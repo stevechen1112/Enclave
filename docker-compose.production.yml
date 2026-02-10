@@ -1,29 +1,46 @@
-# docker-compose.production.yml — Production overrides
+# docker-compose.production.yml — Production overrides for base docker-compose.yml
 # Usage: docker-compose -f docker-compose.yml -f docker-compose.production.yml up -d
+#
+# NOTE: Prefer using docker-compose.prod.yml (standalone) for production.
+#       This file is a lightweight override for the dev docker-compose.yml.
 
 services:
   web:
     env_file: .env.production
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    command: >
+      uvicorn app.main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 4
+        --log-level warning
     restart: always
     environment:
       - APP_ENV=production
-    # No volume mount in production (use built image)
+      - RATE_LIMIT_ENABLED=true
+      - ADMIN_IP_WHITELIST_ENABLED=true
+    # Remove source code mount — use baked-in image
     volumes: []
 
   worker:
     env_file: .env.production
     restart: always
+    environment:
+      - APP_ENV=production
     volumes: []
 
   db:
-    environment:
-      - POSTGRES_PASSWORD=production_password_change_me
     restart: always
-    # Consider using managed DB (RDS, Cloud SQL) in real production
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-unihr}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    # No external port in production
+    ports: []
 
   redis:
     restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    # No external port in production
+    ports: []
 
   frontend:
     restart: always

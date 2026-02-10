@@ -19,8 +19,12 @@
 - [環境變數](#環境變數)
 - [常用指令](#常用指令)
 - [測試](#測試)
+- [常見問題排查](#常見問題排查)
+- [備份與還原](#備份與還原)
+- [生產環境維運檢查清單](#生產環境維運檢查清單)
 - [目錄結構](#目錄結構)
 - [開發計畫](#開發計畫)
+- [文件索引](#文件索引)
 - [授權](#授權)
 
 ---
@@ -156,9 +160,13 @@ UniHR 採用**雙層架構**：
 
 | 類別 | 技術 |
 |------|------|
-| 容器化 | Docker + Docker Compose（5 容器：web / frontend / db / redis / worker） |
+| 容器化 | Docker + Docker Compose（開發版 5 容器 / 生產版 12 容器） |
 | 部署 | 支援 Development / Staging / Production 三環境 |
+| 生產安全 | 啟動驗證器（config.py model_validator）、強制密碼檢查、非 root 執行 |
+| 密鑰管理 | 自動密鑰生成工具（scripts/generate_secrets.py） |
 | API 版本管理 | v1 (穩定) + v2 (新功能)，含 Deprecation Header |
+| 監控 | Prometheus + Grafana（指標收集 + 儀錶板） |
+| 閘道 | Nginx（反向代理 + SSL + 多域名路由） |
 
 ---
 
@@ -388,20 +396,29 @@ Push to main
 
 生產環境透過 `docker-compose.prod.yml` 編排 **12 個容器**：
 
-| 容器 | 說明 | Port |
-|------|------|------|
-| `web` | FastAPI 後端（Gunicorn + Uvicorn workers） | 8000 |
-| `db` | PostgreSQL 15（含調優設定） | 5432 |
-| `redis` | Redis 7（含持久化） | 6379 |
-| `worker` | Celery 背景任務 Worker | — |
-| `frontend` | React SPA（Nginx 靜態服務） | 80 |
-| `admin-api` | Admin 微服務 | 8001 |
-| `admin-frontend` | Admin 前端 SPA | 80 |
-| `admin-redis` | Admin 獨立 Redis | 6380 |
-| `nginx` | 反向代理閘道（多域名路由） | 80/443 |
-| `prometheus` | 監控指標收集 | 9090 |
-| `grafana` | 監控儀錶板 | 3000 |
-| `alertmanager` | 告警推送 | 9093 |
+| 容器 | 說明 | Port | 安全特性 |
+|------|------|------|----------|
+| `web` | FastAPI 後端（uvicorn workers × 4） | 8000 | 無 --reload，無 volume mount，僅 uploads_data 持久化 |
+| `db` | PostgreSQL 15（pgvector + 調優） | — | 不對外暴露，密碼必填檢查，資源限制 |
+| `redis` | Redis 7（啟用 AOF + LRU） | — | requirepass 強制密碼，不對外暴露 |
+| `worker` | Celery 背景任務 Worker | — | max-tasks-per-child=200 防記憶體洩漏 |
+| `frontend` | React SPA（Nginx 靜態服務） | 80 | — |
+| `admin-api` | Admin 微服務 | 8001 | Service Token 驗證 |
+| `admin-frontend` | Admin 前端 SPA | 80 | — |
+| `admin-redis` | Admin 獨立 Redis | — | 獨立密碼，隔離快取 |
+| `gateway` | Nginx 反向代理閘道 | 80/443 | 統一入口，支援 SSL |
+| `prometheus` | 監控指標收集 | 9090 | 僅內部訪問 |
+| `grafana` | 監控儀錶板 | 3000 | 強制密碼，禁止註冊 |
+
+**關鍵安全特性**：
+- ✅ 所有容器 `restart: always`
+- ✅ 完整健康檢查（`healthcheck`）
+- ✅ 資源限制（CPU / Memory limits）
+- ✅ 日誌輪替（json-file + max-size 50m）
+- ✅ 非 root 使用者執行（Dockerfile 中建立 `unihr` 使用者）
+- ✅ 資料庫/Redis 不對外暴露埠
+- ✅ 環境變數透過 `.env.production` 管理，敏感值必填檢查（`:?` 語法）
+- ✅ `app/config.py` 內建啟動驗證器，生產環境自動阻擋弱密鑰
 
 ### Nginx Gateway 多域名路由
 
@@ -451,43 +468,137 @@ FastAPI metrics → Prometheus (scrape) → Grafana (dashboard)
 ```bash
 # 1. 複製環境變數
 cp .env.example .env
-# 編輯 .env 填入 API keys（OPENAI / VOYAGE）
 
-# 2. 啟動所有服務
+# 2. 編輯 .env 填入必要的 API keys
+# 必填項目：
+#   - OPENAI_API_KEY=sk-proj-...    # https://platform.openai.com/api-keys
+#   - VOYAGE_API_KEY=pa-...          # https://www.voyageai.com/
+#   - LLAMAPARSE_API_KEY=llx-...     # https://cloud.llamaindex.ai/
+# 詳細取得方式請參閱「常見問題排查」→「API Keys 取得方式」章節
+
+# 3. 啟動所有服務
 make dev
 
-# 3. 初始化資料庫
+# 4. 等待服務啟動（約 30 秒）
+# 首次啟動需要下載 Docker 映像並建立資料庫
+
+# 5. 初始化資料庫
 make migrate
 
-# 4. 建立預設管理員帳號
-docker-compose exec web python scripts/create_tables.py
+# 6. 建立預設管理員帳號
 docker-compose exec web python scripts/initial_data.py
+# 預設帳密：admin@example.com / admin123
+
+# 7. 上傳測試文件（選用）
+docker-compose exec web python scripts/batch_upload.py
+
+# 8. 執行測試套件驗證（選用）
+docker-compose exec web python scripts/run_tests.py
 ```
 
 啟動後：
 - **後端 API**：http://localhost:8000
-- **API 文件**：http://localhost:8000/docs
-- **前端介面**：http://localhost:3001
+- **API 文件**：http://localhost:8000/docs（Swagger UI 互動式文件）
+- **前端介面**：http://localhost:3001（使用 admin@example.com / admin123 登入）
 - **Admin API**：http://localhost:8001
 - **Admin 文件**：http://localhost:8001/docs
 
-### 生產環境啟動
+**首次使用建議**：
+1. 前往 http://localhost:3001 登入後台
+2. 上傳 1-2 份測試文件（PDF / DOCX / TXT）
+3. 等待文件處理完成（查看「知識庫管理」頁面狀態）
+4. 前往「AI 問答」頁面測試提問
+
+### 生產環境部署
+
+#### 1. 生成密鑰與密碼
 
 ```bash
-# 1. 複製生產用環境變數
-cp .env.production.example .env
+# 一鍵生成所有密鑰（SECRET_KEY、DB 密碼、Redis 密碼等）
+python scripts/generate_secrets.py
 
-# 2. 啟動生產環境（12 容器）
-make prod
+# 或自動寫入 .env.production
+cp .env.production.example .env.production
+python scripts/generate_secrets.py --output .env.production
+```
 
-# 3. 執行資料庫遷移
-docker-compose -f docker-compose.prod.yml exec web alembic upgrade head
+`generate_secrets.py` 會自動產生：
+- `SECRET_KEY`（48 字元）
+- `POSTGRES_PASSWORD`（32 字元）
+- `REDIS_PASSWORD`（24 字元）
+- `ADMIN_REDIS_PASSWORD`（24 字元）
+- `GRAFANA_PASSWORD`（16 字元）
+
+#### 2. 配置環境變數
+
+編輯 `.env.production`，補充以下必填項目：
+
+| 變數 | 說明 | 範例 |
+|------|------|------|
+| `FIRST_SUPERUSER_EMAIL` | 首位超級管理員 Email | `admin@yourcompany.com` |
+| `FIRST_SUPERUSER_PASSWORD` | 超級管理員密碼（≥ 12 字元） | `YourStrongP@ssw0rd!` |
+| `OPENAI_API_KEY` | OpenAI API Key | `sk-proj-...` |
+| `VOYAGE_API_KEY` | Voyage AI API Key | `pa-...` |
+| `LLAMAPARSE_API_KEY` | LlamaParse API Key | `llx-...` |
+| `BACKEND_CORS_ORIGINS` | 允許的前端域名 | `https://app.yourcompany.com` |
+| `CORE_API_URL` | Core 勞動法 API | `https://core.yourcompany.com` |
+
+> ⚠️ **安全提醒**：
+> - `SECRET_KEY` 必須 ≥ 32 字元隨機字串
+> - 所有密碼禁用預設值（`postgres`、`admin123` 等）
+> - **config.py 會在 `APP_ENV=production` 時自動檢查，若使用不安全配置將直接阻擋啟動**
+
+#### 3. 啟動生產環境
+
+```bash
+# 啟動所有容器（web / db / redis / worker / frontend / nginx / prometheus / grafana 等 12 個）
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 等待服務啟動（約 15 秒）
+sleep 15
+
+# 執行資料庫遷移
+docker compose -f docker-compose.prod.yml exec web alembic upgrade head
+
+# 建立首位超級管理員（讀取 .env.production 配置）
+docker compose -f docker-compose.prod.yml exec web python scripts/initial_data.py
+```
+
+#### 4. 驗證部署
+
+```bash
+# 檢查所有容器運行狀態
+docker compose -f docker-compose.prod.yml ps
+
+# 健康檢查
+curl https://app.yourcompany.com/health
+curl https://admin.yourcompany.com/health
+
+# 查看日誌
+docker compose -f docker-compose.prod.yml logs -f web
 ```
 
 生產環境入口：
-- **前台**：https://app.unihr.com
-- **後台**：https://admin.unihr.com
-- **監控**：https://grafana.unihr.com
+- **前台**：https://app.yourcompany.com
+- **後台**：https://admin.yourcompany.com
+- **監控**：https://grafana.yourcompany.com
+
+#### 5. 安全檢查清單
+
+部署前請確認：
+
+| 項目 | 狀態 |
+|------|------|
+| ✅ SECRET_KEY 已改為 ≥ 32 字元隨機字串 | ⬜ |
+| ✅ 資料庫密碼非預設值 `postgres` | ⬜ |
+| ✅ Redis 密碼已設定 | ⬜ |
+| ✅ 超級管理員帳密已改為真實值 | ⬜ |
+| ✅ CORS 只允許指定域名 | ⬜ |
+| ✅ SSL 憑證已配置（nginx/certs/） | ⬜ |
+| ✅ 所有外部 API Key 已填入 | ⬜ |
+| ✅ Grafana 管理員密碼已修改 | ⬜ |
+| ✅ 防火牆只開放 80/443 | ⬜ |
+| ✅ PostgreSQL / Redis 未對外暴露 | ⬜ |
 
 ### 本地開發（不使用 Docker）
 
@@ -512,33 +623,94 @@ uvicorn main:app --reload --port 8001
 
 ## 環境變數
 
+### 必填變數（生產環境）
+
 | 變數 | 說明 | 必填 | 預設 |
 |------|------|------|------|
-| `SECRET_KEY` | JWT 簽名密鑰 | ✅ | — |
+| `SECRET_KEY` | JWT 簽名密鑰（≥ 32 字元） | ✅ | — |
+| `FIRST_SUPERUSER_EMAIL` | 首位超級管理員 Email | ✅ | `admin@example.com` |
+| `FIRST_SUPERUSER_PASSWORD` | 超級管理員密碼（≥ 12 字元） | ✅ | `admin123` |
+| `POSTGRES_PASSWORD` | PostgreSQL 密碼 | ✅ | `postgres` |
+| `REDIS_PASSWORD` | Redis 密碼 | ✅ | — |
+| `ADMIN_REDIS_PASSWORD` | Admin Redis 密碼 | ✅ | — |
 | `OPENAI_API_KEY` | OpenAI API Key | ✅ | — |
+| `VOYAGE_API_KEY` | Voyage AI（Embedding + Rerank） | ✅ | — |
+| `GRAFANA_PASSWORD` | Grafana 管理員密碼 | ✅ | `admin` |
+
+### AI / LLM 設定
+
+| 變數 | 說明 | 必填 | 預設 |
+|------|------|------|------|
 | `OPENAI_MODEL` | OpenAI 模型名稱 | — | `gpt-4o-mini` |
 | `OPENAI_TEMPERATURE` | LLM 生成溫度 | — | `0.3` |
 | `OPENAI_MAX_TOKENS` | LLM 最大輸出 Token | — | `1500` |
-| `VOYAGE_API_KEY` | Voyage AI（Embedding + Rerank） | ✅ | — |
 | `LLAMAPARSE_API_KEY` | LlamaParse 文件解析 API Key | — | — |
 | `LLAMAPARSE_ENABLED` | 啟用 LlamaParse 解析 | — | `true` |
 | `EMBEDDING_DIMENSION` | 向量維度 | — | `1024` |
+
+### 資料庫設定
+
+| 變數 | 說明 | 必填 | 預設 |
+|------|------|------|------|
 | `POSTGRES_SERVER` | PostgreSQL 主機 | — | `localhost` |
 | `POSTGRES_USER` | 資料庫使用者 | — | `postgres` |
-| `POSTGRES_PASSWORD` | 資料庫密碼 | — | `postgres` |
 | `POSTGRES_DB` | 資料庫名稱 | — | `unihr_saas` |
 | `REDIS_HOST` | Redis 主機 | — | `localhost` |
+| `CELERY_BROKER_URL` | Celery Broker URL | — | `redis://redis:6379/0` |
+| `CELERY_RESULT_BACKEND` | Celery 結果後端 | — | `redis://redis:6379/0` |
+
+### 外部服務設定
+
+| 變數 | 說明 | 必填 | 預設 |
+|------|------|------|------|
 | `CORE_API_URL` | Core 勞動法 API 位址 | — | `http://localhost:5000` |
 | `GOOGLE_CLIENT_ID` | Google SSO | — | — |
+| `GOOGLE_CLIENT_SECRET` | Google SSO Secret | — | — |
 | `MICROSOFT_CLIENT_ID` | Microsoft SSO | — | — |
-| `RETRIEVAL_MODE` | 檢索模式 | — | `hybrid` |
-| `RETRIEVAL_RERANK` | 啟用重排序 | — | `true` |
-| `ADMIN_SERVICE_TOKEN` | Admin 微服務 Token | ✅（生產） | — |
-| `ADMIN_REDIS_PASSWORD` | Admin Redis 密碼 | ✅（生產） | — |
-| `DEPLOY_REGION` | 部署區域代碼 | — | `ap` |
-| `GRAFANA_ADMIN_PASSWORD` | Grafana 管理員密碼 | — | `admin` |
+| `MICROSOFT_CLIENT_SECRET` | Microsoft SSO Secret | — | — |
+| `SSO_DEFAULT_REDIRECT_URI` | SSO 回調 URI | — | `http://localhost:3001/login/callback` |
 
-完整列表參見 [.env.example](.env.example)、[.env.production.example](.env.production.example)。
+### 檢索與快取設定
+
+| 變數 | 說明 | 必填 | 預設 |
+|------|------|------|------|
+| `RETRIEVAL_MODE` | 檢索模式（semantic / keyword / hybrid） | — | `hybrid` |
+| `RETRIEVAL_RERANK` | 啟用重排序 | — | `true` |
+| `RETRIEVAL_CACHE_TTL` | 快取 TTL（秒） | — | `300` |
+| `RETRIEVAL_TOP_K` | 預設返回數量 | — | `5` |
+
+### 安全與速率限制
+
+| 變數 | 說明 | 必填 | 預設 |
+|------|------|------|------|
+| `RATE_LIMIT_ENABLED` | 啟用速率限制 | — | `true` |
+| `RATE_LIMIT_GLOBAL_PER_IP` | IP 速率（req/min） | — | `200` |
+| `RATE_LIMIT_PER_USER` | 使用者速率（req/min） | — | `60` |
+| `RATE_LIMIT_PER_TENANT` | 租戶速率（req/min） | — | `300` |
+| `RATE_LIMIT_CHAT_PER_USER` | 聊天速率（req/min） | — | `20` |
+| `ADMIN_IP_WHITELIST_ENABLED` | 啟用 Admin IP 白名單 | — | `false` |
+| `ADMIN_IP_WHITELIST` | 允許的 IP / CIDR | — | `127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16` |
+
+### 微服務與區域設定
+
+| 變數 | 說明 | 必填 | 預設 |
+|------|------|------|------|
+| `ADMIN_SERVICE_TOKEN` | Admin 微服務 Token | ✅（生產） | — |
+| `DEPLOY_REGION` | 部署區域代碼 | — | `ap` |
+| `GRAFANA_ROOT_URL` | Grafana 外部 URL | — | `https://grafana.unihr.com` |
+| `BACKEND_CORS_ORIGINS` | 允許的 CORS 來源（逗號分隔） | — | `http://localhost:3000,http://localhost:3001` |
+
+完整列表參見：
+- 開發：[.env.example](.env.example)
+- Staging：[.env.staging.example](.env.staging.example) 
+- 生產：[.env.production.example](.env.production.example)
+
+> ⚠️ **生產環境安全提示**：  
+> `app/config.py` 含 `model_validator`，在 `APP_ENV=production` 或 `staging` 時會自動檢查：
+> - `SECRET_KEY` 不可為已知弱預設值或 < 32 字元 → **直接 raise ValueError 阻擋啟動**
+> - `POSTGRES_PASSWORD` 不可為 `"postgres"` → **直接 raise ValueError 阻擋啟動**
+> - `FIRST_SUPERUSER_EMAIL` 仍為 `"admin@example.com"` → **發出 UserWarning**
+> - `FIRST_SUPERUSER_PASSWORD` 仍為 `"admin123"` → **發出 UserWarning**
 
 ---
 
@@ -561,9 +733,21 @@ make status             # 查看服務狀態
 make health             # 健康檢查
 make build              # 重建所有容器
 
+# === 生產密鑰生成 ===
+# 生成所有密鑰（顯示在終端）
+python scripts/generate_secrets.py
+
+# 自動寫入 .env.production
+python scripts/generate_secrets.py --output .env.production
+
 # === 部署 ===
 make staging            # 啟動 Staging 環境
 make prod               # 啟動 Production 環境（12 容器）
+
+# 手動啟動生產環境
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml exec web alembic upgrade head
+docker compose -f docker-compose.prod.yml exec web python scripts/initial_data.py
 ```
 
 ---
@@ -611,6 +795,310 @@ k6 run tests/load/k6_load_test.js
 | `benchmark_document_engine.py` | 能力自評 Benchmark | 62 |
 | `tests/load/locustfile.py` | HTTP 負載測試 | — |
 | `tests/load/k6_load_test.js` | k6 效能測試 | — |
+
+---
+
+## 常見問題排查
+
+### 容器無法啟動
+
+**問題**：`docker-compose up -d` 失敗
+
+**排查步驟**：
+```powershell
+# 1. 檢查容器狀態
+docker-compose ps
+
+# 2. 查看失敗容器的日誌
+docker-compose logs web
+docker-compose logs db
+
+# 3. 檢查埠號佔用
+netstat -ano | findstr "8000"
+netstat -ano | findstr "5432"
+
+# 4. 清除舊容器重新啟動
+docker-compose down -v
+docker-compose up -d --build
+```
+
+**常見原因**：
+- 埠號被佔用（8000 / 5432 / 6379）
+- `.env` 檔案格式錯誤或缺少必填欄位
+- Docker Desktop 未啟動或記憶體不足
+
+### 生產環境啟動失敗
+
+**問題**：`APP_ENV=production` 時因為安全檢查無法啟動
+
+**錯誤訊息**：
+```
+ValueError: SECRET_KEY is insecure ('change_t…'). Set a strong random key (≥ 32 chars)
+```
+
+**解決方案**：
+```powershell
+# 1. 生成安全密鑰
+python scripts/generate_secrets.py --output .env.production
+
+# 2. 手動填入 API Keys 與管理員資訊
+# 編輯 .env.production，確保以下欄位已填入：
+# - SECRET_KEY（≥ 32 字元）
+# - POSTGRES_PASSWORD（非 'postgres'）
+# - FIRST_SUPERUSER_EMAIL（真實 email）
+# - FIRST_SUPERUSER_PASSWORD（強密碼）
+# - OPENAI_API_KEY
+# - VOYAGE_API_KEY
+# - LLAMAPARSE_API_KEY
+
+# 3. 重新啟動
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### API Keys 取得方式
+
+| 服務 | 用途 | 取得網址 | 費用 |
+|------|------|----------|------|
+| OpenAI | LLM 生成 + HyDE 查詢擴展 | https://platform.openai.com/api-keys | 依用量計費 |
+| Voyage AI | Embedding (voyage-4-lite) + Rerank (rerank-2) | https://www.voyageai.com/ | 前 100M tokens 免費 |
+| LlamaParse | 高品質文件解析（PDF/DOCX/PPT） | https://cloud.llamaindex.ai/ | 前 1000 頁免費 |
+
+**OpenAI 設定**：
+1. 註冊 OpenAI 帳號，前往 [API Keys](https://platform.openai.com/api-keys)
+2. 點擊「Create new secret key」
+3. 複製 `sk-proj-...` 開頭的 key
+4. 貼入 `.env` 的 `OPENAI_API_KEY`
+
+**Voyage AI 設定**：
+1. 註冊 Voyage AI 帳號，前往 [Dashboard](https://www.voyageai.com/)
+2. 複製 API Key（`pa-...` 開頭）
+3. 貼入 `.env` 的 `VOYAGE_API_KEY`
+
+**LlamaParse 設定**：
+1. 註冊 LlamaIndex 帳號，前往 [LlamaCloud](https://cloud.llamaindex.ai/)
+2. 複製 API Key（`llx-...` 開頭）
+3. 貼入 `.env` 的 `LLAMAPARSE_API_KEY`
+
+### 資料庫連線失敗
+
+**問題**：`FATAL: password authentication failed for user "postgres"`
+
+**解決方案**：
+```powershell
+# 1. 檢查 .env 中的資料庫密碼
+Get-Content .env | Select-String "POSTGRES"
+
+# 2. 清除舊的 volume 並重建
+docker-compose down -v
+docker volume prune -f
+docker-compose up -d
+
+# 3. 等待資料庫初始化完成（約 10 秒）
+Start-Sleep -Seconds 10
+
+# 4. 執行遷移
+docker-compose exec web alembic upgrade head
+```
+
+### 測試套件失敗
+
+**問題**：`scripts/run_tests.py` 某些問題答不出來或分數低
+
+**排查步驟**：
+```powershell
+# 1. 確認所有文件已上傳
+docker-compose exec web python scripts/batch_upload.py
+
+# 2. 檢查 Redis 快取是否需要清除
+docker-compose exec redis redis-cli FLUSHDB
+
+# 3. 重啟服務確保程式碼已重新載入（Windows Docker 不會自動 reload）
+docker-compose restart web worker
+
+# 4. 執行單一問題 debug
+docker-compose exec web python scripts/debug_scores.py E1
+
+# 5. 檢查結構化答案 handler
+docker-compose exec web python scripts/test_structured.py
+```
+
+### Chunk 去重問題
+
+**問題**：重複上傳相同文件後，第二份文件沒有 chunks
+
+**原因**：`document_tasks.py` 的 chunk 去重邏輯錯誤（tenant-scoped 而非 document-scoped）
+
+**已修復**：Phase 8 已將去重改為 per-document SHA256 檢查
+
+**驗證修復**：
+```python
+# 檢查 document_tasks.py 第 130 行左右
+# 應該是：DChunk.document_id == UUID(document_id)
+# 而非：DChunk.tenant_id == UUID(tenant_id)
+```
+
+### 前端無法連線後端
+
+**問題**：前端顯示 `Network Error` 或 CORS 錯誤
+
+**解決方案**：
+```powershell
+# 1. 檢查後端是否運行
+curl http://localhost:8000/health
+
+# 2. 檢查 CORS 設定
+docker-compose exec web python -c "from app.config import settings; print(settings.BACKEND_CORS_ORIGINS)"
+
+# 3. 更新 .env 的 CORS 設定
+# BACKEND_CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002
+
+# 4. 重啟容器
+docker-compose restart web
+```
+
+### Celery Worker 處理文件卡住
+
+**問題**：上傳文件後一直顯示 `processing`
+
+**排查步驟**：
+```powershell
+# 1. 檢查 worker 日誌
+docker-compose logs worker --tail=50
+
+# 2. 檢查任務佇列
+docker-compose exec redis redis-cli LLEN celery
+
+# 3. 檢查是否有任務失敗
+docker-compose exec web python -c "from app.celery_app import celery_app; print(celery_app.control.inspect().active())"
+
+# 4. 重啟 worker
+docker-compose restart worker
+```
+
+---
+
+## 備份與還原
+
+### PostgreSQL 資料庫備份
+
+```powershell
+# 開發環境
+docker-compose exec db pg_dump -U postgres unihr_saas > backup_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+
+# 生產環境
+docker compose -f docker-compose.prod.yml exec db pg_dump -U unihr unihr_saas > backup_prod_$(Get-Date -Format "yyyyMMdd_HHmmss").sql
+
+# 自動備份腳本（已提供）
+./scripts/backup.sh
+```
+
+### 資料庫還原
+
+```powershell
+# 1. 停止服務
+docker-compose down
+
+# 2. 重新啟動資料庫
+docker-compose up -d db
+
+# 3. 還原備份
+Get-Content backup_20260211_120000.sql | docker-compose exec -T db psql -U postgres unihr_saas
+
+# 4. 啟動其他服務
+docker-compose up -d
+```
+
+### 上傳檔案備份
+
+```powershell
+# 備份上傳目錄
+Compress-Archive -Path uploads -DestinationPath uploads_backup_$(Get-Date -Format "yyyyMMdd").zip
+
+# 還原
+Expand-Archive -Path uploads_backup_20260211.zip -DestinationPath uploads -Force
+```
+
+### 完整系統備份
+
+```powershell
+# 1. 資料庫備份
+docker-compose exec db pg_dump -U postgres unihr_saas > db_backup.sql
+
+# 2. 上傳檔案備份
+Compress-Archive -Path uploads -DestinationPath uploads_backup.zip
+
+# 3. 環境變數備份（注意：不要提交到 Git）
+Copy-Item .env .env.backup
+
+# 4. Redis 資料備份（選用）
+docker-compose exec redis redis-cli SAVE
+Copy-Item redis_data/dump.rdb redis_backup.rdb
+```
+
+---
+
+## 生產環境維運檢查清單
+
+### 部署前檢查
+
+- [ ] `.env.production` 所有必填欄位已填入
+- [ ] SECRET_KEY 強度 ≥ 32 字元
+- [ ] 資料庫密碼非預設值
+- [ ] 超級管理員帳密已修改
+- [ ] 所有 API Keys 已取得並填入
+- [ ] CORS 只允許指定域名
+- [ ] SSL 憑證已準備（nginx/certs/）
+- [ ] 防火牆規則已設定（僅開放 80/443）
+- [ ] PostgreSQL / Redis 未對外暴露
+
+### 部署後驗證
+
+```powershell
+# 1. 檢查所有容器運行狀態
+docker compose -f docker-compose.prod.yml ps
+
+# 2. 健康檢查
+curl https://app.yourcompany.com/health
+curl https://admin.yourcompany.com/health
+
+# 3. 測試登入
+# 前往 https://app.yourcompany.com/login
+# 使用 FIRST_SUPERUSER_EMAIL / PASSWORD 登入
+
+# 4. 檢查資料庫遷移
+docker compose -f docker-compose.prod.yml exec web alembic current
+
+# 5. 檢查 Celery Worker
+docker compose -f docker-compose.prod.yml logs worker --tail=20
+
+# 6. 檢查監控
+# 前往 https://grafana.yourcompany.com
+# 使用 GRAFANA_PASSWORD 登入
+```
+
+### 每日檢查
+
+- [ ] 檢查容器狀態：`docker compose -f docker-compose.prod.yml ps`
+- [ ] 檢查磁碟空間：`df -h`
+- [ ] 檢查錯誤日誌：`docker compose -f docker-compose.prod.yml logs --tail=100 | Select-String "ERROR"`
+- [ ] 檢查 Grafana 告警
+- [ ] 執行資料庫備份
+
+### 每週檢查
+
+- [ ] 檢查 PostgreSQL 效能：`docker compose -f docker-compose.prod.yml exec db psql -U unihr -c "SELECT * FROM pg_stat_activity;"`
+- [ ] 檢查 Redis 記憶體使用：`docker compose -f docker-compose.prod.yml exec redis redis-cli INFO memory`
+- [ ] 檢查磁碟 I/O：查看 Grafana 儀錶板
+- [ ] 審查稽核日誌
+- [ ] 測試備份還原流程
+
+### 每月檢查
+
+- [ ] 更新 Docker 映像：`docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d`
+- [ ] 檢查安全性更新
+- [ ] 審查用量統計與配額
+- [ ] 執行負載測試
+- [ ] 審查 SSL 憑證有效期
 
 ---
 
@@ -747,7 +1235,8 @@ unihr-saas/
 ├── scripts/                       # 工具腳本
 │   ├── create_tables.py           #   資料表建立
 │   ├── create_test_users.py       #   測試帳號建立
-│   └── initial_data.py            #   初始化資料
+│   ├── generate_secrets.py        # ★ 生產密鑰生成工具（SECRET_KEY / POSTGRES_PASSWORD / REDIS_PASSWORD 等）
+│   └── initial_data.py            #   初始化資料（讀取 FIRST_SUPERUSER_EMAIL/PASSWORD）
 ├── docs/                          # 專案文件
 │   ├── PROJECT_PLAN.md            #   完整產品規格書（1500+ 行）
 │   ├── API_GUIDE.md               #   API 使用指南
@@ -790,6 +1279,27 @@ unihr-saas/
 | Phase 5 | UX 流程審查：全角色 UX 檢視 + 11 項修復（路由守衛 + SSO 自動識別 + 權限 DI 統一 + UI 增強） | ✅ 完成 |
 | Phase 6 | AI 引擎升級：LlamaParse 智慧解析 + jieba 分詞 + HyDE 查詢擴展 + LLM 答案生成 + Chunk 去重 | ✅ 完成 |
 | Phase 7 | 對話體驗升級：SSE 串流 + Markdown 渲染 + 來源面板 + 回饋系統 + RAG 儀表板 + 行動版響應式（15 任務） | ✅ 完成 |
+| Phase 8 | 生產安全加固：config.py 啟動驗證器 + 密鑰生成工具 + docker-compose.prod.yml 強化（15 項安全特性） | ✅ 完成 |
+
+### Phase 8 任務清單（生產安全加固 — 完成）
+
+| 項目 | 說明 | 狀態 |
+|------|------|------|
+| SEC-1 | config.py 新增 `model_validator`，生產環境自動檢查 SECRET_KEY / POSTGRES_PASSWORD 是否安全 | ✅ |
+| SEC-2 | 新增 `FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD` 配置，取代硬編碼 `admin@example.com / admin123` | ✅ |
+| SEC-3 | `scripts/initial_data.py` 改為讀取 `settings.FIRST_SUPERUSER_*`，使用預設值時發出警告 | ✅ |
+| SEC-4 | `scripts/generate_secrets.py` — 一鍵生成 SECRET_KEY / DB 密碼 / Redis 密碼等，支援自動寫入 `.env.production` | ✅ |
+| SEC-5 | `docker-compose.prod.yml` 重寫：移除 `--reload`、移除 `.:/code` volume mount、改用 pgvector 正確映像 | ✅ |
+| SEC-6 | 生產環境 Redis 加入 `--requirepass` + `maxmemory` + AOF 持久化 | ✅ |
+| SEC-7 | PostgreSQL 密碼改用 `:?` 語法強制必填檢查 | ✅ |
+| SEC-8 | 所有容器加入 `healthcheck` + `restart: always` + 資源限制 | ✅ |
+| SEC-9 | 日誌輪替設定（json-file + max-size 50m + max-file 5） | ✅ |
+| SEC-10 | 新增 `uploads_data` named volume，取代 `.:/code` 掛載 | ✅ |
+| SEC-11 | Celery worker 加入 `--max-tasks-per-child=200` 防記憶體洩漏 | ✅ |
+| SEC-12 | `.env.production.example` 完整模板，含所有必填欄位標註 + 生成密鑰指令 | ✅ |
+| SEC-13 | `docker-compose.production.yml`（override 版本）同步更新 | ✅ |
+| SEC-14 | README.md 新增「生產環境部署」章節，含 5 步驟詳細說明 + 安全檢查清單 | ✅ |
+| SEC-15 | 環境變數章節重構，依類別分組，標註必填項目與安全警告 | ✅ |
 
 ### Phase 7 任務清單（對話體驗升級 — 15/15 完成）
 

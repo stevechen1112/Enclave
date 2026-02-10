@@ -11,7 +11,7 @@ celery_app = Celery(
 celery_app.conf.broker_connection_retry_on_startup = True
 
 celery_app.conf.task_routes = {
-    "app.tasks.*": {"queue": "default"}
+    "app.tasks.*": {"queue": "celery"}
 }
 
 celery_app.conf.update(
@@ -21,3 +21,9 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
 )
+
+# Auto-discover tasks so that @celery_app.task decorators in app/tasks/ get registered
+celery_app.autodiscover_tasks(['app.tasks'])
+
+# Explicitly import tasks to ensure they are registered
+import app.tasks.document_tasks  # noqa: F401, E402

@@ -95,6 +95,39 @@ except ImportError:
 _HAS_LLAMAPARSE = False
 _LlamaParseClient = None
 
+def _get_available_ocr_langs() -> List[str]:
+    if not _HAS_OCR:
+        return []
+    try:
+        return pytesseract.get_languages(config="")
+    except Exception:
+        return []
+
+def _pick_ocr_langs(preferred: str) -> Tuple[str, Optional[str]]:
+    langs = _get_available_ocr_langs()
+    if not langs:
+        return preferred, None
+
+    preferred_list = [p for p in preferred.split("+") if p]
+    chosen = [p for p in preferred_list if p in langs]
+
+    if not chosen:
+        for cand in ("chi_tra", "chi_sim", "eng"):
+            if cand in langs:
+                chosen = [cand]
+                break
+
+    if not chosen:
+        chosen = [sorted(langs)[0]]
+
+    missing = [p for p in preferred_list if p not in chosen]
+    if missing:
+        note = f"OCR 語言包缺少: {', '.join(missing)}，改用 {'+'.join(chosen)}"
+    else:
+        note = None
+
+    return "+".join(chosen), note
+
 def _ensure_llamaparse():
     """延遲載入 LlamaParse，只在第一次呼叫時 import"""
     global _HAS_LLAMAPARSE, _LlamaParseClient
@@ -427,12 +460,14 @@ class DocumentParser:
     @staticmethod
     def _ocr_pdf(file_path: str) -> Tuple[str, float]:
         """OCR 處理掃描型 PDF"""
+        from app.config import settings
         images = convert_from_path(file_path, dpi=300)
         all_text: List[str] = []
         confidences: List[float] = []
+        lang, _ = _pick_ocr_langs(settings.OCR_LANGS)
         for img in images:
             data = pytesseract.image_to_data(
-                img, lang="chi_tra+eng", output_type=pytesseract.Output.DICT
+                img, lang=lang, output_type=pytesseract.Output.DICT
             )
             page_words: List[str] = []
             page_confs: List[float] = []
@@ -856,8 +891,13 @@ class DocumentParser:
             report.images_detected = 1
             report.total_pages = 1
 
+            from app.config import settings
+            lang, note = _pick_ocr_langs(settings.OCR_LANGS)
+            if note:
+                report.add_warning(note)
+
             data = pytesseract.image_to_data(
-                img, lang="chi_tra+eng", output_type=pytesseract.Output.DICT
+                img, lang=lang, output_type=pytesseract.Output.DICT
             )
             words: List[str] = []
             confs: List[float] = []
@@ -1009,29 +1049,46 @@ class DocumentParser:
         # 是否為圖片（啟用更強的 OCR）
         is_image = file_type == "image"
 
-        try:
-            parser = _LlamaParseClient(
-                api_key=api_key,
-                result_type="markdown",
-                parsing_instruction=parsing_instruction,
-                language="zh",
-                # 圖片和掃描文件使用進階 OCR
-                auto_mode=True,
-                auto_mode_trigger_on_image_in_page=True,
-                auto_mode_trigger_on_table_in_page=True,
-            )
+        from app.config import settings
 
-            # 同步解析（celery worker 中已是同步環境）
+        def run_parse(params: Dict[str, Any]) -> List[Any]:
+            parser = _LlamaParseClient(**params)
             import asyncio
             try:
                 loop = asyncio.get_event_loop()
             except RuntimeError:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
+            return loop.run_until_complete(parser.aload_data(file_path))
 
-            documents = loop.run_until_complete(
-                parser.aload_data(file_path)
-            )
+        try:
+            params = {
+                "api_key": api_key,
+                "result_type": settings.LLAMAPARSE_RESULT_TYPE,
+                "parsing_instruction": parsing_instruction,
+                "language": settings.LLAMAPARSE_LANGUAGE,
+            }
+            if settings.LLAMAPARSE_AUTO_MODE:
+                params.update({
+                    "auto_mode": True,
+                    "auto_mode_trigger_on_image_in_page": True,
+                    "auto_mode_trigger_on_table_in_page": True,
+                })
+
+            try:
+                documents = run_parse(params)
+            except Exception as e:
+                msg = str(e)
+                if "422" in msg or "Unprocessable" in msg:
+                    report.add_warning("LlamaParse 參數疑似不相容，改用精簡參數重試")
+                    minimal = {
+                        "api_key": api_key,
+                        "result_type": settings.LLAMAPARSE_RESULT_TYPE,
+                        "parsing_instruction": parsing_instruction,
+                    }
+                    documents = run_parse(minimal)
+                else:
+                    raise
 
             if not documents:
                 report.add_warning("LlamaParse 返回空結果")
@@ -1205,6 +1262,13 @@ class TextChunker:
         sections = cls._split_into_sections(text)
         # 確保空字串 section 不會被累積
         sections = [s for s in sections if s.strip()]
+        from app.config import settings
+        min_section_tokens = (
+            settings.MARKDOWN_MIN_SECTION_TOKENS
+            if cls._is_markdown_like(text)
+            else settings.TEXT_MIN_SECTION_TOKENS
+        )
+        sections = cls._merge_small_sections(sections, min_section_tokens)
         chunks: List[str] = []
         current_chunk = ""
         current_tokens = 0
@@ -1248,8 +1312,8 @@ class TextChunker:
         if current_chunk.strip():
             chunks.append(current_chunk.strip())
 
-        # 過濾低於 30 tokens 的碎片
-        return [c for c in chunks if cls.count_tokens(c) >= 30]
+        # 過濾過小碎片
+        return [c for c in chunks if cls.count_tokens(c) >= settings.TEXT_MIN_SECTION_TOKENS]
 
     # ─── 輔助 ───
 
@@ -1280,6 +1344,45 @@ class TextChunker:
                 sec = sec.replace(ph, tbl)
             result.append(sec)
         return result
+
+    @classmethod
+    def _merge_small_sections(cls, sections: List[str], min_tokens: int) -> List[str]:
+        if min_tokens <= 0:
+            return sections
+        merged: List[str] = []
+        buffer = ""
+        buffer_tokens = 0
+        for sec in sections:
+            sec = sec.strip()
+            if not sec:
+                continue
+            sec_tokens = cls.count_tokens(sec)
+            if buffer:
+                if buffer_tokens + sec_tokens < min_tokens:
+                    buffer = buffer + "\n\n" + sec
+                    buffer_tokens = cls.count_tokens(buffer)
+                    continue
+                merged.append(buffer)
+                buffer = ""
+                buffer_tokens = 0
+
+            if sec_tokens < min_tokens:
+                buffer = sec
+                buffer_tokens = sec_tokens
+            else:
+                merged.append(sec)
+
+        if buffer:
+            merged.append(buffer)
+        return merged
+
+    @staticmethod
+    def _is_markdown_like(text: str) -> bool:
+        lines = text.splitlines()[:200]
+        if not lines:
+            return False
+        heading_lines = sum(1 for l in lines if l.lstrip().startswith("#"))
+        return heading_lines >= 3 or heading_lines / max(len(lines), 1) > 0.1
 
     @classmethod
     def _force_split(cls, text: str, chunk_size: int, chunk_overlap: int) -> List[str]:

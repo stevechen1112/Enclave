@@ -45,9 +45,10 @@ class CoreAPIClient:
         
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
+                # Note: unihr Core uses /chat (not /v1/labor/chat)
                 response = await client.post(
-                    f"{self.base_url}/v1/labor/chat",
-                    json=payload,
+                    f"{self.base_url}/chat",
+                    json={"message": question},  # unihr expects "message" not "question"
                     headers=headers
                 )
                 response.raise_for_status()
@@ -71,7 +72,8 @@ class CoreAPIClient:
         """檢查 Core API 健康狀態"""
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(f"{self.base_url}/v1/health")
+                # Note: unihr Core uses /health (not /v1/health)
+                response = await client.get(f"{self.base_url}/health")
                 response.raise_for_status()
                 return {"status": "healthy", "data": response.json()}
         

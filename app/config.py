@@ -1,6 +1,17 @@
+import secrets
+import warnings
 from typing import List, Union
-from pydantic import AnyHttpUrl, validator
-from pydantic_settings import BaseSettings
+from pydantic import field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# ── Known insecure default keys (must never be used in production) ──
+_INSECURE_KEYS = {
+    "change_this",
+    "change_this_to_a_secure_random_string",
+    "CHANGE_THIS_PRODUCTION_SECRET_MIN_32_CHARS",
+    "secret",
+}
+
 
 class Settings(BaseSettings):
     APP_NAME: str = "UniHR SaaS"
@@ -9,17 +20,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change_this"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     ALGORITHM: str = "HS256"
+
+    # ── First superuser (used by scripts/initial_data.py) ──
+    FIRST_SUPERUSER_EMAIL: str = "admin@example.com"
+    FIRST_SUPERUSER_PASSWORD: str = "admin123"
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
-
-    @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
-            return v
-        raise ValueError(v)
+    BACKEND_CORS_ORIGINS: str = ""
 
     # Core API
     CORE_API_URL: str = "http://localhost:5000"
@@ -53,6 +60,9 @@ class Settings(BaseSettings):
     # LlamaParse（高品質文檔解析 — 跨頁表格、手寫 OCR、複雜佈局）
     LLAMAPARSE_API_KEY: str = ""
     LLAMAPARSE_ENABLED: bool = True  # 設為 False 可強制使用內建解析器
+    LLAMAPARSE_RESULT_TYPE: str = "markdown"
+    LLAMAPARSE_LANGUAGE: str = "ch_tra"
+    LLAMAPARSE_AUTO_MODE: bool = True
     
     # File Storage
     UPLOAD_DIR: str = "./uploads"
@@ -61,6 +71,12 @@ class Settings(BaseSettings):
     # Document Processing
     CHUNK_SIZE: int = 1000  # tokens
     CHUNK_OVERLAP: int = 150  # tokens
+    TABLE_FULL_CHUNK_MAX_CHARS: int = 20000  # 結構化表格全文 chunk 上限
+    MARKDOWN_MIN_SECTION_TOKENS: int = 80
+    TEXT_MIN_SECTION_TOKENS: int = 30
+
+    # OCR
+    OCR_LANGS: str = "chi_tra+eng"
 
     # Retrieval
     RETRIEVAL_MODE: str = "hybrid"         # semantic / keyword / hybrid
@@ -88,10 +104,45 @@ class Settings(BaseSettings):
     ADMIN_IP_WHITELIST: str = "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
     ADMIN_TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True
+    )
+
+    @model_validator(mode="after")
+    def _validate_production_security(self) -> "Settings":
+        """Block startup if critical secrets are insecure in production / staging."""
+        if self.APP_ENV in ("production", "staging"):
+            # ── SECRET_KEY ──
+            if self.SECRET_KEY in _INSECURE_KEYS or len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    f"SECRET_KEY is insecure ('{self.SECRET_KEY[:8]}…'). "
+                    "Set a strong random key (≥ 32 chars) in .env or environment. "
+                    f"Hint: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+                )
+            # ── Database password ──
+            if self.POSTGRES_PASSWORD in ("postgres", ""):
+                raise ValueError(
+                    "POSTGRES_PASSWORD is set to default 'postgres'. "
+                    "Set a strong password in .env or environment."
+                )
+            # ── Superuser credentials ──
+            if self.FIRST_SUPERUSER_EMAIL == "admin@example.com":
+                warnings.warn(
+                    "FIRST_SUPERUSER_EMAIL is still 'admin@example.com'. "
+                    "Consider changing it for production.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            if self.FIRST_SUPERUSER_PASSWORD == "admin123":
+                warnings.warn(
+                    "FIRST_SUPERUSER_PASSWORD is still the default 'admin123'. "
+                    "Set FIRST_SUPERUSER_PASSWORD in .env for production.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+        return self
 
     @property
     def is_production(self) -> bool:

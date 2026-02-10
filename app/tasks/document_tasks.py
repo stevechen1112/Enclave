@@ -61,12 +61,20 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             obj_in=DocumentUpdate(quality_report=metadata)
         )
         
-        # 4. 切片
-        chunks = TextChunker.split_by_tokens(
-            text_content,
-            chunk_size=settings.CHUNK_SIZE,
-            chunk_overlap=settings.CHUNK_OVERLAP
-        )
+        # 4. 切片（結構化表格優先全量入庫）
+        full_table_ok = doc.file_type in {"csv", "xlsx", "xls"}
+        if full_table_ok and len(text_content) <= settings.TABLE_FULL_CHUNK_MAX_CHARS:
+            chunks = [text_content.strip()]
+        else:
+            chunks = TextChunker.split_by_tokens(
+                text_content,
+                chunk_size=settings.CHUNK_SIZE,
+                chunk_overlap=settings.CHUNK_OVERLAP
+            )
+        
+        # 4.5 小檔案 fallback：若文字有效但太短無法分割，整段作為一個 chunk
+        if not chunks and text_content.strip():
+            chunks = [text_content.strip()]
         
         if not chunks:
             crud_document.update(
@@ -118,11 +126,10 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:16]
             vector_id = f"{document_id}-chunk-{idx}"
 
-            # 去重：同一租戶內相同內容的 chunk 不重複寫入
+            # 去重：同一文件內相同內容的 chunk 不重複寫入
             existing = (
                 db.query(DChunk)
                 .filter(
-                    DChunk.tenant_id == UUID(tenant_id),
                     DChunk.document_id == UUID(document_id),
                     DChunk.chunk_hash == chunk_hash,
                 )
@@ -287,10 +294,10 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         for idx, (chunk, embedding) in enumerate(zip(chunks, all_embeddings)):
             chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:16]
 
+            # 去重：同一文件內相同內容的 chunk 不重複寫入
             existing = (
                 db.query(DChunk)
                 .filter(
-                    DChunk.tenant_id == UUID(tenant_id),
                     DChunk.document_id == UUID(document_id),
                     DChunk.chunk_hash == chunk_hash,
                 )

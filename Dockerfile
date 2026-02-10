@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     tesseract-ocr \
+    tesseract-ocr-chi-tra \
     poppler-utils \
     libmagic1 \
     libxml2 \
