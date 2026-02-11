@@ -274,8 +274,10 @@ services:
       - ./nginx/gateway.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/client.conf:/etc/nginx/conf.d/client.conf:ro
       - ./nginx/admin.conf:/etc/nginx/conf.d/admin.conf:ro
-      # Uncomment below for SSL:
-      # - ./certs:/etc/nginx/certs:ro
+      # For SSL support (Let's Encrypt):
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # Alternative: use nginx/gateway.conf.sslip for Linode + sslip.io:
+      # - ./nginx/gateway.conf.sslip:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - web
       - frontend
