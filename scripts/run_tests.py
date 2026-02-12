@@ -23,13 +23,13 @@ import urllib.request, urllib.parse, urllib.error, ssl
 
 # ── 常數 ─────────────────────────────────────
 
-BASE_URL = "http://localhost:8000"
-CORE_API = "https://ai.unihr.com.tw"
-SUPERUSER_EMAIL = "admin@example.com"
-SUPERUSER_PASS = "admin123"
-HR_EMAIL = "hr@taiyutech.com"
-HR_PASS = "Test1234!"
-TENANT_NAME = "泰宇科技股份有限公司"
+BASE_URL = os.getenv("AIHR_BASE_URL", "http://localhost:8000")
+CORE_API = os.getenv("AIHR_CORE_API", "https://ai.unihr.com.tw")
+SUPERUSER_EMAIL = os.getenv("AIHR_SUPERUSER_EMAIL", "admin@example.com")
+SUPERUSER_PASS = os.getenv("AIHR_SUPERUSER_PASS", "admin123")
+HR_EMAIL = os.getenv("AIHR_HR_EMAIL", "hr@taiyutech.com")
+HR_PASS = os.getenv("AIHR_HR_PASS", "Test1234!")
+TENANT_NAME = os.getenv("AIHR_TENANT_NAME", "泰宇科技股份有限公司")
 TW = timezone(timedelta(hours=8))
 TEST_DATA = Path(__file__).parent.parent / "test-data"
 DOCS_DIR = TEST_DATA / "company-documents"

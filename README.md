@@ -487,7 +487,9 @@ make migrate
 
 # 6. 建立預設管理員帳號
 docker-compose exec web python scripts/initial_data.py
-# 預設帳密：admin@example.com / admin123
+
+# 帳號/密碼來源：由環境變數 FIRST_SUPERUSER_EMAIL / FIRST_SUPERUSER_PASSWORD 決定
+# 安全起見：不要把「生產環境真實密碼」寫進 README 或提交到 git。
 
 # 7. 上傳測試文件（選用）
 docker-compose exec web python scripts/batch_upload.py
@@ -499,7 +501,7 @@ docker-compose exec web python scripts/run_tests.py
 啟動後：
 - **後端 API**：http://localhost:8000
 - **API 文件**：http://localhost:8000/docs（Swagger UI 互動式文件）
-- **前端介面**：http://localhost:3001（使用 admin@example.com / admin123 登入）
+- **前端介面**：http://localhost:3001（使用 FIRST_SUPERUSER_EMAIL / FIRST_SUPERUSER_PASSWORD 登入）
 - **Admin API**：http://localhost:8001
 - **Admin 文件**：http://localhost:8001/docs
 
@@ -508,6 +510,31 @@ docker-compose exec web python scripts/run_tests.py
 2. 上傳 1-2 份測試文件（PDF / DOCX / TXT）
 3. 等待文件處理完成（查看「知識庫管理」頁面狀態）
 4. 前往「AI 問答」頁面測試提問
+
+---
+
+## 測試登入帳號（如何取得 / 忘記怎麼辦）
+
+### Superuser（平台管理員）
+
+- 系統的首位 Superuser 是由 `scripts/initial_data.py` 依照環境變數建立/確認：
+- `FIRST_SUPERUSER_EMAIL`
+- `FIRST_SUPERUSER_PASSWORD`
+- **Linode/雲端**：請到伺服器上的 `.env.production` 查看（例如 `/opt/aihr/.env.production`）。
+
+### E2E 測試用 HR 帳號
+
+- `scripts/live_e2e_test.py` 會自動建立一次性 HR 測試帳號：
+- Email：`hr-test-<timestamp>@example.com`
+- Password：預設 `TestHR123!`（可用環境變數 `AIHR_HR_PASS` 覆蓋）
+- 你跑完測試後，帳號 Email 會被寫在測試報告 `test-data/test-results/live_*/test_report.md` 的 Phase 0.4。
+
+### 忘記密碼（建議作法）
+
+- **不要嘗試去翻 git 歷史找密碼**（會留下外洩風險）。
+- 直接在 `.env.production` 設定新的 `FIRST_SUPERUSER_PASSWORD`，然後執行：
+- `docker compose -f docker-compose.prod.yml --env-file .env.production exec web python scripts/initial_data.py`
+- 若該帳號已存在，請用管理 API 或 DB 方式重設（依你的維運流程）。
 
 ### 生產環境部署
 
@@ -679,8 +706,8 @@ uvicorn main:app --reload --port 8001
 | 變數 | 說明 | 必填 | 預設 |
 |------|------|------|------|
 | `SECRET_KEY` | JWT 簽名密鑰（≥ 32 字元） | ✅ | — |
-| `FIRST_SUPERUSER_EMAIL` | 首位超級管理員 Email | ✅ | `admin@example.com` |
-| `FIRST_SUPERUSER_PASSWORD` | 超級管理員密碼（≥ 12 字元） | ✅ | `admin123` |
+| `FIRST_SUPERUSER_EMAIL` | 首位超級管理員 Email | ✅ | — |
+| `FIRST_SUPERUSER_PASSWORD` | 超級管理員密碼（≥ 12 字元） | ✅ | — |
 | `POSTGRES_PASSWORD` | PostgreSQL 密碼 | ✅ | `postgres` |
 | `REDIS_PASSWORD` | Redis 密碼 | ✅ | — |
 | `ADMIN_REDIS_PASSWORD` | Admin Redis 密碼 | ✅ | — |

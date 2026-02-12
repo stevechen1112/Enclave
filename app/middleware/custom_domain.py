@@ -20,8 +20,14 @@ class CustomDomainMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         host = request.headers.get("host", "").split(":")[0].lower()
 
-        # Skip for well-known hosts
-        if host in ("localhost", "127.0.0.1", "", "app.unihr.com", "admin.unihr.com"):
+        # Skip for well-known / non-custom-domain hosts.
+        # - Internal docker hostnames often have no dot (e.g. "web")
+        # - sslip.io is our infra/testing domain, not a tenant custom domain
+        if (
+            host in ("localhost", "127.0.0.1", "", "app.unihr.com", "admin.unihr.com")
+            or "." not in host
+            or host.endswith(".sslip.io")
+        ):
             return await call_next(request)
 
         # Check cache first
