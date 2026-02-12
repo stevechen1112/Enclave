@@ -29,6 +29,42 @@
 
 ---
 
+## 新 PM / RD 快速上手（TL;DR）
+
+### 1) 先確認你要看哪個環境
+
+- **雲端（Linode / sslip.io / HTTP）**：最接近真實使用情境（含 gateway、DB、worker、網路延遲）
+- **本機（Docker 開發環境）**：最快能跑起來做功能驗證與開發
+
+### 2) 雲端（Linode）直接測試
+
+- 使用者介面：`http://app.172-237-5-254.sslip.io`
+- 系統方介面：`http://admin.172-237-5-254.sslip.io`
+- API Swagger：`http://api.172-237-5-254.sslip.io/docs`
+
+登入帳密：
+- Superuser：看 Linode 上的 `/opt/aihr/.env.production`（`FIRST_SUPERUSER_EMAIL` / `FIRST_SUPERUSER_PASSWORD`）
+
+### 3) RD 本機 10 分鐘跑起來（Docker）
+
+```bash
+cp .env.example .env
+make dev
+make migrate
+docker-compose exec web python scripts/initial_data.py
+```
+
+### 4) 跑一次最準的雲端 E2E（建議 RD）
+
+```powershell
+$env:AIHR_BASE_URL="http://api.172-237-5-254.sslip.io"
+$env:AIHR_SUPERUSER_EMAIL="<你的superuser email>"
+$env:AIHR_SUPERUSER_PASS="<你的superuser password>"
+C:/Users/User/Desktop/aihr/.venv/Scripts/python.exe scripts/live_e2e_test.py
+```
+
+---
+
 ## 系統簡介
 
 UniHR 採用**雙層架構**：
@@ -616,10 +652,12 @@ bash scripts/deploy_linode.sh
 6. ✅ 驗證服務狀態
 
 **部署後存取**（使用 sslip.io 臨時網域）：
-- **使用者介面**: http://app.172-237-11-179.sslip.io
-- **系統方介面**: http://admin.172-237-11-179.sslip.io
-- **API 文件**: http://api.172-237-11-179.sslip.io/docs
-- **Grafana**: http://grafana.172-237-11-179.sslip.io
+- **使用者介面**: http://app.172-237-5-254.sslip.io
+- **系統方介面**: http://admin.172-237-5-254.sslip.io
+- **API 文件**: http://api.172-237-5-254.sslip.io/docs
+- **Grafana**: http://grafana.172-237-5-254.sslip.io
+
+> 註：以上以 `172-237-5-254` 為例；若 Linode IP 有變更，sslip.io 網域也會跟著變。
 
 > 📖 **詳細文件**:
 > - [SSH 自動部署指南](docs/SSH_AUTO_DEPLOY.md) - 完整設定步驟與故障排除
@@ -648,9 +686,12 @@ docker compose -f docker-compose.prod.yml exec web python scripts/initial_data.p
 # 檢查所有容器運行狀態
 docker compose -f docker-compose.prod.yml ps
 
-# 健康檢查
-curl https://app.yourcompany.com/health
-curl https://admin.yourcompany.com/health
+# 健康檢查（sslip.io / HTTP）
+curl http://api.172-237-5-254.sslip.io/health
+
+# 若你已配置正式網域 + HTTPS，改用：
+# curl https://app.yourcompany.com/health
+# curl https://admin.yourcompany.com/health
 
 # 查看日誌
 docker compose -f docker-compose.prod.yml logs -f web
