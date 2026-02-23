@@ -2,6 +2,7 @@ import logging
 import json
 import re
 import asyncio
+from datetime import date
 from typing import Dict, Any, List, Optional, AsyncGenerator
 from uuid import UUID
 import uuid
@@ -481,7 +482,8 @@ class ChatOrchestrator:
         include_followup: bool = True,
     ) -> List[Dict[str, str]]:
         """組裝 LLM 的 messages 陣列（含歷史 + 檢索上下文）。"""
-        system_content = self.SYSTEM_PROMPT
+        today_str = f"{date.today().year}年{date.today().month}月{date.today().day}日"
+        system_content = f"今天日期：{today_str}\n\n" + self.SYSTEM_PROMPT
         if include_followup:
             system_content += self.FOLLOWUP_PROMPT
 
@@ -536,11 +538,13 @@ class ChatOrchestrator:
 
     @staticmethod
     def _build_calc_guidance(question: str) -> str:
+        today = date.today()
+        today_str = f"{today.year}年{today.month}月{today.day}日"
         hints: List[str] = []
         if "特休" in question or "特別休假" in question:
             hints.append("特休天數依勞基法第38條，按『實際到職日』計算年資，而非問題敘述中的概算。")
             hints.append("年資區間：未滿6個月=0天，6個月以上未滿1年=3天，1年=7天，2年=10天，3年=14天，5年=15天，10年以上每年+1天(最多30天)。")
-            hints.append("若問題含有具體到職日期，請計算到今天（2026年2月23日）的正確年資後再查對照表。")
+            hints.append(f"若問題含有具體到職日期，請計算到今天（{today_str}）的正確年資後再查對照表。")
         if "資遣費" in question:
             hints.append("資遣費公式：年資(年) × 0.5 × 月平均工資。不要把月薪除以30。")
             hints.append("年資若含月份，需換算為年並可四捨五入到 0.5 年再計算。")
