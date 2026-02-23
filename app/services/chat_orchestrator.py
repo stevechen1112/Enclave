@@ -41,7 +41,8 @@ class ChatOrchestrator:
 4. 若公司內規高於法定最低標準，屬合法且應明確指出
 5. 若參考資料中出現「測試陷阱／提醒／警示」，需依其內容修正結論並點出原因
 6. 使用結構化格式（標題、條列）讓回答清楚易讀
-7. 引用法律時，若參考資料包含具體條號（如第38條），**必須**引用到條號（例如：《勞動基準法》第38條），不能只寫法律名稱
+7. 引用法律時**必須**使用《法律名稱》第X條格式（例如：《勞動基準法》第38條），絕對不能只寫法律名稱。
+   若用戶訊息結尾有「⚠️ 以下法條已在參考資料中明確提及」的清單，每一條都必須出現在回答中
 8. 如果參考資料不足以回答，坦白說明並建議諮詢 HR 部門
 9. 使用繁體中文回答
 10. 需要數值計算時，請列出公式與代入值，嚴格依公式計算"""
@@ -270,7 +271,11 @@ class ChatOrchestrator:
                 for citation in labor_law["citations"]:
                     law_name = citation.get("law_name") or "勞動法規"
                     article = citation.get("article") or ""
-                    title = f"{law_name} {article}".strip()
+                    # 格式化為 《勞動基準法》第17條 形式
+                    if article:
+                        title = f"《{law_name}》第{article}" if not article.startswith("第") else f"《{law_name}》{article}"
+                    else:
+                        title = f"《{law_name}》"
                     context["sources"].append({
                         "type": "law",
                         "title": title,
@@ -284,12 +289,13 @@ class ChatOrchestrator:
                     if law_refs:
                         seen = set()
                         for law_name, article in law_refs[:5]:
-                            key = f"{law_name} {article}".strip()
-                            if key not in seen:
-                                seen.add(key)
+                            # 格式化為 《勞動基準法》第17條 形式
+                            title = f"《{law_name}》第{article}" if article else f"《{law_name}》"
+                            if title not in seen:
+                                seen.add(title)
                                 context["sources"].append({
                                     "type": "law",
-                                    "title": key,
+                                    "title": title,
                                     "snippet": answer_text[:200],
                                 })
                     else:
@@ -513,6 +519,16 @@ class ChatOrchestrator:
             user_content = f"對話歷史摘要：\n{history_summary}\n\n" + user_content
         if calc_guidance:
             user_content += f"\n\n計算與判斷提示：\n{calc_guidance}"
+        # 明確列出已找到的法條，要求 LLM 逐一引用
+        law_sources = [
+            s["title"] for s in context.get("sources", [])
+            if s.get("type") == "law" and "Core API" not in s.get("title", "")
+        ]
+        if law_sources:
+            user_content += (
+                f"\n\n⚠️ 以下法條已在參考資料中明確標示，請務必在回答中引用（不得省略）："
+                f"{'、'.join(law_sources)}"
+            )
         messages.append({"role": "user", "content": user_content})
 
         return messages
