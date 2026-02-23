@@ -30,6 +30,8 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [uploadCurrent, setUploadCurrent] = useState(0)
+  const [uploadTotal, setUploadTotal] = useState(0)
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
   const [selectedDept, setSelectedDept] = useState<string>('')
 
@@ -65,20 +67,31 @@ export default function DocumentsPage() {
   }, [docs, loadDocs])
 
   const onDrop = useCallback(async (files: File[]) => {
-    if (!files[0]) return
+    if (!files.length) return
     setUploading(true)
-    setProgress(0)
-    try {
-      await docApi.upload(files[0], setProgress)
-      toast.success('文件上傳成功，開始處理...')
-      loadDocs()
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '上傳失敗'
-      toast.error(msg)
-    } finally {
-      setUploading(false)
+    setUploadTotal(files.length)
+    let succeeded = 0
+    let failed = 0
+    for (let i = 0; i < files.length; i++) {
+      setUploadCurrent(i + 1)
       setProgress(0)
+      try {
+        await docApi.upload(files[i], setProgress)
+        succeeded++
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || '上傳失敗'
+        toast.error(`${files[i].name}：${msg}`)
+        failed++
+      }
     }
+    if (succeeded > 0) {
+      toast.success(files.length === 1 ? '文件上傳成功，開始處理...' : `${succeeded} 份文件上傳成功，開始處理...`)
+    }
+    setUploading(false)
+    setProgress(0)
+    setUploadTotal(0)
+    setUploadCurrent(0)
+    loadDocs()
   }, [loadDocs])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -86,10 +99,14 @@ export default function DocumentsPage() {
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
       'text/plain': ['.txt'],
+      'text/csv': ['.csv'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
     },
-    maxFiles: 1,
     disabled: !canManage || uploading,
+    multiple: true,
   })
 
   const handleDelete = async (doc: Document) => {
@@ -148,6 +165,9 @@ export default function DocumentsPage() {
             {uploading ? (
               <>
                 <Loader2 className="mb-3 h-8 w-8 animate-spin text-blue-600" />
+                {uploadTotal > 1 && (
+                  <p className="text-xs text-gray-500 mb-1">第 {uploadCurrent} / {uploadTotal} 份</p>
+                )}
                 <p className="text-sm font-medium text-gray-700">上傳中 {progress}%</p>
                 <div className="mt-2 h-2 w-48 overflow-hidden rounded-full bg-gray-200">
                   <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${progress}%` }} />
@@ -156,8 +176,8 @@ export default function DocumentsPage() {
             ) : (
               <>
                 <Upload className="mb-3 h-8 w-8 text-gray-400" />
-                <p className="text-sm font-medium text-gray-700">拖放文件到此處，或點擊選擇</p>
-                <p className="mt-1 text-xs text-gray-400">支援 PDF、DOCX、TXT（最大 50MB）</p>
+                <p className="text-sm font-medium text-gray-700">拖放文件到此處，或點擊選擇（支援多選）</p>
+                <p className="mt-1 text-xs text-gray-400">支援 PDF、DOCX、XLSX、CSV、TXT、JPG、PNG（最大 50MB）</p>
               </>
             )}
           </div>
