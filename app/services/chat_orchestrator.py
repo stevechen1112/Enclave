@@ -537,11 +537,18 @@ class ChatOrchestrator:
     @staticmethod
     def _build_calc_guidance(question: str) -> str:
         hints: List[str] = []
+        if "特休" in question or "特別休假" in question:
+            hints.append("特休天數依勞基法第38條，按『實際到職日』計算年資，而非問題敘述中的概算。")
+            hints.append("年資區間：未滿6個月=0天，6個月以上未滿1年=3天，1年=7天，2年=10天，3年=14天，5年=15天，10年以上每年+1天(最多30天)。")
+            hints.append("若問題含有具體到職日期，請計算到今天（2026年2月23日）的正確年資後再查對照表。")
         if "資遣費" in question:
             hints.append("資遣費公式：年資(年) × 0.5 × 月平均工資。不要把月薪除以30。")
             hints.append("年資若含月份，需換算為年並可四捨五入到 0.5 年再計算。")
-        if "加班" in question and "怎麼算" in question:
-            hints.append("平日加班：前 2 小時 1.34 倍，第 3-4 小時 1.67 倍。時薪=月薪/30/8。")
+        if "加班" in question:
+            hints.append("時薪計算：時薪 = 月薪 / 30 / 8（勞基法基準）。")
+            hints.append("平日加班費：前 2 小時每小時 × 1.34 倍，第 3 小時起每小時 × 1.67 倍。")
+            hints.append("休息日加班費：前 2 小時每小時 × 1.34 倍，第 3-8 小時每小時 × 1.67 倍，第 9 小時起 × 2.67 倍。")
+            hints.append("計算時必須分段計算，不可把全部時數都乘同一倍率。例如：平日加班 4 小時 = 前 2 小時 × 1.34 + 後 2 小時 × 1.67。")
         if "平均" in question and ("薪" in question or "月薪" in question):
             hints.append("平均值需使用所有符合條件的資料列，不要只取前幾筆。")
         if "占比" in question or "比例" in question:

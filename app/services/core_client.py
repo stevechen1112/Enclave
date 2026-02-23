@@ -13,7 +13,7 @@ class CoreAPIClient:
     def __init__(self):
         self.base_url = settings.CORE_API_URL
         self.service_token = settings.CORE_SERVICE_TOKEN
-        self.timeout = 8.0  # seconds（原 60s 過長，Core API 正常 <0.5s）
+        self.timeout = 25.0  # seconds（Core API 需呼叫 GPT-4o，實測 8-15s）
     
     @retry(
         stop=stop_after_attempt(2),
