@@ -486,8 +486,8 @@ async def rag_dashboard(
     days: int = Query(30, ge=1, le=365),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    """取得 RAG 品質儀表板數據（管理員）"""
-    if current_user.role not in ("owner", "admin"):
+    """取得 RAG 品質儀表板數據（owner / admin / hr）"""
+    if current_user.role not in ("owner", "admin", "hr"):
         raise HTTPException(status_code=403, detail="僅管理員可查看")
     return crud_chat.get_rag_dashboard(db, tenant_id=current_user.tenant_id, days=days)
 

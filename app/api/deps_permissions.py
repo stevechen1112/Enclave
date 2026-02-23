@@ -77,12 +77,12 @@ def check_audit_permission(user: User) -> None:
     """
     檢查稽核日誌與用量報表權限
     - superuser: 可查看
-    - owner, admin: 可查看
+    - owner, admin, hr: 可查看
     - 其他: 禁止
     """
     if user.is_superuser:
         return
-    if user.role not in ["owner", "admin"]:
+    if user.role not in ["owner", "admin", "hr"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="您沒有權限查看稽核日誌或用量報表"
