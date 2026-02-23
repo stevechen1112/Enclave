@@ -16,8 +16,8 @@ const navItems = [
   { to: '/branding', icon: Palette, label: '品牌設定', roles: ['owner', 'admin'] },
   { to: '/subscription', icon: CreditCard, label: '訂閱方案', roles: ['owner', 'admin'] },
   { to: '/custom-domains', icon: Globe, label: '自訂域名', roles: ['owner', 'admin'] },
-  { to: '/regions', icon: MapPin, label: '區域資訊' },
-  { to: '/rag-dashboard', icon: Gauge, label: 'RAG 儀表板', roles: ['owner', 'admin'] },
+  { to: '/regions', icon: MapPin, label: '區域資訊', roles: ['owner', 'admin'] },
+  { to: '/rag-dashboard', icon: Gauge, label: 'RAG 儀表板', roles: ['owner', 'admin', 'hr'] },
   { to: '/sso-settings', icon: KeyRound, label: 'SSO 設定', roles: ['owner', 'admin'] },
 ]
 

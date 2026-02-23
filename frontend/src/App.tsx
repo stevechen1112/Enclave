@@ -49,8 +49,8 @@ function AppRoutes() {
         <Route path="branding" element={<RoleGuard roles={['owner', 'admin']}><BrandingPage /></RoleGuard>} />
         <Route path="subscription" element={<RoleGuard roles={['owner', 'admin']}><SubscriptionPage /></RoleGuard>} />
         <Route path="custom-domains" element={<RoleGuard roles={['owner', 'admin']}><CustomDomainsPage /></RoleGuard>} />
-        <Route path="rag-dashboard" element={<RoleGuard roles={['owner', 'admin']}><RAGDashboardPage /></RoleGuard>} />
-        <Route path="regions" element={<RegionsPage />} />
+        <Route path="rag-dashboard" element={<RoleGuard roles={['owner', 'admin', 'hr']}><RAGDashboardPage /></RoleGuard>} />
+        <Route path="regions" element={<RoleGuard roles={['owner', 'admin']}><RegionsPage /></RoleGuard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
