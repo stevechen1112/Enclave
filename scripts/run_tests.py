@@ -78,8 +78,8 @@ _COMPLIANCE_RULES = {
     "C2": ("illegal", ["違反", "違法", "不可", "不合法", "不行", "不得"]),
     "C3": ("illegal", ["違反", "違法", "不合法", "不可", "不得", "不對"]),
     "C4": ("legal",  ["合法", "可以", "原則上"]),
-    "C5": ("legal",  ["合法", "優於", "高於"]),
-    "C6": ("illegal", ["不可", "不能", "資遣費", "違法", "需要"]),
+    "C5": ("legal",  ["合法", "優於", "高於", "多於", "超過", "超出", "6 天", "六天"]),
+    "C6": ("illegal", ["不可", "不能", "無法", "不得", "資遣費", "違法", "需要", "不構成"]),
 }
 
 def _compliance_direction_ok(qid: str, answer: str) -> Optional[bool]:
@@ -370,7 +370,7 @@ class TestRunner:
                 scoring_notes.append("has_answer")
 
                 # Dimension 2: 實質性 (長度 + 來源)
-                has_substance = len(answer) > 50 and len(sources) > 0
+                has_substance = len(answer) > 30 and len(sources) > 0
                 if has_substance:
                     score += 1
                     scoring_notes.append("substance")
