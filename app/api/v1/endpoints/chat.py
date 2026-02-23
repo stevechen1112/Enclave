@@ -1,7 +1,10 @@
 from typing import Any, List, Optional
 from uuid import UUID
 import json
+import logging
 import time
+
+logger = logging.getLogger(__name__)
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from fastapi.responses import StreamingResponse, Response
 from sqlalchemy.orm import Session
@@ -170,7 +173,9 @@ async def chat_stream(
             })
 
         except Exception as e:
+            logger.exception(f"chat_stream event_generator 錯誤: {e}")
             yield _sse({"type": "error", "content": f"處理失敗：{str(e)}"})
+
 
     headers = {
         "Cache-Control": "no-cache",
