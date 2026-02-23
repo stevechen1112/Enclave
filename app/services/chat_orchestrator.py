@@ -301,13 +301,18 @@ class ChatOrchestrator:
                     f"{c.get('law_name', '')} {c.get('article', '')}"
                     for c in labor_law["citations"]
                 )
-            context["context_parts"].append(
-                f"【勞動法規】{citations_text}\n{law_text}"
-            )
-
-        return context
-
-    # ──────────── T7-1: 串流生成 ────────────
+        elif law_text:
+            # Core API 不回傳結構化 citations，從 answer 文字解析法條做為 heading
+            parsed = re.findall(r'《(.+?)》(?:第([\d\-之]+條(?:之\d+)?))?', law_text)
+            seen_cit: set = set()
+            unique_cit: list = []
+            for law_n, art_n in parsed[:8]:
+                key = f"《{law_n}》第{art_n}條" if art_n else f"《{law_n}》"
+                if key not in seen_cit:
+                    seen_cit.add(key)
+                    unique_cit.append(key)
+            if unique_cit:
+                citations_text = "（法源：" + "、".join(unique_cit) + "）"
 
     async def stream_answer(
         self,
