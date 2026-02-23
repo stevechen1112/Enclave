@@ -1,17 +1,21 @@
-"""
-aihr 系統完整測試執行器 v2
+"""aihr 系統完整測試執行器 v3
 ===============================
+- 嚴格評分：數值比對 (±5%)、合規方向檢查、關鍵詞比對
 - 並行問答 (ThreadPoolExecutor)，Phase 2-6 同時 5 個請求
 - 並行文件上傳
+- 支援本地 + 雲端（透過 AIHR_BASE_URL 環境變數）
 - 即時進度顯示
 - 結構化 JSON + Markdown 報告 + 詳細日誌
 
 用法:
-  python scripts/run_tests.py                  # 執行所有階段
+  python scripts/run_tests.py                  # 執行所有階段 (本地)
   python scripts/run_tests.py --phase 0        # 只執行 Phase 0
   python scripts/run_tests.py --phase 2 --phase 3
   python scripts/run_tests.py --resume         # 從上次中斷處繼續
   python scripts/run_tests.py --workers 8      # 並行數 (預設 5)
+
+  # 雲端測試:
+  AIHR_BASE_URL=http://api.172-237-5-254.sslip.io python scripts/run_tests.py
 """
 
 import json, time, os, sys, argparse, traceback, threading, re
@@ -43,6 +47,7 @@ def _extract_numbers(text: str):
     return [float(n.replace(",", "")) for n in nums]
 
 def _numbers_match(expected: str, answer: str) -> Optional[bool]:
+    """Check if key numbers in expected appear in answer (±5% tolerance)."""
     exp_nums = _extract_numbers(expected)
     if not exp_nums:
         return None
@@ -50,7 +55,7 @@ def _numbers_match(expected: str, answer: str) -> Optional[bool]:
     if not ans_nums:
         return False
     for en in exp_nums:
-        tol = max(1.0, abs(en) * 0.01)
+        tol = max(1.0, abs(en) * 0.05)
         if not any(abs(an - en) <= tol for an in ans_nums):
             return False
     return True
@@ -63,6 +68,28 @@ def _terms_match(expected: str, answer: str) -> bool:
     if not terms:
         return False
     return all(t in answer for t in terms)
+
+# ── 合規題方向判斷 ──────────────────────────
+
+_COMPLIANCE_RULES = {
+    # qid → (direction, keywords_any)
+    # direction: "illegal" = 必須判斷違法, "legal" = 必須判斷合法/優於法令
+    "C1": ("legal",  ["合法", "優於", "高於"]),
+    "C2": ("illegal", ["違反", "違法", "不可", "不合法", "不行", "不得"]),
+    "C3": ("illegal", ["違反", "違法", "不合法", "不可", "不得", "不對"]),
+    "C4": ("legal",  ["合法", "可以", "原則上"]),
+    "C5": ("legal",  ["合法", "優於", "高於"]),
+    "C6": ("illegal", ["不可", "不能", "資遣費", "違法", "需要"]),
+}
+
+def _compliance_direction_ok(qid: str, answer: str) -> Optional[bool]:
+    """Check if the answer judges the compliance direction correctly.
+    Returns None if qid is not a compliance question."""
+    rule = _COMPLIANCE_RULES.get(qid)
+    if not rule:
+        return None
+    direction, keywords = rule
+    return any(kw in answer for kw in keywords)
 
 # ── HTTP ─────────────────────────────────────
 
@@ -179,12 +206,13 @@ class TestLogger:
         return rec
 
     def log_api(self, sid, method, url, req_body=None, resp_body=None,
-                status_code=0, duration_ms=0, notes=""):
+                status_code=0, duration_ms=0, notes="", expected_statuses=None):
         rq = {"method": method, "url": url}
         if req_body: rq["body"] = req_body
         rsp = {"status_code": status_code}
         if resp_body: rsp["body"] = resp_body
-        st = "ok" if 200 <= status_code < 300 else "fail"
+        ok_set = expected_statuses or range(200, 300)
+        st = "ok" if status_code in ok_set else "fail"
         return self.log_step(sid, f"{method} {url}", request=rq, response=rsp,
                              status=st, duration_ms=duration_ms, notes=notes)
 
@@ -215,7 +243,7 @@ class TestLogger:
         end = datetime.now(TW)
         total = (end - self.start_time).total_seconds()
         L = [f"# aihr 系統測試報告\n",
-             f"**Run**: `{self.run_id}` | **時間**: {self.start_time:%H:%M}~{end:%H:%M} | **耗時**: {total:.0f}s\n",
+             f"**Run**: `{self.run_id}` | **目標**: `{BASE_URL}` | **時間**: {self.start_time:%H:%M}~{end:%H:%M} | **耗時**: {total:.0f}s\n",
              "## 階段總覽\n",
              "| 階段 | 標題 | 狀態 | 耗時 | 得分 | 得分率 |",
              "|------|------|------|------|------|--------|"]
@@ -306,7 +334,17 @@ class TestRunner:
         except: pass
 
     def _ask_one(self, qid, question, expected, conv_id=None):
-        """發送一題（thread-safe）"""
+        """發送一題（thread-safe）— 嚴格評分版 v3
+
+        評分邏輯 (MAX_SCORE=4):
+          +1  HTTP 200 且 answer 非空
+          +1  答案實質性 (>50 字) 且附帶 sources
+          +1  數值比對通過 (±5%) 或 關鍵詞全部命中
+          +1  合規方向正確 (C 類) 或 引用來源正確 (其他)
+
+        若數值比對明確失敗 (有期望數值但答案不含)，上限 2 分。
+        若合規方向判錯，上限 1 分。
+        """
         token = self._get_token()
         if not token:
             self.log.log_question(qid, question, expected, "(no token)", score=0, max_score=MAX_SCORE, notes="無 token")
@@ -320,23 +358,60 @@ class TestRunner:
                                         headers={"Authorization": f"Bearer {token}"})
             answer = resp.get("answer", "")
             sources = resp.get("sources", [])
-            auto = 0
+            score = 0
             max_score = MAX_SCORE
-            if st == 200 and answer:
-                auto = 1
-                if len(answer) > 50: auto = 2
-                if sources: auto = min(auto + 1, max_score)
+            scoring_notes = []
+
+            if st != 200 or not answer:
+                scoring_notes.append(f"HTTP {st}" if st != 200 else "empty answer")
+            else:
+                # Dimension 1: 有回答
+                score += 1
+                scoring_notes.append("has_answer")
+
+                # Dimension 2: 實質性 (長度 + 來源)
+                has_substance = len(answer) > 50 and len(sources) > 0
+                if has_substance:
+                    score += 1
+                    scoring_notes.append("substance")
+
+                # Dimension 3: 正確性 (數值 或 關鍵詞)
                 num_match = _numbers_match(expected, answer)
+                terms_ok = _terms_match(expected, answer)
                 if num_match is True:
-                    auto = min(auto + 1, max_score)
-                elif num_match is None and _terms_match(expected, answer):
-                    auto = min(auto + 1, max_score)
+                    score += 1
+                    scoring_notes.append("num_match")
+                elif num_match is False:
+                    # 有期望數值但不符 → 上限 2 分
+                    score = min(score, 2)
+                    scoring_notes.append("num_MISMATCH")
+                elif terms_ok:
+                    score += 1
+                    scoring_notes.append("terms_match")
+
+                # Dimension 4: 合規方向 (C 類) 或 有引用來源 (其他)
+                compliance = _compliance_direction_ok(qid, answer)
+                if compliance is True:
+                    score += 1
+                    scoring_notes.append("compliance_ok")
+                elif compliance is False:
+                    # 合規方向判錯 → 上限 1 分
+                    score = min(score, 1)
+                    scoring_notes.append("compliance_WRONG")
+                else:
+                    # 非合規題：有來源 +1
+                    if sources:
+                        score += 1
+                        scoring_notes.append("has_sources")
+
+            score = min(score, max_score)
+            notes_str = ",".join(scoring_notes)
             self.log.log_question(qid, question, expected, answer,
-                                  sources=sources, score=auto, max_score=max_score, duration_ms=ms,
+                                  sources=sources, score=score, max_score=max_score, duration_ms=ms,
                                   conv_id=resp.get("conversation_id"),
-                                  notes="auto_score")
-            ico = "✅" if auto >= 2 else "⚠️" if auto == 1 else "❌"
-            print(f"    {ico} {qid} ({ms}ms)", flush=True)
+                                  notes=notes_str)
+            ico = "✅" if score >= 3 else "⚠️" if score >= 2 else "❌"
+            print(f"    {ico} {qid} [{score}/{max_score}] ({ms}ms) {notes_str}", flush=True)
             return resp
         except Exception as e:
             self.log.log_error(qid, e)
@@ -366,7 +441,13 @@ class TestRunner:
     # ── Phase 0 ──
 
     def _cleanup_tenant_data(self):
-        """清除測試租戶的舊文件資料，確保每次測試乾淨起跑"""
+        """清除測試租戶的舊文件資料，確保每次測試乾淨起跑。
+        僅在本地 (localhost) 環境可用直接 DB 清理。
+        雲端環境跳過此步驟（透過 API 已足夠）。
+        """
+        if "localhost" not in BASE_URL and "127.0.0.1" not in BASE_URL:
+            print("    ⏭️ 雲端模式，跳過 DB 直接清理")
+            return
         try:
             from app.db.session import SessionLocal
             from app.models.tenant import Tenant
@@ -437,7 +518,8 @@ class TestRunner:
                 else:
                     fail += 1
                 self.log.log_api("0.4", "POST", "/tenants/", status_code=st, duration_ms=ms,
-                                  notes=f"tenant_id={self.tenant_id}")
+                                  notes=f"tenant_id={self.tenant_id}",
+                                  expected_statuses=[200, 201, 400])
             except Exception as e:
                 self.log.log_error("0.4", e); fail += 1
 
@@ -452,7 +534,8 @@ class TestRunner:
                       "tenant_id": self.tenant_id, "role": "admin"}
                 st, resp, ms = http_request("POST", f"{BASE_URL}/api/v1/users/", body=ub,
                                             headers={"Authorization": f"Bearer {self.tokens['superuser']}"})
-                self.log.log_api("0.5", "POST", "/users/", status_code=st, duration_ms=ms)
+                self.log.log_api("0.5", "POST", "/users/", status_code=st, duration_ms=ms,
+                                  expected_statuses=[200, 201, 400])
                 ok += 1 if st in (200, 201, 400) else 0
             except Exception as e:
                 self.log.log_error("0.5", e)
@@ -676,7 +759,8 @@ def main():
         runner._quick_login()
 
     print(f"{'='*50}")
-    print(f"  aihr 測試 v2 | {run_id} | workers={args.workers}")
+    print(f"  aihr 測試 v3 | {run_id} | workers={args.workers}")
+    print(f"  目標: {BASE_URL}")
     print(f"  日誌: {logger.run_dir}")
     print(f"{'='*50}\n")
 

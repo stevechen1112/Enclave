@@ -38,20 +38,42 @@ class EmployeeRoster:
             )
             if not doc:
                 return None
-            chunk = (
+            chunks = (
                 db.query(DocumentChunk)
                 .filter(DocumentChunk.document_id == doc.id)
                 .order_by(DocumentChunk.chunk_index)
-                .first()
+                .all()
             )
-            if not chunk:
+            if not chunks:
                 return None
-            rows = EmployeeRoster._parse_rows(chunk.text)
+            texts = [c.text for c in chunks if c.text]
+            if not texts:
+                return None
+            merged_text = "\n".join(texts)
+            rows = EmployeeRoster._parse_rows(merged_text)
+            rows = EmployeeRoster._deduplicate_rows(rows)
             if not rows:
                 return None
             return EmployeeRoster(rows, doc.filename)
         finally:
             db.close()
+
+    @staticmethod
+    def _deduplicate_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        seen = set()
+        result: List[Dict[str, str]] = []
+        for row in rows:
+            emp_id = (row.get("員工編號") or "").strip()
+            name = (row.get("姓名") or "").strip()
+            dept = (row.get("部門") or "").strip()
+            salary = (row.get("月薪") or "").strip()
+            years = (row.get("年資(年)") or "").strip()
+            key = (emp_id, name, dept, salary, years)
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(row)
+        return result
 
     @staticmethod
     def _parse_rows(text: str) -> List[Dict[str, str]]:

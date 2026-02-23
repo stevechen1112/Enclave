@@ -128,6 +128,23 @@ def _pick_ocr_langs(preferred: str) -> Tuple[str, Optional[str]]:
 
     return "+".join(chosen), note
 
+
+def _normalize_llamaparse_language(lang: str) -> Optional[str]:
+    value = (lang or "").strip()
+    if not value:
+        return None
+    aliases = {
+        "ch_tra": "zh-TW",
+        "chi_tra": "zh-TW",
+        "zh_tw": "zh-TW",
+        "zh-tw": "zh-TW",
+        "ch_sim": "zh-CN",
+        "chi_sim": "zh-CN",
+        "zh_cn": "zh-CN",
+        "zh-cn": "zh-CN",
+    }
+    return aliases.get(value.lower(), value)
+
 def _ensure_llamaparse():
     """延遲載入 LlamaParse，只在第一次呼叫時 import"""
     global _HAS_LLAMAPARSE, _LlamaParseClient
@@ -1062,33 +1079,68 @@ class DocumentParser:
             return loop.run_until_complete(parser.aload_data(file_path))
 
         try:
-            params = {
+            language = _normalize_llamaparse_language(settings.LLAMAPARSE_LANGUAGE)
+
+            base_params = {
                 "api_key": api_key,
                 "result_type": settings.LLAMAPARSE_RESULT_TYPE,
                 "parsing_instruction": parsing_instruction,
-                "language": settings.LLAMAPARSE_LANGUAGE,
             }
+
+            attempts: List[Dict[str, Any]] = []
+
+            full = dict(base_params)
+            if language:
+                full["language"] = language
             if settings.LLAMAPARSE_AUTO_MODE:
-                params.update({
+                full.update({
                     "auto_mode": True,
                     "auto_mode_trigger_on_image_in_page": True,
                     "auto_mode_trigger_on_table_in_page": True,
                 })
+            attempts.append(full)
 
-            try:
-                documents = run_parse(params)
-            except Exception as e:
-                msg = str(e)
-                if "422" in msg or "Unprocessable" in msg:
-                    report.add_warning("LlamaParse 參數疑似不相容，改用精簡參數重試")
-                    minimal = {
-                        "api_key": api_key,
-                        "result_type": settings.LLAMAPARSE_RESULT_TYPE,
-                        "parsing_instruction": parsing_instruction,
-                    }
-                    documents = run_parse(minimal)
-                else:
+            no_auto = dict(base_params)
+            if language:
+                no_auto["language"] = language
+            attempts.append(no_auto)
+
+            no_language = dict(base_params)
+            attempts.append(no_language)
+
+            minimal_with_instruction = {
+                "api_key": api_key,
+                "result_type": settings.LLAMAPARSE_RESULT_TYPE,
+                "parsing_instruction": parsing_instruction,
+            }
+            attempts.append(minimal_with_instruction)
+
+            minimal = {
+                "api_key": api_key,
+                "result_type": settings.LLAMAPARSE_RESULT_TYPE,
+            }
+            attempts.append(minimal)
+
+            documents = []
+            last_error: Optional[Exception] = None
+            for i, params in enumerate(attempts, start=1):
+                try:
+                    documents = run_parse(params)
+                    if i > 1:
+                        report.add_warning(f"LlamaParse 使用相容參數重試成功（嘗試 {i}/{len(attempts)}）")
+                    break
+                except Exception as e:
+                    last_error = e
+                    msg = str(e)
+                    if "422" in msg or "Unprocessable" in msg:
+                        report.add_warning(
+                            f"LlamaParse 參數組合不相容（嘗試 {i}/{len(attempts)}），持續降級重試"
+                        )
+                        continue
                     raise
+
+            if not documents and last_error:
+                raise last_error
 
             if not documents:
                 report.add_warning("LlamaParse 返回空結果")

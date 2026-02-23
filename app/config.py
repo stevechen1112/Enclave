@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     LLAMAPARSE_API_KEY: str = ""
     LLAMAPARSE_ENABLED: bool = True  # 設為 False 可強制使用內建解析器
     LLAMAPARSE_RESULT_TYPE: str = "markdown"
-    LLAMAPARSE_LANGUAGE: str = "ch_tra"
+    LLAMAPARSE_LANGUAGE: str = "zh-TW"
     LLAMAPARSE_AUTO_MODE: bool = True
     
     # File Storage

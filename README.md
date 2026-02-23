@@ -63,6 +63,16 @@ $env:AIHR_SUPERUSER_PASS="<你的superuser password>"
 C:/Users/User/Desktop/aihr/.venv/Scripts/python.exe scripts/live_e2e_test.py
 ```
 
+### 5) 檢查本地與 Linode 設定一致性（建議上線前）
+
+```powershell
+# 只檢查本地 .env / .env.production
+python scripts/check_local_cloud_parity.py
+
+# 同時比對 Linode /opt/aihr/.env.production（遮罩顯示）
+python scripts/check_local_cloud_parity.py --host 172.237.5.254 --user root --key C:/Users/User/.ssh/id_rsa_linode
+```
+
 ---
 
 ## 系統簡介
