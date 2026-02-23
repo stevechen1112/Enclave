@@ -320,6 +320,8 @@ class ChatOrchestrator:
                 f"【勞動法規】{citations_text}\n{law_text}"
             )
 
+        return context
+
     async def stream_answer(
         self,
         question: str,
