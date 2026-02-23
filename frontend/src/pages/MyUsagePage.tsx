@@ -51,10 +51,10 @@ export default function MyUsagePage() {
   const [usage, setUsage] = useState<MyUsage | null>(null)
 
   useEffect(() => {
-    // Fetch personal usage from audit/usage APIs filtered by current user
+    // Fetch personal usage from personal-only endpoints (filtered by current user_id server-side)
     Promise.all([
-      api.get('/audit/usage/summary').then(r => r.data).catch(() => null),
-      api.get('/audit/usage/by-action').then(r => r.data).catch(() => []),
+      api.get('/audit/usage/me/summary').then(r => r.data).catch(() => null),
+      api.get('/audit/usage/me/by-action').then(r => r.data).catch(() => []),
     ]).then(([summary, byAction]) => {
       if (summary) {
         setUsage({

@@ -147,8 +147,11 @@ async def chat_stream(
             )
 
             # 記錄用量
-            input_tokens = len(request.question) // 4
-            output_tokens = len(clean_answer) // 4
+            # 輸入估算：問題 + 系統 prompt（~600 tokens） + context（從 context_parts 粗估）
+            context_text_len = sum(len(p) for p in ctx.get("context_parts", []))
+            SYSTEM_PROMPT_TOKENS = 600
+            input_tokens = SYSTEM_PROMPT_TOKENS + len(request.question) // 2 + context_text_len // 2
+            output_tokens = len(clean_answer) // 2
             if ctx.get("labor_law_raw") and ctx["labor_law_raw"].get("usage"):
                 usage = ctx["labor_law_raw"]["usage"]
                 input_tokens = usage.get("input_tokens", input_tokens)
@@ -158,7 +161,7 @@ async def chat_stream(
                 db,
                 tenant_id=current_user.tenant_id,
                 user_id=current_user.id,
-                action_type="chat",
+                action_type="chat_query",
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 pinecone_queries=1 if ctx["has_policy"] else 0,
@@ -260,8 +263,14 @@ async def chat(
     )
     
     # 6. 記錄用量
-    input_tokens = len(request.question) // 4  # 粗略估算
-    output_tokens = len(result["answer"]) // 4
+    # 輸入估算：系統 prompt（~600 tokens） + 問題 + context
+    context_text_len = sum(
+        len(p) for p in (result.get("company_policy") and
+            [result["company_policy"].get("content", "")] or [])
+    )
+    SYSTEM_PROMPT_TOKENS = 600
+    input_tokens = SYSTEM_PROMPT_TOKENS + len(request.question) // 2 + context_text_len // 2
+    output_tokens = len(result["answer"]) // 2
     pinecone_queries = 1 if result.get("company_policy") else 0
     
     # 從 labor_law 獲取實際 token 數（如果有）
@@ -274,7 +283,7 @@ async def chat(
         db,
         tenant_id=current_user.tenant_id,
         user_id=current_user.id,
-        action_type="chat",
+        action_type="chat_query",
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         pinecone_queries=pinecone_queries,

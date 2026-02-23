@@ -79,7 +79,7 @@ def get_usage_by_action(
 ) -> Any:
     """
     按操作類型統計用量
-    - 權限：owner, admin
+    - 權限：owner, admin, hr
     """
     # 權限檢查
     check_audit_permission(current_user)
@@ -91,6 +91,48 @@ def get_usage_by_action(
         end_date=end_date
     )
     return usage
+
+
+# ─── 個人用量端點（所有登入用戶可查詢自己的數據）───
+
+@router.get("/usage/me/summary", response_model=UsageSummary)
+def get_my_usage_summary(
+    db: Session = Depends(deps.get_db),
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    取得目前登入用戶的個人用量摘要
+    - 權限：所有登入用戶（只能查自己）
+    """
+    return crud_audit.get_usage_summary(
+        db,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+
+@router.get("/usage/me/by-action", response_model=List[UsageByActionType])
+def get_my_usage_by_action(
+    db: Session = Depends(deps.get_db),
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    取得目前登入用戶的個人用量（按類型分析）
+    - 權限：所有登入用戶（只能查自己）
+    """
+    return crud_audit.get_usage_by_action_type(
+        db,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
 
 @router.get("/usage/records", response_model=List[UsageRecord])

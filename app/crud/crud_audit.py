@@ -22,9 +22,9 @@ def create_audit_log(
         tenant_id=tenant_id,
         actor_user_id=actor_user_id,
         action=action,
-        resource_type=resource_type,
-        resource_id=resource_id,
-        details=details,
+        target_type=resource_type,    # model uses target_type
+        target_id=resource_id,        # model uses target_id
+        detail_json=details,          # model uses detail_json
         ip_address=ip_address
     )
     db.add(db_obj)
@@ -92,14 +92,17 @@ def get_usage_summary(
     db: Session,
     *,
     tenant_id: UUID,
+    user_id: Optional[UUID] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
 ) -> Dict[str, Any]:
     """
-    獲取租戶用量摘要
+    獲取租戶用量摘要（如指定 user_id 則只查該使用者個人用量）
     """
     query = db.query(UsageRecord).filter(UsageRecord.tenant_id == tenant_id)
     
+    if user_id:
+        query = query.filter(UsageRecord.user_id == user_id)
     if start_date:
         query = query.filter(UsageRecord.created_at >= start_date)
     if end_date:
@@ -130,14 +133,17 @@ def get_usage_by_action_type(
     db: Session,
     *,
     tenant_id: UUID,
+    user_id: Optional[UUID] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
 ) -> List[Dict[str, Any]]:
     """
-    按操作類型分組統計
+    按操作類型分組統計（如指定 user_id 則只查該使用者）
     """
     query = db.query(UsageRecord).filter(UsageRecord.tenant_id == tenant_id)
     
+    if user_id:
+        query = query.filter(UsageRecord.user_id == user_id)
     if start_date:
         query = query.filter(UsageRecord.created_at >= start_date)
     if end_date:

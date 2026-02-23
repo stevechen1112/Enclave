@@ -151,29 +151,36 @@ def upsert_feedback(
     return db_obj
 
 
-def get_feedback_stats(db: Session, tenant_id: UUID) -> Dict[str, Any]:
-    """取得回饋統計。"""
-    total = db.query(func.count(ChatFeedback.id)).filter(
+def get_feedback_stats(db: Session, tenant_id: UUID, since=None) -> Dict[str, Any]:
+    """取得回饋統計。since 如提供則只統計該日期後的資料。"""
+    q = db.query(func.count(ChatFeedback.id)).filter(
         ChatFeedback.tenant_id == tenant_id
-    ).scalar() or 0
+    )
+    if since:
+        q = q.filter(ChatFeedback.created_at >= since)
+    total = q.scalar() or 0
 
-    positive = db.query(func.count(ChatFeedback.id)).filter(
+    q2 = db.query(func.count(ChatFeedback.id)).filter(
         ChatFeedback.tenant_id == tenant_id,
         ChatFeedback.rating == 2,
-    ).scalar() or 0
+    )
+    if since:
+        q2 = q2.filter(ChatFeedback.created_at >= since)
+    positive = q2.scalar() or 0
 
     negative = total - positive
 
     # 差評原因分佈
-    category_rows = (
+    cat_q = (
         db.query(ChatFeedback.category, func.count(ChatFeedback.id))
         .filter(
             ChatFeedback.tenant_id == tenant_id,
             ChatFeedback.rating == 1,
         )
-        .group_by(ChatFeedback.category)
-        .all()
     )
+    if since:
+        cat_q = cat_q.filter(ChatFeedback.created_at >= since)
+    category_rows = cat_q.group_by(ChatFeedback.category).all()
     categories = [{"category": c or "other", "count": cnt} for c, cnt in category_rows]
 
     return {
@@ -280,8 +287,8 @@ def get_rag_dashboard(db: Session, tenant_id: UUID, days: int = 30) -> Dict[str,
         {"date": str(row.date), "count": row.count} for row in daily_rows
     ]
 
-    # 6. 回饋統計
-    feedback = get_feedback_stats(db, tenant_id)
+    # 6. 回饋統計（同步對齊 days 範圍）
+    feedback = get_feedback_stats(db, tenant_id, since=since)
 
     # 7. 延遲分佈
     p50 = _percentile_latency(db, tenant_id, since, 0.50)
