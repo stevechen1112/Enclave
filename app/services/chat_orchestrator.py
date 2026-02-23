@@ -232,14 +232,14 @@ class ChatOrchestrator:
         if has_policy:
             top_policies = company_policy["results"][:3]
             context["company_policy_raw"] = {
-                "content": top_policies[0]["content"],
-                "source": top_policies[0]["filename"],
-                "relevance_score": top_policies[0]["score"],
+                "content": top_policies[0].get("content") or "",
+                "source": top_policies[0].get("filename") or "",
+                "relevance_score": top_policies[0].get("score") or 0,
                 "all_results": [
                     {
-                        "content": r["content"][:500],
-                        "filename": r["filename"],
-                        "score": r["score"],
+                        "content": (r.get("content") or "")[:500],
+                        "filename": r.get("filename") or "",
+                        "score": r.get("score") or 0,
                     }
                     for r in top_policies
                 ],
@@ -247,13 +247,16 @@ class ChatOrchestrator:
             for r in top_policies:
                 context["sources"].append({
                     "type": "policy",
-                    "title": r["filename"],
-                    "snippet": r["content"][:200],
-                    "score": r["score"],
+                    "title": r.get("filename") or "",
+                    "snippet": (r.get("content") or "")[:200],
+                    "score": r.get("score") or 0,
                 })
             for i, r in enumerate(top_policies, 1):
+                content = r.get("content") or ""
+                filename = r.get("filename") or ""
+                score = r.get("score") or 0
                 context["context_parts"].append(
-                    f"【公司內規 #{i}】（來源：{r['filename']}，相關度：{r['score']:.2f}）\n{r['content']}"
+                    f"【公司內規 #{i}】（來源：{filename}，相關度：{score:.2f}）\n{content}"
                 )
 
         if has_labor_law:
@@ -274,7 +277,7 @@ class ChatOrchestrator:
                     })
             else:
                 # Core API 不回傳結構化 citations，從回答文字中解析法條引用
-                answer_text = labor_law.get("answer", "")
+                answer_text = labor_law.get("answer") or ""
                 if answer_text:
                     law_refs = re.findall(r'《(.+?)》(?:第(\d+[-之]?\d*條?))?', answer_text)
                     if law_refs:
