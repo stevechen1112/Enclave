@@ -82,10 +82,17 @@ class ChatOrchestrator:
 
         async def get_company_policy():
             try:
-                results = self.kb_retriever.search(
-                    tenant_id=tenant_id,
-                    query=question,
-                    top_k=top_k,
+                # run_in_executor：search() 含同步 Voyage embed/rerank 呼叫
+                # 若直接在 async def 中呼叫會阻塞 event loop，
+                # 導致 asyncio.gather() 無法真正並行。
+                loop = asyncio.get_event_loop()
+                results = await loop.run_in_executor(
+                    None,
+                    lambda: self.kb_retriever.search(
+                        tenant_id=tenant_id,
+                        query=question,
+                        top_k=top_k,
+                    ),
                 )
                 return {"status": "success", "results": results}
             except Exception as e:
@@ -106,8 +113,12 @@ class ChatOrchestrator:
             asyncio.create_task(get_labor_law()),
         )
 
-        # 內規補強：根據問題關鍵字做檔名導向檢索
-        boosted_results = self._policy_boost_search(tenant_id, question, top_k)
+        # 內規補強：根據問題關鍵字做檔名導向檢索（同樣用 executor 避免阻塞）
+        loop = asyncio.get_event_loop()
+        boosted_results = await loop.run_in_executor(
+            None,
+            lambda: self._policy_boost_search(tenant_id, question, top_k),
+        )
         if boosted_results:
             base_results = company_policy_result.get("results", [])
             merged = self._merge_policy_results(base_results, boosted_results, top_k)
@@ -337,14 +348,22 @@ class ChatOrchestrator:
 
     # ──────────── T7-2: 多輪對話支援 ────────────
 
+    # 需要上下文補全的代名詞／指示詞
+    _CONTEXT_PRONOUNS = ("他", "她", "它", "他的", "她的", "他們", "她們",
+                         "這個人", "那個人", "此人", "該員工", "同一", "上述", "前述")
+
     async def contextualize_query(
         self, query: str, history: List[Dict[str, str]]
     ) -> str:
         """
         用 LLM 將含代名詞/省略主詞的查詢改寫為獨立查詢。
-        若歷史為空或 LLM 不可用，直接回傳原 query。
+        若歷史為空、LLM 不可用、或問題不含指代詞，直接回傳原 query。
         """
         if not history or not self._openai_async:
+            return query
+
+        # 智慧跳過：問題不含代名詞/指示詞時無需 LLM 改寫（節省 ~0.9s）
+        if not any(p in query for p in self._CONTEXT_PRONOUNS):
             return query
 
         messages = [

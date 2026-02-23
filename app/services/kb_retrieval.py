@@ -545,48 +545,11 @@ class KnowledgeBaseRetriever:
 
     def _expand_query(self, query: str) -> Optional[str]:
         """
-        使用 LLM 生成假設文件來擴展查詢。
+        HyDE 查詢擴展（已停用）。
 
-        HyDE 原理：讓 LLM 先「想像」一份可能回答問題的文件片段，
-        再用這個假設文件做語意搜尋，比直接用問題搜尋更精確。
-
-        例如：
-          問題: 「特休怎麼算？」
-          假設文件: 「特別休假天數依勞工在同一雇主或事業單位繼續工作滿
-                     一定期間者：六個月以上一年未滿者，三日；一年以上
-                     二年未滿者，七日... 公司年假制度規定...」
-
-        這樣即使文件中寫的是「年假」而非「特休」，也能搜尋到。
-
-        Returns:
-            擴展後的查詢文本，或 None（若 LLM 不可用）。
+        效能分析：此方法為同步阻塞 OpenAI 呼叫（~1.1s），且 search() 是
+        同步函式，在 asyncio.gather() 中無法真正並行，導致每次問答
+        額外增加 2.2s 延遲。在 voyage-4-lite + rerank 已有效的情況下，
+        HyDE 的精度增益不足以抵消延遲代價，故停用。
         """
-        if not self._openai:
-            return None
-
-        try:
-            response = self._openai.chat.completions.create(
-                model=getattr(settings, "OPENAI_MODEL", "gpt-4o-mini"),
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "你是台灣人資專家。根據使用者的問題，"
-                            "寫一段 50-100 字的假設文件片段，模擬公司人事規章或"
-                            "勞動法規中可能出現的相關段落。"
-                            "只輸出文件片段，不要解釋。"
-                        ),
-                    },
-                    {"role": "user", "content": query},
-                ],
-                temperature=0.5,
-                max_tokens=200,
-            )
-            hypothetical_doc = response.choices[0].message.content.strip()
-            # 將原始查詢與假設文件合併（原始查詢保留語意意圖）
-            expanded = f"{query}\n\n{hypothetical_doc}"
-            logger.debug(f"HyDE 查詢擴展: {query} → +{len(hypothetical_doc)} chars")
-            return expanded
-        except Exception as e:
-            logger.warning(f"HyDE 查詢擴展失敗: {e}")
-            return None
+        return None
