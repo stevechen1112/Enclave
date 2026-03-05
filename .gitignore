@@ -37,6 +37,19 @@ htmlcov/
 uploads/*
 !uploads/.gitkeep
 
+# ---------- 測試產出（保留目錄結構）----------
+test-results/*
+!test-results/.gitkeep
+test-uploads/*
+!test-uploads/.gitkeep
+
+# ---------- 效能基準測試快取 ----------
+.benchmarks/
+
+# ---------- 開發日誌 ----------
+artifacts/logs/*
+!artifacts/logs/.gitkeep
+
 # ---------- 編輯器 / IDE ----------
 .vscode/
 .idea/
