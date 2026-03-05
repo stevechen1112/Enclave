@@ -19,6 +19,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from pydantic import BaseModel
 
 from app.api import deps
 from app.api.deps_permissions import require_admin
@@ -26,8 +27,19 @@ from app.crud import crud_tenant, crud_audit
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.audit import UsageRecord
+from app.services.deployment_mode import (
+    DEPLOYMENT_MODE_GPU,
+    DEPLOYMENT_MODE_NOGPU,
+    get_deployment_mode,
+    resolve_runtime_profiles,
+    set_deployment_mode,
+)
 
 router = APIRouter()
+
+
+class DeploymentModeUpdate(BaseModel):
+    mode: str
 
 
 def _require_same_tenant(current_user: User, target_tenant_id: UUID) -> None:
@@ -95,6 +107,44 @@ def company_quota(
 ) -> Any:
     """公司配額狀態"""
     return crud_tenant.get_quota_status(db, current_user.tenant_id)
+
+
+@router.get("/deployment-mode")
+def get_company_deployment_mode(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_admin),
+) -> Any:
+    """取得目前部署模式與生效中的 LLM preset。"""
+    mode = get_deployment_mode(db)
+    profiles = resolve_runtime_profiles(db)
+    return {
+        "mode": mode,
+        "supported_modes": [DEPLOYMENT_MODE_NOGPU, DEPLOYMENT_MODE_GPU],
+        "profiles": profiles,
+        "updated_by": str(current_user.id),
+    }
+
+
+@router.put("/deployment-mode")
+def update_company_deployment_mode(
+    payload: DeploymentModeUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_admin),
+) -> Any:
+    """切換部署模式：nogpu（沿用現有設定）/ gpu（固定 Qwen3 + bge-m3）。"""
+    try:
+        mode = set_deployment_mode(db, payload.mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    profiles = resolve_runtime_profiles(db)
+    return {
+        "ok": True,
+        "mode": mode,
+        "profiles": profiles,
+        "message": "部署模式已更新，下一次請求立即生效",
+        "updated_by": str(current_user.id),
+    }
 
 
 # ─── User Management ────────────────────────────────────────────────────────

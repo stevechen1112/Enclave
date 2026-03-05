@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, AsyncGenerator
 from uuid import UUID
 import uuid
 from app.config import settings
+from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.services.kb_retrieval import KnowledgeBaseRetriever
 from app.services.structured_answers import try_structured_answer
 
@@ -52,13 +53,16 @@ class ChatOrchestrator:
     
     def __init__(self):
         self.kb_retriever = KnowledgeBaseRetriever()
+        runtime = resolve_runtime_profiles_no_db()
 
         # LLM client（依 LLM_PROVIDER 決定後端）— 用於 RAG 問答（需要強 LLM）
         self._openai = None
         self._openai_async = None
         self._llm_model = "gpt-4o-mini"
 
-        provider = getattr(settings, "LLM_PROVIDER", "openai").lower()
+        main_cfg = runtime.get("main", {})
+        provider = str(main_cfg.get("provider", getattr(settings, "LLM_PROVIDER", "openai"))).lower()
+        main_model = str(main_cfg.get("model", ""))
 
         if _HAS_OPENAI:
             if provider == "gemini":
@@ -67,22 +71,28 @@ class ChatOrchestrator:
                     _base = "https://generativelanguage.googleapis.com/v1beta/openai/"
                     self._openai = openai_lib.OpenAI(api_key=api_key, base_url=_base)
                     self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base)
-                    self._llm_model = getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
+                    self._llm_model = main_model or getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
             elif provider == "openai":
                 api_key = getattr(settings, "OPENAI_API_KEY", "")
                 if api_key:
                     self._openai = openai_lib.OpenAI(api_key=api_key)
                     self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key)
-                    self._llm_model = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
+                    self._llm_model = main_model or getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
+            elif provider == "ollama":
+                ollama_url = str(main_cfg.get("base_url", getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")))
+                self._openai = openai_lib.OpenAI(api_key="ollama", base_url=f"{ollama_url.rstrip('/')}/v1/")
+                self._openai_async = openai_lib.AsyncOpenAI(api_key="ollama", base_url=f"{ollama_url.rstrip('/')}/v1/")
+                self._llm_model = main_model or getattr(settings, "OLLAMA_MODEL", "llama3.2")
 
         # Internal LLM（用於 contextualize 改寫等輕量任務，走本地 Ollama 省錢）
         self._internal_async = None
         self._internal_model = None
-        internal_provider = getattr(settings, "INTERNAL_LLM_PROVIDER", "ollama").lower()
+        internal_cfg = runtime.get("internal", {})
+        internal_provider = str(internal_cfg.get("provider", getattr(settings, "INTERNAL_LLM_PROVIDER", "ollama"))).lower()
 
         if _HAS_OPENAI and internal_provider == "ollama":
-            ollama_url = getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")
-            self._internal_model = getattr(settings, "INTERNAL_OLLAMA_MODEL", "gemma3:27b")
+            ollama_url = str(internal_cfg.get("base_url", getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")))
+            self._internal_model = str(internal_cfg.get("model", getattr(settings, "INTERNAL_OLLAMA_MODEL", "gemma3:27b")))
             self._internal_async = openai_lib.AsyncOpenAI(
                 api_key="ollama",  # Ollama 不需要真實 key
                 base_url=f"{ollama_url.rstrip('/')}/v1/",
@@ -96,12 +106,12 @@ class ChatOrchestrator:
                 self._internal_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base)
             else:
                 self._internal_async = self._openai_async
-            self._internal_model = getattr(settings, "INTERNAL_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+            self._internal_model = str(internal_cfg.get("model", getattr(settings, "INTERNAL_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")))
             logger.info("ChatOrchestrator internal LLM: Gemini(%s)", self._internal_model)
         elif internal_provider == "openai":
             # 內部任務走 OpenAI，使用獨立模型
             self._internal_async = self._openai_async
-            self._internal_model = getattr(settings, "INTERNAL_OPENAI_MODEL", "gpt-4o-mini")
+            self._internal_model = str(internal_cfg.get("model", getattr(settings, "INTERNAL_OPENAI_MODEL", "gpt-4o-mini")))
             logger.info("ChatOrchestrator internal LLM: OpenAI(%s)", self._internal_model)
         else:
             # 其他未知 provider — 退回主 LLM 客戶端

@@ -25,6 +25,7 @@ from typing import AsyncIterator, Iterator, Optional
 import httpx
 
 from app.config import settings
+from app.services.deployment_mode import resolve_runtime_profiles_no_db
 
 logger = logging.getLogger(__name__)
 
@@ -214,22 +215,22 @@ _llm_instance: Optional[LLMClient] = None
 
 
 def get_llm() -> LLMClient:
-    """取得全域 LLMClient 單例（延遲初始化）。"""
-    global _llm_instance
-    if _llm_instance is None:
-        _llm_instance = LLMClient()
-    return _llm_instance
+    """依目前 deployment mode 取得 LLMClient（每次請求重新解析 preset）。"""
+    profiles = resolve_runtime_profiles_no_db()
+    main = profiles.get("main", {})
+    provider = str(main.get("provider", getattr(settings, "LLM_PROVIDER", "openai"))).lower()
+    model = str(main.get("model", "")) or None
+    base_url = None
+    if provider == "ollama":
+        base_url = str(main.get("base_url", getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")))
+    return LLMClient(provider=provider, model=model, base_url=base_url)
 
 
 # 方便直接 from app.services.llm_client import llm 使用
 class _LazyLLM:
     """Lazy proxy，首次呼叫時才初始化 LLMClient。"""
-    _instance: Optional[LLMClient] = None
-
     def _get(self) -> LLMClient:
-        if self._instance is None:
-            self._instance = LLMClient()
-        return self._instance
+        return get_llm()
 
     def complete(self, *args, **kwargs) -> str:
         return self._get().complete(*args, **kwargs)

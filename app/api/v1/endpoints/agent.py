@@ -39,6 +39,7 @@ from app.api.deps import get_current_active_user, get_db
 from app.config import settings
 from app.models.watch_folder import WatchFolder
 from app.agent.review_queue import ReviewQueueManager
+from app.services.deployment_mode import resolve_runtime_profiles_no_db
 
 logger = logging.getLogger(__name__)
 
@@ -518,18 +519,20 @@ async def scan_preview_folders(
     """
     _admin_only(current_user)
 
-    scan_provider: str = getattr(settings, "SCAN_LLM_PROVIDER", "ollama").lower()
+    runtime = resolve_runtime_profiles_no_db()
+    scan_cfg = runtime.get("scan", {})
+    scan_provider: str = str(scan_cfg.get("provider", getattr(settings, "SCAN_LLM_PROVIDER", "ollama"))).lower()
     results: List[dict] = []
 
     if scan_provider in ("gemini", "openai"):
         # ── 雲端模式 ────────────────────────────────────────
         if scan_provider == "gemini":
             api_key: str = getattr(settings, "GEMINI_API_KEY", "")
-            model_name: str = getattr(settings, "SCAN_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+            model_name: str = str(scan_cfg.get("model", getattr(settings, "SCAN_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")))
             base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
         else:  # openai
             api_key = getattr(settings, "OPENAI_API_KEY", "")
-            model_name = getattr(settings, "SCAN_OPENAI_MODEL", "gpt-4o-mini")
+            model_name = str(scan_cfg.get("model", getattr(settings, "SCAN_OPENAI_MODEL", "gpt-4o-mini")))
             base_url = "https://api.openai.com/v1/"
 
         if not api_key:
@@ -557,8 +560,8 @@ async def scan_preview_folders(
             )
     else:
         # ── Ollama 模式（預設）─────────────────────────────
-        ollama_url: str = getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")
-        model: str = getattr(settings, "OLLAMA_SCAN_MODEL", "gemma3:27b")
+        ollama_url: str = str(scan_cfg.get("base_url", getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")))
+        model: str = str(scan_cfg.get("model", getattr(settings, "OLLAMA_SCAN_MODEL", "gemma3:27b")))
 
         async with httpx.AsyncClient(timeout=90.0) as http_client:
             for sf in payload.subfolders:

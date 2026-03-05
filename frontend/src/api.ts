@@ -189,6 +189,8 @@ export const companyApi = {
   systemHealth: () => api.get('/admin/system/health').then(r => r.data),
   usageSummary: () => api.get('/audit/usage/summary').then(r => r.data),
   usageByUser: () => api.get('/audit/usage/by-action').then(r => r.data),
+  getDeploymentMode: () => api.get('/company/deployment-mode').then(r => r.data),
+  setDeploymentMode: (mode: 'gpu' | 'nogpu') => api.put('/company/deployment-mode', { mode }).then(r => r.data),
 }
 
 // ─── Phase 13: KB Maintenance ───

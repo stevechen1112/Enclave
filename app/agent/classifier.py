@@ -308,13 +308,17 @@ def get_classifier() -> DocumentClassifier:
     if _classifier is None:
         try:
             from app.services.llm_client import LLMClient
-            from app.config import settings
+            from app.services.deployment_mode import resolve_runtime_profiles_no_db
             # 分類器使用 INTERNAL_LLM_PROVIDER（預設 Ollama），不消耗雲端 API 額度
-            internal_provider = getattr(settings, "INTERNAL_LLM_PROVIDER", "ollama")
+            runtime = resolve_runtime_profiles_no_db()
+            internal_cfg = runtime.get("internal", {})
+            internal_provider = str(internal_cfg.get("provider", "ollama")).lower()
             if internal_provider == "ollama":
-                ollama_url = getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")
-                ollama_model = getattr(settings, "INTERNAL_OLLAMA_MODEL", "gemma3:27b")
+                ollama_url = str(internal_cfg.get("base_url", "http://host.docker.internal:11434"))
+                ollama_model = str(internal_cfg.get("model", "gemma3:27b"))
                 llm = LLMClient(provider="ollama", model=ollama_model, base_url=ollama_url)
+            elif internal_provider in ("gemini", "openai"):
+                llm = LLMClient(provider=internal_provider, model=str(internal_cfg.get("model", "")) or None)
             else:
                 llm = LLMClient()
             _classifier = DocumentClassifier(llm_client=llm)

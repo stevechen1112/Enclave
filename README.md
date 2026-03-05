@@ -354,6 +354,26 @@ GET /api/v1/agent/review  →  審核員看到佇列
   GET  /api/v1/agent/batches/report  →  PDF 批次報告
 ```
 
+### 3.5 部署模式切換（GPU / NoGPU 固定策略）
+
+管理者可在「公司管理 → 部署模式」切換執行策略，切換後**下一次請求立即生效**（不需重啟）。
+
+```
+NoGPU 模式（沿用目前 .env）
+  ①② 主 LLM      → 依 LLM_PROVIDER / GEMINI_MODEL / OPENAI_MODEL
+  ③ 內部改寫      → 依 INTERNAL_* 設定
+  ④ 掃描摘要      → 依 SCAN_* 設定
+  ⑤ Embedding    → 依 EMBEDDING_PROVIDER 設定
+
+GPU 模式（固定 preset）
+  ①② 主 LLM      → ollama / qwen3:14b
+  ③ 內部改寫      → ollama / qwen3:14b
+  ④ 掃描摘要      → ollama / qwen3:14b
+  ⑤ Embedding    → ollama / bge-m3:latest
+```
+
+> 模式值儲存在 `feature_flags.key=deployment_mode` 的 metadata，不需修改 `.env`。
+
 ### 4. 內容生成流程
 
 ```
@@ -526,6 +546,8 @@ curl -X POST http://localhost:8000/api/v1/users/ \
 > 系統有 **5 個獨立 LLM 槽位**，可分別設定不同模型與提供商：  
 > ①② 問答/生成（`LLM_PROVIDER`）、③ 查詢改寫（`INTERNAL_LLM_PROVIDER`）、  
 > ④ 掃資料夾摘要（`SCAN_LLM_PROVIDER`）、⑤ 向量化（`EMBEDDING_PROVIDER`）
+
+> 補充：若 `deployment_mode=gpu`，系統會覆蓋為固定 Qwen preset（主/副/掃描 `qwen3:14b`、Embedding `bge-m3:latest`）。
 
 **主力 LLM（① ② 問答 + 生成）**
 
@@ -809,6 +831,8 @@ PDF, DOCX, DOC, XLSX, XLS, PPTX, PPT, TXT, MD, CSV, JSON, XML, HTML, RTF, ODT, O
 | DELETE | `/company/users/{user_id}` | 停用成員 | admin |
 | GET | `/company/usage/summary` | 組織用量摘要 | admin |
 | GET | `/company/usage/by-user` | 每位使用者用量明細 | admin |
+| GET | `/company/deployment-mode` | 取得目前部署模式與生效中的 LLM preset | admin |
+| PUT | `/company/deployment-mode` | 切換部署模式（`gpu` / `nogpu`） | admin |
 
 ---
 

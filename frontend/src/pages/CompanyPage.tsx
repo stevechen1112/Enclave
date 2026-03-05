@@ -5,9 +5,10 @@ import {
   MessageSquare, UserPlus, MoreVertical,
   BarChart3, CheckCircle2,
   Mail, Eye, EyeOff,
+  Cpu, Cloud,
 } from 'lucide-react'
 
-type Tab = 'dashboard' | 'users'
+type Tab = 'dashboard' | 'users' | 'deployment'
 
 // ─── Shared ───
 function Loader() {
@@ -276,6 +277,78 @@ function DropdownMenu({ onEdit, onDeactivate, disabled }: { onEdit: () => void; 
   )
 }
 
+function DeploymentTab() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [mode, setMode] = useState<'gpu' | 'nogpu'>('nogpu')
+  const [msg, setMsg] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setMsg('')
+    try {
+      const data = await companyApi.getDeploymentMode()
+      setMode((data?.mode || 'nogpu') as 'gpu' | 'nogpu')
+    } catch {
+      setMsg('無法讀取部署模式')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { void load() }, [load])
+
+  const switchMode = async (next: 'gpu' | 'nogpu') => {
+    if (next === mode) return
+    setSaving(true)
+    setMsg('')
+    try {
+      await companyApi.setDeploymentMode(next)
+      setMode(next)
+      setMsg(`已切換為 ${next === 'gpu' ? 'GPU 模式' : '無 GPU 模式'}（下一次請求立即生效）`)
+    } catch (err: any) {
+      setMsg(err.response?.data?.detail || '切換失敗')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (loading) return <Loader />
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-gray-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-gray-800">部署模式切換（固定策略）</h3>
+        <p className="mt-1 text-sm text-gray-500">切換後會套用固定 LLM preset；不提供自由選模型，避免誤設。</p>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <button
+            disabled={saving}
+            onClick={() => switchMode('nogpu')}
+            className={`rounded-xl border p-4 text-left transition ${mode === 'nogpu' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} disabled:opacity-60`}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800"><Cloud className="h-4 w-4" /> 無 GPU（目前雲端設定）</div>
+            <div className="mt-2 text-xs text-gray-600">①② Gemini、③④ Gemini Flash-Lite；其餘維持目前 .env 設定</div>
+          </button>
+
+          <button
+            disabled={saving}
+            onClick={() => switchMode('gpu')}
+            className={`rounded-xl border p-4 text-left transition ${mode === 'gpu' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} disabled:opacity-60`}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800"><Cpu className="h-4 w-4" /> 有 GPU（固定本地）</div>
+            <div className="mt-2 text-xs text-gray-600">主/副/掃描皆固定 qwen3:14b，Embedding 固定 bge-m3:latest</div>
+          </button>
+        </div>
+
+        {msg && (
+          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{msg}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Usage Tab moved to unified UsagePage ───
 
 // ═══ Main Page ═══
@@ -285,6 +358,7 @@ export default function CompanyPage() {
   const tabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: 'dashboard', label: '總覽', icon: Building2 },
     { key: 'users', label: '成員管理', icon: Users },
+    { key: 'deployment', label: '部署模式', icon: Cpu },
   ]
 
   return (
@@ -314,6 +388,7 @@ export default function CompanyPage() {
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'dashboard' && <DashboardTab />}
         {tab === 'users' && <UsersTab />}
+        {tab === 'deployment' && <DeploymentTab />}
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ from app.config import settings
 from app.db.session import SessionLocal
 from app.crud import crud_document
 from app.services.document_parser import DocumentParser, TextChunker
+from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.schemas.document import DocumentUpdate
 from app.models.document import DocumentChunk
 
@@ -20,23 +21,22 @@ logger = logging.getLogger(__name__)
 
 # ── Embedding helpers ────────────────────────────────────────────────────────
 
-def _embed_voyage(texts: List[str], input_type: str = "document") -> List[List[float]]:
+def _embed_voyage(texts: List[str], model: str, input_type: str = "document") -> List[List[float]]:
     """Cloud embedding via Voyage AI API."""
     import voyageai
     client = voyageai.Client(api_key=settings.VOYAGE_API_KEY)
     all_embeddings: List[List[float]] = []
     batch_size = 32
     for i in range(0, len(texts), batch_size):
-        result = client.embed(texts[i:i + batch_size], model=settings.VOYAGE_MODEL, input_type=input_type)
+        result = client.embed(texts[i:i + batch_size], model=model, input_type=input_type)
         all_embeddings.extend(result.embeddings)
         time.sleep(0.5)
     return all_embeddings
 
 
-def _embed_ollama(texts: List[str], _input_type: str = "document") -> List[List[float]]:
+def _embed_ollama(texts: List[str], model: str, _input_type: str = "document") -> List[List[float]]:
     """Local embedding via Ollama /api/embed endpoint (bge-m3 etc.)."""
     url = f"{settings.OLLAMA_EMBED_URL}/api/embed"
-    model = settings.OLLAMA_EMBED_MODEL
     all_embeddings: List[List[float]] = []
     batch_size = 16  # Ollama handles batch natively
     with httpx.Client(timeout=120.0) as client:
@@ -50,13 +50,16 @@ def _embed_ollama(texts: List[str], _input_type: str = "document") -> List[List[
 
 def embed_texts(texts: List[str], input_type: str = "document") -> List[List[float]]:
     """Route to the configured embedding provider."""
-    provider = getattr(settings, "EMBEDDING_PROVIDER", "voyage")
+    runtime = resolve_runtime_profiles_no_db()
+    embed_cfg = runtime.get("embedding", {})
+    provider = str(embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))).lower()
+    model = str(embed_cfg.get("model", settings.VOYAGE_MODEL if provider == "voyage" else settings.OLLAMA_EMBED_MODEL))
     if provider == "ollama":
-        return _embed_ollama(texts, input_type)
+        return _embed_ollama(texts, model, input_type)
     else:
         if not settings.VOYAGE_API_KEY:
             raise ValueError("VOYAGE_API_KEY 未設定（或改用 EMBEDDING_PROVIDER=ollama）")
-        return _embed_voyage(texts, input_type)
+        return _embed_voyage(texts, model, input_type)
 
 
 @celery_app.task(bind=True, max_retries=3)
