@@ -439,37 +439,146 @@ async def _ollama_summarize_folder(
         return "（摘要失敗，可能 Ollama 未啟動）"
 
 
+def _build_scan_prompt(name: str, path: str, files: List[str], content_samples: List[str] | None) -> tuple[str, int]:
+    """共用：組建掃描摘要 prompt，回傳 (prompt, max_tokens)。"""
+    file_sample = files[:40]
+    file_list = "\n".join(f"  - {f}" for f in file_sample)
+    extra = f"\n  ... 及 {len(files) - len(file_sample)} 個其他檔案" if len(files) > len(file_sample) else ""
+
+    content_section = ""
+    if content_samples:
+        content_section = "\n\n【實際檔案內容節錄（前端頭/中/尾取樣）】\n"
+        for i, sample in enumerate(content_samples[:3], 1):
+            trimmed = sample.strip()[:800]
+            if trimmed:
+                content_section += f"\n<user_file_excerpt id={i}>\n{trimmed}\n</user_file_excerpt>\n"
+
+    has_content = bool(content_section)
+    output_instruction = (
+        "用「繁體中文」寫 2\uff5e4 句詳細描述，說明此資料夾存放什麼類型的內容、涵蓋哪些主題或用途。"
+        if has_content else
+        "用「繁體中文」寫 1\uff5e2 句簡明概述，說明此資料夾存放什麼類型的內容。"
+    )
+    prompt = (
+        "你是一位文件整理助手。"
+        f"根據以下資料夾資訊，{output_instruction}"
+        "只需輸出概述說明，不需要任何前言、標題或符號。\n\n"
+        f"資料夾路徑：{path}\n"
+        f"資料夾名稱：{name}\n"
+        f"檔案數量：{len(files)}\n"
+        f"檔案名稱清單：\n{file_list}{extra}"
+        f"{content_section}"
+    )
+    max_tokens = 250 if has_content else 120
+    return prompt, max_tokens
+
+
+async def _cloud_summarize_folder(
+    name: str,
+    path: str,
+    files: List[str],
+    provider: str,
+    model: str,
+    api_key: str,
+    base_url: str,
+    content_samples: List[str] | None = None,
+) -> str:
+    """使用雲端 LLM（Gemini / OpenAI）產生資料夾摘要。"""
+    try:
+        import openai as openai_lib  # noqa: PLC0415
+    except ImportError:
+        return "（摘要失敗：openai 套件未安裝）"
+
+    prompt, max_tokens = _build_scan_prompt(name, path, files, content_samples)
+    try:
+        client = openai_lib.AsyncOpenAI(api_key=api_key, base_url=base_url)
+        resp = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.3,
+            max_tokens=max_tokens,
+        )
+        return (resp.choices[0].message.content or "").strip()
+    except Exception as exc:
+        logger.warning("[ScanPreview] %s 摘要失敗 %s: %s", provider, path, exc)
+        return f"（摘要失敗：{exc}）"
+
+
 @router.post("/scan-preview")
 async def scan_preview_folders(
     payload: ScanPreviewRequest,
     current_user=Depends(get_current_active_user),
 ):
-    """接收子資料夾檔名清單，用 Ollama 產生摘要，供前端確認頁使用。"""
+    """接收子資料夾檔名清單，產生 AI 摘要，供前端確認頁使用。
+    
+    依 SCAN_LLM_PROVIDER 決定後端：
+      - ollama  → 本地 Ollama（需要 Ollama + 模型已安裝）
+      - gemini  → Google Gemini API（無 GPU 純雲端）
+      - openai  → OpenAI API
+    """
     _admin_only(current_user)
 
-    ollama_url: str = getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")
-    model: str = getattr(settings, "OLLAMA_SCAN_MODEL", "gemma3:27b")
-
+    scan_provider: str = getattr(settings, "SCAN_LLM_PROVIDER", "ollama").lower()
     results: List[dict] = []
-    async with httpx.AsyncClient(timeout=90.0) as http_client:
+
+    if scan_provider in ("gemini", "openai"):
+        # ── 雲端模式 ────────────────────────────────────────
+        if scan_provider == "gemini":
+            api_key: str = getattr(settings, "GEMINI_API_KEY", "")
+            model_name: str = getattr(settings, "SCAN_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+            base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        else:  # openai
+            api_key = getattr(settings, "OPENAI_API_KEY", "")
+            model_name = getattr(settings, "SCAN_OPENAI_MODEL", "gpt-4o-mini")
+            base_url = "https://api.openai.com/v1/"
+
+        if not api_key:
+            raise HTTPException(
+                status_code=503,
+                detail=f"SCAN_LLM_PROVIDER={scan_provider} 但對應的 API Key 未設定",
+            )
+
         for sf in payload.subfolders:
-            has_content = bool(sf.content_samples)
-            summary = await _ollama_summarize_folder(
-                sf.name, sf.path, sf.files, ollama_url, model,
-                content_samples=sf.content_samples if has_content else None,
-                http_client=http_client,
+            summary = await _cloud_summarize_folder(
+                sf.name, sf.path, sf.files,
+                scan_provider, model_name, api_key, base_url,
+                content_samples=sf.content_samples if sf.content_samples else None,
             )
             results.append({
                 "path": sf.path,
                 "name": sf.name,
                 "file_count": len(sf.files),
                 "summary": summary,
-                "has_content_samples": has_content,
+                "has_content_samples": bool(sf.content_samples),
             })
             logger.info(
-                "[ScanPreview] 完成 %s (%d 個檔案, 內容取樣=%s)",
-                sf.path, len(sf.files), "是" if has_content else "否"
+                "[ScanPreview] 完成 %s (%d 個檔案, provider=%s)",
+                sf.path, len(sf.files), scan_provider,
             )
+    else:
+        # ── Ollama 模式（預設）─────────────────────────────
+        ollama_url: str = getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")
+        model: str = getattr(settings, "OLLAMA_SCAN_MODEL", "gemma3:27b")
+
+        async with httpx.AsyncClient(timeout=90.0) as http_client:
+            for sf in payload.subfolders:
+                has_content = bool(sf.content_samples)
+                summary = await _ollama_summarize_folder(
+                    sf.name, sf.path, sf.files, ollama_url, model,
+                    content_samples=sf.content_samples if has_content else None,
+                    http_client=http_client,
+                )
+                results.append({
+                    "path": sf.path,
+                    "name": sf.name,
+                    "file_count": len(sf.files),
+                    "summary": summary,
+                    "has_content_samples": has_content,
+                })
+                logger.info(
+                    "[ScanPreview] 完成 %s (%d 個檔案, 內容取樣=%s)",
+                    sf.path, len(sf.files), "是" if has_content else "否"
+                )
 
     return {"subfolders": results}
 

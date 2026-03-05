@@ -88,8 +88,23 @@ class ChatOrchestrator:
                 base_url=f"{ollama_url.rstrip('/')}/v1/",
             )
             logger.info("ChatOrchestrator internal LLM: Ollama(%s @ %s)", self._internal_model, ollama_url)
-        elif internal_provider != "ollama":
-            # 內部任務也走雲端 — 退回主 LLM 客戶端
+        elif internal_provider == "gemini":
+            # 內部任務走 Gemini，使用獨立的輕量模型（可與主 LLM 不同）
+            api_key = getattr(settings, "GEMINI_API_KEY", "")
+            _base = "https://generativelanguage.googleapis.com/v1beta/openai/"
+            if _HAS_OPENAI and api_key:
+                self._internal_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base)
+            else:
+                self._internal_async = self._openai_async
+            self._internal_model = getattr(settings, "INTERNAL_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+            logger.info("ChatOrchestrator internal LLM: Gemini(%s)", self._internal_model)
+        elif internal_provider == "openai":
+            # 內部任務走 OpenAI，使用獨立模型
+            self._internal_async = self._openai_async
+            self._internal_model = getattr(settings, "INTERNAL_OPENAI_MODEL", "gpt-4o-mini")
+            logger.info("ChatOrchestrator internal LLM: OpenAI(%s)", self._internal_model)
+        else:
+            # 其他未知 provider — 退回主 LLM 客戶端
             self._internal_async = self._openai_async
             self._internal_model = self._llm_model
 
