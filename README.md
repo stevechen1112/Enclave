@@ -372,13 +372,14 @@ NoGPU 模式（沿用目前 .env）
   - ⑤ Embedding：以當前 `EMBEDDING_PROVIDER` 為準（可在「公司管理 → 部署模式」或 `GET /api/v1/company/deployment-mode` 查看實際生效值）
 
 GPU 模式（固定 preset）
-  ①② 主 LLM      → provider=`ollama`，model=`qwen3.5:27b`（固定）
+  ①② 主 LLM      → provider=`gemini`，model=`gemini-3-flash-preview`（固定）
   ③ 內部改寫      → provider=`ollama`，model=`qwen3:14b`（固定）
   ④ 掃描摘要      → provider=`ollama`，model=`qwen3:14b`（固定）
   ⑤ Embedding    → provider=`ollama`，model=`bge-m3:latest`（固定）
 
   對應說明：
   - GPU 模式下，以上 4 組會由系統 preset 直接覆蓋生效（不是讀 `.env` 變數）
+  - 主 LLM 走 Gemini 時，仍需正確設定 `GEMINI_API_KEY`
   - 可用 `GET /api/v1/company/deployment-mode` 查看目前實際生效值
 ```
 
@@ -557,7 +558,7 @@ curl -X POST http://localhost:8000/api/v1/users/ \
 > ①② 問答/生成（`LLM_PROVIDER`）、③ 查詢改寫（`INTERNAL_LLM_PROVIDER`）、  
 > ④ 掃資料夾摘要（`SCAN_LLM_PROVIDER`）、⑤ 向量化（`EMBEDDING_PROVIDER`）
 
-> 補充：若 `deployment_mode=gpu`，系統會覆蓋為固定 Qwen preset（主/副/掃描 `qwen3:14b`、Embedding `bge-m3:latest`）。
+> 補充：若 `deployment_mode=gpu`，系統會覆蓋為固定混合 preset（主 LLM=`gemini-3-flash-preview`；內部改寫/掃描=`qwen3:14b`；Embedding=`bge-m3:latest`）。
 
 **主力 LLM（① ② 問答 + 生成）**
 
