@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ========================================================
-# UniHR Database Backup Script
+# Enclave Database Backup Script
 # ========================================================
 # Creates a compressed PostgreSQL dump with timestamp.
 # Supports both Docker and direct pg_dump.
@@ -15,11 +15,11 @@
 #   BACKUP_DIR       — Backup directory (default: ./backups)
 #   RETENTION_DAYS   — Days to keep backups (default: 30)
 #   POSTGRES_USER    — DB user (default: postgres)
-#   POSTGRES_DB      — DB name (default: unihr_saas)
+#   POSTGRES_DB      — DB name (default: enclave)
 #   COMPOSE_SERVICE  — Docker compose DB service (default: db)
 #
 # Cron example (daily at 2 AM):
-#   0 2 * * * cd /path/to/aihr && ./scripts/backup.sh >> /var/log/unihr-backup.log 2>&1
+#   0 2 * * * cd /path/to/aihr && ./scripts/backup.sh >> /var/log/enclave-backup.log 2>&1
 # ========================================================
 
 set -euo pipefail
@@ -28,17 +28,17 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_DB="${POSTGRES_DB:-unihr_saas}"
+POSTGRES_DB="${POSTGRES_DB:-enclave}"
 COMPOSE_SERVICE="${COMPOSE_SERVICE:-db}"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-BACKUP_FILE="${BACKUP_DIR}/unihr_${TIMESTAMP}.sql.gz"
+BACKUP_FILE="${BACKUP_DIR}/enclave_${TIMESTAMP}.sql.gz"
 MODE="${1:-docker}"
 
 # ── Ensure backup directory exists ──
 mkdir -p "${BACKUP_DIR}"
 
 echo "════════════════════════════════════════════"
-echo "  UniHR Backup — $(date '+%Y-%m-%d %H:%M:%S')"
+echo "  Enclave Backup — $(date '+%Y-%m-%d %H:%M:%S')"
 echo "════════════════════════════════════════════"
 echo "  Mode:      ${MODE}"
 echo "  Database:  ${POSTGRES_DB}"
@@ -90,15 +90,15 @@ fi
 # ── Step 3: Clean old backups ──
 echo ""
 echo "▸ Cleaning backups older than ${RETENTION_DAYS} days..."
-DELETED_COUNT=$(find "${BACKUP_DIR}" -name "unihr_*.sql.gz" -mtime "+${RETENTION_DAYS}" -print -delete | wc -l)
+DELETED_COUNT=$(find "${BACKUP_DIR}" -name "enclave_*.sql.gz" -mtime "+${RETENTION_DAYS}" -print -delete | wc -l)
 echo "✓ Deleted ${DELETED_COUNT} old backup(s)"
 
 # ── Step 4: List remaining backups ──
 echo ""
 echo "▸ Current backups:"
-ls -lh "${BACKUP_DIR}"/unihr_*.sql.gz 2>/dev/null || echo "  (none)"
+ls -lh "${BACKUP_DIR}"/enclave_*.sql.gz 2>/dev/null || echo "  (none)"
 
-TOTAL_COUNT=$(find "${BACKUP_DIR}" -name "unihr_*.sql.gz" | wc -l)
+TOTAL_COUNT=$(find "${BACKUP_DIR}" -name "enclave_*.sql.gz" | wc -l)
 TOTAL_SIZE=$(du -sh "${BACKUP_DIR}" | cut -f1)
 echo ""
 echo "  Total: ${TOTAL_COUNT} backup(s), ${TOTAL_SIZE}"

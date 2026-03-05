@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================================
-# UniHR SaaS — Linode 快速部署腳本
+# Enclave — Linode 快速部署腳本
 # ========================================================
 # IP: 172.237.11.179
 # 使用 sslip.io 臨時網域
@@ -9,7 +9,7 @@
 set -e  # 遇到錯誤立即停止
 
 echo "========================================="
-echo "UniHR SaaS - Linode 部署開始"
+echo "Enclave - Linode 部署開始"
 echo "========================================="
 
 # 顏色定義
@@ -58,21 +58,17 @@ IP="172.237.11.179"
 DOMAIN="172-237-11-179.sslip.io"
 
 # 更新 CORS
-sed -i "s|BACKEND_CORS_ORIGINS=.*|BACKEND_CORS_ORIGINS=http://app.${DOMAIN},http://admin.${DOMAIN}|g" .env.production
+sed -i "s|BACKEND_CORS_ORIGINS=.*|BACKEND_CORS_ORIGINS=http://app.${DOMAIN}|g" .env.production
 
 # 添加 Frontend URLs（如果不存在）
 if ! grep -q "FRONTEND_URL=" .env.production; then
     echo "FRONTEND_URL=http://app.${DOMAIN}" >> .env.production
 fi
-if ! grep -q "ADMIN_FRONTEND_URL=" .env.production; then
-    echo "ADMIN_FRONTEND_URL=http://admin.${DOMAIN}" >> .env.production
-fi
-
 echo -e "${GREEN}✓ 網域配置完成${NC}"
 echo -e "${YELLOW}使用網域:${NC}"
 echo -e "  - 使用者介面: http://app.${DOMAIN}"
-echo -e "  - 系統方介面: http://admin.${DOMAIN}"
-echo -e "  - API: http://api.${DOMAIN}"
+echo -e "  - 系統方介面: 與使用者介面同網址（依角色顯示）"
+echo -e "  - API: http://app.${DOMAIN}/api"
 echo -e "  - Grafana: http://grafana.${DOMAIN}"
 
 # 5. 手動配置提示

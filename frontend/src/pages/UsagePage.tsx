@@ -1,20 +1,23 @@
 /**
- * Unified Usage Page — 合併用量統計 + 使用報告 + 組織用量
+ * Unified Usage Page — 用量統計 + 使用報告 + 組織用量 + 個人用量
  *
  * Tabs:
- *   1. 總覽 — 總操作數、Token、成本、按操作類型分佈 (原 UsagePage)
- *   2. 部門分佈 — 部門圖表 + 熱門文件 + 熱門問題 (原 UsageReportPage)
- *   3. 成員明細 — 每人用量表格 (原 CompanyPage UsageTab)
+ *   1. 總覽 — 總操作數、Token、成本、按操作類型分佈 (admin)
+ *   2. 部門分佈 — 部門圖表 + 熱門文件 + 熱門問題 (admin)
+ *   3. 成員明細 — 每人用量表格 (admin)
+ *   4. 我的用量 — 個人使用統計 (全員)
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { auditApi, kbApi, companyApi } from '../api'
+import api from '../api'
+import { useAuth } from '../auth'
 import type { UsageSummary, UsageByAction } from '../types'
 import {
   BarChart3, Loader2, Coins, MessageSquare, Database, Cpu,
   FileSpreadsheet, FileText, Users, Building2, Search,
-  RefreshCw, ExternalLink,
+  RefreshCw, ExternalLink, Activity,
 } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -56,7 +59,7 @@ const fmtNum = (n: number) =>
     : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K`
     : String(n)
 
-type Tab = 'overview' | 'department' | 'members'
+type Tab = 'overview' | 'department' | 'members' | 'personal'
 
 /* ── Types for department report ─────────────────────────────── */
 interface DeptUsage { department_name: string; query_count: number; generate_count: number; total_tokens: number; active_users: number }
@@ -362,16 +365,148 @@ function MembersTab() {
 }
 
 /* ════════════════════════════════════════════════════════════════
-   Main Page
+   Tab 4 — 我的用量（全員可見）
+   ════════════════════════════════════════════════════════════════ */
+
+const ACTION_LABELS: Record<string, string> = {
+  chat_query: 'AI 問答',
+  document_upload: '文件上傳',
+  document_parse: '文件解析',
+  kb_search: '知識庫搜尋',
+  embedding: '向量化',
+}
+
+interface PersonalUsage {
+  total_queries: number
+  total_input_tokens: number
+  total_output_tokens: number
+  total_cost_usd: number
+  recent_actions: {
+    action_type: string
+    count: number
+    total_input_tokens: number
+    total_output_tokens: number
+    total_cost: number
+  }[]
+}
+
+function PersonalTab() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(true)
+  const [usage, setUsage] = useState<PersonalUsage | null>(null)
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/audit/usage/me/summary').then(r => r.data).catch(() => null),
+      api.get('/audit/usage/me/by-action').then(r => r.data).catch(() => []),
+    ]).then(([summary, byAction]) => {
+      if (summary) {
+        setUsage({
+          total_queries: summary.total_actions || 0,
+          total_input_tokens: summary.total_input_tokens || 0,
+          total_output_tokens: summary.total_output_tokens || 0,
+          total_cost_usd: summary.total_cost || 0,
+          recent_actions: byAction || [],
+        })
+      }
+    }).finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-gray-500">
+        {user?.full_name || user?.email} 的個人使用統計
+      </p>
+
+      {/* Stats */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={MessageSquare} label="總操作次數" value={usage?.total_queries?.toLocaleString() ?? '0'} color="bg-blue-50 text-blue-600" />
+        <StatCard icon={Cpu} label="輸入 Tokens" value={usage?.total_input_tokens?.toLocaleString() ?? '0'} color="bg-purple-50 text-purple-600" />
+        <StatCard icon={Cpu} label="輸出 Tokens" value={usage?.total_output_tokens?.toLocaleString() ?? '0'} color="bg-indigo-50 text-indigo-600" />
+        <StatCard icon={Coins} label="估算費用" value={`$${(usage?.total_cost_usd ?? 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
+      </div>
+
+      {/* By action type */}
+      {usage?.recent_actions && usage.recent_actions.length > 0 && (
+        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+          <div className="border-b border-gray-200 px-6 py-4">
+            <h2 className="text-sm font-semibold text-gray-900">按類型分析</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left">
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500">操作類型</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">次數</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸入 Tokens</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸出 Tokens</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">費用 (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usage.recent_actions.map((a) => (
+                  <tr key={a.action_type} className="border-b border-gray-50 hover:bg-gray-50">
+                    <td className="px-6 py-3 font-medium text-gray-900">
+                      {ACTION_LABELS[a.action_type] || a.action_type}
+                    </td>
+                    <td className="px-6 py-3 text-right text-gray-600">{a.count.toLocaleString()}</td>
+                    <td className="px-6 py-3 text-right text-gray-600">{a.total_input_tokens.toLocaleString()}</td>
+                    <td className="px-6 py-3 text-right text-gray-600">{a.total_output_tokens.toLocaleString()}</td>
+                    <td className="px-6 py-3 text-right text-gray-600">${a.total_cost.toFixed(4)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {(!usage || usage.total_queries === 0) && (
+        <div className="flex flex-col items-center py-16 text-gray-400">
+          <Activity className="mb-3 h-12 w-12" />
+          <p className="text-sm font-medium">尚無使用記錄</p>
+          <p className="mt-1 text-xs">開始使用 AI 問答或上傳文件後，您的用量統計將顯示在這裡</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+/* ════════════════════════════════════════════════════════════════
+   Main Page — role-aware tabs
    ════════════════════════════════════════════════════════════════ */
 export default function UsagePage() {
-  const [tab, setTab] = useState<Tab>('overview')
+  const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const tabs: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
+  const isAdmin = user?.role === 'owner' || user?.role === 'admin'
+
+  const adminTabs: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
     { key: 'overview', label: '總覽', icon: BarChart3 },
     { key: 'department', label: '部門分佈', icon: Building2 },
     { key: 'members', label: '成員明細', icon: Users },
+    { key: 'personal', label: '我的用量', icon: Activity },
   ]
+
+  const memberTabs: { key: Tab; label: string; icon: typeof BarChart3 }[] = [
+    { key: 'personal', label: '我的用量', icon: Activity },
+  ]
+
+  const tabs = isAdmin ? adminTabs : memberTabs
+  const urlTab = searchParams.get('tab') as Tab | null
+  const defaultTab = isAdmin ? 'overview' : 'personal'
+  const [tab, setTabState] = useState<Tab>(
+    urlTab && tabs.some(t => t.key === urlTab) ? urlTab : defaultTab
+  )
+
+  const setTab = (t: Tab) => {
+    setTabState(t)
+    setSearchParams(t === defaultTab ? {} : { tab: t })
+  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -381,23 +516,28 @@ export default function UsagePage() {
           <BarChart3 className="h-5 w-5 text-blue-600" />
           <h1 className="text-lg font-semibold text-gray-900">用量統計</h1>
         </div>
-        <p className="text-sm text-gray-500 mb-3">API 消耗、部門分佈、成員明細一站式查看</p>
-        <div className="flex gap-1">
-          {tabs.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === t.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
-              }`}>
-              <t.icon className="h-4 w-4" /> {t.label}
-            </button>
-          ))}
-        </div>
+        <p className="text-sm text-gray-500 mb-3">
+          {isAdmin ? 'API 消耗、部門分佈、成員明細一站式查看' : '您的個人使用統計'}
+        </p>
+        {tabs.length > 1 && (
+          <div className="flex gap-1">
+            {tabs.map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === t.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                }`}>
+                <t.icon className="h-4 w-4" /> {t.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'overview' && <OverviewTab />}
         {tab === 'department' && <DepartmentTab />}
         {tab === 'members' && <MembersTab />}
+        {tab === 'personal' && <PersonalTab />}
       </div>
     </div>
   )

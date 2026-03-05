@@ -134,7 +134,7 @@ h1('二、技術架構')
 h2('2.1  系統架構圖')
 para('''
   [前端 Web]  React 19 + TypeScript + Vite（http://localhost:3001）
-  [前端 Admin] React + Vite（另一套管理後台，http://localhost:3002）
+    [管理後台]  與前端同站點，採角色權限控管（superuser）
         │
         │ HTTPS / SSE
         ▼

@@ -7,21 +7,21 @@ PASS='Elf3_T9nI0LYUBzWKZstiEv5WkF5rggfGM5-REO18lA'
 
 # Stop app services to release DB connections
 
-docker compose -f docker-compose.prod.yml --env-file .env.production stop web worker admin-api
+docker compose -f docker-compose.prod.yml --env-file .env.production stop web worker
 
 # Drop and recreate database
 
 docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres <<'SQL'
 SELECT pg_terminate_backend(pid)
 FROM pg_stat_activity
-WHERE datname = 'unihr_saas'
+WHERE datname = 'enclave'
   AND pid <> pg_backend_pid();
 
-DROP DATABASE IF EXISTS unihr_saas;
+DROP DATABASE IF EXISTS enclave;
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'unihr') THEN
-    CREATE ROLE unihr WITH LOGIN PASSWORD 'TEMP_PASSWORD';
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'enclave') THEN
+    CREATE ROLE enclave WITH LOGIN PASSWORD 'TEMP_PASSWORD';
   END IF;
 END
 $$;
@@ -29,15 +29,15 @@ SQL
 
 # Set correct password and create database
 
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres -c "ALTER ROLE unihr WITH LOGIN PASSWORD '${PASS}';"
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres -c "ALTER ROLE enclave WITH LOGIN PASSWORD '${PASS}';"
 
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres -c "CREATE DATABASE unihr_saas OWNER unihr;"
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres -c "CREATE DATABASE enclave OWNER enclave;"
 
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE unihr_saas TO unihr;"
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d postgres -c "GRANT ALL PRIVILEGES ON DATABASE enclave TO enclave;"
 
 # Enable pgvector
 
-docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d unihr_saas <<'SQL'
+docker compose -f docker-compose.prod.yml --env-file .env.production exec -T db psql -U postgres -d enclave <<'SQL'
 CREATE EXTENSION IF NOT EXISTS vector;
 SQL
 
@@ -55,4 +55,4 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec -T web
 
 # Restart app services
 
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d web worker admin-api
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d web worker

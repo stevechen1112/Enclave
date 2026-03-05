@@ -18,7 +18,7 @@ reusable_oauth2 = OAuth2PasswordBearer(
 )
 
 
-def get_db() -> Generator:
+def get_db() -> Generator[Session, None, None]:
     try:
         db = SessionLocal()
         yield db
@@ -41,7 +41,12 @@ def get_current_user(
         )
     user = crud_user.get_by_email(db, email=token_data.sub)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Return 401 rather than 404 to avoid leaking whether an e-mail is registered
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================================
-# UniHR SaaS — 部署驗證腳本
+# Enclave — 部署驗證腳本
 # ========================================================
 # 檢查所有服務是否正常運行
 # ========================================================
@@ -18,7 +18,7 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 echo "========================================="
-echo "UniHR SaaS - 部署驗證"
+echo "Enclave - 部署驗證"
 echo "========================================="
 echo ""
 
@@ -55,22 +55,22 @@ echo ""
 # 2. 健康檢查端點
 echo -e "${YELLOW}[2/3] API 健康檢查${NC}"
 echo "---------------------------------------"
-check_service "Backend API Health" "${PROTOCOL}://api.${DOMAIN}/health"
-check_service "Backend API Docs" "${PROTOCOL}://api.${DOMAIN}/docs"
+check_service "Backend API Health" "${PROTOCOL}://app.${DOMAIN}/health"
+check_service "Backend API Docs" "${PROTOCOL}://app.${DOMAIN}/docs"
 echo ""
 
 # 3. 前端介面
 echo -e "${YELLOW}[3/3] 前端介面${NC}"
 echo "---------------------------------------"
 check_service "使用者介面 (app)" "${PROTOCOL}://app.${DOMAIN}"
-check_service "系統方介面 (admin)" "${PROTOCOL}://admin.${DOMAIN}"
+check_service "系統方介面 (admin role)" "${PROTOCOL}://app.${DOMAIN}"
 check_service "Grafana" "${PROTOCOL}://grafana.${DOMAIN}" "302"
 echo ""
 
 # 4. DNS 解析檢查
 echo -e "${YELLOW}[額外] DNS 解析檢查${NC}"
 echo "---------------------------------------"
-for subdomain in app admin api admin-api grafana; do
+for subdomain in app grafana; do
     echo -n "檢查 ${subdomain}.${DOMAIN}... "
     result=$(dig +short ${subdomain}.${DOMAIN} | tail -n1)
     if [ "$result" = "$IP" ]; then
@@ -85,7 +85,7 @@ echo ""
 echo -e "${YELLOW}[額外] 資料庫連線${NC}"
 echo "---------------------------------------"
 echo -n "PostgreSQL... "
-if docker compose -f docker-compose.prod.yml exec -T postgres pg_isready -q; then
+if docker compose -f docker-compose.prod.yml exec -T db pg_isready -q; then
     echo -e "${GREEN}✓ OK${NC}"
 else
     echo -e "${RED}✗ FAIL${NC}"
@@ -118,8 +118,8 @@ echo ""
 # 使用指南
 echo -e "${YELLOW}存取網址：${NC}"
 echo "  使用者介面: ${PROTOCOL}://app.${DOMAIN}"
-echo "  系統方介面: ${PROTOCOL}://admin.${DOMAIN}"
-echo "  API 文件: ${PROTOCOL}://api.${DOMAIN}/docs"
+echo "  系統方介面: ${PROTOCOL}://app.${DOMAIN} (admin 以角色登入)"
+echo "  API 文件: ${PROTOCOL}://app.${DOMAIN}/docs"
 echo "  Grafana: ${PROTOCOL}://grafana.${DOMAIN}"
 echo ""
 echo -e "${YELLOW}登入資訊：${NC}"

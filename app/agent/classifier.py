@@ -15,27 +15,6 @@ Phase 10 — AI 自動分類引擎 (Classifier)
   - 預設行業範本：法律、會計、醫療、製造
   - 管理員可在後台自訂分類標籤與欄位
   - 設定存於 organization_settings 資料表
-
-TODO (Phase 10 實作):
-  - 設計 ClassificationProposal dataclass
-  - 實作 filename_parser()：正規表示式提取日期、姓名、文件類型、狀態
-  - 實作 content_analyzer()：呼叫 LLM 分析前 N tokens
-  - 整合 taxonomy 設定（從 DB 讀取或 config 載入）
-  - 計算綜合信心分數
-"""
-
-"""
-Phase 10 — AI 自動分類引擎 (Classifier)
-
-對每個被 file_watcher 發現的檔案進行兩段分析：
-  1. 檔名解析：用正規表示式 + LLM 從檔名提取結構化欄位
-  2. 內容摘要分析：讀取文件前 500 tokens，用 LLM 判斷類型與實體
-
-輸出 ClassificationProposal，包含：
-  - 建議分類（來自可設定的 taxonomy）
-  - 建議標籤（日期、當事人、案件類型、狀態等）
-  - 信心分數（0.0 ~ 1.0）
-  - 判斷依據摘要（顯示在審核介面，讓人類理解 AI 為何這樣判斷）
 """
 
 import re

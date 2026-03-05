@@ -26,16 +26,20 @@ def login_access_token(
     )
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect email or password"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     elif not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
-            user.email, expires_delta=access_token_expires
+            user.email,
+            expires_delta=access_token_expires,
+            tenant_id=user.tenant_id,
         ),
         "token_type": "bearer",
     }

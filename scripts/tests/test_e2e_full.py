@@ -54,7 +54,8 @@ def section(title: str) -> None:
 
 
 # ── 設定 ─────────────────────────────────────────
-TEST_DATA_DIR = Path(__file__).resolve().parent / "test-data" / "company-documents"
+ROOT_DIR = Path(__file__).resolve().parents[2]
+TEST_DATA_DIR = ROOT_DIR / "test-data" / "company-documents"
 
 # 要測試的本地檔案（相對於 TEST_DATA_DIR）
 TEST_FILES: List[Dict[str, Any]] = [

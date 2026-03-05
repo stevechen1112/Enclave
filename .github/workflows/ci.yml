@@ -1,5 +1,5 @@
 # ========================================================
-# GitHub Actions CI Pipeline — UniHR SaaS
+# GitHub Actions CI Pipeline — Enclave
 # ========================================================
 # Triggers on push/PR to main branch.
 # Runs: lint, type check, backend tests, frontend builds.
@@ -145,42 +145,6 @@ jobs:
           path: frontend/dist
           retention-days: 7
 
-  # ─── Admin Frontend: Lint + Build ───
-  admin-frontend-build:
-    name: Admin Frontend Build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: admin-frontend
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: admin-frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: TypeScript check
-        run: npx tsc --noEmit
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: admin-frontend-dist
-          path: admin-frontend/dist
-          retention-days: 7
-
   # ─── Playwright E2E Tests ───
   e2e-test:
     name: Playwright E2E
@@ -231,18 +195,15 @@ jobs:
   docker-build:
     name: Docker Build Check
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build, admin-frontend-build]
+    needs: [backend-test, frontend-build]
     steps:
       - uses: actions/checkout@v4
 
       - name: Build backend image
-        run: docker build -t unihr-backend:ci .
+        run: docker build -t enclave-backend:ci .
 
       - name: Build client frontend image
-        run: docker build -t unihr-frontend:ci ./frontend
-
-      - name: Build admin frontend image
-        run: docker build -t unihr-admin:ci ./admin-frontend
+        run: docker build -t enclave-frontend:ci ./frontend
 
   # ─── Security: Dependency Audit ───
   security-audit:
@@ -268,8 +229,4 @@ jobs:
 
       - name: NPM audit (frontend)
         working-directory: frontend
-        run: npm audit --audit-level=high || true
-
-      - name: NPM audit (admin-frontend)
-        working-directory: admin-frontend
         run: npm audit --audit-level=high || true

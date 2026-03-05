@@ -60,7 +60,7 @@ Write-Host '[5/5] Configuring SSH config...' -ForegroundColor Yellow
 $SSHConfigPath = "$env:USERPROFILE\.ssh\config"
 $ConfigEntry = @'
 
-# UniHR Linode Server
+# Enclave Linode Server
 Host aihr-linode
     HostName 172.237.11.179
     User root

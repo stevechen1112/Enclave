@@ -37,7 +37,7 @@
 
 ### 問題根因
 
-QUALITY_PERFORMANCE_REPORT.md 記錄：
+docs/reports/QUALITY_PERFORMANCE_REPORT.md 記錄：
 - 平均回應 **48.9 秒**，P95 = **77.3 秒**
 - 主瓶頸：Core API（外部 UniHR Core，GPT-4o）15-30 秒
 - 5 個 worker 並發即觸發 rate limit，導致比首次測試慢 75%
@@ -514,7 +514,7 @@ def embed_chunks_with_cache(chunks: list[str], voyage_client, redis_client=None)
 
 ### 問題根因
 
-從 QUALITY_PERFORMANCE_REPORT.md 人工審查結果：
+從 docs/reports/QUALITY_PERFORMANCE_REPORT.md 人工審查結果：
 - **D2**（技術部平均月薪）：只找到 4 人，少了 2 人 → 語義向量召回不完整
 - **D4**（年資最深員工）：回答謝雅玲 8.7 年，實際是 E005 張志豪 9.6 年 → 結構化表格 chunk 召回不足
 - **D3**（資遣費計算）：計算邏輯依賴精確員工資料，若 chunk 遺漏則計算錯誤

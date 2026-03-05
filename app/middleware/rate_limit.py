@@ -28,7 +28,16 @@ class RateLimiter:
     """基於 Redis 的滑動視窗限流器"""
 
     def __init__(self, redis_url: Optional[str] = None):
-        self._redis_url = redis_url or getattr(settings, "CELERY_BROKER_URL", "redis://localhost:6379/0")
+        # Prefer the dedicated REDIS_HOST/PORT settings; fall back to CELERY_BROKER_URL
+        # so rate-limiting does not share the Celery broker connection implicitly.
+        if redis_url:
+            self._redis_url = redis_url
+        elif getattr(settings, "REDIS_HOST", None):
+            host = settings.REDIS_HOST
+            port = int(getattr(settings, "REDIS_PORT", 6379))
+            self._redis_url = f"redis://{host}:{port}/2"  # db=2 isolated from Celery (db=0)
+        else:
+            self._redis_url = getattr(settings, "CELERY_BROKER_URL", "redis://localhost:6379/2")
         self._redis: Optional[redis.Redis] = None
 
     @property

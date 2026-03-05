@@ -1,5 +1,5 @@
 # ========================================================
-# Docker Compose — Production Configuration
+# Docker Compose — Production Configuration (On-Premise)
 # ========================================================
 # Prerequisites:
 #   1. Copy .env.production.example → .env.production
@@ -73,11 +73,11 @@ services:
       - ./configs/postgresql-tuning.conf:/etc/postgresql/conf.d/tuning.conf:ro
       - ./backups:/backups
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-unihr}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-      - POSTGRES_DB=${POSTGRES_DB:-unihr_saas}
+      - POSTGRES_DB=${POSTGRES_DB:-enclave}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-unihr}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -197,89 +197,6 @@ services:
           cpus: '0.05'
           memory: 16M
 
-  # ── Admin Frontend ──
-  admin-frontend:
-    build: ./admin-frontend
-    restart: always
-    expose:
-      - "80"
-    depends_on:
-      - web
-      - admin-api
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80/"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 64M
-        reservations:
-          cpus: '0.05'
-          memory: 16M
-
-  # ── Admin API Microservice (T4-18) ──
-  admin-api:
-    build:
-      context: .
-      dockerfile: admin_service/Dockerfile
-    restart: always
-    env_file: .env.production
-    expose:
-      - "8001"
-    environment:
-      - APP_ENV=production
-      - POSTGRES_SERVER=db
-      - REDIS_HOST=redis
-      - ADMIN_REDIS_URL=redis://:${ADMIN_REDIS_PASSWORD}@admin-redis:6379/0
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      admin-redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 128M
-
-  # ── Admin Redis (T4-18) ──
-  admin-redis:
-    image: redis:7-alpine
-    restart: always
-    command: >
-      redis-server
-        --requirepass ${ADMIN_REDIS_PASSWORD:-}
-        --maxmemory 128mb
-        --maxmemory-policy allkeys-lru
-    volumes:
-      - admin_redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${ADMIN_REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 128M
-        reservations:
-          cpus: '0.05'
-          memory: 32M
 
   # ── Nginx Gateway ──
   gateway:
@@ -289,17 +206,13 @@ services:
       - "${GATEWAY_HTTP_PORT:-80}:80"
       - "${GATEWAY_HTTPS_PORT:-443}:443"
     volumes:
-      - ./nginx/gateway.conf.linode:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/gateway.conf:/etc/nginx/conf.d/default.conf:ro
       # For SSL support (Let's Encrypt):
       # - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       web:
         condition: service_healthy
-      admin-api:
-        condition: service_healthy
       frontend:
-        condition: service_started
-      admin-frontend:
         condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:80/"]
@@ -355,7 +268,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-https://grafana.unihr.com}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
     expose:
       - "3000"
     depends_on:
@@ -372,7 +285,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  admin_redis_data:
   uploads_data:
   prometheus_data:
   grafana_data:

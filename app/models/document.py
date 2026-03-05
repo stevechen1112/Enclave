@@ -41,7 +41,7 @@ class DocumentChunk(Base):
     chunk_hash = Column(String, index=True)
     vector_id = Column(String, nullable=True)      # Legacy (Pinecone), kept for backwards compat
     embedding = Column(Vector(1024), nullable=True)  # pgvector: voyage-4-lite 1024d
-    metadata_json = Column(JSON, default={}) # page, section, etc.
+    metadata_json = Column(JSON, default=dict)  # page, section, etc. — use callable to avoid shared mutable default
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

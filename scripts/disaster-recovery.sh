@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ========================================================
-# UniHR Disaster Recovery Script
+# Enclave Disaster Recovery Script
 # ========================================================
 # Full system recovery from a snapshot backup.
 # Restores: Database → Redis → Uploads
@@ -29,11 +29,11 @@ if [[ ! -d "${SNAPSHOT_DIR}" ]]; then
 fi
 
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_DB="${POSTGRES_DB:-unihr_saas}"
+POSTGRES_DB="${POSTGRES_DB:-enclave}"
 COMPOSE_SERVICE="${COMPOSE_SERVICE:-db}"
 
 echo "════════════════════════════════════════════"
-echo "  UniHR Disaster Recovery"
+echo "  Enclave Disaster Recovery"
 echo "════════════════════════════════════════════"
 echo "  Snapshot: ${SNAPSHOT_DIR}"
 echo ""
@@ -53,13 +53,13 @@ echo ""
 
 # ── Step 1: Stop application ──
 echo "━━━ [1/5] Stopping Services ━━━"
-docker compose stop web worker frontend admin-frontend 2>/dev/null || true
+docker compose stop web worker frontend 2>/dev/null || true
 echo "✓ Services stopped"
 echo ""
 
 # ── Step 2: Restore Database ──
 echo "━━━ [2/5] Restoring Database ━━━"
-DB_DUMP=$(find "${SNAPSHOT_DIR}" -name "unihr_*.sql.gz" | head -1)
+DB_DUMP=$(find "${SNAPSHOT_DIR}" -name "enclave_*.sql.gz" | head -1)
 if [[ -n "${DB_DUMP}" ]]; then
     echo "▸ Using backup: ${DB_DUMP}"
 
@@ -121,7 +121,7 @@ echo ""
 
 # ── Step 5: Restart Everything ──
 echo "━━━ [5/5] Starting Services ━━━"
-docker compose start web worker frontend admin-frontend
+docker compose start web worker frontend
 echo "✓ All services started"
 
 # ── Health Check ──

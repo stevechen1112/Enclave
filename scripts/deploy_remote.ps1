@@ -39,7 +39,7 @@ function Write-Warning-Custom {
 }
 
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "UniHR SaaS - 遠端部署工具" -ForegroundColor Cyan
+Write-Host "Enclave - 遠端部署工具" -ForegroundColor Cyan
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 

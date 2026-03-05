@@ -1,14 +1,14 @@
 """
 Creates a fresh demo tenant + demo user for live presentation.
-Tenant: UniHR 現場展示公司 (completely empty, no documents)
-User:   demo@unihr.ai / admin123
+Tenant: Enclave 現場展示公司 (completely empty, no documents)
+User:   demo@enclave.local / admin123
 """
 import urllib.request, urllib.parse, json
 
 BASE = "http://api.172-237-5-254.sslip.io"
-DEMO_EMAIL = "demo@unihr.ai"
+DEMO_EMAIL = "demo@enclave.local"
 DEMO_PASS  = "admin123"
-DEMO_TENANT = "UniHR 現場展示公司"
+DEMO_TENANT = "Enclave 現場展示公司"
 
 # ── 1. SU login ───────────────────────────────────────────
 d = urllib.parse.urlencode({"username": "admin@example.com",

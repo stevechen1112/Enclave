@@ -1,7 +1,7 @@
 #!/bin/bash
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
   -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'username=demo@unihr.ai&password=admin123' | \
+  -d 'username=demo@enclave.local&password=admin123' | \
   python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 
 echo "Token obtained: ${TOKEN:0:20}..."

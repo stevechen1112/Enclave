@@ -202,9 +202,6 @@ apt install -y certbot python3-certbot-nginx
 ```bash
 certbot certonly --standalone \
   -d app.172-237-11-179.sslip.io \
-  -d admin.172-237-11-179.sslip.io \
-  -d api.172-237-11-179.sslip.io \
-  -d admin-api.172-237-11-179.sslip.io \
   -d grafana.172-237-11-179.sslip.io \
   --email your-email@example.com \
   --agree-tos \
@@ -244,7 +241,7 @@ docker compose -f docker-compose.prod.yml up -d gateway
 certbot renew --dry-run
 
 # 加入 cron（每天凌晨 3 點檢查）
-echo "0 3 * * * certbot renew --quiet && docker compose -f /opt/aihr/docker-compose.prod.yml restart gateway" | crontab -
+echo "0 3 * * * certbot renew --quiet && docker compose -f /opt/enclave/docker-compose.prod.yml restart gateway" | crontab -
 ```
 
 ---
@@ -273,7 +270,7 @@ docker compose -f docker-compose.prod.yml restart
 
 ### 更新程式碼
 ```bash
-cd /opt/aihr
+cd /opt/enclave
 git pull
 docker compose -f docker-compose.prod.yml build
 docker compose -f docker-compose.prod.yml up -d
@@ -286,7 +283,7 @@ docker compose -f docker-compose.prod.yml exec web alembic upgrade head
 bash scripts/backup.sh
 
 # 設定每日自動備份（凌晨 2 點）
-echo "0 2 * * * cd /opt/aihr && bash scripts/backup.sh" | crontab -e
+echo "0 2 * * * cd /opt/enclave && bash scripts/backup.sh" | crontab -e
 ```
 
 ### 檢查服務健康狀態
@@ -310,9 +307,6 @@ docker compose -f docker-compose.prod.yml exec redis redis-cli -a <REDIS_PASSWOR
 ### 1. DNS 設定
 ```
 A     app.yourdomain.com       -> 172.237.11.179
-A     admin.yourdomain.com     -> 172.237.11.179
-A     api.yourdomain.com       -> 172.237.11.179
-A     admin-api.yourdomain.com -> 172.237.11.179
 A     grafana.yourdomain.com   -> 172.237.11.179
 A     *.yourdomain.com         -> 172.237.11.179  # wildcard
 ```
@@ -333,9 +327,6 @@ A     *.yourdomain.com         -> 172.237.11.179  # wildcard
 ```bash
 certbot certonly --standalone \
   -d app.yourdomain.com \
-  -d admin.yourdomain.com \
-  -d api.yourdomain.com \
-  -d admin-api.yourdomain.com \
   -d grafana.yourdomain.com \
   --email your-email@example.com \
   --agree-tos

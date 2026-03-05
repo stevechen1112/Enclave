@@ -95,11 +95,11 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["unihr", "backend"],
+  "tags": ["enclave", "backend"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
-  "title": "UniHR Backend Overview",
-  "uid": "unihr-backend-overview"
+  "title": "Enclave Backend Overview",
+  "uid": "enclave-backend-overview"
 }

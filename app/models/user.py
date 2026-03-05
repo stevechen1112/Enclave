@@ -32,7 +32,8 @@ class User(Base):
     department = relationship("Department", back_populates="users")
 
     @property
-    def is_active(self):
+    def is_active(self) -> bool:
         return self.status == "active"
+
     conversations = relationship("Conversation", back_populates="user")
     usage_records = relationship("UsageRecord", back_populates="user")

@@ -1,5 +1,5 @@
 # ========================================================
-# Prometheus Configuration — UniHR SaaS
+# Prometheus Configuration — Enclave
 # ========================================================
 
 global:
@@ -18,7 +18,7 @@ rule_files:
 
 # ── Scrape Targets ──
 scrape_configs:
-  - job_name: "unihr-backend"
+  - job_name: "enclave-backend"
     metrics_path: /metrics
     static_configs:
       - targets: ["web:8000"]

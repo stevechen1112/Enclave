@@ -1,4 +1,4 @@
-# UniHR 運維 SOP（標準作業程序）
+# Enclave 運維 SOP（標準作業程序）
 
 > 版本: 1.0 | 更新日期: 2026-02-07 | 維護者: DevOps Team
 
@@ -42,7 +42,7 @@ GitHub Actions (deploy-staging.yml)
 
 **驗證步驟：**
 1. 檢查 GitHub Actions 執行結果（綠勾）
-2. 確認 Staging 環境健康：`curl https://staging.unihr.com/health`
+2. 確認 Staging 環境健康：`curl https://staging.yourdomain.com/health`
 3. 執行冒煙測試：登入 → 聊天 → 文件上傳
 
 ### 1.2 Production 部署（手動觸發）
@@ -79,8 +79,8 @@ GitHub → Actions → deploy-production.yml → Run workflow
 **預估時間：** 10-15 分鐘
 
 **部署後驗證（5 分鐘內完成）：**
-1. `curl https://api.unihr.com/health` → 200
-2. `curl https://admin.unihr.com` → 200
+1. `curl https://app.yourdomain.com/health` → 200
+2. `curl https://app.yourdomain.com` → 200
 3. 登入測試帳號確認功能正常
 4. 檢查 Grafana — 錯誤率無異常升高
 5. 檢查 Prometheus — 無 alert firing
@@ -117,18 +117,18 @@ GitHub → Actions → deploy-production.yml → Run workflow
 
 ```bash
 # 1. SSH 到 Production 伺服器
-ssh deploy@prod.unihr.com
+ssh deploy@prod.yourdomain.com
 
 # 2. 查看可用的映像版本
-docker images | grep unihr | head -10
+docker images | grep enclave | head -10
 
 # 3. 切換到上一版映像
-cd /opt/unihr
+cd /opt/enclave
 export IMAGE_TAG=prod-<previous-sha>
 docker compose -f docker-compose.prod.yml up -d web worker
 
 # 4. 驗證回滾
-curl https://api.unihr.com/health
+curl https://app.yourdomain.com/health
 
 # 5. 如果有 DB migration 需要回滾
 docker compose exec web alembic downgrade -1
@@ -177,7 +177,7 @@ docker compose exec web alembic history
 
 ```bash
 # 排程已設定在 crontab
-# 0 2 * * * /opt/unihr/scripts/backup.sh
+# 0 2 * * * /opt/enclave/scripts/backup.sh
 
 # 手動觸發備份
 ./scripts/backup.sh
@@ -199,7 +199,7 @@ docker compose exec web alembic history
 
 ```bash
 # 1. 還原備份到測試環境
-./scripts/restore.sh backups/daily/unihr_20260207.sql.gz
+./scripts/restore.sh backups/daily/enclave_20260207.sql.gz
 
 # 2. 驗證資料完整性
 psql -h testdb -d unihr_restore -c "
@@ -335,8 +335,8 @@ docker compose -f docker-compose.prod.yml logs --tail=100 web
 docker compose -f docker-compose.prod.yml logs --tail=100 worker
 
 # ── API 健康 ──
-curl -s https://api.unihr.com/health | jq .
-curl -s https://api.unihr.com/api/v1/admin/system/health \
+curl -s https://app.yourdomain.com/health | jq .
+curl -s https://app.yourdomain.com/api/v1/admin/system/health \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq .
 
 # ── 資料庫 ──

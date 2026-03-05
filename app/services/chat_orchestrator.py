@@ -260,7 +260,7 @@ class ChatOrchestrator:
                 if delta.content:
                     yield delta.content
         except Exception as e:
-            logger.warning(f"LLM 串流生成失敗，回退到模板: {e}")
+            logger.warning("LLM 串流生成失敗，回退到模板: %s", e)
             yield self._fallback_answer(context)
 
     # ──────────── T7-2: 多輪對話支援 ────────────
@@ -311,7 +311,7 @@ class ChatOrchestrator:
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            logger.warning(f"查詢改寫失敗: {e}")
+            logger.warning("查詢改寫失敗: %s", e)
             return query
 
     # ──────────── 向下相容：保留原 process_query ────────────

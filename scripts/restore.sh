@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ========================================================
-# UniHR Database Restore Script
+# Enclave Database Restore Script
 # ========================================================
 # Restores a PostgreSQL dump from a backup file.
 # Supports both Docker and direct psql restore.
 #
 # Usage:
 #   chmod +x scripts/restore.sh
-#   ./scripts/restore.sh backups/unihr_20240101_020000.sql.gz
-#   ./scripts/restore.sh --direct backups/unihr_20240101_020000.sql.gz
+#   ./scripts/restore.sh backups/enclave_20240101_020000.sql.gz
+#   ./scripts/restore.sh --direct backups/enclave_20240101_020000.sql.gz
 #
 # ⚠️ WARNING: This will DROP and RECREATE the database!
 # ========================================================
@@ -30,7 +30,7 @@ if [[ -z "${BACKUP_FILE}" ]]; then
     echo "Usage: $0 [--direct] <backup_file.sql.gz>"
     echo ""
     echo "Available backups:"
-    ls -lh backups/unihr_*.sql.gz 2>/dev/null || echo "  (none found)"
+    ls -lh backups/enclave_*.sql.gz 2>/dev/null || echo "  (none found)"
     exit 1
 fi
 
@@ -41,11 +41,11 @@ fi
 
 # ── Configuration ──
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_DB="${POSTGRES_DB:-unihr_saas}"
+POSTGRES_DB="${POSTGRES_DB:-enclave}"
 COMPOSE_SERVICE="${COMPOSE_SERVICE:-db}"
 
 echo "════════════════════════════════════════════"
-echo "  UniHR Database Restore"
+echo "  Enclave Database Restore"
 echo "════════════════════════════════════════════"
 echo "  Mode:      ${MODE}"
 echo "  Database:  ${POSTGRES_DB}"

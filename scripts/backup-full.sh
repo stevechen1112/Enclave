@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ========================================================
-# UniHR Full System Backup (DB + Redis + Uploads)
+# Enclave Full System Backup (DB + Redis + Uploads)
 # ========================================================
 # Creates a complete system backup including:
 #   1. PostgreSQL database dump
@@ -24,7 +24,7 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SNAPSHOT_DIR="${BACKUP_DIR}/snapshot_${TIMESTAMP}"
 
 echo "════════════════════════════════════════════"
-echo "  UniHR Full System Backup"
+echo "  Enclave Full System Backup"
 echo "  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "════════════════════════════════════════════"
 

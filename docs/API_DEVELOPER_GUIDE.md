@@ -1,7 +1,7 @@
-# UniHR API 開發者文件
+# Enclave API 開發者文件
 
-> Version: 1.0 | Base URL: `https://api.unihr.com/api/v1`
-> OpenAPI Spec: `https://api.unihr.com/api/v1/openapi.json`
+> Version: 1.0 | Base URL: `https://app.yourdomain.com/api/v1`
+> OpenAPI Spec: `https://app.yourdomain.com/api/v1/openapi.json`
 
 ---
 
@@ -26,7 +26,7 @@
 
 ```bash
 # 1. 登入取得 JWT Token
-curl -X POST https://api.unihr.com/api/v1/auth/login \
+curl -X POST https://app.yourdomain.com/api/v1/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=your@email.com&password=yourpassword"
 
@@ -41,7 +41,7 @@ curl -X POST https://api.unihr.com/api/v1/auth/login \
 
 ```bash
 # 2. 使用 Token 呼叫 API
-curl -X GET https://api.unihr.com/api/v1/users/me \
+curl -X GET https://app.yourdomain.com/api/v1/users/me \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
 ```
 
@@ -65,7 +65,7 @@ Token 預設有效期為 **480 分鐘（8 小時）**。到期後需重新登入
 
 ```bash
 # 取得 SSO 登入 URL
-curl -X POST https://api.unihr.com/api/v1/auth/sso/initiate \
+curl -X POST https://app.yourdomain.com/api/v1/auth/sso/initiate \
   -H "Content-Type: application/json" \
   -d '{"provider": "google", "tenant_id": "your-tenant-id"}'
 ```
@@ -141,7 +141,7 @@ X-Service-Token: <service_token>
 #### cURL
 
 ```bash
-curl -X POST https://api.unihr.com/api/v1/chat/ \
+curl -X POST https://app.yourdomain.com/api/v1/chat/ \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -154,7 +154,7 @@ curl -X POST https://api.unihr.com/api/v1/chat/ \
 ```python
 import httpx
 
-BASE_URL = "https://api.unihr.com/api/v1"
+BASE_URL = "https://app.yourdomain.com/api/v1"
 TOKEN = "your_access_token"
 
 headers = {"Authorization": f"Bearer {TOKEN}"}
@@ -175,7 +175,7 @@ print(f"來源：{data.get('sources', [])}")
 #### JavaScript (Node.js)
 
 ```javascript
-const BASE_URL = "https://api.unihr.com/api/v1";
+const BASE_URL = "https://app.yourdomain.com/api/v1";
 const TOKEN = "your_access_token";
 
 // 發送問題
@@ -198,7 +198,7 @@ console.log("來源:", data.sources);
 #### cURL
 
 ```bash
-curl -X POST https://api.unihr.com/api/v1/documents/upload \
+curl -X POST https://app.yourdomain.com/api/v1/documents/upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@company_rules.pdf"
 ```
@@ -221,7 +221,7 @@ print(f"狀態: {doc['status']}")  # pending → processing → processed
 ### 4.3 知識庫搜尋
 
 ```bash
-curl -X GET "https://api.unihr.com/api/v1/kb/search?q=加班費&top_k=5" \
+curl -X GET "https://app.yourdomain.com/api/v1/kb/search?q=加班費&top_k=5" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -229,11 +229,11 @@ curl -X GET "https://api.unihr.com/api/v1/kb/search?q=加班費&top_k=5" \
 
 ```bash
 # JSON 格式
-curl -X GET "https://api.unihr.com/api/v1/subscription/usage/export?format=json" \
+curl -X GET "https://app.yourdomain.com/api/v1/subscription/usage/export?format=json" \
   -H "Authorization: Bearer $TOKEN"
 
 # CSV 格式
-curl -X GET "https://api.unihr.com/api/v1/subscription/usage/export?format=csv" \
+curl -X GET "https://app.yourdomain.com/api/v1/subscription/usage/export?format=csv" \
   -H "Authorization: Bearer $TOKEN" \
   -o usage_report.csv
 ```
@@ -241,13 +241,13 @@ curl -X GET "https://api.unihr.com/api/v1/subscription/usage/export?format=csv" 
 ### 4.5 完整 Python SDK 範例
 
 ```python
-"""UniHR API Client 範例"""
+"""Enclave API Client 範例"""
 
 import httpx
 from typing import Optional
 
 
-class UniHRClient:
+class EnclaveClient:
     def __init__(self, base_url: str, email: str, password: str):
         self.base_url = base_url.rstrip("/")
         self.client = httpx.Client(timeout=30)
@@ -305,8 +305,8 @@ class UniHRClient:
 
 # 使用範例
 if __name__ == "__main__":
-    client = UniHRClient(
-        base_url="https://api.unihr.com/api/v1",
+    client = EnclaveClient(
+      base_url="https://app.yourdomain.com/api/v1",
         email="admin@example.com",
         password="your_password",
     )
@@ -448,11 +448,11 @@ X-RateLimit-Reset: 1706889600
 
 ### OpenAPI 自動生成
 
-UniHR 基於 FastAPI，自動產生完整的 OpenAPI 3.0 規格：
+Enclave 基於 FastAPI，自動產生完整的 OpenAPI 3.0 規格：
 
 ```bash
 # 下載 OpenAPI spec
-curl https://api.unihr.com/api/v1/openapi.json -o openapi.json
+curl https://app.yourdomain.com/api/v1/openapi.json -o openapi.json
 
 # 使用 openapi-generator 生成 SDK
 npx @openapitools/openapi-generator-cli generate \
@@ -519,10 +519,10 @@ except httpx.HTTPStatusError as e:
 
 ```
 # v1（目前）
-https://api.unihr.com/api/v1/...
+https://app.yourdomain.com/api/v1/...
 
 # v2（未來）
-https://api.unihr.com/api/v2/...
+https://app.yourdomain.com/api/v2/...
 ```
 
 ### Deprecation Header
@@ -538,7 +538,7 @@ X-API-Sunset-Date: 2027-01-01
 ### 版本資訊端點
 
 ```bash
-curl https://api.unihr.com/api/versions
+curl https://app.yourdomain.com/api/versions
 
 # Response:
 # {

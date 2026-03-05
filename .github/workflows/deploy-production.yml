@@ -63,7 +63,7 @@ jobs:
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
             set -e
-            cd /opt/unihr
+            cd /opt/enclave
             echo "📦 Creating pre-deploy backup..."
             bash scripts/backup.sh --direct
             echo "✅ Backup complete"
@@ -77,7 +77,7 @@ jobs:
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
             set -e
-            cd /opt/unihr
+            cd /opt/enclave
             TAG="${{ steps.tag.outputs.tag }}"
 
             echo "🏷️ Deploying tag: $TAG"
@@ -88,12 +88,10 @@ jobs:
             # Pull specific tag
             docker pull ${{ env.IMAGE_PREFIX }}/backend:${TAG}
             docker pull ${{ env.IMAGE_PREFIX }}/frontend:${TAG}
-            docker pull ${{ env.IMAGE_PREFIX }}/admin-frontend:${TAG}
 
             # Tag as 'latest' for docker-compose
             docker tag ${{ env.IMAGE_PREFIX }}/backend:${TAG} ${{ env.IMAGE_PREFIX }}/backend:latest
             docker tag ${{ env.IMAGE_PREFIX }}/frontend:${TAG} ${{ env.IMAGE_PREFIX }}/frontend:latest
-            docker tag ${{ env.IMAGE_PREFIX }}/admin-frontend:${TAG} ${{ env.IMAGE_PREFIX }}/admin-frontend:latest
 
             # Rolling restart
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
@@ -133,16 +131,12 @@ jobs:
             echo "🔍 Running smoke tests..."
 
             # API health
-            curl -sf https://app.unihr.com/health | grep -q '"status":"ok"'
+            curl -sf http://localhost:8000/health | grep -q '"status":"ok"'
             echo "  ✅ API health OK"
 
             # Frontend loads
-            curl -sf -o /dev/null -w "%{http_code}" https://app.unihr.com/ | grep -q "200"
+            curl -sf -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"
             echo "  ✅ Frontend OK"
-
-            # Admin loads
-            curl -sf -o /dev/null -w "%{http_code}" https://admin.unihr.com/ | grep -q "200"
-            echo "  ✅ Admin frontend OK"
 
             echo "✅ All smoke tests passed"
 

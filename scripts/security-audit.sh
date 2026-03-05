@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ========================================================
-# UniHR Security Audit Script
+# Enclave Security Audit Script
 # ========================================================
 # Comprehensive security checklist and automated scans:
 #   1. Dependency vulnerability scan (pip-audit + npm audit)
@@ -41,7 +41,7 @@ log_info()  { echo -e "  ${CYAN}ℹ${NC} $1"; }
 section()   { echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
 
 echo "════════════════════════════════════════════"
-echo "  UniHR Security Audit"
+echo "  Enclave Security Audit"
 echo "  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "════════════════════════════════════════════"
 
@@ -91,32 +91,6 @@ except:
     fi
 fi
 
-if [[ -d "admin-frontend" ]]; then
-    echo "  Auditing admin-frontend/..."
-    pushd admin-frontend > /dev/null
-    AUDIT_RESULT=$(npm audit --json 2>/dev/null | python3 -c "
-import sys, json
-try:
-    data = json.load(sys.stdin)
-    vulns = data.get('metadata', {}).get('vulnerabilities', {})
-    critical = vulns.get('critical', 0)
-    high = vulns.get('high', 0)
-    moderate = vulns.get('moderate', 0)
-    print(f'{critical},{high},{moderate}')
-except:
-    print('0,0,0')
-" 2>/dev/null || echo "0,0,0")
-    popd > /dev/null
-
-    IFS=',' read -r CRIT HIGH MOD <<< "${AUDIT_RESULT}"
-    if [[ "${CRIT}" -gt 0 ]] || [[ "${HIGH}" -gt 0 ]]; then
-        log_fail "Admin Frontend: ${CRIT} critical, ${HIGH} high, ${MOD} moderate vulnerabilities"
-    elif [[ "${MOD}" -gt 0 ]]; then
-        log_warn "Admin Frontend: ${MOD} moderate vulnerabilities"
-    else
-        log_pass "Admin Frontend: No known vulnerabilities"
-    fi
-fi
 fi
 
 # ============================================
@@ -279,7 +253,7 @@ done
 section "7. Docker Security"
 
 # Check Dockerfiles for best practices
-for dockerfile in Dockerfile frontend/Dockerfile admin-frontend/Dockerfile; do
+for dockerfile in Dockerfile frontend/Dockerfile; do
     if [[ -f "${dockerfile}" ]]; then
         echo "  Checking ${dockerfile}..."
 
@@ -321,7 +295,7 @@ section "8. Container Image Vulnerability Scan"
 
 if command -v trivy &>/dev/null; then
     echo "  Scanning Docker images with Trivy..."
-    for image in unihr-backend unihr-frontend unihr-admin; do
+    for image in enclave-backend enclave-frontend; do
         if docker image inspect "${image}" &>/dev/null; then
             TRIVY_RESULT=$(trivy image --severity HIGH,CRITICAL --quiet "${image}" 2>/dev/null || echo "scan failed")
             if echo "${TRIVY_RESULT}" | grep -q "Total: 0"; then

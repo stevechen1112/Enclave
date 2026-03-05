@@ -1,9 +1,9 @@
 # ========================================================
-# Prometheus Alert Rules — UniHR SaaS
+# Prometheus Alert Rules — Enclave
 # ========================================================
 
 groups:
-  - name: unihr-backend
+  - name: enclave-backend
     rules:
       # ── High Error Rate ──
       - alert: HighErrorRate
@@ -34,12 +34,12 @@ groups:
 
       # ── Service Down ──
       - alert: ServiceDown
-        expr: up{job="unihr-backend"} == 0
+        expr: up{job="enclave-backend"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "UniHR backend is down"
+          summary: "Enclave backend is down"
           description: "The backend service has been unreachable for over 1 minute."
 
       # ── Too Many In-Progress Requests ──

@@ -18,12 +18,12 @@
 set -euo pipefail
 
 # ── Configuration ──
-CLIENT_DOMAIN="${CLIENT_DOMAIN:-app.unihr.com}"
-ADMIN_DOMAIN="${ADMIN_DOMAIN:-admin.unihr.com}"
-EMAIL="${CERTBOT_EMAIL:-admin@unihr.com}"
+CLIENT_DOMAIN="${CLIENT_DOMAIN:-app.yourcompany.com}"
+ADMIN_DOMAIN="${ADMIN_DOMAIN:-admin.yourcompany.com}"
+EMAIL="${CERTBOT_EMAIL:-admin@yourcompany.com}"
 
 echo "════════════════════════════════════════════"
-echo "  UniHR SSL Certificate Setup"
+echo "  Enclave SSL Certificate Setup"
 echo "════════════════════════════════════════════"
 echo "  Client domain: ${CLIENT_DOMAIN}"
 echo "  Admin domain:  ${ADMIN_DOMAIN}"

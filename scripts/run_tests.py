@@ -28,7 +28,7 @@ import urllib.request, urllib.parse, urllib.error, ssl
 # ── 常數 ─────────────────────────────────────
 
 BASE_URL = os.getenv("AIHR_BASE_URL", "http://localhost:8000")
-CORE_API = os.getenv("AIHR_CORE_API", "https://ai.unihr.com.tw")
+CORE_API = os.getenv("AIHR_CORE_API", "http://localhost:8000")
 SUPERUSER_EMAIL = os.getenv("AIHR_SUPERUSER_EMAIL", "admin@example.com")
 SUPERUSER_PASS = os.getenv("AIHR_SUPERUSER_PASS", "admin123")
 HR_EMAIL = os.getenv("AIHR_HR_EMAIL", "hr@taiyutech.com")

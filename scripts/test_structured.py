@@ -2,7 +2,7 @@ import sys, os
 sys.path.insert(0, "/code")
 os.environ.setdefault("POSTGRES_SERVER", "db")
 os.environ.setdefault("REDIS_HOST", "redis")
-os.environ.setdefault("DATABASE_URL", "postgresql://postgres:postgres@db:5432/unihr_saas")
+os.environ.setdefault("DATABASE_URL", "postgresql://postgres:postgres@db:5432/enclave")
 
 from uuid import UUID
 

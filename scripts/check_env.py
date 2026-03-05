@@ -43,7 +43,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "")
 check(
     "SECRET_KEY",
     len(SECRET_KEY) >= 32 and SECRET_KEY != "change_this_to_a_secure_random_string_at_least_32_chars",
-    "未設定或仍使用範本值，請執行 python gen_hash.py 產生安全金鑰"
+    "未設定或仍使用範本值，請執行 python scripts/dev/gen_hash.py 產生安全金鑰"
 )
 
 POSTGRES_SERVER = os.getenv("POSTGRES_SERVER", "")

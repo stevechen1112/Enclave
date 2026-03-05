@@ -43,7 +43,7 @@ class DemoPDF(FPDF):
         self.set_default_font(bold=True, size=9)
         self.set_text_color(255, 255, 255)
         self.set_xy(10, 2)
-        self.cell(0, 8, "UniHR AI 勞資法務助手 — Demo 指南  v1.1", align="L")
+        self.cell(0, 8, "Enclave AI 勞資法務助手 — Demo 指南  v1.1", align="L")
         self.set_xy(0, 2)
         self.cell(200, 8, "2026-02-23", align="R")
 

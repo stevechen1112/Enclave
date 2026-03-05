@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { MessageSquare, FileText, BarChart3, BarChart2, LogOut, Shield, ClipboardList, Building2, Activity, Menu, X, FolderSearch, CheckSquare, LayoutDashboard, Wand2, HeartPulse, FileStack, Settings } from 'lucide-react'
+import { MessageSquare, FileText, BarChart3, BarChart2, LogOut, Shield, ClipboardList, Building2, Menu, X, FolderSearch, CheckSquare, Wand2, HeartPulse, FileStack, Settings } from 'lucide-react'
 import clsx from 'clsx'
 
 type NavItem =
@@ -15,16 +15,15 @@ const navItems: NavItem[] = [
   { type: 'link', to: '/generate', icon: Wand2, label: '內容生成' },
   { type: 'link', to: '/reports', icon: FileStack, label: '我的報告' },
   { type: 'link', to: '/documents', icon: FileText, label: '文件管理' },
-  { type: 'link', to: '/my-usage', icon: Activity, label: '我的用量' },
+  { type: 'link', to: '/usage', icon: BarChart3, label: '用量統計' },
   // ── 管理 ──
   { type: 'section', label: '管理', roles: ['owner', 'admin', 'manager'] },
   { type: 'link', to: '/agent', icon: FolderSearch, label: 'Agent 設定', roles: ['owner', 'admin'] },
   { type: 'link', to: '/agent/review', icon: CheckSquare, label: '審核佇列', roles: ['owner', 'admin', 'manager'] },
-  { type: 'link', to: '/agent/progress', icon: LayoutDashboard, label: '處理進度', roles: ['owner', 'admin', 'manager'] },
   // ── 分析 ──
   { type: 'section', label: '分析', roles: ['owner', 'admin'] },
   { type: 'link', to: '/query-analytics', icon: BarChart2, label: '問答分析', roles: ['owner', 'admin'] },
-  { type: 'link', to: '/usage', icon: BarChart3, label: '用量統計', roles: ['owner', 'admin'] },
+
   { type: 'link', to: '/audit', icon: ClipboardList, label: '稽核日誌', roles: ['owner', 'admin'] },
   { type: 'link', to: '/kb-health', icon: HeartPulse, label: 'KB 健康度', roles: ['owner', 'admin'] },
   // ── 設定 ──

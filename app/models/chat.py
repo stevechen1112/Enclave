@@ -37,7 +37,7 @@ class RetrievalTrace(Base):
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=False)
     message_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=False, unique=True)
     
-    sources_json = Column(JSON, default={}) # { company_docs: [], labor_law: [] }
+    sources_json = Column(JSON, default=dict)  # List[dict] of source chunks returned to the user
     latency_ms = Column(Integer, nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())

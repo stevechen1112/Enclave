@@ -1,5 +1,23 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import auth, tenants, users, documents, kb, chat, audit, departments, admin, feature_flags, analytics, agent, generate, mobile, kb_maintenance, company, sso, reports
+from app.api.v1.endpoints import (
+    admin,
+    agent,
+    audit,
+    auth,
+    chat,
+    chat_analytics,
+    company,
+    departments,
+    documents,
+    feature_flags,
+    generate,
+    kb,
+    kb_maintenance,
+    mobile,
+    reports,
+    tenants,
+    users,
+)
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -7,11 +25,12 @@ api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(kb.router, prefix="/kb", tags=["knowledge-base"])
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(chat_analytics.router, prefix="/chat", tags=["analytics"])
 api_router.include_router(audit.router, prefix="/audit", tags=["audit"])
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(feature_flags.router, prefix="/feature-flags", tags=["feature-flags"])
-api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+# analytics.router removed — 前端未使用，進階分析功能暫時停用
 api_router.include_router(tenants.router, prefix="/organization", tags=["organization"])
 # Phase 10 — 主動索引 Agent
 api_router.include_router(agent.router, prefix="/agent", tags=["agent"])
@@ -25,5 +44,3 @@ api_router.include_router(mobile.router, prefix="/mobile", tags=["mobile"])
 api_router.include_router(kb_maintenance.router, prefix="/kb-maintenance", tags=["kb-maintenance"])
 # T3-2 — 公司自助管理（Owner/Admin 使用）
 api_router.include_router(company.router, prefix="/company", tags=["company"])
-# SSO — OAuth state & PKCE callback
-api_router.include_router(sso.router, prefix="/sso", tags=["sso"])

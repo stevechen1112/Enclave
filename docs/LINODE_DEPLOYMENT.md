@@ -11,9 +11,8 @@
 
 ### 使用的網域
 - **使用者介面（租戶）**: `https://app.172-237-11-179.sslip.io`
-- **系統方介面（Admin）**: `https://admin.172-237-11-179.sslip.io`
-- **後端 API**: `https://api.172-237-11-179.sslip.io`
-- **Admin API**: `https://admin-api.172-237-11-179.sslip.io`
+- **管理後台（同前端，角色控管）**: `https://app.172-237-11-179.sslip.io`
+- **後端 API（由 Gateway 路由）**: `https://app.172-237-11-179.sslip.io/api/v1`
 - **監控（Grafana）**: `https://grafana.172-237-11-179.sslip.io`
 - **租戶子網域**: `https://<tenant>.172-237-11-179.sslip.io`
 
@@ -88,7 +87,7 @@ ufw status
 ```bash
 cd /opt
 git clone https://github.com/stevechen1112/aihr.git
-cd aihr
+cd enclave
 ```
 
 #### 4.2 生成生產環境配置
@@ -109,24 +108,22 @@ APP_ENV=production
 SECRET_KEY=<generate_secrets.py 已生成>
 
 # === 網域配置（sslip.io）===
-BACKEND_CORS_ORIGINS=https://app.172-237-11-179.sslip.io,https://admin.172-237-11-179.sslip.io
+BACKEND_CORS_ORIGINS=https://app.172-237-11-179.sslip.io
 FRONTEND_URL=https://app.172-237-11-179.sslip.io
-ADMIN_FRONTEND_URL=https://admin.172-237-11-179.sslip.io
 
 # === 資料庫 ===
 POSTGRES_SERVER=postgres
-POSTGRES_USER=unihr
+POSTGRES_USER=postgres
 POSTGRES_PASSWORD=<generate_secrets.py 已生成>
-POSTGRES_DB=unihr
+POSTGRES_DB=enclave
 
 # === Redis ===
 REDIS_HOST=redis
 REDIS_PASSWORD=<generate_secrets.py 已生成>
-ADMIN_REDIS_PASSWORD=<generate_secrets.py 已生成>
 
 # === AI API Keys（必須填寫真實 key）===
-OPENAI_API_KEY=sk-proj-...
-VOYAGE_API_KEY=pa-...
+GEMINI_API_KEY=...
+LLM_PROVIDER=gemini
 
 # === LlamaParse ===
 LLAMA_CLOUD_API_KEY=llx-...
@@ -178,9 +175,6 @@ docker compose -f docker-compose.prod.yml stop gateway
 ```bash
 certbot certonly --standalone \
   -d app.172-237-11-179.sslip.io \
-  -d admin.172-237-11-179.sslip.io \
-  -d api.172-237-11-179.sslip.io \
-  -d admin-api.172-237-11-179.sslip.io \
   -d grafana.172-237-11-179.sslip.io \
   --email your-email@example.com \
   --agree-tos \
@@ -226,7 +220,7 @@ docker compose -f docker-compose.prod.yml up -d gateway
 certbot renew --dry-run
 
 # 加入 cron（每天凌晨 3 點檢查）
-echo "0 3 * * * certbot renew --quiet && docker compose -f /opt/aihr/docker-compose.prod.yml restart gateway" | crontab -
+echo "0 3 * * * certbot renew --quiet && docker compose -f /opt/enclave/docker-compose.prod.yml restart gateway" | crontab -
 ```
 
 ---
@@ -243,13 +237,13 @@ docker compose -f docker-compose.prod.yml ps
 
 ```bash
 # API 健康檢查
-curl https://api.172-237-11-179.sslip.io/health
+curl https://app.172-237-11-179.sslip.io/health
 
 # 使用者介面
 curl -I https://app.172-237-11-179.sslip.io
 
-# 系統方介面
-curl -I https://admin.172-237-11-179.sslip.io
+# 管理後台（同前端）
+curl -I https://app.172-237-11-179.sslip.io
 
 # Grafana
 curl -I https://grafana.172-237-11-179.sslip.io
@@ -257,7 +251,7 @@ curl -I https://grafana.172-237-11-179.sslip.io
 
 ### 3. 瀏覽器測試
 - **使用者介面**: https://app.172-237-11-179.sslip.io
-- **系統方介面**: https://admin.172-237-11-179.sslip.io
+- **管理後台（同前端）**: https://app.172-237-11-179.sslip.io
 - **Grafana**: https://grafana.172-237-11-179.sslip.io
   - 預設帳號: `admin`
   - 密碼: `.env.production` 中的 `GRAFANA_PASSWORD`
@@ -288,7 +282,7 @@ docker compose -f docker-compose.prod.yml restart
 
 ### 更新程式碼
 ```bash
-cd /opt/aihr
+cd /opt/enclave
 git pull
 docker compose -f docker-compose.prod.yml build
 docker compose -f docker-compose.prod.yml up -d
@@ -301,7 +295,7 @@ docker compose -f docker-compose.prod.yml exec web alembic upgrade head
 bash scripts/backup.sh
 
 # 設定每日自動備份（凌晨 2 點）
-echo "0 2 * * * cd /opt/aihr && bash scripts/backup.sh" | crontab -e
+echo "0 2 * * * cd /opt/enclave && bash scripts/backup.sh" | crontab -e
 ```
 
 ---
@@ -314,9 +308,6 @@ echo "0 2 * * * cd /opt/aihr && bash scripts/backup.sh" | crontab -e
 在你的 DNS 服務商設定：
 ```
 A     app.yourdomain.com       -> 172.237.11.179
-A     admin.yourdomain.com     -> 172.237.11.179
-A     api.yourdomain.com       -> 172.237.11.179
-A     admin-api.yourdomain.com -> 172.237.11.179
 A     grafana.yourdomain.com   -> 172.237.11.179
 A     *.yourdomain.com         -> 172.237.11.179  # wildcard for tenants
 ```
@@ -328,9 +319,6 @@ A     *.yourdomain.com         -> 172.237.11.179  # wildcard for tenants
 ```bash
 certbot certonly --standalone \
   -d app.yourdomain.com \
-  -d admin.yourdomain.com \
-  -d api.yourdomain.com \
-  -d admin-api.yourdomain.com \
   -d grafana.yourdomain.com \
   --email your-email@example.com \
   --agree-tos

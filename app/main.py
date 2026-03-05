@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
+import ipaddress
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.api.v1.api import api_router
@@ -53,8 +54,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Enclave — 企業私有 AI 知識大腦",
     description="地端部署的企業知識庫與 AI 問答平台",
-    version="0.9.0",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    version="1.0.0",
+    openapi_url=(f"{settings.API_V1_STR}/openapi.json" if not settings.is_production else None),
+    docs_url=("/docs" if not settings.is_production else None),
+    redoc_url=("/redoc" if not settings.is_production else None),
     lifespan=lifespan,
 )
 
@@ -95,15 +98,37 @@ app.include_router(api_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():
-    return {"message": "Enclave API", "version": "0.9.0", "docs": "/docs"}
+    return {
+        "message": "Enclave API",
+        "version": "1.0.0",
+        "docs": "/docs" if not settings.is_production else None,
+    }
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "env": settings.APP_ENV}
 
 # Prometheus metrics endpoint (T4-11)
-app.add_route("/metrics", metrics_endpoint)
-set_app_info(version="1.0.0", env=settings.APP_ENV)
+@app.get("/metrics", include_in_schema=False)
+def metrics(request: Request):
+    """Expose metrics only to internal networks in production."""
+    if settings.is_production and settings.METRICS_INTERNAL_ONLY:
+        client_ip = request.client.host if request.client else ""
+        try:
+            ip = ipaddress.ip_address(client_ip)
+            if not (ip.is_loopback or ip.is_private):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="metrics endpoint is restricted",
+                )
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="metrics endpoint is restricted",
+            )
+    return metrics_endpoint(request)
+
+set_app_info(version="1.0.0", env=settings.APP_ENV)  # keep in sync with FastAPI(version=)
 
 @app.get("/api/versions")
 def api_versions():

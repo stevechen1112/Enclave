@@ -19,6 +19,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 
 from app.config import settings
+from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.db.session import SessionLocal
 from app.models.document import DocumentChunk, Document
 
@@ -68,7 +69,10 @@ class KnowledgeBaseRetriever:
     """
 
     def __init__(self):
-        self._embedding_provider = getattr(settings, "EMBEDDING_PROVIDER", "voyage")
+        runtime = resolve_runtime_profiles_no_db()
+        embed_cfg = runtime.get("embedding", {})
+        self._embedding_provider = str(embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))).lower()
+        self._embedding_model = str(embed_cfg.get("model", getattr(settings, "OLLAMA_EMBED_MODEL", "bge-m3")))
 
         if self._embedding_provider == "ollama":
             self.voyage_client = None  # not needed

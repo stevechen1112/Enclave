@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════
-# UniHR SaaS — Makefile
+# Enclave — Makefile
 # ═══════════════════════════════════════════
 .PHONY: dev staging prod down logs migrate test
 
@@ -69,7 +69,7 @@ shell:
 	docker-compose exec web bash
 
 db-shell:
-	docker-compose exec db psql -U postgres -d unihr_saas
+	docker-compose exec db psql -U postgres -d enclave
 
 redis-cli:
 	docker-compose exec redis redis-cli

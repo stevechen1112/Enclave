@@ -10,7 +10,6 @@ from datetime import datetime, timedelta, UTC
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from pydantic import BaseModel
 
 from app.api import deps
 from app.api.deps_permissions import require_superuser
@@ -19,45 +18,9 @@ from app.models.tenant import Tenant
 from app.models.document import Document
 from app.models.audit import AuditLog, UsageRecord
 from app.models.chat import Conversation
+from app.schemas.admin import AdminUserInfo, OrgDashboard, SystemHealth
 
 router = APIRouter()
-
-
-# ===============================================
-#  Response Schemas
-# ===============================================
-
-class OrgDashboard(BaseModel):
-    """單一組織儀表板 — 取代原 SaaS PlatformDashboard"""
-    org_name: str
-    total_users: int
-    active_users: int
-    total_documents: int
-    total_conversations: int
-    total_actions: int
-    total_cost: float
-    daily_actions: list
-    top_users: list
-
-
-class AdminUserInfo(BaseModel):
-    id: str
-    email: str
-    full_name: Optional[str]
-    role: Optional[str]
-    status: Optional[str]
-    tenant_id: str
-    department_name: Optional[str]
-    created_at: Optional[datetime]
-
-
-class SystemHealth(BaseModel):
-    status: str
-    database: str
-    redis: str
-    uptime_seconds: float
-    python_version: str
-    active_connections: int
 
 
 # ===============================================
@@ -324,138 +287,9 @@ def system_health(
 
 
 # ===============================================
-#  Quota Management
+#  Quota Management — 已移除（地端版不需要 SaaS 配額管理）
 # ===============================================
 
-from app.crud import crud_tenant
-from app.schemas.tenant import PLAN_QUOTAS
-
-
-@router.get("/tenants/{tenant_id}/quota")
-def get_tenant_quota(
-    tenant_id: UUID,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_superuser),
-) -> Any:
-    """取得租戶配額狀態（含使用量）"""
-    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-    return crud_tenant.get_quota_status(db, tenant_id)
-
-
-@router.put("/tenants/{tenant_id}/quota")
-def update_tenant_quota(
-    tenant_id: UUID,
-    payload: dict,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_superuser),
-) -> Any:
-    """更新租戶配額欄位"""
-    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    allowed_fields = {
-        "max_users", "max_documents", "max_storage_mb",
-        "monthly_query_limit", "monthly_token_limit",
-        "quota_alert_threshold", "quota_alert_email",
-    }
-    for field, value in payload.items():
-        if field in allowed_fields:
-            setattr(tenant, field, value)
-    db.commit()
-    db.refresh(tenant)
-    return crud_tenant.get_quota_status(db, tenant_id)
-
-
-@router.post("/tenants/{tenant_id}/quota/apply-plan")
-def apply_plan_quota(
-    tenant_id: UUID,
-    plan: str = Query(..., description="Plan name: free, pro, enterprise"),
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_superuser),
-) -> Any:
-    """套用方案預設配額到租戶"""
-    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-    if plan not in PLAN_QUOTAS:
-        raise HTTPException(status_code=400, detail=f"Unknown plan: {plan}")
-
-    defaults = PLAN_QUOTAS[plan]
-    for field, value in defaults.items():
-        setattr(tenant, field, value)
-    tenant.plan = plan
-    db.commit()
-    db.refresh(tenant)
-    return {"plan": tenant.plan, "tenant_id": str(tenant_id), **defaults}
-
-
-@router.get("/quota/plans")
-def list_plan_quotas(
-    current_user: User = Depends(require_superuser),
-) -> Any:
-    """列出所有方案的預設配額"""
-    return PLAN_QUOTAS
-
-
 # ===============================================
-#  Security Config
+#  Security Config — 已移除（地端版不需要多租戶安全組態）
 # ===============================================
-
-VALID_ISOLATION_LEVELS = {"standard", "enhanced", "strict"}
-
-
-@router.get("/tenants/{tenant_id}/security")
-def get_security_config(
-    tenant_id: UUID,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_superuser),
-) -> Any:
-    """取得租戶安全組態"""
-    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-    return {
-        "tenant_id": str(tenant_id),
-        "isolation_level": tenant.isolation_level or "standard",
-        "require_mfa": tenant.require_mfa or False,
-        "ip_whitelist": tenant.ip_whitelist or "",
-    }
-
-
-@router.put("/tenants/{tenant_id}/security")
-def update_security_config(
-    tenant_id: UUID,
-    payload: dict,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_superuser),
-) -> Any:
-    """更新租戶安全組態"""
-    tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
-
-    if "isolation_level" in payload:
-        if payload["isolation_level"] not in VALID_ISOLATION_LEVELS:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid isolation_level. Must be one of: {VALID_ISOLATION_LEVELS}",
-            )
-        tenant.isolation_level = payload["isolation_level"]
-
-    if "require_mfa" in payload:
-        tenant.require_mfa = bool(payload["require_mfa"])
-
-    if "ip_whitelist" in payload:
-        tenant.ip_whitelist = payload["ip_whitelist"]
-
-    db.commit()
-    db.refresh(tenant)
-    return {
-        "tenant_id": str(tenant_id),
-        "isolation_level": tenant.isolation_level or "standard",
-        "require_mfa": tenant.require_mfa or False,
-        "ip_whitelist": tenant.ip_whitelist or "",
-    }

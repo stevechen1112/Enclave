@@ -8,11 +8,9 @@ import UsagePage from './pages/UsagePage'
 import AuditLogsPage from './pages/AuditLogsPage'
 import DepartmentsPage from './pages/DepartmentsPage'
 import CompanyPage from './pages/CompanyPage'
-import MyUsagePage from './pages/MyUsagePage'
 // Phase 10 — 主動索引 Agent
 import AgentPage from './pages/AgentPage'
 import ReviewQueuePage from './pages/ReviewQueuePage'
-import ProgressDashboardPage from './pages/ProgressDashboardPage'
 // Phase 11 — 內容生成
 import GeneratePage from './pages/GeneratePage'
 import QueryAnalyticsPage from './pages/QueryAnalyticsPage'
@@ -43,15 +41,15 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<ChatPage />} />
         <Route path="documents" element={<DocumentsPage />} />
-        <Route path="my-usage" element={<MyUsagePage />} />
-        <Route path="usage" element={<RoleGuard roles={['owner', 'admin']}><UsagePage /></RoleGuard>} />
+        <Route path="my-usage" element={<Navigate to="/usage?tab=personal" replace />} />
+        <Route path="usage" element={<UsagePage />} />
         <Route path="audit" element={<RoleGuard roles={['owner', 'admin']}><AuditLogsPage /></RoleGuard>} />
         <Route path="departments" element={<RoleGuard roles={['owner', 'admin']}><DepartmentsPage /></RoleGuard>} />
         <Route path="company" element={<RoleGuard roles={['owner', 'admin']}><CompanyPage /></RoleGuard>} />
         {/* Phase 10 — 主動索引 Agent */}
         <Route path="agent" element={<RoleGuard roles={['owner', 'admin']}><AgentPage /></RoleGuard>} />
         <Route path="agent/review" element={<RoleGuard roles={['owner', 'admin', 'manager']}><ReviewQueuePage /></RoleGuard>} />
-        <Route path="agent/progress" element={<RoleGuard roles={['owner', 'admin', 'manager']}><ProgressDashboardPage /></RoleGuard>} />
+        <Route path="agent/progress" element={<Navigate to="/agent?tab=progress" replace />} />
         <Route path="query-analytics" element={<RoleGuard roles={['owner', 'admin']}><QueryAnalyticsPage /></RoleGuard>} />
         {/* Phase 11 — 內容生成 */}
         <Route path="generate" element={<GeneratePage />} />
@@ -60,9 +58,6 @@ function AppRoutes() {
         <Route path="reports/:id" element={<ReportDetailPage />} />
         {/* Phase 13 — 知識庫維護 */}
         <Route path="kb-health" element={<RoleGuard roles={['owner', 'admin']}><KBHealthPage /></RoleGuard>} />
-        {/* Redirects for merged pages */}
-        <Route path="rag-dashboard" element={<Navigate to="/query-analytics" replace />} />
-        <Route path="usage-report" element={<Navigate to="/usage" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

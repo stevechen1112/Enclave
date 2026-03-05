@@ -46,12 +46,12 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Create non-root user
-RUN groupadd -r unihr && useradd -r -g unihr -d /code -s /sbin/nologin unihr
+RUN groupadd -r enclave && useradd -r -g enclave -d /code -s /sbin/nologin enclave
 
 COPY . .
 
-RUN chown -R unihr:unihr /code
-USER unihr
+RUN chown -R enclave:enclave /code
+USER enclave
 
 EXPOSE 8000
 

@@ -1,5 +1,5 @@
 """
-批量上傳測試文件到 UniHR SaaS API
+批量上傳測試文件到 Enclave API
 """
 import os, sys, time, requests, glob
 

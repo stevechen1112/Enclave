@@ -61,17 +61,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build & push admin-frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./admin-frontend
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}/admin-frontend:staging
-            ${{ env.IMAGE_PREFIX }}/admin-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       # ── Deploy via SSH ──
       - name: Deploy to staging server
         uses: appleboy/ssh-action@v1
@@ -81,7 +70,7 @@ jobs:
           key: ${{ secrets.STAGING_SSH_KEY }}
           script: |
             set -e
-            cd /opt/unihr
+            cd /opt/enclave
 
             # Pull latest images
             docker compose -f docker-compose.prod.yml pull

@@ -8,6 +8,8 @@ from io import StringIO
 from typing import Dict, List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+
 from app.db.session import SessionLocal
 from app.models.document import Document, DocumentChunk
 
@@ -24,8 +26,15 @@ class EmployeeRoster:
         self.source_filename = source_filename
 
     @staticmethod
-    def load(tenant_id: UUID) -> Optional["EmployeeRoster"]:
-        db = SessionLocal()
+    def load(tenant_id: UUID, db: Optional[Session] = None) -> Optional["EmployeeRoster"]:
+        """Load the most-recent employee roster document for *tenant_id*.
+
+        Pass an existing *db* session to reuse a caller-managed transaction;
+        omit it to run in a short-lived session that is closed automatically.
+        """
+        _own_session = db is None
+        if _own_session:
+            db = SessionLocal()
         try:
             doc = (
                 db.query(Document)
@@ -56,7 +65,8 @@ class EmployeeRoster:
                 return None
             return EmployeeRoster(rows, doc.filename)
         finally:
-            db.close()
+            if _own_session:
+                db.close()
 
     @staticmethod
     def _deduplicate_rows(rows: List[Dict[str, str]]) -> List[Dict[str, str]]:
@@ -532,8 +542,16 @@ def try_structured_answer(
     tenant_id: UUID,
     question: str,
     history: Optional[List[Dict[str, str]]] = None,
+    db: Optional[Session] = None,
 ) -> Optional[StructuredAnswer]:
-    roster = EmployeeRoster.load(tenant_id)
+    """Attempt to answer *question* using structured in-memory data sources.
+
+    Pass an existing *db* session to allow the employee roster query to share
+    a caller-managed transaction; omit it to use a short-lived session.
+    Returns ``None`` when no structured handler matches, signalling the
+    caller to fall back to the RAG pipeline.
+    """
+    roster = EmployeeRoster.load(tenant_id, db=db)
     if not roster:
         return None
 

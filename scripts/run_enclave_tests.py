@@ -328,7 +328,7 @@ def phase2():
     r = api.get("/api/v1/kb/stats")
     if r.status_code == 200:
         s = r.json()
-        ok("KB 統計", f"chunks={s.get('total_chunks',0)} docs={s.get('total_documents',0)}")
+        ok("KB 統計", f"chunks={s.get('total_chunks',0)} vectors={s.get('vector_count',0)} dim={s.get('dimension','?')}")
     else:
         fail("KB 統計", f"HTTP {r.status_code}")
 
@@ -628,7 +628,7 @@ def phase7():
     r = api.get("/api/v1/kb-maintenance/kb/health")
     if r.status_code == 200:
         h = r.json()
-        ok("KB 健康狀態", f"status={h.get('status','?')} chunks={h.get('total_chunks',0)}")
+        ok("KB 健康狀態", f"docs={h.get('total_documents',0)} completed={h.get('completed_documents',0)} coverage={h.get('index_coverage_pct','?')}% conf7d={h.get('avg_confidence_7d','N/A')}")
     else:
         fail("KB 健康狀態", f"HTTP {r.status_code}")
 

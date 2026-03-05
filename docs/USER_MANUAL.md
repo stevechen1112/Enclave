@@ -1,4 +1,4 @@
-# UniHR 使用者操作手冊
+# Enclave 使用者操作手冊
 
 > 版本: 1.0 | 更新日期: 2026-02-07
 
@@ -18,7 +18,7 @@
 ### 1.1 首次登入
 
 1. 收到邀請郵件後，點擊連結設定密碼
-2. 開啟 `https://app.unihr.com`，輸入 Email 和密碼
+2. 開啟 `https://app.yourdomain.com`，輸入 Email 和密碼
 3. 首次登入會引導至公司設定頁面
 
 ### 1.2 公司基本設定
@@ -33,7 +33,7 @@
 | 輔色調 | 選擇輔助色，影響背景/強調色 |
 | Favicon | 網站圖示，建議 32×32px ICO/PNG |
 
-> **💡 提示**：品牌設定為 Pro 以上方案功能。Free 方案使用 UniHR 預設品牌。
+> **💡 提示**：品牌設定為 Pro 以上方案功能。Free 方案使用系統預設品牌。
 
 ### 1.3 成員管理
 
@@ -99,15 +99,15 @@
 
 #### Google SSO
 1. 前往 Google Cloud Console 建立 OAuth 2.0 憑證
-2. 設定 Redirect URI: `https://app.unihr.com/api/v1/auth/sso/callback/google`
-3. 在 UniHR 填入 Client ID 和 Client Secret
+2. 設定 Redirect URI: `https://app.yourdomain.com/api/v1/auth/sso/callback/google`
+3. 在 Enclave 後台填入 Client ID 和 Client Secret
 4. 設定允許的 Email Domain（如 `@yourcompany.com`）
 5. 啟用
 
 #### Microsoft SSO
 1. 前往 Azure AD 註冊應用程式
-2. 設定 Redirect URI: `https://app.unihr.com/api/v1/auth/sso/callback/microsoft`
-3. 在 UniHR 填入 Client ID 和 Client Secret
+2. 設定 Redirect URI: `https://app.yourdomain.com/api/v1/auth/sso/callback/microsoft`
+3. 在 Enclave 後台填入 Client ID 和 Client Secret
 4. 啟用
 
 ### 1.7 稽核記錄
@@ -145,7 +145,7 @@
 1. 輸入您的域名（如 `hr.yourcompany.com`）
 2. 系統生成 DNS TXT 驗證記錄
 3. 在您的 DNS 管理介面新增 TXT 記錄
-4. 回到 UniHR 點擊「驗證」
+4. 回到 Enclave 點擊「驗證」
 5. 驗證成功後等待 SSL 憑證配置
 6. 完成後即可透過自訂域名存取
 
@@ -155,7 +155,7 @@
 
 ### 2.1 登入
 
-1. 開啟公司提供的 UniHR 網址
+1. 開啟公司提供的 Enclave 網址
 2. 使用 Email/密碼 或 SSO 登入
 
 ### 2.2 提問（AI 問答）
@@ -197,7 +197,7 @@
 
 ### 3.1 平台管理 Dashboard
 
-路徑：`https://admin.unihr.com`
+路徑：`https://app.yourdomain.com`（使用 superuser 權限進入平台管理）
 
 登入後可看到：
 - 平台總覽（租戶數、使用者數、文件數、對話數）
@@ -247,7 +247,7 @@
 
 ### 3.6 監控
 
-路徑：`https://grafana.unihr.com`
+路徑：`https://grafana.yourdomain.com`
 
 Grafana Dashboard 提供：
 - HTTP 請求量 / 錯誤率

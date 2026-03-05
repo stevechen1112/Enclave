@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     # ── First superuser (used by scripts/initial_data.py) ──
     FIRST_SUPERUSER_EMAIL: str = "admin@example.com"
-    FIRST_SUPERUSER_PASSWORD: str = "admin123"
+    FIRST_SUPERUSER_PASSWORD: str = ""  # Must be set via FIRST_SUPERUSER_PASSWORD in .env
     
     # CORS
     BACKEND_CORS_ORIGINS: str = ""
@@ -117,6 +117,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_GLOBAL_PER_IP: int = 200
     RATE_LIMIT_PER_USER: int = 60
     RATE_LIMIT_CHAT_PER_USER: int = 20
+    METRICS_INTERNAL_ONLY: bool = True
 
     # Admin IP Whitelist
     ADMIN_IP_WHITELIST_ENABLED: bool = False
@@ -166,12 +167,18 @@ class Settings(BaseSettings):
                     UserWarning,
                     stacklevel=2,
                 )
-            if self.FIRST_SUPERUSER_PASSWORD == "admin123":
+            if not self.FIRST_SUPERUSER_PASSWORD:
                 warnings.warn(
-                    "FIRST_SUPERUSER_PASSWORD is still the default 'admin123'. "
-                    "Set FIRST_SUPERUSER_PASSWORD in .env for production.",
+                    "FIRST_SUPERUSER_PASSWORD is empty. "
+                    "Set FIRST_SUPERUSER_PASSWORD in .env before first run.",
                     UserWarning,
                     stacklevel=2,
+                )
+            # ── Admin whitelist (must be enabled in production/staging) ──
+            if not self.ADMIN_IP_WHITELIST_ENABLED:
+                raise ValueError(
+                    "ADMIN_IP_WHITELIST_ENABLED must be true in production/staging. "
+                    "Set ADMIN_IP_WHITELIST_ENABLED=true and configure ADMIN_IP_WHITELIST."
                 )
         return self
 

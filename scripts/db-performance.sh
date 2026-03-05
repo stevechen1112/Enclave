@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# UniHR 資料庫效能分析腳本（T4-15）
+# Enclave 資料庫效能分析腳本（T4-15）
 # ===========================================================================
 #
 # 用途：
@@ -24,8 +24,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 DB_HOST="${PGHOST:-localhost}"
 DB_PORT="${PGPORT:-5432}"
-DB_USER="${PGUSER:-unihr}"
-DB_NAME="${PGDATABASE:-unihr}"
+DB_USER="${PGUSER:-enclave}"
+DB_NAME="${PGDATABASE:-enclave}"
 
 PSQL_CMD="psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME"
 REPORT_DIR="reports/db-performance"
@@ -34,7 +34,7 @@ REPORT_FILE="${REPORT_DIR}/report_$(date +%Y%m%d_%H%M%S).txt"
 mkdir -p "$REPORT_DIR"
 
 echo "======================================================================"
-echo "📊 UniHR 資料庫效能分析"
+echo "📊 Enclave 資料庫效能分析"
 echo "      Host: ${DB_HOST}:${DB_PORT}"
 echo "      Database: ${DB_NAME}"
 echo "      Report: ${REPORT_FILE}"

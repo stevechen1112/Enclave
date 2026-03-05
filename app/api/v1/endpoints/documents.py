@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 import aiofiles
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -15,10 +16,12 @@ from app.models.user import User
 from app.models.document import Document as DocumentModel
 from app.schemas.document import Document, DocumentCreate
 from app.config import settings
+from app.crud import crud_tenant  # top-level import
 from app.tasks.document_tasks import process_document_task
 from app.services.document_parser import SUPPORTED_FORMATS
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 # ── Response schema for /supported-formats ──────────────────────────────────────
@@ -109,7 +112,6 @@ async def upload_document(
     check_document_permission(current_user, "create")
 
     # 文件數量配額檢查
-    from app.crud import crud_tenant
     doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")
     if not doc_quota.get("allowed", True):
         raise HTTPException(
@@ -142,49 +144,74 @@ async def upload_document(
             detail=str(e)
         )
     
-    # 3. 檢查文件大小
-    file_content = await file.read()
-    file_size = len(file_content)
-    
-    if file_size > settings.MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"文件過大（{file_size / 1024 / 1024:.2f} MB），上限為 {settings.MAX_FILE_SIZE / 1024 / 1024} MB"
-        )
-    
-    if file_size == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="文件為空"
-        )
-    
-    # 3.5. 清理檔名（去除資料夾路徑前綴，如 webkitRelativePath）
+    # 3. 清理檔名（去除資料夾路徑前綴，如 webkitRelativePath）
     clean_filename = os.path.basename(file.filename or "")
     if not clean_filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="無效的檔名")
 
-    # 4. 建立文件記錄
+    # 4. 串流寫檔（避免一次把整個檔案讀進記憶體）
+    upload_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.tenant_id))
+    os.makedirs(upload_dir, exist_ok=True)
+    temp_file_path = os.path.join(upload_dir, f"tmp-{uuid.uuid4().hex}{file_ext}")
+
+    file_size = 0
+    chunk_size = 1024 * 1024  # 1MB
+    try:
+        async with aiofiles.open(temp_file_path, "wb") as f:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                file_size += len(chunk)
+                if file_size > settings.MAX_FILE_SIZE:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            f"文件過大（{file_size / 1024 / 1024:.2f} MB），"
+                            f"上限為 {settings.MAX_FILE_SIZE / 1024 / 1024} MB"
+                        ),
+                    )
+                await f.write(chunk)
+    except HTTPException:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise
+    except Exception:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise
+    finally:
+        await file.close()
+
+    if file_size == 0:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文件為空"
+        )
+
+    # 5. 建立文件記錄
     doc_in = DocumentCreate(
         filename=clean_filename,
         file_type=file_type
     )
     
-    document = crud_document.create(
-        db,
-        obj_in=doc_in,
-        tenant_id=current_user.tenant_id,
-        uploaded_by=current_user.id,
-        file_size=file_size
-    )
-    
-    # 5. 儲存文件
-    upload_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.tenant_id))
-    os.makedirs(upload_dir, exist_ok=True)
-    
+    try:
+        document = crud_document.create(
+            db,
+            obj_in=doc_in,
+            tenant_id=current_user.tenant_id,
+            uploaded_by=current_user.id,
+            file_size=file_size
+        )
+    except Exception:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise
+
     file_path = os.path.join(upload_dir, f"{document.id}{file_ext}")
-    
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(file_content)
+    os.replace(temp_file_path, file_path)
     
     # 6. 觸發背景任務處理
     process_document_task.delay(
@@ -194,6 +221,41 @@ async def upload_document(
     )
     
     return document
+
+
+@router.delete("/batch", summary="批次刪除所有文件")
+def batch_delete_documents(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    批次刪除當前租戶的所有文件（含 chunks、實體檔案）。
+    權限：owner, admin
+    """
+    if current_user.role not in ("owner", "admin") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="僅管理員可執行批次刪除")
+
+    docs = (
+        db.query(DocumentModel)
+        .filter(DocumentModel.tenant_id == current_user.tenant_id)
+        .all()
+    )
+    deleted = 0
+    for doc in docs:
+        for chunk in doc.chunks:
+            db.delete(chunk)
+        try:
+            ext = os.path.splitext(doc.filename)[1]
+            fp = os.path.join(settings.UPLOAD_DIR, str(doc.tenant_id), f"{doc.id}{ext}")
+            if os.path.exists(fp):
+                os.remove(fp)
+        except Exception:
+            pass
+        db.delete(doc)
+        deleted += 1
+    db.commit()
+    return {"deleted": deleted}
 
 
 @router.get("/{document_id}", response_model=Document)
@@ -263,7 +325,7 @@ def delete_document(
             db.delete(chunk)
         db.commit()
     except Exception as e:
-        print(f"刪除向量 chunks 失敗: {e}")
+        logger.warning("刪除向量 chunks 失敗 (document_id=%s): %s", document_id, e)
     
     # 刪除實體文件
     try:
@@ -276,7 +338,7 @@ def delete_document(
         if os.path.exists(file_path):
             os.remove(file_path)
     except Exception as e:
-        print(f"刪除實體文件失敗: {e}")
+        logger.warning("刪除實體文件失敗 (document_id=%s): %s", document_id, e)
     
     # 刪除資料庫記錄
     crud_document.delete(db, document_id=document_id)
@@ -284,38 +346,3 @@ def delete_document(
     return {"message": "文件已刪除", "document_id": str(document_id)}
 
 
-@router.delete("/batch", summary="批次刪除所有文件")
-def batch_delete_documents(
-    *,
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """
-    批次刪除當前租戶的所有文件（含 chunks、實體檔案）。
-    權限：owner, admin
-    """
-    if current_user.role not in ("owner", "admin") and not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="僅管理員可執行批次刪除")
-
-    docs = (
-        db.query(DocumentModel)
-        .filter(DocumentModel.tenant_id == current_user.tenant_id)
-        .all()
-    )
-    deleted = 0
-    for doc in docs:
-        # Delete chunks
-        for chunk in doc.chunks:
-            db.delete(chunk)
-        # Delete physical file
-        try:
-            ext = os.path.splitext(doc.filename)[1]
-            fp = os.path.join(settings.UPLOAD_DIR, str(doc.tenant_id), f"{doc.id}{ext}")
-            if os.path.exists(fp):
-                os.remove(fp)
-        except Exception:
-            pass
-        db.delete(doc)
-        deleted += 1
-    db.commit()
-    return {"deleted": deleted}

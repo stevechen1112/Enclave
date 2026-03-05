@@ -1,7 +1,7 @@
 import requests, time, io
 
 r = requests.post('http://web:8000/api/v1/auth/login/access-token',
-    data={'username': 'demo@unihr.ai', 'password': 'admin123'})
+    data={'username': 'demo@enclave.local', 'password': 'admin123'})
 token = r.json()['access_token']
 headers = {'Authorization': f'Bearer {token}'}
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate production secrets for UniHR SaaS deployment.
+Generate production secrets for Enclave deployment.
 
 Usage:
     python scripts/generate_secrets.py
@@ -16,7 +16,6 @@ def generate_secrets() -> dict[str, str]:
         "SECRET_KEY": secrets.token_urlsafe(48),
         "POSTGRES_PASSWORD": secrets.token_urlsafe(32),
         "REDIS_PASSWORD": secrets.token_urlsafe(24),
-        "ADMIN_REDIS_PASSWORD": secrets.token_urlsafe(24),
         "GRAFANA_PASSWORD": secrets.token_urlsafe(16),
     }
 
@@ -69,7 +68,7 @@ def main():
 
     # Default: just print the secrets
     print("=" * 60)
-    print("  UniHR SaaS — Generated Production Secrets")
+    print("  Enclave — Generated Production Secrets")
     print("=" * 60)
     for key, value in generated.items():
         print(f"{key}={value}")

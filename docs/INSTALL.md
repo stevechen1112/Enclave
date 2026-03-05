@@ -8,10 +8,10 @@
 
 | 情境 | 最低需求 | 建議配置 |
 |---|---|---|
-| 使用 OpenAI API | 4 核 CPU、8 GB RAM、50 GB SSD | 8 核、16 GB RAM、200 GB SSD |
+| 使用雲端 API（Gemini / OpenAI） | 4 核 CPU、8 GB RAM、50 GB SSD | 8 核、16 GB RAM、200 GB SSD |
 | 使用 Ollama 本機 LLM | 8 核 CPU、16 GB RAM、100 GB SSD | 獨立 GPU（8 GB VRAM 以上）、32 GB RAM |
 
-> **說明：** OpenAI API 模式下，LLM 推論在雲端執行，本機只需足夠的記憶體給 PostgreSQL + pgvector 使用。  
+> **說明：** 雲端 API 模式下（Gemini / OpenAI），LLM 推論在雲端執行，本機只需足夠的記憶體給 PostgreSQL + pgvector 使用。  
 > Ollama 模式下，LLM 推論在本機執行，效能主要取決於 CPU/GPU 和記憶體。
 
 ---
@@ -70,16 +70,29 @@ SECRET_KEY=<產生的金鑰>
 # 資料庫密碼
 POSTGRES_PASSWORD=<資料庫密碼>
 
-# LLM 設定（二選一）
-# ── 選項 A：OpenAI API ──
-LLM_PROVIDER=openai
-OPENAI_API_KEY=sk-...
-VOYAGE_API_KEY=voyage-...
+# LLM 設定（三選一）
+# ── 選項 A：Google Gemini（推薦，性價比高）──
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=AIza...
+GEMINI_MODEL=gemini-3-flash-preview
 
-# ── 選項 B：Ollama 本機 LLM ──
+# ── 選項 B：OpenAI API ──
+# LLM_PROVIDER=openai
+# OPENAI_API_KEY=sk-...
+# OPENAI_MODEL=gpt-4o-mini
+
+# ── 選項 C：Ollama 本機 LLM（零 API 費用，需要較強硬體）──
 # LLM_PROVIDER=ollama
 # OLLAMA_BASE_URL=http://host.docker.internal:11434
 # OLLAMA_MODEL=llama3.2
+
+# 向量嵌入設定（二選一）
+# ── 預設：Ollama 本機嵌入（免費，推薦地端）──
+EMBEDDING_PROVIDER=ollama
+OLLAMA_EMBED_MODEL=bge-m3
+# ── 雲端 Voyage AI（品質較高，需 API Key）──
+# EMBEDDING_PROVIDER=voyage
+# VOYAGE_API_KEY=pa-...
 ```
 
 ### 步驟 3：執行環境檢查
@@ -221,14 +234,22 @@ httpx.ConnectError: [Errno 111] Connection refused
 **解決：** 修改 `nginx/gateway.conf` 中的 `client_max_body_size`，預設 100MB。
 
 ### Q: 向量搜尋品質差
-**解決：** 確認 `VOYAGE_API_KEY` 已正確設定。若使用 Ollama 模式，Voyage AI 的嵌入向量仍需 API Key，或改用本機嵌入模型（需額外設定）。
+**解決：** 確認 `EMBEDDING_PROVIDER` 設定正確：
+- `EMBEDDING_PROVIDER=ollama`（預設）：確認 Ollama 正在執行且已下載 `bge-m3` 模型（`ollama pull bge-m3`）。
+- `EMBEDDING_PROVIDER=voyage`：確認 `VOYAGE_API_KEY` 有效。
+
+### Q: Gemini API 呼叫失敗
+```
+httpx.HTTPStatusError: 400 Bad Request
+```
+**解決：** 確認 `GEMINI_API_KEY` 已正確填入，且有存取 `gemini-3-flash-preview` 模型的權限．可至 [Google AI Studio](https://aistudio.google.com/) 確認 API 金鑰狀態。
 
 ---
 
 ## 九、網路安全建議
 
-- ✅ 限制 API 端口（8001）只對內網開放，不對外暴露
-- ✅ 啟用防火牆，只開放 80/443 (Nginx) 與 SSH 端口
+- ✅ 對外只開放 80/443（Nginx）與 SSH 端口，後端 API 8000 及資料庫 5432 不對外暴露
+- ✅ 啟用防火牆，封鎖所有不必要端口
 - ✅ 定期更換 `SECRET_KEY` 和資料庫密碼
 - ✅ 若需行動端遠端存取，使用 **Tailscale** 或 **WireGuard VPN**，而非直接開放端口
 - ✅ 啟用磁碟加密（BitLocker / dm-crypt）保護靜態資料
@@ -243,4 +264,4 @@ httpx.ConnectError: [Errno 111] Connection refused
 
 ---
 
-文件版本：v1.0 ｜ Enclave 私有專案
+文件版本：v1.1（2026-03-06）｜ Enclave 私有專案

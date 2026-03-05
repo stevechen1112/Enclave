@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-UniHR 文件處理引擎 — 綜合能力評估 (Benchmark & Self-Evaluation)
+Enclave 文件處理引擎 — 綜合能力評估 (Benchmark & Self-Evaluation)
 
 評估維度：
   A. 解析正確性 — 各格式的內容提取是否完整、準確
@@ -976,7 +976,7 @@ def eval_enterprise_coverage():
 def generate_report():
     print("\n")
     print("╔" + "═" * 62 + "╗")
-    print("║         UniHR 文件處理引擎 — 綜合能力評估報告              ║")
+    print("║         Enclave 文件處理引擎 — 綜合能力評估報告              ║")
     print("╠" + "═" * 62 + "╣")
 
     # 按類別彙總
@@ -1069,7 +1069,7 @@ def generate_report():
 
 if __name__ == "__main__":
     print("=" * 64)
-    print("  UniHR 文件處理引擎 — 綜合能力自評 Benchmark")
+    print("  Enclave 文件處理引擎 — 綜合能力自評 Benchmark")
     print("  日期: 2026-02-06")
     print("=" * 64)
 
