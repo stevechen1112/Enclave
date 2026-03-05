@@ -360,10 +360,16 @@ GET /api/v1/agent/review  →  審核員看到佇列
 
 ```
 NoGPU 模式（沿用目前 .env）
-  ①② 主 LLM      → 依 LLM_PROVIDER / GEMINI_MODEL / OPENAI_MODEL
-  ③ 內部改寫      → 依 INTERNAL_* 設定
-  ④ 掃描摘要      → 依 SCAN_* 設定
-  ⑤ Embedding    → 依 EMBEDDING_PROVIDER 設定
+  ①② 主 LLM      → 依 `LLM_PROVIDER` 對應模型（Gemini 用 `GEMINI_MODEL`、OpenAI 用 `OPENAI_MODEL`、Ollama 用 `OLLAMA_MODEL`）
+  ③ 內部改寫      → 依 `INTERNAL_LLM_PROVIDER` 對應模型（`INTERNAL_GEMINI_MODEL` / `INTERNAL_OPENAI_MODEL` / `INTERNAL_OLLAMA_MODEL`）
+  ④ 掃描摘要      → 依 `SCAN_LLM_PROVIDER` 對應模型（`SCAN_GEMINI_MODEL` / `SCAN_OPENAI_MODEL` / `OLLAMA_SCAN_MODEL`）
+  ⑤ Embedding    → 依 `EMBEDDING_PROVIDER` 對應模型（Voyage=`VOYAGE_MODEL`、Ollama=`OLLAMA_EMBED_MODEL`）
+
+  目前專案（你現在的 NoGPU 設定）範例：
+  - ①② 主 LLM：`gemini-3-flash-preview`
+  - ③ 內部改寫：`gemini-3.1-flash-lite-preview`
+  - ④ 掃描摘要：`gemini-3.1-flash-lite-preview`
+  - ⑤ Embedding：以當前 `EMBEDDING_PROVIDER` 為準（可在「公司管理 → 部署模式」或 `GET /api/v1/company/deployment-mode` 查看實際生效值）
 
 GPU 模式（固定 preset）
   ①② 主 LLM      → ollama / qwen3:14b
