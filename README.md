@@ -372,10 +372,14 @@ NoGPU 模式（沿用目前 .env）
   - ⑤ Embedding：以當前 `EMBEDDING_PROVIDER` 為準（可在「公司管理 → 部署模式」或 `GET /api/v1/company/deployment-mode` 查看實際生效值）
 
 GPU 模式（固定 preset）
-  ①② 主 LLM      → ollama / qwen3:14b
-  ③ 內部改寫      → ollama / qwen3:14b
-  ④ 掃描摘要      → ollama / qwen3:14b
-  ⑤ Embedding    → ollama / bge-m3:latest
+  ①② 主 LLM      → provider=`ollama`，model=`qwen3:14b`（固定）
+  ③ 內部改寫      → provider=`ollama`，model=`qwen3:14b`（固定）
+  ④ 掃描摘要      → provider=`ollama`，model=`qwen3:14b`（固定）
+  ⑤ Embedding    → provider=`ollama`，model=`bge-m3:latest`（固定）
+
+  對應說明：
+  - GPU 模式下，以上 4 組會由系統 preset 直接覆蓋生效（不是讀 `.env` 變數）
+  - 可用 `GET /api/v1/company/deployment-mode` 查看目前實際生效值
 ```
 
 > 模式值儲存在 `feature_flags.key=deployment_mode` 的 metadata，不需修改 `.env`。
