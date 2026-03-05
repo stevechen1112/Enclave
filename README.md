@@ -971,9 +971,21 @@ Enclave/
 ├── docker-compose.yml          # 開發環境
 ├── docker-compose.prod.yml     # 生產環境
 ├── scripts/
+│   ├── run_enclave_tests.py    # ★ 主測試腳本（P0-P13，85 cases）
+│   ├── run_tests.py            # 輕量整合測試
 │   ├── initial_data.py         # 初始化 superuser
-│   ├── run_tests.py            # 整合測試腳本
-│   └── ...
+│   ├── dev/                    # 開發工具（find_env.py / gen_hash.py / verify_hash.py / query.sql）
+│   ├── tests/                  # 早期 E2E 腳本（test_e2e.py / test_upload.py 等）
+│   └── ...                     # 其他維運 / DB / 部署腳本
+├── docs/
+│   ├── reports/                # 稽核 & 品質報告（INTEGRATION_AUDIT_REPORT.md 等）
+│   ├── 開發計畫_企業AI知識大腦_地端版.docx
+│   └── *.md                    # API 指南、部署手冊、SOP 等
+├── artifacts/
+│   ├── logs/                   # 執行時 log（gitignore；僅保留 .gitkeep）
+│   └── reports/                # migration_output.txt / plan_extracted.txt
+├── test-results/               # run_enclave_tests.py 輸出 JSON（gitignore）
+├── test-uploads/               # 測試上傳暫存（gitignore）
 └── test-data/                  # 測試文件與問題集
 ```
 
@@ -1087,14 +1099,19 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 # 單元測試
 pytest tests/
 
-# 整合測試（需要運行中的 API）
-python scripts/run_tests.py
+# ★ 完整整合測試（P0-P13，85 cases；需要運行中的 API）
+python scripts/run_enclave_tests.py --skip-upload
 
 # 指定特定 phase
-python scripts/run_tests.py --phase 0 --phase 1
+python scripts/run_enclave_tests.py --phase 2 --phase 7 --skip-upload
 
-# 雲端環境測試
-ENCLAVE_BASE_URL=http://your-server python scripts/run_tests.py
+# 含文件上傳（需 test-data/ 中有測試檔）
+python scripts/run_enclave_tests.py
+
+# 指定測試目標伺服器
+ENCLAVE_BASE_URL=http://your-server python scripts/run_enclave_tests.py --skip-upload
+
+# 結果 JSON 存於 test-results/（自動 gitignore）
 ```
 
 ---
