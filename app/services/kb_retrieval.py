@@ -1,8 +1,8 @@
 """
-UniHR 進階知識庫檢索服務 (Advanced Knowledge Base Retriever)
+Enclave 進階知識庫檢索服務（Advanced Knowledge Base Retriever）
 
 功能：
-  - 語意檢索（pgvector + Voyage Embedding）
+  - 語意檢索（pgvector + Ollama/Voyage Embedding）
   - 關鍵字檢索（BM25）
   - 混合檢索（語意 + BM25 + RRF 融合）
   - 相似度閾值過濾
@@ -18,13 +18,18 @@ import re
 from typing import List, Dict, Any, Optional
 from uuid import UUID
 
-import voyageai
-
 from app.config import settings
 from app.db.session import SessionLocal
 from app.models.document import DocumentChunk, Document
 
 logger = logging.getLogger(__name__)
+
+# ── 可選依賴 ──
+try:
+    import voyageai as _voyageai_lib
+    _HAS_VOYAGE = True
+except ImportError:
+    _HAS_VOYAGE = False
 
 # ── 可選依賴 ──
 try:
@@ -63,10 +68,14 @@ class KnowledgeBaseRetriever:
     """
 
     def __init__(self):
-        if not settings.VOYAGE_API_KEY:
-            raise ValueError("VOYAGE_API_KEY 未設定")
+        self._embedding_provider = getattr(settings, "EMBEDDING_PROVIDER", "voyage")
 
-        self.voyage_client = voyageai.Client(api_key=settings.VOYAGE_API_KEY)
+        if self._embedding_provider == "ollama":
+            self.voyage_client = None  # not needed
+        else:
+            if not settings.VOYAGE_API_KEY:
+                raise ValueError("VOYAGE_API_KEY 未設定（或改用 EMBEDDING_PROVIDER=ollama）")
+            self.voyage_client = _voyageai_lib.Client(api_key=settings.VOYAGE_API_KEY)
 
         # OpenAI client（用於 HyDE 查詢擴展）
         self._openai = None
@@ -217,12 +226,12 @@ class KnowledgeBaseRetriever:
         filter_dict: Optional[Dict] = None,
     ) -> List[Dict[str, Any]]:
         """使用 pgvector 的 cosine distance 進行語意檢索"""
+        from app.tasks.document_tasks import embed_texts
+
         db = SessionLocal()
         try:
-            # 1. 取得查詢向量
-            query_embedding = self.voyage_client.embed(
-                [query], model=settings.VOYAGE_MODEL, input_type="query",
-            ).embeddings[0]
+            # 1. 取得查詢向量（Ollama / Voyage 自動切換）
+            query_embedding = embed_texts([query], input_type="query")[0]
 
             # 2. 使用 pgvector cosine distance 搜尋
             #    cosine_distance = 1 - cosine_similarity
@@ -455,6 +464,10 @@ class KnowledgeBaseRetriever:
         if not results:
             return results
 
+        # Rerank 需要 Voyage client；若未啟用則使用本地關鍵字感知重排序
+        if self.voyage_client is None:
+            return self._local_rerank(query, results, top_k=top_k)
+
         try:
             documents = [r.get("content", "")[:2000] for r in results]
 
@@ -477,6 +490,85 @@ class KnowledgeBaseRetriever:
         except Exception as e:
             logger.warning(f"重排序失敗，回退到原始排序: {e}")
             return results[:top_k]
+
+    # ─────────────────────────────────────────────
+    # 本地重排序（Voyage 不可用時的 fallback）
+    # ─────────────────────────────────────────────
+
+    def _local_rerank(
+        self,
+        query: str,
+        results: List[Dict[str, Any]],
+        top_k: int = 5,
+    ) -> List[Dict[str, Any]]:
+        """
+        本地關鍵字感知重排序器。
+
+        結合三項訊號重新計算分數：
+          1. 原始 RRF / 語意分數（40%）
+          2. jieba 詞級關鍵字重疊率（35%）
+          3. 實體（人名 / 員工編號 / 檔名）精確匹配加分（25%）
+
+        不需任何外部 API，零延遲。
+        """
+        if not results:
+            return results
+
+        query_tokens = set(self._tokenize(query))
+        # 提取查詢中的人名 / 員工編號 / 關鍵實體
+        query_entities: List[str] = []
+        # 中文姓名（2~3 字）
+        for name_match in re.finditer(r'[\u4e00-\u9fff]{2,4}', query):
+            candidate = name_match.group()
+            if candidate not in ('什麼', '多少', '如何', '可以', '是否', '哪些',
+                                 '怎麼', '目前', '現在', '需要', '公司', '員工',
+                                 '今年', '年度', '等級', '部門', '超過', '金額',
+                                 '結果', '代表', '上限', '其中'):
+                query_entities.append(candidate)
+        # 員工編號 E001~E999
+        for eid_match in re.finditer(r'E\d{3}', query, re.IGNORECASE):
+            query_entities.append(eid_match.group().upper())
+
+        scored: List[tuple] = []
+        max_rrf = max((r.get('score', 0) for r in results), default=1.0) or 1.0
+
+        for r in results:
+            content = r.get('content', '')
+            filename = r.get('filename', '')
+            full_text = content + ' ' + filename
+
+            # (1) 原始分數正規化 0~1
+            rrf_norm = r.get('score', 0) / max_rrf
+
+            # (2) 詞級關鍵字重疊率
+            content_tokens = set(self._tokenize(full_text))
+            if query_tokens:
+                overlap = len(query_tokens & content_tokens) / len(query_tokens)
+            else:
+                overlap = 0.0
+
+            # (3) 實體匹配加分
+            entity_score = 0.0
+            if query_entities:
+                matches = sum(1 for e in query_entities if e in full_text)
+                entity_score = matches / len(query_entities)
+
+            # 綜合分數
+            final = 0.40 * rrf_norm + 0.35 * overlap + 0.25 * entity_score
+            scored.append((final, r))
+
+        # 按重排分數降序排列
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        reranked_results: List[Dict[str, Any]] = []
+        for final_score, r in scored[:top_k]:
+            item = r.copy()
+            item['score'] = round(final_score, 4)
+            item['reranked'] = True
+            reranked_results.append(item)
+
+        logger.info(f"本地重排序完成：{len(results)} → {len(reranked_results)} 筆")
+        return reranked_results
 
     # ─────────────────────────────────────────────
     # Redis 快取

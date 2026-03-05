@@ -30,6 +30,8 @@ htmlcov/
 .env.development
 .env.staging
 .env.production
+.env.test
+.env.*.local
 
 # ---------- 上傳資料（保留目錄結構）----------
 uploads/*

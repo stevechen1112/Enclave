@@ -3,9 +3,9 @@
 """
 import os, sys, time, requests, glob
 
-BASE_URL = "http://localhost:8000"
-HR_USER = "hr@taiyutech.com"
-HR_PASS = "Test1234!"
+BASE_URL = "http://localhost:8001"
+HR_USER = "admin@example.com"
+HR_PASS = "admin123"
 DOC_DIR = os.path.join(os.path.dirname(__file__), "..", "test-data", "company-documents")
 
 # 支援的副檔名

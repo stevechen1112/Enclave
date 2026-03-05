@@ -42,12 +42,39 @@ export const authApi = {
 }
 
 // ─── Documents ───
+// Cache with TTL — re-fetches every 10 minutes so hot-deployed format changes are picked up
+let _supportedFormatsCache: { promise: Promise<Set<string>>; ts: number } | null = null
+const FORMATS_CACHE_TTL = 10 * 60 * 1000  // 10 minutes
+
 export const docApi = {
+  /**
+   * Fetches the backend's authoritative list of supported upload extensions.
+   * Result is cached with a 10-minute TTL.
+   * Falls back to an empty Set on network error (caller should handle gracefully).
+   */
+  getSupportedFormats: (): Promise<Set<string>> => {
+    const now = Date.now()
+    if (_supportedFormatsCache && (now - _supportedFormatsCache.ts) < FORMATS_CACHE_TTL) {
+      return _supportedFormatsCache.promise
+    }
+    const promise = api
+      .get<{ extensions: string[] }>('/documents/supported-formats')
+      .then(r => new Set<string>(r.data.extensions))
+      .catch(() => {
+        _supportedFormatsCache = null   // allow retry next time
+        return new Set<string>()
+      })
+    _supportedFormatsCache = { promise, ts: now }
+    return promise
+  },
+
   list: (params?: { department_id?: string }) => api.get<Document[]>('/documents/', { params }).then(r => r.data),
   get: (id: string) => api.get<Document>(`/documents/${id}`).then(r => r.data),
   upload: (file: File, onProgress?: (pct: number) => void) => {
     const form = new FormData()
-    form.append('file', file)
+    // Strip webkitRelativePath prefix — only send the basename
+    const basename = file.name.includes('/') ? file.name.split('/').pop()! : file.name
+    form.append('file', file, basename)
     return api.post<Document>('/documents/upload', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (e) => {
@@ -100,7 +127,16 @@ export const chatApi = {
           const trimmed = line.trim()
           if (!trimmed.startsWith('data: ')) continue
           try {
-            const event: SSEEvent = JSON.parse(trimmed.slice(6))
+            const raw = JSON.parse(trimmed.slice(6))
+            // Map backend source fields to frontend ChatSource interface
+            if (raw.type === 'sources' && Array.isArray(raw.sources)) {
+              raw.sources = raw.sources.map((s: Record<string, unknown>) => ({
+                ...s,
+                title: s.title || s.filename || '',
+                snippet: s.snippet || s.content || '',
+              }))
+            }
+            const event: SSEEvent = raw
             onEvent(event)
           } catch {
             // skip malformed
@@ -139,62 +175,91 @@ export const auditApi = {
     api.get('/audit/usage/export', { params: { format, ...params }, responseType: 'blob' }).then(r => r.data),
 }
 
-// ─── Company Self-Service (T3-2) ───
+// ─── Admin / Organization Management ───
+// P9-1/P9-2: Removed branding/subscription/quota-plan from companyApi
+// Routes map to backend /admin/* prefix
 export const companyApi = {
-  dashboard: () => api.get('/company/dashboard').then(r => r.data),
-  profile: () => api.get('/company/profile').then(r => r.data),
-  quota: () => api.get('/company/quota').then(r => r.data),
-  users: () => api.get('/company/users').then(r => r.data),
+  dashboard: () => api.get('/admin/dashboard').then(r => r.data),
+  users: (params?: Record<string, string>) => api.get('/admin/users', { params }).then(r => r.data),
   inviteUser: (data: { email: string; full_name?: string; role: string; password: string }) =>
-    api.post('/company/users/invite', data).then(r => r.data),
+    api.post('/admin/users/invite', data).then(r => r.data),
   updateUser: (id: string, data: Record<string, unknown>) =>
-    api.put(`/company/users/${id}`, data).then(r => r.data),
-  deactivateUser: (id: string) => api.delete(`/company/users/${id}`).then(r => r.data),
-  usageSummary: () => api.get('/company/usage/summary').then(r => r.data),
-  usageByUser: () => api.get('/company/usage/by-user').then(r => r.data),
-  branding: () => api.get('/company/branding').then(r => r.data),
-  updateBranding: (data: Record<string, unknown>) =>
-    api.put('/company/branding', data).then(r => r.data),
+    api.put(`/admin/users/${id}`, data).then(r => r.data),
+  deactivateUser: (id: string) => api.delete(`/admin/users/${id}`).then(r => r.data),
+  systemHealth: () => api.get('/admin/system/health').then(r => r.data),
+  usageSummary: () => api.get('/audit/usage/summary').then(r => r.data),
+  usageByUser: () => api.get('/audit/usage/by-action').then(r => r.data),
 }
 
-// ─── Public (no auth) ───
-export const publicApi = {
-  branding: (params?: { domain?: string; tenant_id?: string }) =>
-    api.get('/public/branding', { params }).then(r => r.data),
+// ─── Phase 13: KB Maintenance ───
+export const kbApi = {
+  // P13-3: Health dashboard
+  health: (staleDays?: number) =>
+    api.get('/kb-maintenance/kb/health', { params: staleDays ? { stale_days: staleDays } : {} }).then(r => r.data),
+
+  // P13-1: Document versions
+  listVersions: (docId: string) =>
+    api.get(`/kb-maintenance/documents/${docId}/versions`).then(r => r.data),
+  reupload: (docId: string, file: File, changeNote?: string) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/kb-maintenance/documents/${docId}/reupload`, form, {
+      params: changeNote ? { change_note: changeNote } : {},
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data)
+  },
+
+  // P13-2: Version diff
+  diff: (docId: string, oldVer: number, newVer: number) =>
+    api.get(`/kb-maintenance/documents/${docId}/diff`, { params: { old_version: oldVer, new_version: newVer } }).then(r => r.data),
+
+  // P13-4: Knowledge gaps
+  listGaps: (status?: string) =>
+    api.get('/kb-maintenance/kb/gaps', { params: status ? { status } : {} }).then(r => r.data),
+  resolveGap: (gapId: string, data: { document_id?: string; resolve_note?: string }) =>
+    api.post(`/kb-maintenance/kb/gaps/${gapId}/resolve`, data).then(r => r.data),
+  scanGaps: (days?: number) =>
+    api.post('/kb-maintenance/kb/gaps/scan', null, { params: days ? { days } : {} }).then(r => r.data),
+
+  // P13-5: Taxonomy
+  listCategories: (includeInactive?: boolean) =>
+    api.get('/kb-maintenance/kb/categories', { params: includeInactive ? { include_inactive: true } : {} }).then(r => r.data),
+  createCategory: (data: { name: string; description?: string; parent_id?: string; sort_order?: number }) =>
+    api.post('/kb-maintenance/kb/categories', data).then(r => r.data),
+  updateCategory: (catId: string, data: Record<string, unknown>) =>
+    api.put(`/kb-maintenance/kb/categories/${catId}`, data).then(r => r.data),
+  deleteCategory: (catId: string) =>
+    api.delete(`/kb-maintenance/kb/categories/${catId}`).then(r => r.data),
+  categoryRevisions: (catId: string) =>
+    api.get(`/kb-maintenance/kb/categories/${catId}/revisions`).then(r => r.data),
+  rollbackCategory: (catId: string, revision: number) =>
+    api.post(`/kb-maintenance/kb/categories/${catId}/rollback/${revision}`).then(r => r.data),
+
+  // P13-6: Integrity check
+  triggerIntegrityCheck: () =>
+    api.post('/kb-maintenance/kb/integrity/scan').then(r => r.data),
+  listIntegrityReports: (limit?: number) =>
+    api.get('/kb-maintenance/kb/integrity/reports', { params: limit ? { limit } : {} }).then(r => r.data),
+
+  // P13-7: Backup & restore
+  createBackup: (backupType?: string) =>
+    api.post('/kb-maintenance/kb/backups', { backup_type: backupType || 'full' }).then(r => r.data),
+  listBackups: (limit?: number) =>
+    api.get('/kb-maintenance/kb/backups', { params: limit ? { limit } : {} }).then(r => r.data),
+  restore: (backupId: string) =>
+    api.post('/kb-maintenance/kb/backups/restore', { backup_id: backupId }).then(r => r.data),
+
+  // P13-8: Usage report
+  usageReport: (days?: number) =>
+    api.get('/kb-maintenance/kb/usage-report', { params: days ? { days } : {} }).then(r => r.data),
 }
 
-// ─── Subscription (T4-17) ───
-export const subscriptionApi = {
-  plans: () => api.get('/subscription/plans').then(r => r.data),
-  current: () => api.get('/subscription/current').then(r => r.data),
-  upgrade: (target_plan: string) => api.post('/subscription/upgrade', { target_plan }).then(r => r.data),
-  checkFeature: (feature: string) => api.get('/subscription/feature-check', { params: { feature } }).then(r => r.data),
-  exportUsage: (params?: Record<string, string>) =>
-    api.get('/subscription/usage/export', { params, responseType: 'blob' }).then(r => r.data),
-}
-
-// ─── SSO ───
-export const ssoApi = {
-  /** Public: get enabled providers for a tenant (no auth required) */
-  providers: (tenantId: string) =>
-    api.get<{ provider: string; enabled: boolean }[]>(`/auth/sso/providers/${tenantId}`).then(r => r.data),
-  /** Public: auto-discover tenant + SSO providers by email domain */
-  discover: (email: string) =>
-    api.post<{ tenant_id: string; tenant_name: string; providers: { provider: string; client_id: string }[] }>('/auth/sso/discover', { email }).then(r => r.data),
-  /** Public: create signed OAuth state */
-  state: (body: { tenant_id: string; provider: string }) =>
-    api.post<{ state: string }>('/auth/sso/state', body).then(r => r.data),
-  /** Exchange OAuth code for JWT */
-  callback: (body: { code: string; redirect_uri: string; tenant_id: string; provider: string; state: string; code_verifier: string }) =>
-    api.post<{ access_token: string; token_type: string }>('/auth/sso/callback', body).then(r => r.data),
-  /** Admin: list SSO configs (requires auth) */
-  listConfigs: () => api.get('/auth/sso/config').then(r => r.data),
-  /** Admin: create / upsert SSO config */
-  createConfig: (body: Record<string, unknown>) => api.post('/auth/sso/config', body).then(r => r.data),
-  /** Admin: update SSO config */
-  updateConfig: (provider: string, body: Record<string, unknown>) => api.put(`/auth/sso/config/${provider}`, body).then(r => r.data),
-  /** Admin: delete SSO config */
-  deleteConfig: (provider: string) => api.delete(`/auth/sso/config/${provider}`).then(r => r.data),
+// ─── Phase 10: Agent ───
+export const agentApi = {
+  scanPreview: (subfolders: Array<{ path: string; name: string; files: string[]; content_samples?: string[] }>) =>
+    api.post<{
+      subfolders: Array<{ path: string; name: string; file_count: number; summary: string; has_content_samples: boolean }>
+    }>('/agent/scan-preview', { subfolders }).then(r => r.data),
 }
 
 export default api

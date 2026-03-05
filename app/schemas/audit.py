@@ -1,15 +1,15 @@
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # Audit Log Schemas
 class AuditLogBase(BaseModel):
     action: str
-    resource_type: Optional[str] = None
-    resource_id: Optional[str] = None
-    details: Optional[dict] = None
+    target_type: Optional[str] = None
+    target_id: Optional[str] = None
+    detail_json: Optional[dict] = None
 
 
 class AuditLog(AuditLogBase):
@@ -19,8 +19,7 @@ class AuditLog(AuditLogBase):
     ip_address: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Usage Record Schemas
@@ -39,8 +38,7 @@ class UsageRecord(UsageRecordBase):
     user_id: Optional[UUID] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UsageSummary(BaseModel):

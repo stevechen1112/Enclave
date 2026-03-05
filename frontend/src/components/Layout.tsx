@@ -1,29 +1,40 @@
 import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
-import { useBranding } from '../contexts/BrandingContext'
-import { MessageSquare, FileText, BarChart3, LogOut, Shield, ClipboardList, Building2, KeyRound, Palette, CreditCard, Globe, MapPin, Activity, Menu, X, Gauge } from 'lucide-react'
+import { MessageSquare, FileText, BarChart3, BarChart2, LogOut, Shield, ClipboardList, Building2, Activity, Menu, X, FolderSearch, CheckSquare, LayoutDashboard, Wand2, HeartPulse, FileStack, Settings } from 'lucide-react'
 import clsx from 'clsx'
 
-const navItems = [
-  { to: '/', icon: MessageSquare, label: 'AI 問答' },
-  { to: '/documents', icon: FileText, label: '文件管理' },
-  { to: '/my-usage', icon: Activity, label: '我的用量' },
-  { to: '/usage', icon: BarChart3, label: '用量統計', roles: ['owner', 'admin'] },
-  { to: '/audit', icon: ClipboardList, label: '稽核日誌', roles: ['owner', 'admin'] },
-  { to: '/departments', icon: Building2, label: '部門管理', roles: ['owner', 'admin', 'hr'] },
-  { to: '/company', icon: Building2, label: '公司管理', roles: ['owner', 'admin'] },
-  { to: '/branding', icon: Palette, label: '品牌設定', roles: ['owner', 'admin'] },
-  { to: '/subscription', icon: CreditCard, label: '訂閱方案', roles: ['owner', 'admin'] },
-  { to: '/custom-domains', icon: Globe, label: '自訂域名', roles: ['owner', 'admin'] },
-  { to: '/regions', icon: MapPin, label: '區域資訊', roles: ['owner', 'admin'] },
-  { to: '/rag-dashboard', icon: Gauge, label: 'RAG 儀表板', roles: ['owner', 'admin', 'hr'] },
-  { to: '/sso-settings', icon: KeyRound, label: 'SSO 設定', roles: ['owner', 'admin'] },
+type NavItem =
+  | { type: 'link'; to: string; icon: typeof MessageSquare; label: string; roles?: string[] }
+  | { type: 'section'; label: string; roles?: string[] }
+
+const navItems: NavItem[] = [
+  // ── 工作 ──
+  { type: 'section', label: '工作' },
+  { type: 'link', to: '/', icon: MessageSquare, label: 'AI 問答' },
+  { type: 'link', to: '/generate', icon: Wand2, label: '內容生成' },
+  { type: 'link', to: '/reports', icon: FileStack, label: '我的報告' },
+  { type: 'link', to: '/documents', icon: FileText, label: '文件管理' },
+  { type: 'link', to: '/my-usage', icon: Activity, label: '我的用量' },
+  // ── 管理 ──
+  { type: 'section', label: '管理', roles: ['owner', 'admin', 'manager'] },
+  { type: 'link', to: '/agent', icon: FolderSearch, label: 'Agent 設定', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/agent/review', icon: CheckSquare, label: '審核佇列', roles: ['owner', 'admin', 'manager'] },
+  { type: 'link', to: '/agent/progress', icon: LayoutDashboard, label: '處理進度', roles: ['owner', 'admin', 'manager'] },
+  // ── 分析 ──
+  { type: 'section', label: '分析', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/query-analytics', icon: BarChart2, label: '問答分析', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/usage', icon: BarChart3, label: '用量統計', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/audit', icon: ClipboardList, label: '稽核日誌', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/kb-health', icon: HeartPulse, label: 'KB 健康度', roles: ['owner', 'admin'] },
+  // ── 設定 ──
+  { type: 'section', label: '設定', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/departments', icon: Building2, label: '部門管理', roles: ['owner', 'admin'] },
+  { type: 'link', to: '/company', icon: Settings, label: '組織設定', roles: ['owner', 'admin'] },
 ]
 
 export default function Layout() {
   const { user, logout } = useAuth()
-  const branding = useBranding()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -31,8 +42,6 @@ export default function Layout() {
     logout()
     navigate('/login')
   }
-
-  const displayName = branding.brand_name || branding.tenant_name || 'UniHR'
 
   const visibleNav = navItems.filter(item => {
     return !item.roles || item.roles.includes(user?.role ?? '')
@@ -42,12 +51,8 @@ export default function Layout() {
     <>
       {/* Logo */}
       <div className="flex h-14 items-center gap-2 border-b border-gray-200 px-4">
-        {branding.brand_logo_url ? (
-          <img src={branding.brand_logo_url} alt={displayName} className="h-6 w-6 object-contain" />
-        ) : (
-          <Shield className="h-6 w-6" style={{ color: branding.brand_primary_color || '#2563eb' }} />
-        )}
-        <span className="text-lg font-bold text-gray-900">{displayName}</span>
+        <Shield className="h-6 w-6 text-blue-600" />
+        <span className="text-lg font-bold text-gray-900">Enclave</span>
         {/* Mobile close button */}
         <button
           onClick={() => setSidebarOpen(false)}
@@ -58,26 +63,36 @@ export default function Layout() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {visibleNav.map(({ to, icon: Icon, label }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/'}
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) =>
-              clsx(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              )
-            }
-          >
-            <Icon className="h-5 w-5" />
-            {label}
-          </NavLink>
-        ))}
+      <nav className="flex-1 space-y-0.5 px-3 py-4 overflow-y-auto">
+        {visibleNav.map((item, idx) => {
+          if (item.type === 'section') {
+            return (
+              <div key={`sec-${idx}`} className={clsx('px-3 pt-4 pb-1', idx === 0 && 'pt-0')}>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">{item.label}</p>
+              </div>
+            )
+          }
+          const { to, icon: Icon, label } = item
+          return (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                clsx(
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                )
+              }
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* User info */}
@@ -130,7 +145,7 @@ export default function Layout() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <span className="font-semibold text-gray-800">{displayName}</span>
+          <span className="font-semibold text-gray-800">Enclave</span>
         </header>
 
         <main className="flex-1 overflow-hidden">

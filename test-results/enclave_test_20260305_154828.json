@@ -1,0 +1,90 @@
+{
+  "timestamp": "20260305_154828",
+  "summary": {
+    "passed": 16,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "label": "健康檢查",
+      "detail": "env=development"
+    },
+    {
+      "status": "PASS",
+      "label": "Admin 登入",
+      "detail": "admin@example.com"
+    },
+    {
+      "status": "PASS",
+      "label": "測試 HR 帳號已存在",
+      "detail": "跳過建立"
+    },
+    {
+      "status": "PASS",
+      "label": "取得 me 資訊",
+      "detail": "role=owner tenant=fd39fa1a..."
+    },
+    {
+      "status": "PASS",
+      "label": "Agent 狀態",
+      "detail": "watcher=False scheduler=True folders=0 pending=0"
+    },
+    {
+      "status": "PASS",
+      "label": "監控資料夾清單",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "瀏覽目錄 /code",
+      "detail": "16 個子目錄"
+    },
+    {
+      "status": "PASS",
+      "label": "新增監控資料夾",
+      "detail": "path=/code/test-agent-watch"
+    },
+    {
+      "status": "PASS",
+      "label": "Scan Preview（Ollama 摘要）",
+      "detail": "此資料夾主要存放太宇科技股份有限公司的人事相關政策與員工手冊，涵蓋了員工的聘僱、薪資、休假、考核、獎懲等面向。包含人事管"
+    },
+    {
+      "status": "PASS",
+      "label": "啟動 Agent",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "觸發即時掃描",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "審核佇列（待審核）",
+      "detail": "total=0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "批次狀態統計",
+      "detail": "{'status_summary': {}}"
+    },
+    {
+      "status": "PASS",
+      "label": "批次報告 PDF",
+      "detail": "2096 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "Toggle 監控資料夾（停用）",
+      "detail": "is_active=False"
+    },
+    {
+      "status": "PASS",
+      "label": "停止 Agent",
+      "detail": ""
+    }
+  ]
+}

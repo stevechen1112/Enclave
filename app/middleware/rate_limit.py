@@ -1,10 +1,10 @@
 """
-API Rate Limiting 中間件（T3-4）
-基於 Redis 的滑動視窗 Rate Limiter，支援：
-  - 全域速率限制（IP 層）
-  - 租戶級速率限制
-  - 使用者級速率限制
-  - 濫用偵測與自動封鎖
+單機資源保護 Middleware（P9-8）
+
+地端版本不需要三層租戶速率限制。
+改為簡單的單機保護：
+  - 同一 IP 每分鐘最多 N 次請求（防止本機腳本失控）
+  - Redis 不可用時自動放行（不阻擋正常使用）
 """
 import logging
 import time
@@ -115,22 +115,14 @@ class RateLimiter:
 #  Rate Limit Configuration
 # ═══════════════════════════════════════════
 
-# 預設限流設定（可透過環境變數覆蓋）
+# 單機保護設定：同一 IP 每分鐘最多 200 次（地端通常只有少數使用者）
 RATE_LIMITS = {
     "global_per_ip": {
         "max_requests": int(getattr(settings, "RATE_LIMIT_GLOBAL_PER_IP", 200)),
         "window_seconds": 60,
     },
-    "per_user": {
-        "max_requests": int(getattr(settings, "RATE_LIMIT_PER_USER", 60)),
-        "window_seconds": 60,
-    },
-    "per_tenant": {
-        "max_requests": int(getattr(settings, "RATE_LIMIT_PER_TENANT", 300)),
-        "window_seconds": 60,
-    },
     "chat_per_user": {
-        "max_requests": int(getattr(settings, "RATE_LIMIT_CHAT_PER_USER", 20)),
+        "max_requests": int(getattr(settings, "RATE_LIMIT_CHAT_PER_USER", 30)),
         "window_seconds": 60,
     },
 }
@@ -142,14 +134,15 @@ RATE_LIMITS = {
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    全域 Rate Limiting 中間件。
+    單機資源保護 Middleware（P9-8）。
     依序檢查：
-    1. IP 是否被濫用封鎖
-    2. IP 級全域限流
-    3. 如果能識別用戶/租戶，進一步限流
+    1. IP 是否被濫用封鎖（短時間大量請求）
+    2. IP 級全域限流（每分鐘上限）
+    Redis 不可用時自動放行，不阻礙正常使用。
     """
 
-    SKIP_PATHS = {"/", "/health", "/api/versions", "/docs", "/openapi.json", "/redoc"}
+    SKIP_PATHS = {"/", "/health", "/api/versions", "/docs", "/openapi.json", "/redoc",
+                   "/api/v1/documents/supported-formats"}
 
     def __init__(self, app, redis_url: Optional[str] = None):
         super().__init__(app)

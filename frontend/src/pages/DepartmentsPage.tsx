@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Building2, Plus, Loader2, Trash2, ChevronRight, ChevronDown, FolderTree } from 'lucide-react'
+import { Building2, Plus, Loader2, Trash2, ChevronRight, ChevronDown, FolderTree, Pencil, Check, X } from 'lucide-react'
 import api from '../api'
+import toast from 'react-hot-toast'
 
 interface Department {
   id: string
@@ -53,14 +54,35 @@ function flattenTree(nodes: DeptNode[], collapsed: Set<string>): DeptNode[] {
   return result
 }
 
-function DeptRow({ dept, collapsed, onToggle, onDelete }: {
+function DeptRow({ dept, collapsed, onToggle, onDelete, onUpdate }: {
   dept: DeptNode
   collapsed: Set<string>
   onToggle: (id: string) => void
   onDelete: (id: string) => void
+  onUpdate: (id: string, data: { name: string; description: string | null }) => Promise<void>
 }) {
   const hasChildren = dept.children.length > 0
   const isCollapsed = collapsed.has(dept.id)
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(dept.name)
+  const [editDesc, setEditDesc] = useState(dept.description || '')
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    if (!editName.trim()) return
+    setSaving(true)
+    try {
+      await onUpdate(dept.id, { name: editName.trim(), description: editDesc.trim() || null })
+      setEditing(false)
+    } catch { /* handled by parent */ }
+    finally { setSaving(false) }
+  }
+
+  const handleCancel = () => {
+    setEditName(dept.name)
+    setEditDesc(dept.description || '')
+    setEditing(false)
+  }
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
@@ -77,26 +99,59 @@ function DeptRow({ dept, collapsed, onToggle, onDelete }: {
             <span className="mr-1.5 w-5" />
           )}
           <Building2 className={`h-4 w-4 mr-2 shrink-0 ${dept.depth === 0 ? 'text-blue-500' : dept.depth === 1 ? 'text-indigo-400' : 'text-gray-400'}`} />
-          <span className="text-sm font-medium text-gray-900">{dept.name}</span>
-          {hasChildren && (
+          {editing ? (
+            <input value={editName} onChange={e => setEditName(e.target.value)}
+              className="rounded border border-blue-300 px-2 py-0.5 text-sm font-medium text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 w-36"
+              autoFocus onKeyDown={e => e.key === 'Enter' && handleSave()} />
+          ) : (
+            <span className="text-sm font-medium text-gray-900">{dept.name}</span>
+          )}
+          {hasChildren && !editing && (
             <span className="ml-2 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
               {dept.children.length}
             </span>
           )}
         </div>
       </td>
-      <td className="px-5 py-3 text-sm text-gray-500">{dept.description || '—'}</td>
+      <td className="px-5 py-3">
+        {editing ? (
+          <input value={editDesc} onChange={e => setEditDesc(e.target.value)}
+            className="rounded border border-gray-300 px-2 py-0.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full"
+            placeholder="描述（選填）"
+            onKeyDown={e => e.key === 'Enter' && handleSave()} />
+        ) : (
+          <span className="text-sm text-gray-500">{dept.description || '—'}</span>
+        )}
+      </td>
       <td className="px-5 py-3 text-sm text-gray-500">
         {dept.created_at ? new Date(dept.created_at).toLocaleDateString('zh-TW') : '—'}
       </td>
       <td className="px-5 py-3 text-right">
-        <button
-          onClick={() => onDelete(dept.id)}
-          className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          停用
-        </button>
+        <div className="flex items-center justify-end gap-1">
+          {editing ? (
+            <>
+              <button onClick={handleSave} disabled={saving || !editName.trim()}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-green-600 hover:bg-green-50 disabled:opacity-50">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 儲存
+              </button>
+              <button onClick={handleCancel}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-gray-500 hover:bg-gray-100">
+                <X className="h-3.5 w-3.5" /> 取消
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setEditing(true)}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 transition-colors">
+                <Pencil className="h-3.5 w-3.5" /> 編輯
+              </button>
+              <button onClick={() => onDelete(dept.id)}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-red-600 hover:bg-red-50 transition-colors">
+                <Trash2 className="h-3.5 w-3.5" /> 停用
+              </button>
+            </>
+          )}
+        </div>
       </td>
     </tr>
   )
@@ -160,7 +215,18 @@ export default function DepartmentsPage() {
       await api.delete(`/departments/${id}`)
       load()
     } catch {
-      alert('停用失敗')
+      toast.error('停用失敗')
+    }
+  }
+
+  const handleUpdate = async (id: string, data: { name: string; description: string | null }) => {
+    try {
+      await api.put(`/departments/${id}`, data)
+      toast.success('已更新')
+      load()
+    } catch {
+      toast.error('更新失敗')
+      throw new Error('update failed')
     }
   }
 
@@ -258,6 +324,7 @@ export default function DepartmentsPage() {
                     collapsed={collapsed}
                     onToggle={toggleCollapse}
                     onDelete={handleDelete}
+                    onUpdate={handleUpdate}
                   />
                 ))}
               </tbody>

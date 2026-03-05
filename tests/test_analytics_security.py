@@ -3,22 +3,9 @@ Phase 3 Integration Tests — Rate Limiting & Analytics (T3-4, T3-5)
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
-ORCH_CLASS = "app.api.v1.endpoints.chat.ChatOrchestrator"
-
-
-def _mock_orchestrator():
-    result = {
-        "request_id": "r", "question": "q", "answer": "a",
-        "company_policy": None, "labor_law": None,
-        "sources": [], "notes": [], "disclaimer": "僅供參考",
-    }
-    inst = AsyncMock()
-    inst.process_query = AsyncMock(return_value=result)
-    return patch(ORCH_CLASS, return_value=inst)
 
 
 async def _setup(client, superuser_headers, tax_id):
@@ -44,8 +31,7 @@ async def test_daily_usage_trend(client: AsyncClient, superuser_headers: dict):
     """測試每日用量趨勢 API"""
     t, h = await _setup(client, superuser_headers, "DT01")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "trend q"})
+    await client.post(CHAT_URL, headers=h, json={"question": "trend q"})
 
     r = await client.get("/api/v1/analytics/trends/daily?days=7", headers=superuser_headers)
     assert r.status_code == 200
@@ -62,8 +48,7 @@ async def test_daily_trend_per_tenant(client: AsyncClient, superuser_headers: di
     """測試單一租戶每日趨勢"""
     t, h = await _setup(client, superuser_headers, "DT02")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "tenant trend"})
+    await client.post(CHAT_URL, headers=h, json={"question": "tenant trend"})
 
     r = await client.get(
         f"/api/v1/analytics/trends/daily?tenant_id={t['id']}&days=7",
@@ -77,8 +62,7 @@ async def test_monthly_cost_by_tenant(client: AsyncClient, superuser_headers: di
     """測試各租戶月度成本排行"""
     t, h = await _setup(client, superuser_headers, "MC01")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "cost q"})
+    await client.post(CHAT_URL, headers=h, json={"question": "cost q"})
 
     r = await client.get("/api/v1/analytics/trends/monthly-by-tenant", headers=superuser_headers)
     assert r.status_code == 200
@@ -117,8 +101,7 @@ async def test_budget_alerts_detects_exceeded(client: AsyncClient, superuser_hea
         json={"monthly_query_limit": 1},
     )
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "q"})
+    await client.post(CHAT_URL, headers=h, json={"question": "q"})
 
     r = await client.get("/api/v1/analytics/budget-alerts", headers=superuser_headers)
     assert r.status_code == 200

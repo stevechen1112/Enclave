@@ -4,7 +4,7 @@
 """
 from typing import Any, List, Optional
 from uuid import UUID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -79,7 +79,7 @@ def daily_usage_trend(
     取得每日用量趨勢（最近 N 天）。
     若指定 tenant_id 則僅查該租戶；否則為全平台。
     """
-    start = datetime.utcnow() - timedelta(days=days)
+    start = datetime.now(UTC) - timedelta(days=days)
     q = db.query(
         cast(UsageRecord.created_at, Date).label("date"),
         func.count(UsageRecord.id).label("queries"),
@@ -127,7 +127,7 @@ def monthly_cost_by_tenant(
     """
     各租戶本月成本排行。
     """
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     y = year or now.year
     m = month or now.month
     month_start = datetime(y, m, 1)
@@ -189,7 +189,7 @@ def detect_anomalies(
     異常偵測：找出用量明顯偏離平均的租戶。
     計算每租戶近 7 天日均 vs 前 30 天日均，找出偏離倍數超過閾值者。
     """
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     recent_start = now - timedelta(days=7)
     baseline_start = now - timedelta(days=37)
     baseline_end = now - timedelta(days=7)

@@ -1,0 +1,235 @@
+{
+  "timestamp": "20260305_154930",
+  "summary": {
+    "passed": 34,
+    "failed": 10,
+    "skipped": 1
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "label": "健康檢查",
+      "detail": "env=development"
+    },
+    {
+      "status": "PASS",
+      "label": "Admin 登入",
+      "detail": "admin@example.com"
+    },
+    {
+      "status": "PASS",
+      "label": "測試 HR 帳號已存在",
+      "detail": "跳過建立"
+    },
+    {
+      "status": "PASS",
+      "label": "取得 me 資訊",
+      "detail": "role=owner tenant=fd39fa1a..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 員工手冊-第一章-總則.md",
+      "detail": "id=f55722dc..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 員工手冊-第一章-總則.pdf",
+      "detail": "id=b1b026bd..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 獎懲管理辦法.md",
+      "detail": "id=244741d7..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 獎懲管理辦法.pdf",
+      "detail": "id=4833b403..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 報帳作業規範.md",
+      "detail": "id=d9709e8b..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 報帳作業規範.pdf",
+      "detail": "id=1d4c1a3c..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 新人到職SOP.md",
+      "detail": "id=7b1d7f43..."
+    },
+    {
+      "status": "PASS",
+      "label": "上傳 新人到職SOP.pdf",
+      "detail": "id=ee6ab3df..."
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 新人到職SOP.md",
+      "detail": "status=completed chunks=20"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 員工手冊-第一章-總則.pdf",
+      "detail": "status=completed chunks=16"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 報帳作業規範.md",
+      "detail": "status=completed chunks=34"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 獎懲管理辦法.pdf",
+      "detail": "status=completed chunks=15"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 員工手冊-第一章-總則.md",
+      "detail": "status=completed chunks=16"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 報帳作業規範.pdf",
+      "detail": "status=completed chunks=30"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 獎懲管理辦法.md",
+      "detail": "status=completed chunks=17"
+    },
+    {
+      "status": "PASS",
+      "label": "解析狀態 新人到職SOP.pdf",
+      "detail": "status=completed chunks=16"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 統計",
+      "detail": "chunks=620 docs=0"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「勞工退休金提撥率」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「年度考核流程」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「請假規定 特休」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「薪資計算方式」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "FAIL",
+      "label": "[A 基本HR] 員工試用期最長可以多久",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"question\"],\"msg\":\"Field "
+    },
+    {
+      "status": "FAIL",
+      "label": "[A 假勤] 公司每年特休假天數怎麼計算",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"question\"],\"msg\":\"Field "
+    },
+    {
+      "status": "FAIL",
+      "label": "[D 計算] 勞工退休金雇主應提撥多少比例",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"question\"],\"msg\":\"Field "
+    },
+    {
+      "status": "FAIL",
+      "label": "[A HR規範] 員工違反工作規則可以怎麼處理",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"question\"],\"msg\":\"Field "
+    },
+    {
+      "status": "FAIL",
+      "label": "[A 薪酬] 請問公司薪資發放日是幾號",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"question\"],\"msg\":\"Field "
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話清單",
+      "detail": "5 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "搜尋對話「特休」",
+      "detail": "16 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話詳情",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話訊息",
+      "detail": "4 則"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出對話 JSON",
+      "detail": ""
+    },
+    {
+      "status": "FAIL",
+      "label": "送出對話回饋",
+      "detail": "HTTP 422 {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"message_id\"],\"msg\":\"Field required\",\"input\":{\"conversati"
+    },
+    {
+      "status": "PASS",
+      "label": "取得回饋統計",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "RAG Dashboard",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得模板清單",
+      "detail": "0 種: "
+    },
+    {
+      "status": "FAIL",
+      "label": "生成 [job_description]",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"enum\",\"loc\":[\"body\",\"template\"],\"msg\":\"Input sho"
+    },
+    {
+      "status": "FAIL",
+      "label": "生成 [performance_review]",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"enum\",\"loc\":[\"body\",\"template\"],\"msg\":\"Input sho"
+    },
+    {
+      "status": "FAIL",
+      "label": "生成 [hr_policy]",
+      "detail": "[ERROR 422] {\"detail\":[{\"type\":\"enum\",\"loc\":[\"body\",\"template\"],\"msg\":\"Input sho"
+    },
+    {
+      "status": "SKIP",
+      "label": "匯出 DOCX/PDF",
+      "detail": "無可用生成內容"
+    },
+    {
+      "status": "PASS",
+      "label": "取得報告清單",
+      "detail": "0 筆"
+    },
+    {
+      "status": "FAIL",
+      "label": "建立報告",
+      "detail": "HTTP 422 {\"detail\":[{\"type\":\"missing\",\"loc\":[\"body\",\"prompt\"],\"msg\":\"Field required\",\"input\":{\"title\":\"自動測試報告"
+    }
+  ]
+}

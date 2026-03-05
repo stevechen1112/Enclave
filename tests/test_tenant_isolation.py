@@ -4,22 +4,9 @@ Tenant Isolation Tests
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
-ORCH_CLASS = "app.api.v1.endpoints.chat.ChatOrchestrator"
-
-
-def _mock_orchestrator():
-    result = {
-        "request_id": "r", "question": "q", "answer": "a",
-        "company_policy": None, "labor_law": None,
-        "sources": [], "notes": [], "disclaimer": "僅供參考",
-    }
-    inst = AsyncMock()
-    inst.process_query = AsyncMock(return_value=result)
-    return patch(ORCH_CLASS, return_value=inst)
 
 
 @pytest.mark.asyncio
@@ -48,14 +35,12 @@ async def test_tenant_data_isolation(client: AsyncClient, superuser_headers: dic
     hb = await login_user(client, "o@b.com", "PassB123!")
 
     # B 上傳文件
-    with patch("app.tasks.document_tasks.process_document_task.delay") as mt:
-        mt.return_value.id = "t-b"
-        up = await client.post(
-            "/api/v1/documents/upload", headers=hb,
-            files={"file": ("b.txt", b"B confidential.", "text/plain")},
-        )
-        assert up.status_code == 200
-        doc_b_id = up.json()["id"]
+    up = await client.post(
+        "/api/v1/documents/upload", headers=hb,
+        files={"file": ("b.txt", b"B confidential.", "text/plain")},
+    )
+    assert up.status_code == 200
+    doc_b_id = up.json()["id"]
 
     # A 看不到 B 的文件
     assert len((await client.get("/api/v1/documents/", headers=ha)).json()) == 0
@@ -91,14 +76,13 @@ async def test_conversation_isolation(client: AsyncClient, superuser_headers: di
     ha = await login_user(client, "u@ca.com", "ChatA123!")
     hb = await login_user(client, "u@cb.com", "ChatB123!")
 
-    with _mock_orchestrator():
-        ra = await client.post(CHAT_URL, headers=ha, json={"question": "Q from A"})
-        assert ra.status_code == 200
-        conv_a = ra.json()["conversation_id"]
+    ra = await client.post(CHAT_URL, headers=ha, json={"question": "Q from A"})
+    assert ra.status_code == 200
+    conv_a = ra.json()["conversation_id"]
 
-        rb = await client.post(CHAT_URL, headers=hb, json={"question": "Q from B"})
-        assert rb.status_code == 200
-        conv_b = rb.json()["conversation_id"]
+    rb = await client.post(CHAT_URL, headers=hb, json={"question": "Q from B"})
+    assert rb.status_code == 200
+    conv_b = rb.json()["conversation_id"]
 
     ca = (await client.get("/api/v1/chat/conversations", headers=ha)).json()
     assert len(ca) == 1 and ca[0]["id"] == conv_a
@@ -136,9 +120,8 @@ async def test_audit_log_isolation(client: AsyncClient, superuser_headers: dict)
     ha = await login_user(client, "adm@aa.com", "AuditA123!")
     hb = await login_user(client, "adm@ab.com", "AuditB123!")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=ha, json={"question": "Test A"})
-        await client.post(CHAT_URL, headers=hb, json={"question": "Test B"})
+    await client.post(CHAT_URL, headers=ha, json={"question": "Test A"})
+    await client.post(CHAT_URL, headers=hb, json={"question": "Test B"})
 
     la = (await client.get("/api/v1/audit/logs", headers=ha)).json()
     lb = (await client.get("/api/v1/audit/logs", headers=hb)).json()
@@ -177,17 +160,9 @@ async def test_knowledge_base_isolation(client: AsyncClient, superuser_headers: 
     ha = await login_user(client, "u@ka.com", "KBA123!")
     hb = await login_user(client, "u@kb.com", "KBB123!")
 
-    KB_CLASS = "app.api.v1.endpoints.kb.KnowledgeBaseRetriever"
+    # 使用真實向量檢索（測試租戶尚無文件，預期回傳空結果但狀態 200）
+    sa = await client.post("/api/v1/kb/search", headers=ha, json={"query": "policy", "top_k": 5})
+    assert sa.status_code == 200
 
-    mock_ret_a = [{"score": 0.9, "content": "A policy", "filename": "a.txt", "document_id": "d1", "chunk_index": 0}]
-    mock_ret_b = [{"score": 0.85, "content": "B policy", "filename": "b.txt", "document_id": "d2", "chunk_index": 0}]
-
-    inst_a = type("MockRetriever", (), {"search": lambda self, **kw: mock_ret_a})()
-    with patch(KB_CLASS, return_value=inst_a):
-        sa = await client.post("/api/v1/kb/search", headers=ha, json={"query": "policy", "top_k": 5})
-        assert sa.status_code == 200
-
-    inst_b = type("MockRetriever", (), {"search": lambda self, **kw: mock_ret_b})()
-    with patch(KB_CLASS, return_value=inst_b):
-        sb = await client.post("/api/v1/kb/search", headers=hb, json={"query": "policy", "top_k": 5})
-        assert sb.status_code == 200
+    sb = await client.post("/api/v1/kb/search", headers=hb, json={"query": "policy", "top_k": 5})
+    assert sb.status_code == 200

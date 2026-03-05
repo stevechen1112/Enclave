@@ -43,21 +43,13 @@ API_VERSIONS = {
     "versions": [
         {
             "version": "v1",
-            "status": "stable" if not V1_DEPRECATION_DATE else "deprecated",
-            "base_url": "/api/v1",
-            "deprecation_date": V1_DEPRECATION_DATE or None,
-            "sunset_date": V1_SUNSET_DATE or None,
-            "docs": "/docs",
-        },
-        {
-            "version": "v2",
             "status": "stable",
-            "base_url": "/api/v2",
+            "base_url": "/api/v1",
             "deprecation_date": None,
             "sunset_date": None,
             "docs": "/docs",
         },
     ],
-    "current": "v2",
-    "migration_guide": "https://docs.unihr.example.com/api/migration-v1-to-v2",
+    "current": "v1",
+    "migration_guide": None,
 }

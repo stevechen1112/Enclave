@@ -1,0 +1,1117 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\playwright.config.ts",
+    "rootDir": "C:/Users/User/Desktop/Enclave/frontend/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/User/Desktop/Enclave/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/User/Desktop/Enclave/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "core-flows.spec.ts",
+      "file": "core-flows.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication",
+          "file": "core-flows.spec.ts",
+          "line": 31,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-01: Login page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 257,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:38:07.048Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-63f93cc2abaad69a744d",
+              "file": "core-flows.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "E2E-02: Login with valid credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61125,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:38:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:38:07.371Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--86e35-ogin-with-valid-credentials-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--86e35-ogin-with-valid-credentials-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--86e35-ogin-with-valid-credentials-chromium\\error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-26e1c7eb3b85132bd44a",
+              "file": "core-flows.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "E2E-03: Invalid credentials shows error",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61073,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 49,
+                            "line": 45
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  43 |   test('E2E-03: Invalid credentials shows error', async ({ page }) => {\n  44 |     await page.goto('/login')\n> 45 |     await page.getByPlaceholder(/email|信箱|帳號/i).fill('wrong@example.com')\n     |                                                 ^\n  46 |     await page.getByPlaceholder(/密碼|password/i).fill('wrongpass')\n  47 |     await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  48 |     // Should show error message or stay on login\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:45:49"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:39:09.286Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--92b6a-lid-credentials-shows-error-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--92b6a-lid-credentials-shows-error-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--92b6a-lid-credentials-shows-error-chromium\\error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-689eda988690539fb239",
+              "file": "core-flows.spec.ts",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "E2E-04: Unauthenticated redirect to login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 259,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:40:11.189Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-e3d074690f59b929623e",
+              "file": "core-flows.spec.ts",
+              "line": 52,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Navigation",
+          "file": "core-flows.spec.ts",
+          "line": 58,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-05: Navigate to Documents page",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61546,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 59
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 57 |\u001b[39m\n \u001b[90m 58 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Navigation'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 61 |\u001b[39m   })\n \u001b[90m 62 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 59
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  57 |\n  58 | test.describe('Navigation', () => {\n> 59 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  60 |     await login(page)\n  61 |   })\n  62 |\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:60:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:40:11.514Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-05-Navigate-to-Documents-page-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-05-Navigate-to-Documents-page-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-05-Navigate-to-Documents-page-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 59
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-8cb9d1082b1da876049c",
+              "file": "core-flows.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "E2E-06: Navigate to Generate page",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61113,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 59
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 57 |\u001b[39m\n \u001b[90m 58 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Navigation'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 61 |\u001b[39m   })\n \u001b[90m 62 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 59
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  57 |\n  58 | test.describe('Navigation', () => {\n> 59 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  60 |     await login(page)\n  61 |   })\n  62 |\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:60:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:41:13.869Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-06-Navigate-to-Generate-page-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-06-Navigate-to-Generate-page-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-06-Navigate-to-Generate-page-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 59
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-10709a19e2f77f436ffa",
+              "file": "core-flows.spec.ts",
+              "line": 68,
+              "column": 3
+            },
+            {
+              "title": "E2E-07: Navigate to Agent page (admin)",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61083,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 59
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 57 |\u001b[39m\n \u001b[90m 58 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Navigation'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 61 |\u001b[39m   })\n \u001b[90m 62 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 59
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  57 |\n  58 | test.describe('Navigation', () => {\n> 59 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  60 |     await login(page)\n  61 |   })\n  62 |\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:60:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:42:15.843Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-07-Navigate-to-Agent-page-admin--chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-07-Navigate-to-Agent-page-admin--chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-07-Navigate-to-Agent-page-admin--chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 59
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-a22382584bc1db44ddad",
+              "file": "core-flows.spec.ts",
+              "line": 73,
+              "column": 3
+            },
+            {
+              "title": "E2E-08: Navigate to KB Health page",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61147,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 59
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 57 |\u001b[39m\n \u001b[90m 58 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Navigation'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 59 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 60 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 61 |\u001b[39m   })\n \u001b[90m 62 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 59
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  57 |\n  58 | test.describe('Navigation', () => {\n> 59 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  60 |     await login(page)\n  61 |   })\n  62 |\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:59:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:60:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:43:17.790Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-08-Navigate-to-KB-Health-page-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-08-Navigate-to-KB-Health-page-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Navigation-E2E-08-Navigate-to-KB-Health-page-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 59
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-fbe980640d45e6e42041",
+              "file": "core-flows.spec.ts",
+              "line": 78,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Documents",
+          "file": "core-flows.spec.ts",
+          "line": 88,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-09: Documents page renders table/list",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61127,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:89:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 89
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 87 |\u001b[39m\n \u001b[90m 88 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Documents'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 89 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 90 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 91 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/documents'\u001b[39m)\n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 89
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  87 |\n  88 | test.describe('Documents', () => {\n> 89 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  90 |     await login(page)\n  91 |     await page.goto('/documents')\n  92 |     await page.waitForLoadState('networkidle')\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:89:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:90:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:44:19.771Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-0-5f379-nts-page-renders-table-list-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-0-5f379-nts-page-renders-table-list-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-0-5f379-nts-page-renders-table-list-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 89
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-81b6b3103e7c1dd7a274",
+              "file": "core-flows.spec.ts",
+              "line": 95,
+              "column": 3
+            },
+            {
+              "title": "E2E-10: Upload button exists",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61123,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:89:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 89
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 87 |\u001b[39m\n \u001b[90m 88 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Documents'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 89 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 90 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 91 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/documents'\u001b[39m)\n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 89
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  87 |\n  88 | test.describe('Documents', () => {\n> 89 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  90 |     await login(page)\n  91 |     await page.goto('/documents')\n  92 |     await page.waitForLoadState('networkidle')\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:89:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:90:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:45:21.745Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-button-exists-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-button-exists-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-button-exists-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 89
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-cbdffce8ab4030012efd",
+              "file": "core-flows.spec.ts",
+              "line": 102,
+              "column": 3
+            },
+            {
+              "title": "E2E-11: Document upload flow",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 61143,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:89:8",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 8,
+                          "line": 89
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 87 |\u001b[39m\n \u001b[90m 88 |\u001b[39m test\u001b[33m.\u001b[39mdescribe(\u001b[32m'Documents'\u001b[39m\u001b[33m,\u001b[39m () \u001b[33m=>\u001b[39m {\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 89 |\u001b[39m   test\u001b[33m.\u001b[39mbeforeEach(\u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m    |\u001b[39m        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 90 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 91 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/documents'\u001b[39m)\n \u001b[90m 92 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mwaitForLoadState(\u001b[32m'networkidle'\u001b[39m)\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 8,
+                            "line": 89
+                          },
+                          "message": "\u001b[31mTest timeout of 60000ms exceeded while running \"beforeEach\" hook.\u001b[39m\n\n  87 |\n  88 | test.describe('Documents', () => {\n> 89 |   test.beforeEach(async ({ page }) => {\n     |        ^\n  90 |     await login(page)\n  91 |     await page.goto('/documents')\n  92 |     await page.waitForLoadState('networkidle')\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:89:8"
+                        },
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Test timeout of 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:90:5"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:46:23.730Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-11-Document-upload-flow-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-11-Document-upload-flow-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-11-Document-upload-flow-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 8,
+                        "line": 89
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-fd1d90f3b05973e54caf",
+              "file": "core-flows.spec.ts",
+              "line": 107,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Chat",
+          "file": "core-flows.spec.ts",
+          "line": 131,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-12: Chat page renders input area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 0,
+                      "status": "interrupted",
+                      "duration": 44649,
+                      "error": {
+                        "message": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n",
+                        "stack": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:133:5",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 47,
+                          "line": 22
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 20 |\u001b[39m \u001b[36masync\u001b[39m \u001b[36mfunction\u001b[39m login(page\u001b[33m:\u001b[39m \u001b[33mPage\u001b[39m\u001b[33m,\u001b[39m email \u001b[33m=\u001b[39m \u001b[33mADMIN_EMAIL\u001b[39m\u001b[33m,\u001b[39m password \u001b[33m=\u001b[39m \u001b[33mADMIN_PASS\u001b[39m) {\n \u001b[90m 21 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m'/login'\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 22 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByPlaceholder(\u001b[35m/email|信箱|帳號/i\u001b[39m)\u001b[33m.\u001b[39mfill(email)\n \u001b[90m    |\u001b[39m                                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 23 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByPlaceholder(\u001b[35m/密碼|password/i\u001b[39m)\u001b[33m.\u001b[39mfill(password)\n \u001b[90m 24 |\u001b[39m   \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[35m/登入|login|sign in/i\u001b[39m })\u001b[33m.\u001b[39mclick()\n \u001b[90m 25 |\u001b[39m   \u001b[90m// Wait for redirect away from login\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 47,
+                            "line": 22
+                          },
+                          "message": "Error: locator.fill: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for getByPlaceholder(/email|信箱|帳號/i)\u001b[22m\n\n\n  20 | async function login(page: Page, email = ADMIN_EMAIL, password = ADMIN_PASS) {\n  21 |   await page.goto('/login')\n> 22 |   await page.getByPlaceholder(/email|信箱|帳號/i).fill(email)\n     |                                               ^\n  23 |   await page.getByPlaceholder(/密碼|password/i).fill(password)\n  24 |   await page.getByRole('button', { name: /登入|login|sign in/i }).click()\n  25 |   // Wait for redirect away from login\n    at login (C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:22:47)\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:133:5"
+                        },
+                        {
+                          "message": "Error: browserContext.close: Target page, context or browser has been closed"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:47:25.726Z",
+                      "annotations": [],
+                      "attachments": [],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 47,
+                        "line": 22
+                      }
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-f92b3e0563f6afc31f1a",
+              "file": "core-flows.spec.ts",
+              "line": 138,
+              "column": 3
+            },
+            {
+              "title": "E2E-13: Send a chat message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-d3faa5058dee76755dcc",
+              "file": "core-flows.spec.ts",
+              "line": 143,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Generate",
+          "file": "core-flows.spec.ts",
+          "line": 164,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-14: Generate page renders template selector",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-05d7c3e278bdacab6cc7",
+              "file": "core-flows.spec.ts",
+              "line": 171,
+              "column": 3
+            },
+            {
+              "title": "E2E-15: Generate page has prompt input",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-4790ffb3f592ba738192",
+              "file": "core-flows.spec.ts",
+              "line": 180,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Admin Pages",
+          "file": "core-flows.spec.ts",
+          "line": 186,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-16: Usage page accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-bb298c3fdfc0edfde39b",
+              "file": "core-flows.spec.ts",
+              "line": 191,
+              "column": 3
+            },
+            {
+              "title": "E2E-17: Audit logs page accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-5c83657c8c2c344317b1",
+              "file": "core-flows.spec.ts",
+              "line": 198,
+              "column": 3
+            },
+            {
+              "title": "E2E-18: RAG Dashboard accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-d846ac6a22ff1df3f0ff",
+              "file": "core-flows.spec.ts",
+              "line": 204,
+              "column": 3
+            },
+            {
+              "title": "E2E-19: Query Analytics accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-f3287383624e91d2902f",
+              "file": "core-flows.spec.ts",
+              "line": 210,
+              "column": 3
+            },
+            {
+              "title": "E2E-20: Usage Report accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [],
+                  "status": "skipped"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-3f873f9003166b6c3993",
+              "file": "core-flows.spec.ts",
+              "line": 216,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-02-25T10:38:06.281Z",
+    "duration": 604474.2,
+    "expected": 2,
+    "skipped": 9,
+    "unexpected": 9,
+    "flaky": 0
+  }
+}

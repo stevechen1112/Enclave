@@ -33,6 +33,8 @@ export interface Document {
   error_message: string | null
   created_at: string | null
   updated_at: string | null
+  /** P10-3: true 若文件於 7 天內新增或重新索引 */
+  is_new: boolean
 }
 
 // ─── Chat ───
@@ -86,11 +88,12 @@ export interface SSEEvent {
 
 // ─── T7-4 Source reference ───
 export interface ChatSource {
-  type: 'policy' | 'law'
-  title: string
-  snippet: string
+  type?: 'policy' | 'law'
+  title: string          // display — mapped from backend `filename`
+  snippet: string        // display — mapped from backend `content`
   document_id?: string
   score?: number
+  chunk_index?: number
 }
 
 // ─── T7-5 Feedback ───

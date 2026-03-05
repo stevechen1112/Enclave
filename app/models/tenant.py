@@ -21,17 +21,10 @@ class Tenant(Base):
     quota_alert_threshold = Column(Float, default=0.8)                  # 配額告警閾值 (0~1)
     quota_alert_email = Column(String, nullable=True)                   # 告警通知信箱
 
-    # ── White-label Branding (T4-3) ──
-    brand_name = Column(String(100), nullable=True)                     # 自訂品牌名稱
-    brand_logo_url = Column(String(500), nullable=True)                 # Logo URL
-    brand_primary_color = Column(String(7), nullable=True)              # 主色（如 #2563eb）
-    brand_secondary_color = Column(String(7), nullable=True)            # 輔色
-    brand_favicon_url = Column(String(500), nullable=True)              # Favicon URL
-    custom_domain = Column(String(255), nullable=True, unique=True)     # 自訂域名
-
-    # ── Multi-Region (T4-19) ──
-    region = Column(String(10), nullable=False, default="ap")            # ap / us / eu / jp
-    data_residency_note = Column(Text, nullable=True)                    # 資料落地說明（合規）
+    # ── Security Config 安全組態欄位 ──
+    isolation_level = Column(String, default="standard")                # standard | enhanced | strict
+    require_mfa = Column(Boolean, default=False)
+    ip_whitelist = Column(Text, nullable=True)                          # 逗號分隔的 IP/CIDR 清單
 
     # Relationships
     users = relationship("User", back_populates="tenant")
@@ -41,4 +34,3 @@ class Tenant(Base):
     usage_records = relationship("UsageRecord", back_populates="tenant")
     departments = relationship("Department", back_populates="tenant")
     feature_permissions = relationship("FeaturePermission", back_populates="tenant")
-    sso_configs = relationship("TenantSSOConfig", back_populates="tenant", cascade="all, delete-orphan")

@@ -1,0 +1,440 @@
+{
+  "timestamp": "20260305_155503",
+  "summary": {
+    "passed": 85,
+    "failed": 0,
+    "skipped": 1
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "label": "健康檢查",
+      "detail": "env=development"
+    },
+    {
+      "status": "PASS",
+      "label": "Admin 登入",
+      "detail": "admin@example.com"
+    },
+    {
+      "status": "PASS",
+      "label": "測試 HR 帳號已存在",
+      "detail": "跳過建立"
+    },
+    {
+      "status": "PASS",
+      "label": "取得 me 資訊",
+      "detail": "role=owner tenant=fd39fa1a..."
+    },
+    {
+      "status": "SKIP",
+      "label": "文件上傳",
+      "detail": "--skip-upload 已設定"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 統計",
+      "detail": "chunks=620 docs=0"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「勞工退休金提撥率」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「年度考核流程」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「請假規定 特休」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「薪資計算方式」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "[A 基本HR] 員工試用期最長可以多久",
+      "detail": "關鍵字 3/3  8.9s  623chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[A 假勤] 公司每年特休假天數怎麼計算",
+      "detail": "關鍵字 3/3  8.7s  987chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[D 計算] 勞工退休金雇主應提撥多少比例",
+      "detail": "關鍵字 3/3  7.8s  611chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[A HR規範] 員工違反工作規則可以怎麼處理",
+      "detail": "關鍵字 3/3  8.5s  763chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[A 薪酬] 請問公司薪資發放日是幾號",
+      "detail": "關鍵字 2/2  5.1s  376chars"
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話清單",
+      "detail": "5 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "搜尋對話「特休」",
+      "detail": "20 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話詳情",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話訊息",
+      "detail": "10 則"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出對話 JSON",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "送出對話回饋（rating=2 👍）",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得回饋統計",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "RAG Dashboard",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得模板清單",
+      "detail": "5 種: draft_response, case_summary, meeting_minutes, analysis_report, faq_draft"
+    },
+    {
+      "status": "PASS",
+      "label": "生成 [draft_response]",
+      "detail": "837 chars  8.7s"
+    },
+    {
+      "status": "PASS",
+      "label": "生成 [case_summary]",
+      "detail": "1006 chars  18.7s"
+    },
+    {
+      "status": "PASS",
+      "label": "生成 [meeting_minutes]",
+      "detail": "1515 chars  12.7s"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出 DOCX",
+      "detail": "37766 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出 PDF",
+      "detail": "2368 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "取得報告清單",
+      "detail": "6 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立報告",
+      "detail": "id=c294ecc6..."
+    },
+    {
+      "status": "PASS",
+      "label": "釘選報告",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "搜尋報告「自動測試」",
+      "detail": "1 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "刪除報告",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "KB 健康狀態",
+      "detail": "status=? chunks=0"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 分類清單",
+      "detail": "1 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立分類",
+      "detail": "id=0f7385f1..."
+    },
+    {
+      "status": "PASS",
+      "label": "觸發完整性掃描",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "完整性報告清單",
+      "detail": "4 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立 KB 備份",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "備份清單",
+      "detail": "8 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "知識缺口清單",
+      "detail": "3 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 版本清單（per-doc）",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立部門「測試研發部」",
+      "detail": "id=e65a2ca9..."
+    },
+    {
+      "status": "PASS",
+      "label": "建立子部門「後端團隊」",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "部門清單",
+      "detail": "2 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "部門樹狀結構",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "更新部門",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "刪除測試部門（含子部門）",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "公司 Dashboard",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "公司資料",
+      "detail": "name=Demo Tenant plan=enterprise"
+    },
+    {
+      "status": "PASS",
+      "label": "配額狀態",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "成員清單",
+      "detail": "5 位"
+    },
+    {
+      "status": "PASS",
+      "label": "用量摘要",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "按使用者用量",
+      "detail": "5 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "功能旗標清單",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立功能旗標",
+      "detail": "key=test_auto_flag_155426"
+    },
+    {
+      "status": "PASS",
+      "label": "停用功能旗標",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "刪除功能旗標",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "分析摘要",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "對話趨勢",
+      "detail": "7 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "熱門問題",
+      "detail": "5 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "未答問題",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "稽核日誌",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "稽核日誌 CSV 匯出",
+      "detail": "64 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "稽核 - 用量摘要",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "稽核 - 按動作",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "Agent 狀態",
+      "detail": "watcher=False scheduler=True folders=1 pending=0"
+    },
+    {
+      "status": "PASS",
+      "label": "監控資料夾清單",
+      "detail": "1 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "瀏覽目錄 /code",
+      "detail": "16 個子目錄"
+    },
+    {
+      "status": "PASS",
+      "label": "監控資料夾已存在",
+      "detail": "id=91b5fa63..."
+    },
+    {
+      "status": "PASS",
+      "label": "Scan Preview（Ollama 摘要）",
+      "detail": "此資料夾主要存放太宇科技股份有限公司的人事相關政策與員工手冊，涵蓋了員工的聘僱、薪資、休假、考核、獎懲等各項管理規範。包"
+    },
+    {
+      "status": "PASS",
+      "label": "啟動 Agent",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "觸發即時掃描",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "審核佇列（待審核）",
+      "detail": "total=0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "批次狀態統計",
+      "detail": "{'status_summary': {}}"
+    },
+    {
+      "status": "PASS",
+      "label": "批次報告 PDF",
+      "detail": "2096 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "Toggle 監控資料夾（停用）",
+      "detail": "is_active=False"
+    },
+    {
+      "status": "PASS",
+      "label": "停止 Agent",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "效能：健康檢查",
+      "detail": "0.00s  (SLA=3s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：KB 統計",
+      "detail": "0.01s  (SLA=2s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：KB 搜尋",
+      "detail": "0.63s  (SLA=5s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：分析摘要",
+      "detail": "0.01s  (SLA=5s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：稽核日誌",
+      "detail": "0.00s  (SLA=5s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：部門樹",
+      "detail": "0.01s  (SLA=3s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：KB 健康",
+      "detail": "0.01s  (SLA=5s)"
+    }
+  ]
+}

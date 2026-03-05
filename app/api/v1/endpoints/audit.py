@@ -246,7 +246,7 @@ def _pdf_stream(title: str, rows: list, columns: list[tuple[str, str]]) -> Strea
 
 @router.get("/logs/export")
 def export_audit_logs(
-    format: str = Query("csv", regex="^(csv|pdf)$"),
+    format: str = Query("csv", pattern="^(csv|pdf)$"),
     action: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
@@ -275,8 +275,8 @@ def export_audit_logs(
         ("created_at", "Time"),
         ("action", "Action"),
         ("actor_user_id", "User ID"),
-        ("resource_type", "Resource Type"),
-        ("resource_id", "Resource ID"),
+        ("target_type", "Resource Type"),
+        ("target_id", "Resource ID"),
         ("ip_address", "IP Address"),
     ]
     if format == "pdf":
@@ -286,7 +286,7 @@ def export_audit_logs(
 
 @router.get("/usage/export")
 def export_usage_records(
-    format: str = Query("csv", regex="^(csv|pdf)$"),
+    format: str = Query("csv", pattern="^(csv|pdf)$"),
     action_type: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,

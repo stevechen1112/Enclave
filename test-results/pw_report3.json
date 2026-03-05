@@ -1,0 +1,882 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\playwright.config.ts",
+    "rootDir": "C:/Users/User/Desktop/Enclave/frontend/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/User/Desktop/Enclave/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/User/Desktop/Enclave/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "core-flows.spec.ts",
+      "file": "core-flows.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication",
+          "file": "core-flows.spec.ts",
+          "line": 31,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-01: Login page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 253,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:24.435Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-63f93cc2abaad69a744d",
+              "file": "core-flows.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "E2E-02: Login with valid credentials",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 612,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:24.754Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-26e1c7eb3b85132bd44a",
+              "file": "core-flows.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "E2E-03: Invalid credentials shows error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 401,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:25.372Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-689eda988690539fb239",
+              "file": "core-flows.spec.ts",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "E2E-04: Unauthenticated redirect to login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 221,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:25.779Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-e3d074690f59b929623e",
+              "file": "core-flows.spec.ts",
+              "line": 52,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Navigation",
+          "file": "core-flows.spec.ts",
+          "line": 58,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-05: Navigate to Documents page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 655,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:26.004Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-8cb9d1082b1da876049c",
+              "file": "core-flows.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "E2E-06: Navigate to Generate page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 675,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:26.664Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-10709a19e2f77f436ffa",
+              "file": "core-flows.spec.ts",
+              "line": 68,
+              "column": 3
+            },
+            {
+              "title": "E2E-07: Navigate to Agent page (admin)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 648,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:27.344Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-a22382584bc1db44ddad",
+              "file": "core-flows.spec.ts",
+              "line": 73,
+              "column": 3
+            },
+            {
+              "title": "E2E-08: Navigate to KB Health page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 606,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:27.998Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-fbe980640d45e6e42041",
+              "file": "core-flows.spec.ts",
+              "line": 78,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Documents",
+          "file": "core-flows.spec.ts",
+          "line": 88,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-09: Documents page renders table/list",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1162,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:28.610Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-81b6b3103e7c1dd7a274",
+              "file": "core-flows.spec.ts",
+              "line": 95,
+              "column": 3
+            },
+            {
+              "title": "E2E-10: Upload area exists",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1190,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeAttached\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first())\nExpected: attached\nError: strict mode violation: getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first()) resolved to 2 elements:\n    1) <input multiple type=\"file\" tabindex=\"-1\" accept=\"application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,text/plain,.txt,text/csv,.csv,image/jpeg,.jpg,.jpeg,image/png,.png\"/> aka getByRole('button', { name: 'Choose File' })\n    2) <p class=\"text-sm font-medium text-gray-700\">拖放文件到此處，或點擊選擇（支援多選）</p> aka getByText('拖放文件到此處，或點擊選擇（支援多選）')\n\nCall log:\n\u001b[2m  - Expect \"toBeAttached\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first())\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeAttached\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first())\nExpected: attached\nError: strict mode violation: getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first()) resolved to 2 elements:\n    1) <input multiple type=\"file\" tabindex=\"-1\" accept=\"application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,text/plain,.txt,text/csv,.csv,image/jpeg,.jpg,.jpeg,image/png,.png\"/> aka getByRole('button', { name: 'Choose File' })\n    2) <p class=\"text-sm font-medium text-gray-700\">拖放文件到此處，或點擊選擇（支援多選）</p> aka getByText('拖放文件到此處，或點擊選擇（支援多選）')\n\nCall log:\n\u001b[2m  - Expect \"toBeAttached\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first())\u001b[22m\n\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:105:30",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 30,
+                          "line": 105
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 103 |\u001b[39m     \u001b[36mconst\u001b[39m uploadArea \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mgetByText(\u001b[35m/拖放文件|drag|drop|upload/i\u001b[39m)\u001b[33m.\u001b[39mfirst()\n \u001b[90m 104 |\u001b[39m       \u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mlocator(\u001b[32m'input[type=\"file\"]'\u001b[39m)\u001b[33m.\u001b[39mfirst())\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 105 |\u001b[39m     \u001b[36mawait\u001b[39m expect(uploadArea)\u001b[33m.\u001b[39mtoBeAttached({ timeout\u001b[33m:\u001b[39m \u001b[35m5\u001b[39m_000 })\n \u001b[90m     |\u001b[39m                              \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 106 |\u001b[39m   })\n \u001b[90m 107 |\u001b[39m\n \u001b[90m 108 |\u001b[39m   test(\u001b[32m'E2E-11: Document upload flow'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 30,
+                            "line": 105
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeAttached\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first())\nExpected: attached\nError: strict mode violation: getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first()) resolved to 2 elements:\n    1) <input multiple type=\"file\" tabindex=\"-1\" accept=\"application/pdf,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,text/plain,.txt,text/csv,.csv,image/jpeg,.jpg,.jpeg,image/png,.png\"/> aka getByRole('button', { name: 'Choose File' })\n    2) <p class=\"text-sm font-medium text-gray-700\">拖放文件到此處，或點擊選擇（支援多選）</p> aka getByText('拖放文件到此處，或點擊選擇（支援多選）')\n\nCall log:\n\u001b[2m  - Expect \"toBeAttached\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText(/拖放文件|drag|drop|upload/i).first().or(locator('input[type=\"file\"]').first())\u001b[22m\n\n\n  103 |     const uploadArea = page.getByText(/拖放文件|drag|drop|upload/i).first()\n  104 |       .or(page.locator('input[type=\"file\"]').first())\n> 105 |     await expect(uploadArea).toBeAttached({ timeout: 5_000 })\n      |                              ^\n  106 |   })\n  107 |\n  108 |   test('E2E-11: Document upload flow', async ({ page }) => {\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:105:30"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:29.777Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-area-exists-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-area-exists-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-area-exists-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 30,
+                        "line": 105
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-40ce84c347430a2ee487",
+              "file": "core-flows.spec.ts",
+              "line": 102,
+              "column": 3
+            },
+            {
+              "title": "E2E-11: Document upload flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4203,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:31.767Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-fd1d90f3b05973e54caf",
+              "file": "core-flows.spec.ts",
+              "line": 108,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Chat",
+          "file": "core-flows.spec.ts",
+          "line": 132,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-12: Chat page renders input area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1175,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:36.037Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-f92b3e0563f6afc31f1a",
+              "file": "core-flows.spec.ts",
+              "line": 139,
+              "column": 3
+            },
+            {
+              "title": "E2E-13: Send a chat message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6308,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:37.219Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-d3faa5058dee76755dcc",
+              "file": "core-flows.spec.ts",
+              "line": 144,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Generate",
+          "file": "core-flows.spec.ts",
+          "line": 165,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-14: Generate page renders template selector",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 3600,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first())\nExpected: visible\nError: strict mode violation: getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first()) resolved to 2 elements:\n    1) <h2 class=\"text-sm font-semibold text-gray-700 mb-3\">選擇生成模板</h2> aka getByRole('heading', { name: '選擇生成模板' })\n    2) <button class=\"w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors bg-blue-50 border border-blue-200\">…</button> aka getByRole('button', { name: '✉️ 函件草稿 正式函件、答覆、通知' })\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first())\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first())\nExpected: visible\nError: strict mode violation: getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first()) resolved to 2 elements:\n    1) <h2 class=\"text-sm font-semibold text-gray-700 mb-3\">選擇生成模板</h2> aka getByRole('heading', { name: '選擇生成模板' })\n    2) <button class=\"w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors bg-blue-50 border border-blue-200\">…</button> aka getByRole('button', { name: '✉️ 函件草稿 正式函件、答覆、通知' })\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first())\u001b[22m\n\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:176:31",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 31,
+                          "line": 176
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 174 |\u001b[39m     \u001b[36mconst\u001b[39m templateBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[35m/函件草稿|案件摘要|會議記錄|分析報告|FAQ/i\u001b[39m })\u001b[33m.\u001b[39mfirst()\n \u001b[90m 175 |\u001b[39m       \u001b[33m.\u001b[39mor(page\u001b[33m.\u001b[39mgetByText(\u001b[35m/選擇生成模板/i\u001b[39m)\u001b[33m.\u001b[39mfirst())\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 176 |\u001b[39m     \u001b[36mawait\u001b[39m expect(templateBtn)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m5\u001b[39m_000 })\n \u001b[90m     |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 177 |\u001b[39m   })\n \u001b[90m 178 |\u001b[39m\n \u001b[90m 179 |\u001b[39m   test(\u001b[32m'E2E-15: Generate page has prompt input'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 31,
+                            "line": 176
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first())\nExpected: visible\nError: strict mode violation: getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first()) resolved to 2 elements:\n    1) <h2 class=\"text-sm font-semibold text-gray-700 mb-3\">選擇生成模板</h2> aka getByRole('heading', { name: '選擇生成模板' })\n    2) <button class=\"w-full flex items-start gap-3 px-3 py-2.5 rounded-lg text-left transition-colors bg-blue-50 border border-blue-200\">…</button> aka getByRole('button', { name: '✉️ 函件草稿 正式函件、答覆、通知' })\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first().or(getByText(/選擇生成模板/i).first())\u001b[22m\n\n\n  174 |     const templateBtn = page.getByRole('button', { name: /函件草稿|案件摘要|會議記錄|分析報告|FAQ/i }).first()\n  175 |       .or(page.getByText(/選擇生成模板/i).first())\n> 176 |     await expect(templateBtn).toBeVisible({ timeout: 5_000 })\n      |                               ^\n  177 |   })\n  178 |\n  179 |   test('E2E-15: Generate page has prompt input', async ({ page }) => {\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:176:31"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:43.533Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Generate-E2E-14-296a2-e-renders-template-selector-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Generate-E2E-14-296a2-e-renders-template-selector-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Generate-E2E-14-296a2-e-renders-template-selector-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 31,
+                        "line": 176
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-05d7c3e278bdacab6cc7",
+              "file": "core-flows.spec.ts",
+              "line": 172,
+              "column": 3
+            },
+            {
+              "title": "E2E-15: Generate page has prompt input",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3647,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:47.918Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-4790ffb3f592ba738192",
+              "file": "core-flows.spec.ts",
+              "line": 179,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Admin Pages",
+          "file": "core-flows.spec.ts",
+          "line": 185,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-16: Usage page accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1201,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:51.638Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-bb298c3fdfc0edfde39b",
+              "file": "core-flows.spec.ts",
+              "line": 190,
+              "column": 3
+            },
+            {
+              "title": "E2E-17: Audit logs page accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1161,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:52.847Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-5c83657c8c2c344317b1",
+              "file": "core-flows.spec.ts",
+              "line": 197,
+              "column": 3
+            },
+            {
+              "title": "E2E-18: RAG Dashboard accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1180,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:54.014Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-d846ac6a22ff1df3f0ff",
+              "file": "core-flows.spec.ts",
+              "line": 203,
+              "column": 3
+            },
+            {
+              "title": "E2E-19: Query Analytics accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1213,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:55.200Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-f3287383624e91d2902f",
+              "file": "core-flows.spec.ts",
+              "line": 209,
+              "column": 3
+            },
+            {
+              "title": "E2E-20: Usage Report accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1188,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:51:56.417Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-3f873f9003166b6c3993",
+              "file": "core-flows.spec.ts",
+              "line": 215,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-02-25T10:51:23.605Z",
+    "duration": 34055.623,
+    "expected": 18,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

@@ -692,24 +692,8 @@ def try_structured_answer(
                     }],
                 )
 
-    if ("健檢" in question or "健康檢查" in question) and "異常" in question:
-        report = HealthReport.load(tenant_id)
-        if report:
-            summary = report.summary() or "無明顯異常"
-            answer = (
-                f"健檢報告顯示 {summary}。"
-                "整體評估為正常，建議依醫師建議追蹤與必要時配戴眼鏡矯正。"
-                "如需細節可再查看報告摘要與醫師建議。"
-            )
-            return StructuredAnswer(
-                answer=answer,
-                sources=[{
-                    "type": "policy",
-                    "title": report.source_filename,
-                    "snippet": "檢查結果摘要",
-                    "score": 1.0,
-                }],
-            )
+    # NOTE: 健檢異常問題已移除特殊路由，改由向量搜尋處理（可正確按員工姓名過濾）
+    # if ("健檢" in question or "健康檢查" in question) and "異常" in question:
 
     if "特休" in question and ("核准" in question or "誰核准" in question or "需要誰" in question):
         form = LeaveForm.load(tenant_id)

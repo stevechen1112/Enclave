@@ -1,6 +1,6 @@
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 # Shared properties
@@ -33,8 +33,7 @@ class UserInDBBase(UserBase):
     department_id: Optional[UUID] = None
     is_superuser: Optional[bool] = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Additional properties to return via API

@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
-from datetime import datetime
-from pydantic import BaseModel
+from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel, computed_field, ConfigDict
 
 
 class DocumentBase(BaseModel):
@@ -33,17 +33,33 @@ class DocumentInDBBase(DocumentBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+# P10-3 ── 新入庫判斷閾值（7 天）
+_NEW_THRESHOLD_DAYS = 7
 
 
 class Document(DocumentInDBBase):
-    pass
+    @computed_field  # type: ignore[misc]
+    @property
+    def is_new(self) -> bool:
+        """
+        P10-3：文件是否為「最新入庫」狀態（7 天內新增或重新索引）。
+        前端可根據此欄位顯示 NEW 標誌 icon。
+        """
+        ts = self.updated_at or self.created_at
+        if not ts:
+            return False
+        now = datetime.now(timezone.utc)
+        # 確保時區一致
+        ts_aware = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+        return (now - ts_aware) < timedelta(days=_NEW_THRESHOLD_DAYS)
 
 
 class DocumentChunkBase(BaseModel):
     chunk_index: Optional[int] = None
-    content: Optional[str] = None
+    text: Optional[str] = None
     chunk_hash: Optional[str] = None
 
 
@@ -53,5 +69,4 @@ class DocumentChunk(DocumentChunkBase):
     tenant_id: Optional[UUID] = None
     vector_id: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

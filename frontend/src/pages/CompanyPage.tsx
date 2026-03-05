@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { companyApi } from '../api'
 import {
   Loader2, AlertCircle, Building2, Users, FileText,
-  MessageSquare, Gauge, UserPlus, MoreVertical,
-  BarChart3, ChevronDown, CheckCircle2, AlertTriangle,
+  MessageSquare, UserPlus, MoreVertical,
+  BarChart3, CheckCircle2,
   Mail, Eye, EyeOff,
 } from 'lucide-react'
 
-type Tab = 'dashboard' | 'users' | 'quota' | 'usage'
+type Tab = 'dashboard' | 'users'
 
 // ─── Shared ───
 function Loader() {
@@ -30,21 +30,6 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
           <p className="text-xl font-bold text-gray-900">{value}</p>
           {sub && <p className="text-xs text-gray-400">{sub}</p>}
         </div>
-      </div>
-    </div>
-  )
-}
-function UsageBar({ label, current, limit, ratio }: { label: string; current: number; limit: number | null; ratio: number | null }) {
-  const pct = ratio != null ? Math.min(ratio * 100, 100) : 0
-  const color = ratio == null ? 'bg-gray-200' : ratio >= 1 ? 'bg-red-500' : ratio >= 0.8 ? 'bg-amber-500' : 'bg-blue-500'
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1">
-        <span className="font-medium text-gray-700">{label}</span>
-        <span className="text-gray-500">{current.toLocaleString()} / {limit != null ? limit.toLocaleString() : '∞'}</span>
-      </div>
-      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${limit != null ? pct : 0}%` }} />
       </div>
     </div>
   )
@@ -73,31 +58,15 @@ function DashboardTab() {
         <StatCard icon={BarChart3} label="本月查詢" value={data.monthly_queries} sub={`費用: $${(data.monthly_cost || 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
       </div>
 
-      {/* Quota overview */}
+      {/* 地端版授權資訊 */}
       {qs && (
-        <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-              <Gauge className="h-4 w-4" /> 配額使用狀況
-            </h3>
-            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-              qs.plan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-              qs.plan === 'pro' ? 'bg-blue-100 text-blue-700' :
-              'bg-gray-100 text-gray-700'
-            }`}>{qs.plan || 'free'} 方案</span>
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="h-4 w-4 text-blue-600" />
+            <h3 className="text-sm font-semibold text-gray-700">系統授權資訊</h3>
+            <span className="ml-auto inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">地端版 On-Premise</span>
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <UsageBar label="使用者" current={qs.current_users} limit={qs.max_users} ratio={qs.users_usage_ratio} />
-            <UsageBar label="文件" current={qs.current_documents} limit={qs.max_documents} ratio={qs.documents_usage_ratio} />
-            <UsageBar label="月查詢" current={qs.current_monthly_queries} limit={qs.monthly_query_limit} ratio={qs.queries_usage_ratio} />
-            <UsageBar label="月 Token" current={qs.current_monthly_tokens} limit={qs.monthly_token_limit} ratio={qs.tokens_usage_ratio} />
-          </div>
-          {qs.is_over_quota && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <div>{qs.quota_warnings?.map((w: string, i: number) => <p key={i}>{w}</p>)}</div>
-            </div>
-          )}
+          <p className="text-sm text-gray-500">智識庫資料在地端獨立運行，未設受使用者數、文件數、API 呼叫次數限制。</p>
         </div>
       )}
     </div>
@@ -307,122 +276,7 @@ function DropdownMenu({ onEdit, onDeactivate, disabled }: { onEdit: () => void; 
   )
 }
 
-// ═══ Quota Tab ═══
-function QuotaTab() {
-  const [quota, setQuota] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    companyApi.quota().then(setQuota).catch(() => null).finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <Loader />
-  if (!quota) return <Empty text="無法載入配額" />
-
-  return (
-    <div className="max-w-lg space-y-5">
-      <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">方案配額</h3>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-            quota.plan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-            quota.plan === 'pro' ? 'bg-blue-100 text-blue-700' :
-            'bg-gray-100 text-gray-700'
-          }`}>{quota.plan || 'free'}</span>
-        </div>
-        <UsageBar label="使用者" current={quota.current_users} limit={quota.max_users} ratio={quota.users_usage_ratio} />
-        <UsageBar label="文件" current={quota.current_documents} limit={quota.max_documents} ratio={quota.documents_usage_ratio} />
-        <UsageBar label="儲存空間 (MB)" current={quota.current_storage_mb} limit={quota.max_storage_mb} ratio={quota.storage_usage_ratio} />
-        <UsageBar label="月查詢" current={quota.current_monthly_queries} limit={quota.monthly_query_limit} ratio={quota.queries_usage_ratio} />
-        <UsageBar label="月 Token" current={quota.current_monthly_tokens} limit={quota.monthly_token_limit} ratio={quota.tokens_usage_ratio} />
-
-        {quota.is_over_quota && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <div>{quota.quota_warnings?.map((w: string, i: number) => <p key={i}>{w}</p>)}</div>
-          </div>
-        )}
-
-        {!quota.is_over_quota && (
-          <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700 flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4" /> 配額使用正常
-          </div>
-        )}
-      </div>
-
-      <p className="text-xs text-gray-400 text-center">如需調整配額，請聯繫平台管理員</p>
-    </div>
-  )
-}
-
-// ═══ Usage Tab ═══
-function UsageTab() {
-  const [summary, setSummary] = useState<any>(null)
-  const [byUser, setByUser] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showByUser, setShowByUser] = useState(false)
-
-  useEffect(() => {
-    Promise.all([companyApi.usageSummary(), companyApi.usageByUser()])
-      .then(([s, u]) => { setSummary(s); setByUser(u) })
-      .catch(() => null)
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <Loader />
-  if (!summary) return <Empty text="無法載入用量資料" />
-
-  return (
-    <div className="space-y-6">
-      {/* Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={BarChart3} label="總操作數" value={summary.total_actions} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={MessageSquare} label="總 Token" value={(summary.total_input_tokens + summary.total_output_tokens).toLocaleString()} color="bg-green-50 text-green-600" />
-        <StatCard icon={Gauge} label="Pinecone 查詢" value={summary.total_pinecone_queries} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={BarChart3} label="估計成本" value={`$${summary.total_cost?.toFixed(4) || '0'}`} color="bg-amber-50 text-amber-600" />
-      </div>
-
-      {/* By user toggle */}
-      <div>
-        <button
-          onClick={() => setShowByUser(!showByUser)}
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-        >
-          <ChevronDown className={`h-4 w-4 transition-transform ${showByUser ? 'rotate-180' : ''}`} />
-          按成員查看用量
-        </button>
-      </div>
-
-      {showByUser && byUser.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <th className="px-5 py-3">成員</th>
-                <th className="px-5 py-3 text-right">查詢次數</th>
-                <th className="px-5 py-3 text-right">Token</th>
-                <th className="px-5 py-3 text-right">成本</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {byUser.map((u: any, i: number) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-5 py-2">
-                    <p className="text-sm font-medium text-gray-900">{u.full_name || u.email}</p>
-                    {u.full_name && <p className="text-xs text-gray-400">{u.email}</p>}
-                  </td>
-                  <td className="px-5 py-2 text-right text-sm text-gray-600">{u.monthly_queries}</td>
-                  <td className="px-5 py-2 text-right text-sm text-gray-600">{(u.monthly_tokens || 0).toLocaleString()}</td>
-                  <td className="px-5 py-2 text-right text-sm font-medium text-gray-700">${(u.monthly_cost || 0).toFixed(4)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  )
-}
+// ─── Usage Tab moved to unified UsagePage ───
 
 // ═══ Main Page ═══
 export default function CompanyPage() {
@@ -431,8 +285,6 @@ export default function CompanyPage() {
   const tabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: 'dashboard', label: '總覽', icon: Building2 },
     { key: 'users', label: '成員管理', icon: Users },
-    { key: 'quota', label: '配額', icon: Gauge },
-    { key: 'usage', label: '用量', icon: BarChart3 },
   ]
 
   return (
@@ -462,8 +314,6 @@ export default function CompanyPage() {
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'dashboard' && <DashboardTab />}
         {tab === 'users' && <UsersTab />}
-        {tab === 'quota' && <QuotaTab />}
-        {tab === 'usage' && <UsageTab />}
       </div>
     </div>
   )

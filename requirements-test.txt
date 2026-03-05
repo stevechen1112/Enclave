@@ -1,7 +1,18 @@
-# Testing dependencies
+# 測試基礎套件
 pytest==7.4.4
-pytest-asyncio==0.23.3
+pytest-asyncio>=0.24.0
+pytest-cov==4.1.0
 httpx==0.26.0
 
-# Load testing (T4-14)
+# 資料工廠與模複
+factory-boy==3.3.0
+faker==24.0.0
+
+# 文件處理（上傳測試所需）
+aiofiles==23.2.1
+python-multipart==0.0.9
+Pillow==10.2.0
+python-docx==1.1.0
+
+# 負載測試
 locust==2.24.0

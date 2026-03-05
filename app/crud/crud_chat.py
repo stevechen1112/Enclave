@@ -231,9 +231,9 @@ def search_messages(
 
 def get_rag_dashboard(db: Session, tenant_id: UUID, days: int = 30) -> Dict[str, Any]:
     """取得 RAG 品質儀表板統計資料。"""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, UTC
 
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
 
     # 1. 對話總量
     total_conversations = db.query(func.count(Conversation.id)).filter(

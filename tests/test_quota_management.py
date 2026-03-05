@@ -3,22 +3,9 @@ Phase 3 Integration Tests — Quota Management (T3-1)
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
-ORCH_CLASS = "app.api.v1.endpoints.chat.ChatOrchestrator"
-
-
-def _mock_orchestrator():
-    result = {
-        "request_id": "r", "question": "q", "answer": "a",
-        "company_policy": None, "labor_law": None,
-        "sources": [], "notes": [], "disclaimer": "僅供參考",
-    }
-    inst = AsyncMock()
-    inst.process_query = AsyncMock(return_value=result)
-    return patch(ORCH_CLASS, return_value=inst)
 
 
 async def _setup_tenant(client, superuser_headers, name, tax_id, plan="free"):
@@ -99,15 +86,14 @@ async def test_query_quota_enforcement(client: AsyncClient, superuser_headers: d
         json={"monthly_query_limit": 1},
     )
 
-    with _mock_orchestrator():
-        # 第 1 次查詢應成功
-        r1 = await client.post(CHAT_URL, headers=h, json={"question": "第一個問題"})
-        assert r1.status_code == 200
+    # 第 1 次查詢應成功
+    r1 = await client.post(CHAT_URL, headers=h, json={"question": "第一個問題"})
+    assert r1.status_code == 200
 
-        # 第 2 次查詢應被限制
-        r2 = await client.post(CHAT_URL, headers=h, json={"question": "第二個問題"})
-        assert r2.status_code == 429
-        assert "quota_exceeded" in str(r2.json())
+    # 第 2 次查詢應被限制
+    r2 = await client.post(CHAT_URL, headers=h, json={"question": "第二個問題"})
+    assert r2.status_code == 429
+    assert "quota_exceeded" in str(r2.json())
 
 
 @pytest.mark.asyncio
@@ -122,21 +108,19 @@ async def test_document_quota_enforcement(client: AsyncClient, superuser_headers
         json={"max_documents": 1},
     )
 
-    with patch("app.tasks.document_tasks.process_document_task.delay") as mt:
-        mt.return_value.id = "t-1"
-        # 第 1 份應成功
-        r1 = await client.post(
-            "/api/v1/documents/upload", headers=h,
-            files={"file": ("a.txt", b"hello", "text/plain")},
-        )
-        assert r1.status_code == 200
+    # 第 1 份應成功
+    r1 = await client.post(
+        "/api/v1/documents/upload", headers=h,
+        files={"file": ("a.txt", b"hello", "text/plain")},
+    )
+    assert r1.status_code == 200
 
-        # 第 2 份應被限制
-        r2 = await client.post(
-            "/api/v1/documents/upload", headers=h,
-            files={"file": ("b.txt", b"world", "text/plain")},
-        )
-        assert r2.status_code == 429
+    # 第 2 份應被限制
+    r2 = await client.post(
+        "/api/v1/documents/upload", headers=h,
+        files={"file": ("b.txt", b"world", "text/plain")},
+    )
+    assert r2.status_code == 429
 
 
 @pytest.mark.asyncio

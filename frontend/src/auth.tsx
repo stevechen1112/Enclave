@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
-import { authApi, ssoApi } from './api'
+import { authApi } from './api'
 import type { User } from './types'
 
 interface AuthState {
@@ -7,7 +7,6 @@ interface AuthState {
   token: string | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  loginWithSSO: (code: string, redirectUri: string, tenantId: string, provider: string, state: string, codeVerifier: string) => Promise<void>
   logout: () => void
 }
 
@@ -45,27 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(access_token)
   }
 
-  const loginWithSSO = async (code: string, redirectUri: string, tenantId: string, provider: string, state: string, codeVerifier: string) => {
-    const { access_token } = await ssoApi.callback({
-      code,
-      redirect_uri: redirectUri,
-      tenant_id: tenantId,
-      provider,
-      state,
-      code_verifier: codeVerifier,
-    })
-    localStorage.setItem('token', access_token)
-    setToken(access_token)
-  }
-
-  const logout = () => {
+const logout = () => {
     localStorage.removeItem('token')
     setToken(null)
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, loginWithSSO, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

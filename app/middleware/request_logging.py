@@ -20,7 +20,7 @@ from app.logging_config import (
     user_id_ctx,
 )
 
-logger = logging.getLogger("unihr.request")
+logger = logging.getLogger("enclave.request")
 
 
 def _extract_user_context(request: Request) -> tuple[str, str]:

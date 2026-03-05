@@ -1,5 +1,8 @@
 """Add custom_domain table (T4-6)
 
+⚠️ DEPRECATED — Superseded by c7c9c43b1a3d_add_custom_domains.py in the primary chain.
+Do not apply this migration.
+
 Revision ID: t4_6_custom_domain
 """
 from alembic import op

@@ -1,9 +1,10 @@
 import os
 import uuid
 import aiofiles
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -15,9 +16,27 @@ from app.models.document import Document as DocumentModel
 from app.schemas.document import Document, DocumentCreate
 from app.config import settings
 from app.tasks.document_tasks import process_document_task
-from app.services.quota_enforcement import enforce_document_quota
+from app.services.document_parser import SUPPORTED_FORMATS
 
 router = APIRouter()
+
+
+# ── Response schema for /supported-formats ──────────────────────────────────────
+class SupportedFormatsResponse(BaseModel):
+    extensions: List[str]
+    type_map: Dict[str, str]
+
+
+@router.get("/supported-formats", response_model=SupportedFormatsResponse)
+def get_supported_formats() -> SupportedFormatsResponse:
+    """
+    公開端點：回傳後端支援的上傳格式清單，供前端動態使用。
+    不需要認證，讓登入畫面前也能快取格式清單。
+    """
+    return SupportedFormatsResponse(
+        extensions=sorted(SUPPORTED_FORMATS.keys()),
+        type_map=SUPPORTED_FORMATS,
+    )
 
 
 @router.get("/", response_model=List[Document])
@@ -79,7 +98,6 @@ async def upload_document(
     db: Session = Depends(deps.get_db),
     file: UploadFile = File(...),
     current_user: User = Depends(deps.get_current_active_user),
-    _quota: None = Depends(enforce_document_quota),
 ) -> Any:
     """
     上傳文件
@@ -89,7 +107,21 @@ async def upload_document(
     """
     # 權限檢查
     check_document_permission(current_user, "create")
-    
+
+    # 文件數量配額檢查
+    from app.crud import crud_tenant
+    doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")
+    if not doc_quota.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "quota_exceeded",
+                "message": doc_quota.get("message", "文件數量配額已超過"),
+                "current": doc_quota.get("current"),
+                "limit": doc_quota.get("limit"),
+            },
+        )
+
     # 1. 驗證文件類型（支援所有 Phase 0-2 格式）
     from app.services.document_parser import DocumentParser, SUPPORTED_FORMATS
     allowed_extensions = set(SUPPORTED_FORMATS.keys())
@@ -126,9 +158,14 @@ async def upload_document(
             detail="文件為空"
         )
     
+    # 3.5. 清理檔名（去除資料夾路徑前綴，如 webkitRelativePath）
+    clean_filename = os.path.basename(file.filename or "")
+    if not clean_filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="無效的檔名")
+
     # 4. 建立文件記錄
     doc_in = DocumentCreate(
-        filename=file.filename,
+        filename=clean_filename,
         file_type=file_type
     )
     
@@ -245,3 +282,40 @@ def delete_document(
     crud_document.delete(db, document_id=document_id)
     
     return {"message": "文件已刪除", "document_id": str(document_id)}
+
+
+@router.delete("/batch", summary="批次刪除所有文件")
+def batch_delete_documents(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """
+    批次刪除當前租戶的所有文件（含 chunks、實體檔案）。
+    權限：owner, admin
+    """
+    if current_user.role not in ("owner", "admin") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="僅管理員可執行批次刪除")
+
+    docs = (
+        db.query(DocumentModel)
+        .filter(DocumentModel.tenant_id == current_user.tenant_id)
+        .all()
+    )
+    deleted = 0
+    for doc in docs:
+        # Delete chunks
+        for chunk in doc.chunks:
+            db.delete(chunk)
+        # Delete physical file
+        try:
+            ext = os.path.splitext(doc.filename)[1]
+            fp = os.path.join(settings.UPLOAD_DIR, str(doc.tenant_id), f"{doc.id}{ext}")
+            if os.path.exists(fp):
+                os.remove(fp)
+        except Exception:
+            pass
+        db.delete(doc)
+        deleted += 1
+    db.commit()
+    return {"deleted": deleted}

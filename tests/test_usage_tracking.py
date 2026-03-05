@@ -4,23 +4,9 @@ Usage Tracking Tests
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
-ORCH_CLASS = "app.api.v1.endpoints.chat.ChatOrchestrator"
-
-
-def _mock_orchestrator(**overrides):
-    result = {
-        "request_id": "r-usage", "question": "q", "answer": "a",
-        "company_policy": None, "labor_law": None,
-        "sources": [], "notes": [], "disclaimer": "僅供參考",
-    }
-    result.update(overrides)
-    inst = AsyncMock()
-    inst.process_query = AsyncMock(return_value=result)
-    return patch(ORCH_CLASS, return_value=inst)
 
 
 async def _setup_tenant_owner(client, superuser_headers, suffix):
@@ -43,9 +29,8 @@ async def test_usage_tracking_token_counts(client: AsyncClient, superuser_header
     """測試 token 用量是否正確追蹤"""
     _, h = await _setup_tenant_owner(client, superuser_headers, "tok")
 
-    with _mock_orchestrator():
-        r = await client.post(CHAT_URL, headers=h, json={"question": "token test"})
-        assert r.status_code == 200
+    r = await client.post(CHAT_URL, headers=h, json={"question": "token test"})
+    assert r.status_code == 200
 
     summary = await client.get("/api/v1/audit/usage/summary", headers=h)
     assert summary.status_code == 200
@@ -58,10 +43,9 @@ async def test_usage_tracking_pinecone_queries(client: AsyncClient, superuser_he
     """測試向量資料庫查詢次數追蹤"""
     _, h = await _setup_tenant_owner(client, superuser_headers, "pin")
 
-    with _mock_orchestrator():
-        for i in range(3):
-            r = await client.post(CHAT_URL, headers=h, json={"question": f"pinecone q{i}"})
-            assert r.status_code == 200
+    for i in range(3):
+        r = await client.post(CHAT_URL, headers=h, json={"question": f"pinecone q{i}"})
+        assert r.status_code == 200
 
     summary = await client.get("/api/v1/audit/usage/summary", headers=h)
     assert summary.status_code == 200
@@ -72,8 +56,7 @@ async def test_usage_cost_estimation(client: AsyncClient, superuser_headers: dic
     """測試使用成本估算"""
     _, h = await _setup_tenant_owner(client, superuser_headers, "cost")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "cost test"})
+    await client.post(CHAT_URL, headers=h, json={"question": "cost test"})
 
     summary = await client.get("/api/v1/audit/usage/summary", headers=h)
     assert summary.status_code == 200
@@ -87,15 +70,12 @@ async def test_usage_aggregation_by_action_type(client: AsyncClient, superuser_h
     """測試依動作類型彙總用量"""
     _, h = await _setup_tenant_owner(client, superuser_headers, "agg")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "q1"})
+    await client.post(CHAT_URL, headers=h, json={"question": "q1"})
 
-    with patch("app.tasks.document_tasks.process_document_task.delay") as mt:
-        mt.return_value.id = "t-agg"
-        await client.post(
-            "/api/v1/documents/upload", headers=h,
-            files={"file": ("agg.txt", b"some text", "text/plain")},
-        )
+    await client.post(
+        "/api/v1/documents/upload", headers=h,
+        files={"file": ("agg.txt", b"some text", "text/plain")},
+    )
 
     logs = await client.get("/api/v1/audit/logs", headers=h)
     assert logs.status_code == 200
@@ -110,8 +90,7 @@ async def test_usage_time_range_filtering(client: AsyncClient, superuser_headers
     """測試依時間範圍篩選用量"""
     _, h = await _setup_tenant_owner(client, superuser_headers, "time")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "time q"})
+    await client.post(CHAT_URL, headers=h, json={"question": "time q"})
 
     r = await client.get(
         "/api/v1/audit/usage/summary",
@@ -133,9 +112,8 @@ async def test_multi_user_usage_attribution(client: AsyncClient, superuser_heade
     })
     h_emp = await login_user(client, "emp@musr.com", "Emp123!")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h_owner, json={"question": "owner q"})
-        await client.post(CHAT_URL, headers=h_emp, json={"question": "emp q"})
+    await client.post(CHAT_URL, headers=h_owner, json={"question": "owner q"})
+    await client.post(CHAT_URL, headers=h_emp, json={"question": "emp q"})
 
     summary = await client.get("/api/v1/audit/usage/summary", headers=h_owner)
     assert summary.status_code == 200

@@ -1,5 +1,5 @@
 """
-UniHR 多格式文件解析引擎 (Document Parser Engine)
+Enclave 多格式文件解析引擎 (Document Parser Engine)
 
 支援格式：
   Phase 0: PDF(文字型)、DOCX、TXT
@@ -130,18 +130,21 @@ def _pick_ocr_langs(preferred: str) -> Tuple[str, Optional[str]]:
 
 
 def _normalize_llamaparse_language(lang: str) -> Optional[str]:
+    """將使用者設定的語言代碼轉為 LlamaParse 接受的代碼。
+
+    LlamaParse 接受 'ch_tra' (繁體) / 'ch_sim' (簡體)，
+    但使用者常用 'zh-TW' / 'zh-CN'。
+    """
     value = (lang or "").strip()
     if not value:
         return None
     aliases = {
-        "ch_tra": "zh-TW",
-        "chi_tra": "zh-TW",
-        "zh_tw": "zh-TW",
-        "zh-tw": "zh-TW",
-        "ch_sim": "zh-CN",
-        "chi_sim": "zh-CN",
-        "zh_cn": "zh-CN",
-        "zh-cn": "zh-CN",
+        "zh-tw": "ch_tra",
+        "zh_tw": "ch_tra",
+        "chi_tra": "ch_tra",
+        "zh-cn": "ch_sim",
+        "zh_cn": "ch_sim",
+        "chi_sim": "ch_sim",
     }
     return aliases.get(value.lower(), value)
 
@@ -1053,8 +1056,8 @@ class DocumentParser:
         import nest_asyncio
         nest_asyncio.apply()
 
-        # 根據文件類型調整解析參數
-        parsing_instruction = (
+        # 根據文件類型調整解析參數（LlamaParse ≥0.6 改用 system_prompt）
+        system_prompt = (
             "這是一份人力資源或企業管理相關的文件。"
             "請精確保留所有表格結構（使用 Markdown 表格格式）、"
             "包含表頭的對應關係。"
@@ -1084,7 +1087,7 @@ class DocumentParser:
             base_params = {
                 "api_key": api_key,
                 "result_type": settings.LLAMAPARSE_RESULT_TYPE,
-                "parsing_instruction": parsing_instruction,
+                "system_prompt": system_prompt,
             }
 
             attempts: List[Dict[str, Any]] = []
@@ -1111,7 +1114,7 @@ class DocumentParser:
             minimal_with_instruction = {
                 "api_key": api_key,
                 "result_type": settings.LLAMAPARSE_RESULT_TYPE,
-                "parsing_instruction": parsing_instruction,
+                "system_prompt": system_prompt,
             }
             attempts.append(minimal_with_instruction)
 

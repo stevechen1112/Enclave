@@ -1,7 +1,7 @@
 """Schemas for SSO configuration and OAuth callback."""
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 # ─── Tenant SSO Config ───
 
@@ -31,8 +31,7 @@ class SSOConfigRead(SSOConfigBase):
     id: UUID
     tenant_id: UUID
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SSOConfigPublic(BaseModel):
@@ -40,8 +39,7 @@ class SSOConfigPublic(BaseModel):
     provider: str
     enabled: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ─── OAuth callback ───

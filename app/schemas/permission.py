@@ -1,7 +1,7 @@
 from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # ─── Department Schemas ───
@@ -27,8 +27,7 @@ class Department(DepartmentBase):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DepartmentTree(Department):
@@ -59,8 +58,7 @@ class FeaturePermission(FeaturePermissionBase):
     tenant_id: UUID
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # 可用功能模組列表

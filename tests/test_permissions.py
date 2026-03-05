@@ -4,22 +4,9 @@ Permission & Role-Based Access Control Tests
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
-ORCH_CLASS = "app.api.v1.endpoints.chat.ChatOrchestrator"
-
-
-def _mock_orchestrator():
-    result = {
-        "request_id": "r", "question": "q", "answer": "a",
-        "company_policy": None, "labor_law": None,
-        "sources": [], "notes": [], "disclaimer": "僅供參考",
-    }
-    inst = AsyncMock()
-    inst.process_query = AsyncMock(return_value=result)
-    return patch(ORCH_CLASS, return_value=inst)
 
 
 @pytest.mark.asyncio
@@ -43,14 +30,12 @@ async def test_employee_cannot_delete_documents(client: AsyncClient, superuser_h
 
     h_owner = await login_user(client, "owner@permtest.com", "Owner123!")
 
-    with patch("app.tasks.document_tasks.process_document_task.delay") as mt:
-        mt.return_value.id = "t1"
-        up = await client.post(
-            "/api/v1/documents/upload", headers=h_owner,
-            files={"file": ("test.txt", b"Test content", "text/plain")},
-        )
-        assert up.status_code == 200
-        doc_id = up.json()["id"]
+    up = await client.post(
+        "/api/v1/documents/upload", headers=h_owner,
+        files={"file": ("test.txt", b"Test content", "text/plain")},
+    )
+    assert up.status_code == 200
+    doc_id = up.json()["id"]
 
     h_emp = await login_user(client, "emp@permtest.com", "Emp123!")
 
@@ -135,14 +120,12 @@ async def test_hr_can_manage_documents_but_not_users(client: AsyncClient, superu
     h_admin = await login_user(client, "admin@hp.com", "Admin123!")
 
     # HR 上傳文件 → 成功
-    with patch("app.tasks.document_tasks.process_document_task.delay") as mt:
-        mt.return_value.id = "hr-task"
-        up = await client.post(
-            "/api/v1/documents/upload", headers=h_hr,
-            files={"file": ("hr.txt", b"HR doc", "text/plain")},
-        )
-        assert up.status_code == 200
-        doc_id = up.json()["id"]
+    up = await client.post(
+        "/api/v1/documents/upload", headers=h_hr,
+        files={"file": ("hr.txt", b"HR doc", "text/plain")},
+    )
+    assert up.status_code == 200
+    doc_id = up.json()["id"]
 
     assert (await client.get("/api/v1/documents/", headers=h_hr)).status_code == 200
     assert (await client.delete(f"/api/v1/documents/{doc_id}", headers=h_hr)).status_code == 200
@@ -183,14 +166,12 @@ async def test_viewer_read_only_access(client: AsyncClient, superuser_headers: d
 
     h_hr = await login_user(client, "hr@vt.com", "HR123!")
 
-    with patch("app.tasks.document_tasks.process_document_task.delay") as mt:
-        mt.return_value.id = "vt-task"
-        up = await client.post(
-            "/api/v1/documents/upload", headers=h_hr,
-            files={"file": ("vt.txt", b"Test doc", "text/plain")},
-        )
-        assert up.status_code == 200
-        doc_id = up.json()["id"]
+    up = await client.post(
+        "/api/v1/documents/upload", headers=h_hr,
+        files={"file": ("vt.txt", b"Test doc", "text/plain")},
+    )
+    assert up.status_code == 200
+    doc_id = up.json()["id"]
 
     h_viewer = await login_user(client, "viewer@vt.com", "Viewer123!")
 
@@ -198,18 +179,16 @@ async def test_viewer_read_only_access(client: AsyncClient, superuser_headers: d
     assert (await client.get("/api/v1/documents/", headers=h_viewer)).status_code == 200
     assert (await client.get(f"/api/v1/documents/{doc_id}", headers=h_viewer)).status_code == 200
 
-    # 上傳 → 拒絕
-    with patch("app.tasks.document_tasks.process_document_task.delay"):
-        r = await client.post(
-            "/api/v1/documents/upload", headers=h_viewer,
-            files={"file": ("v.txt", b"Viewer attempt", "text/plain")},
-        )
-        assert r.status_code == 403
+    # 上傳 → 小會殷回權限檢查，在 Celery 任務之前就會拒絕
+    r = await client.post(
+        "/api/v1/documents/upload", headers=h_viewer,
+        files={"file": ("v.txt", b"Viewer attempt", "text/plain")},
+    )
+    assert r.status_code == 403
 
     # 刪除 → 拒絕
     assert (await client.delete(f"/api/v1/documents/{doc_id}", headers=h_viewer)).status_code == 403
 
     # 聊天 → 成功
-    with _mock_orchestrator():
-        chat = await client.post(CHAT_URL, headers=h_viewer, json={"question": "Viewer Q"})
-        assert chat.status_code == 200
+    chat = await client.post(CHAT_URL, headers=h_viewer, json={"question": "Viewer Q"})
+    assert chat.status_code == 200

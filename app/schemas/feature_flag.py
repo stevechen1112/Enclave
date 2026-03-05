@@ -1,7 +1,7 @@
 """Feature Flag schemas."""
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class FeatureFlagBase(BaseModel):
@@ -36,9 +36,7 @@ class FeatureFlagUpdate(BaseModel):
 class FeatureFlag(FeatureFlagBase):
     id: UUID
 
-    class Config:
-        from_attributes = True
-        populate_by_name = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class FeatureFlagEvaluation(BaseModel):

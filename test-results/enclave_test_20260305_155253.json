@@ -1,0 +1,150 @@
+{
+  "timestamp": "20260305_155253",
+  "summary": {
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "label": "健康檢查",
+      "detail": "env=development"
+    },
+    {
+      "status": "PASS",
+      "label": "Admin 登入",
+      "detail": "admin@example.com"
+    },
+    {
+      "status": "PASS",
+      "label": "測試 HR 帳號已存在",
+      "detail": "跳過建立"
+    },
+    {
+      "status": "PASS",
+      "label": "取得 me 資訊",
+      "detail": "role=owner tenant=fd39fa1a..."
+    },
+    {
+      "status": "PASS",
+      "label": "[A 基本HR] 員工試用期最長可以多久",
+      "detail": "關鍵字 3/3  10.0s  432chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[A 假勤] 公司每年特休假天數怎麼計算",
+      "detail": "關鍵字 3/3  9.2s  714chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[D 計算] 勞工退休金雇主應提撥多少比例",
+      "detail": "關鍵字 3/3  9.9s  443chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[A HR規範] 員工違反工作規則可以怎麼處理",
+      "detail": "關鍵字 3/3  9.2s  846chars"
+    },
+    {
+      "status": "PASS",
+      "label": "[A 薪酬] 請問公司薪資發放日是幾號",
+      "detail": "關鍵字 2/2  6.7s  539chars"
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話清單",
+      "detail": "5 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "搜尋對話「特休」",
+      "detail": "18 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話詳情",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得對話訊息",
+      "detail": "10 則"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出對話 JSON",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "送出對話回饋（rating=2 👍）",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得回饋統計",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "RAG Dashboard",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "取得模板清單",
+      "detail": "5 種: draft_response, case_summary, meeting_minutes, analysis_report, faq_draft"
+    },
+    {
+      "status": "PASS",
+      "label": "生成 [draft_response]",
+      "detail": "811 chars  8.3s"
+    },
+    {
+      "status": "PASS",
+      "label": "生成 [case_summary]",
+      "detail": "1147 chars  15.5s"
+    },
+    {
+      "status": "PASS",
+      "label": "生成 [meeting_minutes]",
+      "detail": "1451 chars  14.1s"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出 DOCX",
+      "detail": "37806 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "匯出 PDF",
+      "detail": "2329 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "取得報告清單",
+      "detail": "3 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立報告",
+      "detail": "id=4c5404dd..."
+    },
+    {
+      "status": "PASS",
+      "label": "釘選報告",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "搜尋報告「自動測試」",
+      "detail": "1 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "刪除報告",
+      "detail": ""
+    }
+  ]
+}

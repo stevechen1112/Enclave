@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # Shared properties
@@ -46,8 +46,7 @@ class TenantInDBBase(TenantBase):
     quota_alert_threshold: Optional[float] = 0.8
     quota_alert_email: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Additional properties to return via API

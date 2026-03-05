@@ -1,5 +1,8 @@
 """add chat_feedbacks table for T7-5
 
+⚠️ DEPRECATED — Superseded by d1e2f3a4b5c6_phase10_13_tables.py in the primary chain.
+Do not apply this migration.
+
 Revision ID: t7_5_feedback
 Revises: t4_19_multi_region
 Create Date: 2026-02-09

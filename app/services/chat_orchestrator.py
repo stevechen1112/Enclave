@@ -1,6 +1,5 @@
 import logging
 import json
-import re
 import asyncio
 from datetime import date
 from typing import Dict, Any, List, Optional, AsyncGenerator
@@ -8,7 +7,6 @@ from uuid import UUID
 import uuid
 from app.config import settings
 from app.services.kb_retrieval import KnowledgeBaseRetriever
-from app.services.core_client import CoreAPIClient
 from app.services.structured_answers import try_structured_answer
 
 logger = logging.getLogger(__name__)
@@ -26,26 +24,23 @@ class ChatOrchestrator:
     聊天協調器（RAG Generation 層）
 
     負責：
-    1. 並行查詢公司內規 + 勞資法 Core API
+    1. 查詢企業內部知識庫（KB Retrieval）
     2. 使用 LLM 根據檢索結果生成上下文感知的回答
-    3. 附帶來源引用與法律免責聲明
+    3. 附帶來源引用
     4. 支援串流生成 (T7-1) 與多輪對話 (T7-2)
     """
 
-    SYSTEM_PROMPT = """你是 UniHR 人資 AI 助理，專門回答台灣企業的人事規章與勞動法規問題。
+    SYSTEM_PROMPT = """你是企業私有知識庫的 AI 問答助理，專門根據組織內部文件回答問題。
 
 回答規則：
 1. **只根據下方提供的參考資料回答**，不要自行捏造或引用未提供的內容
-2. 如果有公司內規，以公司內規為主，法律規定為輔助參照
-3. 如果公司內規的規定**低於**勞動法的最低標準，必須明確指出
-4. 若公司內規高於法定最低標準，屬合法且應明確指出
-5. 若參考資料中出現「測試陷阱／提醒／警示」，需依其內容修正結論並點出原因
+2. 若參考資料中有多份文件涉及同一問題，綜合各份文件給出最完整的回答
+3. 若參考資料中出現相互矛盾的內容，明確指出矛盾之處，並說明各自的依據
+4. 若參考資料不足以回答問題，坦白說明「目前知識庫中沒有足夠的相關文件」
+5. 引用文件時，請標注文件名稱（例如：根據《XXX 合約》第 X 條）
 6. 使用結構化格式（標題、條列）讓回答清楚易讀
-7. 引用法律時**必須**使用《法律名稱》第X條格式（例如：《勞動基準法》第38條），絕對不能只寫法律名稱。
-   若用戶訊息結尾有「⚠️ 以下法條已在參考資料中明確提及」的清單，每一條都必須出現在回答中
-8. 如果參考資料不足以回答，坦白說明並建議諮詢 HR 部門
-9. 使用繁體中文回答
-10. 需要數值計算時，請列出公式與代入值，嚴格依公式計算"""
+7. 需要數值計算時，列出公式與代入值，嚴格依公式計算
+8. 使用繁體中文回答"""
 
     FOLLOWUP_PROMPT = """
 
@@ -57,15 +52,46 @@ class ChatOrchestrator:
     
     def __init__(self):
         self.kb_retriever = KnowledgeBaseRetriever()
-        self.core_client = CoreAPIClient()
 
-        # OpenAI client (sync + async)
+        # LLM client（依 LLM_PROVIDER 決定後端）— 用於 RAG 問答（需要強 LLM）
         self._openai = None
         self._openai_async = None
-        openai_key = getattr(settings, "OPENAI_API_KEY", "")
-        if _HAS_OPENAI and openai_key:
-            self._openai = openai_lib.OpenAI(api_key=openai_key)
-            self._openai_async = openai_lib.AsyncOpenAI(api_key=openai_key)
+        self._llm_model = "gpt-4o-mini"
+
+        provider = getattr(settings, "LLM_PROVIDER", "openai").lower()
+
+        if _HAS_OPENAI:
+            if provider == "gemini":
+                api_key = getattr(settings, "GEMINI_API_KEY", "")
+                if api_key:
+                    _base = "https://generativelanguage.googleapis.com/v1beta/openai/"
+                    self._openai = openai_lib.OpenAI(api_key=api_key, base_url=_base)
+                    self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base)
+                    self._llm_model = getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
+            elif provider == "openai":
+                api_key = getattr(settings, "OPENAI_API_KEY", "")
+                if api_key:
+                    self._openai = openai_lib.OpenAI(api_key=api_key)
+                    self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key)
+                    self._llm_model = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
+
+        # Internal LLM（用於 contextualize 改寫等輕量任務，走本地 Ollama 省錢）
+        self._internal_async = None
+        self._internal_model = None
+        internal_provider = getattr(settings, "INTERNAL_LLM_PROVIDER", "ollama").lower()
+
+        if _HAS_OPENAI and internal_provider == "ollama":
+            ollama_url = getattr(settings, "OLLAMA_SCAN_URL", "http://host.docker.internal:11434")
+            self._internal_model = getattr(settings, "INTERNAL_OLLAMA_MODEL", "gemma3:27b")
+            self._internal_async = openai_lib.AsyncOpenAI(
+                api_key="ollama",  # Ollama 不需要真實 key
+                base_url=f"{ollama_url.rstrip('/')}/v1/",
+            )
+            logger.info("ChatOrchestrator internal LLM: Ollama(%s @ %s)", self._internal_model, ollama_url)
+        elif internal_provider != "ollama":
+            # 內部任務也走雲端 — 退回主 LLM 客戶端
+            self._internal_async = self._openai_async
+            self._internal_model = self._llm_model
 
     # ──────────── T7-0: 檢索層（與生成解耦） ────────────
 
@@ -76,114 +102,32 @@ class ChatOrchestrator:
         top_k: int = 5,
     ) -> Dict[str, Any]:
         """
-        純檢索：並行查詢公司內規 + 勞資法 Core API，回傳結構化上下文。
-        
+        純檢索：查詢企業內部知識庫，回傳結構化上下文。
+
         分離自原 process_query，使串流端點可先取得來源，再分段生成。
         """
         request_id = str(uuid.uuid4())
 
-        async def get_company_policy():
-            try:
-                # run_in_executor：search() 含同步 Voyage embed/rerank 呼叫
-                # 若直接在 async def 中呼叫會阻塞 event loop，
-                # 導致 asyncio.gather() 無法真正並行。
-                loop = asyncio.get_event_loop()
-                results = await loop.run_in_executor(
-                    None,
-                    lambda: self.kb_retriever.search(
-                        tenant_id=tenant_id,
-                        query=question,
-                        top_k=top_k,
-                    ),
-                )
-                return {"status": "success", "results": results}
-            except Exception as e:
-                return {"status": "error", "error": str(e), "results": []}
-
-        async def get_labor_law():
-            try:
-                result = await self.core_client.chat(
-                    question=question,
-                    request_id=request_id,
-                )
-                return result
-            except Exception as e:
-                return {"status": "error", "answer": "勞資法查詢失敗", "error": str(e)}
-
-        company_policy_result, labor_law_result = await asyncio.gather(
-            asyncio.create_task(get_company_policy()),
-            asyncio.create_task(get_labor_law()),
-        )
-
-        # 內規補強：根據問題關鍵字做檔名導向檢索（同樣用 executor 避免阻塞）
-        loop = asyncio.get_event_loop()
-        boosted_results = await loop.run_in_executor(
-            None,
-            lambda: self._policy_boost_search(tenant_id, question, top_k),
-        )
-        if boosted_results:
-            base_results = company_policy_result.get("results", [])
-            merged = self._merge_policy_results(base_results, boosted_results, top_k)
-            company_policy_result["status"] = "success"
-            company_policy_result["results"] = merged
+        try:
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(
+                None,
+                lambda: self.kb_retriever.search(
+                    tenant_id=tenant_id,
+                    query=question,
+                    top_k=top_k,
+                ),
+            )
+            company_policy_result = {"status": "success", "results": results}
+        except Exception as e:
+            company_policy_result = {"status": "error", "error": str(e), "results": []}
 
         # ── 組裝結構化上下文 ──
         return self._build_context(
             question=question,
             company_policy=company_policy_result,
-            labor_law=labor_law_result,
             request_id=request_id,
         )
-
-    def _policy_boost_search(
-        self, tenant_id: UUID, question: str, top_k: int
-    ) -> List[Dict[str, Any]]:
-        filenames = self._policy_hint_filenames(question)
-        if not filenames:
-            return []
-        try:
-            return self.kb_retriever.search(
-                tenant_id=tenant_id,
-                query=question,
-                top_k=top_k,
-                mode="semantic",
-                rerank=False,
-                filter_dict={"filename": filenames},
-            )
-        except Exception:
-            return []
-
-    @staticmethod
-    def _policy_hint_filenames(question: str) -> List[str]:
-        hints: List[str] = []
-        if any(k in question for k in ["績效", "考核"]):
-            hints.append("員工手冊-第一章-總則.pdf")
-        if any(k in question for k in ["報帳", "計程車", "憑證", "發票"]):
-            hints.append("報帳作業規範.pdf")
-        if any(k in question for k in ["新人", "報到", "到職", "試用期"]):
-            hints.extend(["新人到職SOP.pdf", "勞動契約書-謝雅玲.pdf"])
-        if any(k in question for k in ["特休", "婚假", "喪假", "生理假", "產假", "陪產", "請假"]):
-            hints.extend(["員工手冊-第一章-總則.pdf", "請假單範本-E012-周秀蘭.pdf"])
-        if "年終獎金" in question or "獎懲" in question:
-            hints.extend(["獎懲管理辦法.pdf", "勞動契約書-謝雅玲.pdf"])
-        if "加班" in question:
-            hints.extend(["員工手冊-第一章-總則.pdf", "勞動契約書-謝雅玲.pdf"])
-        if "交通津貼" in question or "津貼" in question:
-            hints.append("員工手冊-第一章-總則.pdf")
-        if "勞保" in question or "健保" in question:
-            hints.append("202601-E007-劉志明-薪資條.pdf")
-        if "健檢" in question or "健康檢查" in question:
-            hints.append("健康檢查報告-E016-高淑珍.pdf")
-        if "薪資" in question or "薪水" in question or "實領" in question:
-            hints.append("202601-E007-劉志明-薪資條.pdf")
-        # 去重保持順序
-        seen = set()
-        ordered = []
-        for name in hints:
-            if name not in seen:
-                seen.add(name)
-                ordered.append(name)
-        return ordered
 
     @staticmethod
     def _merge_policy_results(
@@ -207,7 +151,6 @@ class ChatOrchestrator:
         self,
         question: str,
         company_policy: Dict[str, Any],
-        labor_law: Dict[str, Any],
         request_id: str,
     ) -> Dict[str, Any]:
         """將 raw 檢索結果組裝為結構化 context dict。"""
@@ -215,117 +158,46 @@ class ChatOrchestrator:
             company_policy.get("status") == "success"
             and len(company_policy.get("results", [])) > 0
         )
-        has_labor_law = (
-            labor_law.get("status") != "error" and labor_law.get("answer")
-        )
 
         context: Dict[str, Any] = {
             "request_id": request_id,
             "question": question,
             "has_policy": has_policy,
-            "has_labor_law": has_labor_law,
             "company_policy_raw": None,
-            "labor_law_raw": None,
             "context_parts": [],
             "sources": [],
-            "disclaimer": "本回答僅供參考，不構成正式法律意見。如有具體情況，請諮詢專業法律顧問。",
+            "disclaimer": "本回答由 AI 根據知識庫文件生成，僅供參考。如有重要決策，請以正式文件為準。",
         }
 
         if has_policy:
-            top_policies = company_policy["results"][:3]
+            top_results = company_policy["results"][:5]
             context["company_policy_raw"] = {
-                "content": top_policies[0].get("content") or "",
-                "source": top_policies[0].get("filename") or "",
-                "relevance_score": top_policies[0].get("score") or 0,
+                "content": top_results[0].get("content") or "",
+                "source": top_results[0].get("filename") or "",
+                "relevance_score": top_results[0].get("score") or 0,
                 "all_results": [
                     {
                         "content": (r.get("content") or "")[:500],
                         "filename": r.get("filename") or "",
                         "score": r.get("score") or 0,
                     }
-                    for r in top_policies
+                    for r in top_results
                 ],
             }
-            for r in top_policies:
+            for r in top_results:
                 context["sources"].append({
                     "type": "policy",
                     "title": r.get("filename") or "",
                     "snippet": (r.get("content") or "")[:200],
                     "score": r.get("score") or 0,
                 })
-            for i, r in enumerate(top_policies, 1):
+            for i, r in enumerate(top_results, 1):
                 content = r.get("content") or ""
                 filename = r.get("filename") or ""
                 score = r.get("score") or 0
                 context["context_parts"].append(
-                    f"【公司內規 #{i}】（來源：{filename}，相關度：{score:.2f}）\n{content}"
+                    f"【文件 #{i}】（來源：{filename}，相關度：{score:.2f}）\n{content}"
                 )
-
-        if has_labor_law:
-            context["labor_law_raw"] = {
-                "answer": labor_law.get("answer", ""),
-                "citations": labor_law.get("citations", []),
-                "usage": labor_law.get("usage", {}),
-            }
-            if labor_law.get("citations"):
-                for citation in labor_law["citations"]:
-                    law_name = citation.get("law_name") or "勞動法規"
-                    article = citation.get("article") or ""
-                    # 格式化為 《勞動基準法》第17條 形式
-                    if article:
-                        title = f"《{law_name}》第{article}" if not article.startswith("第") else f"《{law_name}》{article}"
-                    else:
-                        title = f"《{law_name}》"
-                    context["sources"].append({
-                        "type": "law",
-                        "title": title,
-                        "snippet": labor_law.get("answer", "")[:200],
-                    })
-            else:
-                # Core API 不回傳結構化 citations，從回答文字中解析法條引用
-                answer_text = labor_law.get("answer") or ""
-                if answer_text:
-                    law_refs = re.findall(r'《(.+?)》(?:第(\d+[-之]?\d*條?))?', answer_text)
-                    if law_refs:
-                        seen = set()
-                        for law_name, article in law_refs[:5]:
-                            # 格式化為 《勞動基準法》第17條 形式
-                            title = f"《{law_name}》第{article}" if article else f"《{law_name}》"
-                            if title not in seen:
-                                seen.add(title)
-                                context["sources"].append({
-                                    "type": "law",
-                                    "title": title,
-                                    "snippet": answer_text[:200],
-                                })
-                    else:
-                        context["sources"].append({
-                            "type": "law",
-                            "title": "勞動法規 (Core API)",
-                            "snippet": answer_text[:200],
-                        })
-            law_text = labor_law.get("answer", "")
-            citations_text = ""
-            if labor_law.get("citations"):
-                citations_text = "；".join(
-                    f"{c.get('law_name', '')} {c.get('article', '')}"
-                    for c in labor_law["citations"]
-                )
-            elif law_text:
-                # Core API 不回傳結構化 citations，從 answer 文字解析法條做為 heading
-                parsed = re.findall(r'《(.+?)》(?:第([\d\-之]+條(?:之\d+)?))?', law_text)
-                seen_cit: set = set()
-                unique_cit: list = []
-                for law_n, art_n in parsed[:8]:
-                    key = f"《{law_n}》第{art_n}條" if art_n else f"《{law_n}》"
-                    if key not in seen_cit:
-                        seen_cit.add(key)
-                        unique_cit.append(key)
-                if unique_cit:
-                    citations_text = "（法源：" + "、".join(unique_cit) + "）"
-            context["context_parts"].append(
-                f"【勞動法規】{citations_text}\n{law_text}"
-            )
 
         return context
 
@@ -342,7 +214,7 @@ class ChatOrchestrator:
         yield 每個 token chunk，前端可逐字渲染。
         若 LLM 不可用，則 yield 整段 fallback。
         """
-        if not self._openai_async or not (context["has_policy"] or context["has_labor_law"]):
+        if not self._openai_async or not context["has_policy"]:
             yield self._fallback_answer(context)
             return
 
@@ -352,7 +224,7 @@ class ChatOrchestrator:
 
         try:
             response = await self._openai_async.chat.completions.create(
-                model=getattr(settings, "OPENAI_MODEL", "gpt-4o-mini"),
+                model=self._llm_model,
                 messages=messages,
                 temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
                 max_tokens=getattr(settings, "OPENAI_MAX_TOKENS", 1500),
@@ -370,16 +242,23 @@ class ChatOrchestrator:
 
     # 需要上下文補全的代名詞／指示詞
     _CONTEXT_PRONOUNS = ("他", "她", "它", "他的", "她的", "他們", "她們",
-                         "這個人", "那個人", "此人", "該員工", "同一", "上述", "前述")
+                         "這個人", "那個人", "此人", "該員工", "同一", "上述", "前述",
+                         "其中", "這些", "那些", "上面", "裡面", "哪些",
+                         "這個", "那個", "該", "以上", "剛才")
 
     async def contextualize_query(
         self, query: str, history: List[Dict[str, str]]
     ) -> str:
         """
         用 LLM 將含代名詞/省略主詞的查詢改寫為獨立查詢。
+        優先使用 internal LLM（本地 Ollama）省錢，退回主 LLM 客戶端。
         若歷史為空、LLM 不可用、或問題不含指代詞，直接回傳原 query。
         """
-        if not history or not self._openai_async:
+        # 選擇內部 LLM（Ollama）或退回主 LLM
+        client = self._internal_async or self._openai_async
+        model = self._internal_model or self._llm_model
+
+        if not history or not client:
             return query
 
         # 智慧跳過：問題不含代名詞/指示詞時無需 LLM 改寫（節省 ~0.9s）
@@ -399,8 +278,8 @@ class ChatOrchestrator:
         ]
 
         try:
-            response = await self._openai_async.chat.completions.create(
-                model="gpt-4o-mini",
+            response = await client.chat.completions.create(
+                model=model,
                 messages=messages,
                 temperature=0,
                 max_tokens=200,
@@ -431,11 +310,10 @@ class ChatOrchestrator:
                 "request_id": str(uuid.uuid4()),
                 "question": question,
                 "company_policy": None,
-                "labor_law": None,
                 "answer": structured.answer,
                 "sources": structured.sources,
                 "notes": ["使用結構化資料直接計算"],
-                "disclaimer": "本回答僅供參考，不構成正式法律意見。如有具體情況，請諮詢專業法律顧問。",
+                "disclaimer": "本回答由 AI 根據知識庫文件生成，僅供參考。如有重要決策，請以正式文件為準。",
             }
         # 查詢改寫（多輪）
         effective_question = question
@@ -454,14 +332,13 @@ class ChatOrchestrator:
             "request_id": ctx["request_id"],
             "question": question,
             "company_policy": ctx["company_policy_raw"],
-            "labor_law": ctx["labor_law_raw"],
             "answer": "",
             "sources": ctx["sources"],
             "notes": [],
             "disclaimer": ctx["disclaimer"],
         }
 
-        if self._openai and (ctx["has_policy"] or ctx["has_labor_law"]):
+        if self._openai and ctx["has_policy"]:
             try:
                 result["answer"] = self._generate_answer_sync(
                     question, ctx, history=history
@@ -473,7 +350,7 @@ class ChatOrchestrator:
                 result["notes"].append("LLM 暫時無法使用，以結構化格式呈現")
         else:
             result["answer"] = self._fallback_answer(ctx)
-            if not (ctx["has_policy"] or ctx["has_labor_law"]):
+            if not ctx["has_policy"]:
                 result["notes"].append("未找到相關資訊")
 
         return result
@@ -545,7 +422,7 @@ class ChatOrchestrator:
         messages = self._build_llm_messages(question, context, history=history)
 
         response = self._openai.chat.completions.create(
-            model=getattr(settings, "OPENAI_MODEL", "gpt-4o-mini"),
+            model=self._llm_model,
             messages=messages,
             temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
             max_tokens=getattr(settings, "OPENAI_MAX_TOKENS", 1500),
@@ -613,46 +490,31 @@ class ChatOrchestrator:
     def _fallback_answer(context: Dict[str, Any]) -> str:
         """LLM 不可用時的模板 fallback。"""
         has_policy = context.get("has_policy", False)
-        has_labor_law = context.get("has_labor_law", False)
 
-        if has_policy and has_labor_law:
+        if has_policy:
             policy_content = context["company_policy_raw"]["content"][:500]
-            law_answer = context["labor_law_raw"]["answer"][:500]
-            return f"""📋 **公司內規規定**：
+            return f"""📋 **知識庫相關內容**：
 {policy_content}
 
-⚖️ **勞動法規補充**：
-{law_answer}
-
-💡 **說明**：公司內規是您的優先參考依據，但不得違反勞動法的最低標準。"""
-
-        elif has_policy:
-            return f"""📋 **公司內規規定**：
-{context["company_policy_raw"]["content"]}
-
-💡 **提醒**：未查詢到相關勞動法規補充。如需了解法律最低標準，請進一步諮詢。"""
-
-        elif has_labor_law:
-            return f"""⚖️ **勞動法規**：
-{context["labor_law_raw"]["answer"]}
-
-💡 **提醒**：未在公司內規中找到相關規定。建議確認公司是否有額外規定。"""
+💡 **提醒**：以上為知識庫中最相關的段落，AI 生成回答目前暫時無法使用。"""
 
         else:
-            return "抱歉，未找到相關資訊。請嘗試換個方式提問，或聯繫 HR 部門。"
+            return "抱歉，目前知識庫中的資料不足以回答此問題。請嘗試換個方式提問，或向管理員確認是否需要補充相關文件。"
 
     def format_summary(self, result: Dict[str, Any]) -> str:
         """格式化摘要（用於顯示）"""
         summary = f"**問題**：{result['question']}\n\n"
         summary += result["answer"]
 
-        if result["sources"]:
+        if result.get("sources"):
             summary += "\n\n**參考來源**：\n"
             for source in result["sources"]:
-                if source["type"] == "company_policy":
-                    summary += f"- 📋 {source['filename']} (相關度: {source['score']:.2f})\n"
-                elif source["type"] == "labor_law":
-                    summary += f"- ⚖️ {source.get('law_name', '勞動法規')} {source.get('article', '')}\n"
+                title = source.get("title") or source.get("filename") or ""
+                score = source.get("score")
+                if score is not None:
+                    summary += f"- 📄 {title} (相關度: {score:.2f})\n"
+                else:
+                    summary += f"- 📄 {title}\n"
 
         summary += f"\n\n{result['disclaimer']}"
         return summary

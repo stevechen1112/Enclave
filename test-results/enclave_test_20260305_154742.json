@@ -1,0 +1,255 @@
+{
+  "timestamp": "20260305_154742",
+  "summary": {
+    "passed": 49,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "label": "健康檢查",
+      "detail": "env=development"
+    },
+    {
+      "status": "PASS",
+      "label": "Admin 登入",
+      "detail": "admin@example.com"
+    },
+    {
+      "status": "PASS",
+      "label": "測試 HR 帳號已存在",
+      "detail": "跳過建立"
+    },
+    {
+      "status": "PASS",
+      "label": "取得 me 資訊",
+      "detail": "role=owner tenant=fd39fa1a..."
+    },
+    {
+      "status": "PASS",
+      "label": "KB 統計",
+      "detail": "chunks=456 docs=0"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「勞工退休金提撥率」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「年度考核流程」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「請假規定 特休」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 搜尋「薪資計算方式」",
+      "detail": "5 筆 (期望 ≥1)"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 健康狀態",
+      "detail": "status=? chunks=0"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 分類清單",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立分類",
+      "detail": "id=c8995b20..."
+    },
+    {
+      "status": "PASS",
+      "label": "觸發完整性掃描",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "完整性報告清單",
+      "detail": "3 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立 KB 備份",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "備份清單",
+      "detail": "7 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "知識缺口清單",
+      "detail": "3 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "KB 版本清單（per-doc）",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立部門「測試研發部」",
+      "detail": "id=a96cee80..."
+    },
+    {
+      "status": "PASS",
+      "label": "建立子部門「後端團隊」",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "部門清單",
+      "detail": "2 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "部門樹狀結構",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "更新部門",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "刪除測試部門（含子部門）",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "公司 Dashboard",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "公司資料",
+      "detail": "name=Demo Tenant plan=enterprise"
+    },
+    {
+      "status": "PASS",
+      "label": "配額狀態",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "成員清單",
+      "detail": "5 位"
+    },
+    {
+      "status": "PASS",
+      "label": "用量摘要",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "按使用者用量",
+      "detail": "5 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "功能旗標清單",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "建立功能旗標",
+      "detail": "key=test_auto_flag_154741"
+    },
+    {
+      "status": "PASS",
+      "label": "停用功能旗標",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "刪除功能旗標",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "分析摘要",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "對話趨勢",
+      "detail": "7 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "熱門問題",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "未答問題",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "稽核日誌",
+      "detail": "0 筆"
+    },
+    {
+      "status": "PASS",
+      "label": "稽核日誌 CSV 匯出",
+      "detail": "64 bytes"
+    },
+    {
+      "status": "PASS",
+      "label": "稽核 - 用量摘要",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "稽核 - 按動作",
+      "detail": ""
+    },
+    {
+      "status": "PASS",
+      "label": "效能：健康檢查",
+      "detail": "0.00s  (SLA=3s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：KB 統計",
+      "detail": "0.01s  (SLA=2s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：KB 搜尋",
+      "detail": "0.52s  (SLA=5s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：分析摘要",
+      "detail": "0.01s  (SLA=5s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：稽核日誌",
+      "detail": "0.00s  (SLA=5s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：部門樹",
+      "detail": "0.00s  (SLA=3s)"
+    },
+    {
+      "status": "PASS",
+      "label": "效能：KB 健康",
+      "detail": "0.01s  (SLA=5s)"
+    }
+  ]
+}

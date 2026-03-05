@@ -1,4 +1,7 @@
 """
+⚠️ DEPRECATED — This migration is in the secondary (disconnected) alembic chain.
+Most indexes are already created in the primary chain's initial schema (450ae450e023).
+
 T4-15 資料庫調優 — 索引最佳化 Migration
 =========================================
 

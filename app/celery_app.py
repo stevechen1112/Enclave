@@ -3,12 +3,15 @@ from app.config import settings
 
 # 使用 settings 中的配置，確保從環境變數讀取
 celery_app = Celery(
-    "unihr",
+    "enclave",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND
 )
 
 celery_app.conf.broker_connection_retry_on_startup = True
+celery_app.conf.broker_connection_retry = True
+celery_app.conf.broker_connection_max_retries = 5
+celery_app.conf.broker_pool_limit = 3
 
 celery_app.conf.task_routes = {
     "app.tasks.*": {"queue": "celery"}
@@ -27,3 +30,4 @@ celery_app.autodiscover_tasks(['app.tasks'])
 
 # Explicitly import tasks to ensure they are registered
 import app.tasks.document_tasks  # noqa: F401, E402
+import app.tasks.kb_maintenance_tasks  # noqa: F401, E402

@@ -1,4 +1,7 @@
 """
+⚠️ DEPRECATED — This migration is in the secondary (disconnected) alembic chain.
+Region columns are not used in the current on-prem model.
+
 T4-19 多區域部署 — Tenant region 欄位 Migration
 =================================================
 

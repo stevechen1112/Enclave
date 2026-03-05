@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniAI人資長 — 產品簡介</title>
+<style>
+  /* RESET & BASIC */
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+    color: #333;
+    background: #525659; /* Application gray background */
+  }
+
+  /* PAPER SHEET SIMULATION */
+  .sheet {
+    background: white;
+    width: 210mm;
+    min-height: 297mm; /* Exact A4 height */
+    margin: 10mm auto;
+    padding: 20mm; /* Standard margin */
+    position: relative;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* PRINT RULES */
+  @media print {
+    body { background: none; }
+    .sheet {
+      margin: 0;
+      box-shadow: none;
+      page-break-after: always;
+      height: 296mm; /* Slight adjustment for print margins */
+      width: 100%;
+    }
+  }
+
+  /* TYPOGRAPHY */
+  h1 { font-size: 20pt; color: #1a56db; margin: 0 0 10px 0; font-weight: 700; }
+  h2 {
+    font-size: 14pt;
+    color: #1a56db;
+    border-bottom: 2px solid #1a56db;
+    padding-bottom: 6px;
+    margin: 24px 0 16px 0;
+    font-weight: 700;
+  }
+  h2:first-of-type { margin-top: 0; }
+  h3 { font-size: 11.5pt; color: #222; margin: 18px 0 8px 0; font-weight: 700; display: flex; align-items: center; }
+  p { font-size: 10pt; line-height: 1.6; margin: 8px 0; text-align: justify; }
+  li { font-size: 10pt; line-height: 1.6; margin: 4px 0; }
+
+  /* COMPONENTS */
+  
+  /* Badge Number */
+  .num {
+    background: #1a56db; color: #fff;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    text-align: center; line-height: 22px;
+    font-size: 9pt; font-weight: 700;
+    margin-right: 8px; flex-shrink: 0;
+  }
+
+  /* Highlight Box */
+  .highlight {
+    background: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    padding: 10px 16px;
+    margin: 12px 0;
+    font-size: 10pt;
+    color: #15803d;
+  }
+
+  /* Q&A Block */
+  .qa-box { margin-bottom: 16px; border: 1px solid #eee; border-radius: 8px; overflow: hidden; }
+  .qa-q { background: #f8f9fa; padding: 10px 14px; font-size: 10pt; font-weight: 600; color: #444; border-bottom: 1px solid #eee; }
+  .qa-a { background: #fff; padding: 10px 14px; font-size: 10pt; color: #1a56db; line-height: 1.6; }
+  .qa-a::before { content: "➤ "; color: #1a56db; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; margin: 12px 0; }
+  th { background: #1a56db; color: #fff; padding: 8px 10px; text-align: left; font-weight: 500; }
+  td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  
+  /* Capabilities Grid */
+  .cap-box {
+    display: flex; gap: 15px; margin-top: 15px;
+  }
+  .cap-item {
+    flex: 1;
+    background: #f8faff;
+    border: 1px solid #dbeafe;
+    padding: 15px;
+    border-radius: 8px;
+  }
+  .cap-item h3 { margin-top: 0; color: #1e40af; font-size: 11pt; }
+  .cap-item p { font-size: 9pt; color: #4b5563; margin-bottom: 0; }
+
+  /* Case Study Dialog */
+  .dialog { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-top: 10px; background: #f9fafb; }
+  .msg-row { margin-bottom: 6px; display: flex; }
+  .msg-row.last { margin-bottom: 0; }
+  .msg-lbl { font-weight: 700; width: 80px; flex-shrink: 0; font-size: 9.5pt; }
+  .msg-txt { font-size: 9.5pt; line-height: 1.5; }
+  .from-user .msg-lbl { color: #555; }
+  .from-sys .msg-lbl { color: #1a56db; }
+
+  /* Footer */
+  .sheet-footer {
+    position: absolute;
+    bottom: 20mm;
+    left: 20mm;
+    right: 20mm;
+    border-top: 1px solid #eee;
+    padding-top: 8px;
+    font-size: 8pt;
+    color: #999;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* COVER STYLES */
+  .cover-sheet {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .cover-logo { font-size: 42pt; font-weight: 800; color: #1a56db; letter-spacing: 2px; margin-bottom: 20px; }
+  .cover-text { font-size: 16pt; color: #444; font-weight: 300; }
+  .cover-ver { margin-top: 80px; color: #888; font-size: 10pt; }
+
+  /* CTA */
+  .cta {
+    background: #1a56db; color: white; border-radius: 8px; padding: 20px; text-align: center; margin-top: auto; margin-bottom: 40px;
+  }
+  .cta h3 { color: white; margin-top: 0; justify-content: center; }
+  .cta p { color: #dbeafe; text-align: center; margin: 4px 0; }
+
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: COVER -->
+<div class="sheet cover-sheet">
+  <div>
+    <div class="cover-logo">UniAI人資長</div>
+    <div class="cover-text">讓每一位員工的提問<br>都有人資長等級的即時回覆</div>
+    <div class="cover-ver">產品簡介 v1.0 ｜ 2026年2月</div>
+  </div>
+</div>
+
+<!-- PAGE 2: INTRO & CAPABILITIES -->
+<div class="sheet">
+  <h2>您的 HR 部門，是否也面臨這些挑戰？</h2>
+  <div style="background:#fef2f2; border-left:4px solid #ef4444; padding:15px; border-radius:0 8px 8px 0; margin-bottom:20px;">
+    <ul style="margin:0 0 0 20px; color:#333;">
+      <li>員工反覆詢問相同的請假規定、加班費算法，HR 疲於回應</li>
+      <li>薪資計算、資遣費試算仰賴人工，既耗時又怕算錯</li>
+      <li>內規與勞基法是否衝突？沒有人力逐條比對</li>
+      <li>員工手冊、管理辦法散落各處，查詢費時</li>
+    </ul>
+  </div>
+  <p>對中小企業而言，HR 通常身兼數職。UniAI 人資長專為此設計，只要將文件上傳，系統即刻將內容轉化為智能客服，支援自然語言即問即答。</p>
+
+  <h2>三大核心能力</h2>
+  
+  <div class="cap-box" style="flex-direction:column; gap:12px;">
+    <div class="cap-item">
+      <h3>1. 上傳文件，自動變成知識庫</h3>
+      <p>支援 PDF, Excel, Word, JPG 等常見格式。無論是員工手冊、薪資條、勞動契約或掃描文件，上傳後系統自動解析索引，處理一份文件僅需 10 秒。</p>
+    </div>
+    <div class="cap-item">
+      <h3>2. 結合內規與法令，精準回覆</h3>
+      <p>內建台灣勞動法庫。回覆問題時，系統會自動比對「公司內規」與「現行法規」，若有衝突會主動提醒風險，不只給答案，更給合規建議。</p>
+    </div>
+    <div class="cap-item">
+      <h3>3. 跨文件推理與數據計算</h3>
+      <p>可讀取員工名冊、薪資表等結構化資料。不需公式，直接提問「技術部平均薪資」、「某員工特休剩幾天」，系統即時計算。回應速度 < 1秒。</p>
+    </div>
+  </div>
+
+  <div class="highlight">不需要標記關鍵字、不需要預先整理 QA，文件上傳就能用。</div>
+
+  <div class="sheet-footer">
+    <span>UniAI人資長</span>
+    <span>Page 1 / 4 (Content)</span>
+  </div>
+</div>
+
+<!-- PAGE 3: CASE STUDIES (1-3) -->
+<div class="sheet">
+  <h2>實際導入案例</h2>
+  <p>以下為中小企業實際測試成果：上傳 11 份文件，驗證 43 道實務問題，準確率 100%。</p>
+
+  <h3><span class="num">1</span>員工自助查詢：福利與假勤</h3>
+  <div class="qa-box">
+    <div class="qa-q">Q: 我們公司有交通津貼嗎？補助多少？</div>
+    <div class="qa-a">公司提供交通津貼，依通勤距離補貼 500-2,000 元。實際金額依員工手冊之距離級距核定。</div>
+  </div>
+  <div class="qa-box">
+    <div class="qa-q">Q: 入職 3 年 2 個月，特休有幾天？</div>
+    <div class="qa-a">年資約 3.17 年，依假勤辦法特休為 14 天。</div>
+  </div>
+
+  <h3><span class="num">2</span>合規檢測：加班費計算</h3>
+  <div class="qa-box">
+    <div class="qa-q">Q: 平日加班一律給 1.5 倍工資，這樣合法嗎？</div>
+    <div class="qa-a">部分有風險。前 2 小時 1.5 倍優於法令 (1.34)；但第 3 小時起法規要求 1.67 倍，若僅給 1.5 倍則低於法規標準。</div>
+  </div>
+  <table style="width:100%; font-size:9pt; margin-top:8px;">
+    <tr><th>時段</th><th>公司倍率</th><th>法定倍率</th><th>判定結果</th></tr>
+    <tr><td>前2小時</td><td>1.50 倍</td><td>1.34 倍</td><td style="color:green">✔ 合法優於法規</td></tr>
+    <tr><td>第3小時起</td><td>1.50 倍</td><td>1.67 倍</td><td style="color:red">✘ 低於法規標準</td></tr>
+  </table>
+
+  <h3><span class="num">3</span>HR 助手：資遣費與薪資試算</h3>
+  <div class="qa-box">
+    <div class="qa-q">Q: 若資遣劉志明，資遣費多少？ (HR專用)</div>
+    <div class="qa-a">劉志明年資 6.2 年 (進位 6.5)，新制資遣費 = 6.5 x 0.5 x 52,000 = 169,000 元。</div>
+  </div>
+
+  <div class="sheet-footer">
+    <span>UniAI人資長</span>
+    <span>Page 2 / 4 (Content)</span>
+  </div>
+</div>
+
+<!-- PAGE 4: CASE STUDIES (4-5) & WHO -->
+<div class="sheet">
+  <h3><span class="num">4</span>跨文件綜合查詢：薪資明細</h3>
+  <div class="qa-box">
+    <div class="qa-q">Q: 劉志明本月實領多少？包含哪些？</div>
+    <div class="qa-a">
+      本月實領：55,244 元。<br>
+      明細：本薪 48,000 + 伙食 2,400 + 全勤 1,000 + 加班費 4,297 (依打卡紀錄計算) - 勞健保自付額。<br>
+      <span style="font-size:9pt;color:#888;">(系統自動關聯：薪資單 + 打卡紀錄 + 員工手冊加班費率)</span>
+    </div>
+  </div>
+
+  <h3><span class="num">5</span>多輪對話理解</h3>
+  <div class="dialog">
+    <div class="msg-row from-user"><div class="msg-lbl">員工</div><div class="msg-txt">我做了3年想離職，要多久前講？</div></div>
+    <div class="msg-row from-sys"><div class="msg-lbl">UniAI</div><div class="msg-txt">年資滿 3 年，依法需提前 20 天預告。</div></div>
+    <div class="msg-row from-user"><div class="msg-lbl">員工</div><div class="msg-txt">那我有資遣費嗎？</div></div>
+    <div class="msg-row from-sys"><div class="msg-lbl">UniAI</div><div class="msg-txt">自請離職沒有資遣費。資遣費僅適用於非自願離職。</div></div>
+    <div class="msg-row from-user"><div class="msg-lbl">員工</div><div class="msg-txt">如果是公司要我走呢？</div></div>
+    <div class="msg-row from-sys"><div class="msg-lbl">UniAI</div><div class="msg-txt">若為非自願離職，公司需依法給付預告工資與資遣費。</div></div>
+  </div>
+
+  <h2>適合對象與效益</h2>
+  <table>
+    <tr><th width="20%">對象</th><th>效益</th></tr>
+    <tr><td><b>HR</b></td><td>節省 80% 重複問答時間，降低法規合規風險</td></tr>
+    <tr><td><b>員工</b></td><td>24H 隨時查詢，隱私性高，不敢問的問題也能問</td></tr>
+    <tr><td><b>雇主</b></td><td>即時掌握人事數據，避免勞資爭議</td></tr>
+  </table>
+
+  <h2>為什麼選擇我們？</h2>
+  <table style="font-size:9pt;">
+    <tr><th>比較項目</th><th>傳統方式</th><th>UniAI 人資長</th></tr>
+    <tr><td>查詢速度</td><td>翻閱紙本/詢問主管 (數小時)</td><td><b>即時 (1秒)</b></td></tr>
+    <tr><td>資料維護</td><td>手冊更新難同步</td><td><b>上傳即更新</b></td></tr>
+    <tr><td>法規更新</td><td>依賴人工關注修法</td><td><b>系統自動更新法庫</b></td></tr>
+  </table>
+
+  <div class="sheet-footer">
+    <span>UniAI人資長</span>
+    <span>Page 3 / 4 (Content)</span>
+  </div>
+</div>
+
+<!-- PAGE 5: PRICING & CTA -->
+<div class="sheet">
+  <h2>導入流程</h2>
+  <div style="display:flex; gap:10px; text-align:center; margin-bottom:20px;">
+    <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:6px; font-size:9pt;">
+      <b>Step 1</b><br>準備現有文件<br>(Word/PDF)
+    </div>
+    <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:6px; font-size:9pt;">
+      <b>Step 2</b><br>上傳文件<br>(5秒/份)
+    </div>
+    <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:6px; font-size:9pt;">
+      <b>Step 3</b><br>提問驗證<br>(約30分鐘)
+    </div>
+    <div style="flex:1; background:#e0e7ff; padding:10px; border-radius:6px; font-size:9pt; color:#1a56db; font-weight:bold;">
+      <b>Step 4</b><br>開放員工使用
+    </div>
+  </div>
+
+  <h2>授權方案</h2>
+  <table>
+    <tr><th>方案</th><th>規模</th><th>功能</th></tr>
+    <tr><td><b>基礎版</b></td><td>< 50人</td><td>文件問答、假勤查詢</td></tr>
+    <tr><td><b>專業版</b></td><td>50-200人</td><td>+ 合規檢測、數據計算</td></tr>
+    <tr><td><b>企業版</b></td><td>> 200人</td><td>+ API 串接、私有化部署</td></tr>
+  </table>
+  <p style="text-align:center; font-size:9.5pt; color:#666;">* 全方案皆包含 30 天免費試用期，無隱藏費用。</p>
+
+  <div class="cta">
+    <h3>立即體驗 UniAI 人資長</h3>
+    <p>免費試用 30 天：上傳文件親自驗證</p>
+    <p>預約 Demo：專人線上演示 (15分鐘)</p>
+  </div>
+
+  <div style="margin-top:auto;">
+    <h3>附錄：技術與資安</h3>
+    <ul style="font-size:9.5pt; color:#555;">
+      <li>核心技術：OpenAI GPT-4 + 向量檢索 (RAG)</li>
+      <li>資料隔離：多租戶架構 (Multi-tenant)，企業資料獨立儲存</li>
+      <li>傳輸加密：全站採用 TLS 1.3 加密傳輸</li>
+    </ul>
+  </div>
+
+  <div class="sheet-footer">
+    <span>UniAI人資長</span>
+    <span>Page 4 / 4 (Content)</span>
+  </div>
+</div>
+
+</body>
+</html>

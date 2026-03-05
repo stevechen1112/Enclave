@@ -16,7 +16,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
-logger = logging.getLogger("unihr.db")
+logger = logging.getLogger("enclave.db")
 
 # ---------------------------------------------------------------------------
 # 連線池調參
@@ -31,7 +31,7 @@ SLOW_QUERY_THRESHOLD_MS = int(getattr(settings, "SLOW_QUERY_THRESHOLD_MS", 500))
 
 engine = create_engine(
     f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}"
-    f"@{settings.POSTGRES_SERVER}/{settings.POSTGRES_DB}",
+    f"@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}",
     pool_pre_ping=True,
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,

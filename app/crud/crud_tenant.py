@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, UTC
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.tenant import Tenant
@@ -59,7 +59,7 @@ def update(db: Session, *, db_obj: Tenant, obj_in: TenantUpdate) -> Tenant:
 
 def _month_start() -> datetime:
     """取得當月第一天"""
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
     return now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 

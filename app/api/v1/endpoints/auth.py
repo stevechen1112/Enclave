@@ -9,6 +9,7 @@ from app.api import deps
 from app.core import security
 from app.crud import crud_user
 from app.schemas.token import Token
+from app.config import settings
 
 router = APIRouter()
 
@@ -31,7 +32,7 @@ def login_access_token(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
-    access_token_expires = timedelta(minutes=60 * 24 * 8) # 8 days
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return {
         "access_token": security.create_access_token(
             user.email, expires_delta=access_token_expires

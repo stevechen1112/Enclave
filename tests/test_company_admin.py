@@ -3,22 +3,9 @@ Phase 3 Integration Tests — Tenant Self-Service (T3-2)
 """
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
-ORCH_CLASS = "app.api.v1.endpoints.chat.ChatOrchestrator"
-
-
-def _mock_orchestrator():
-    result = {
-        "request_id": "r", "question": "q", "answer": "a",
-        "company_policy": None, "labor_law": None,
-        "sources": [], "notes": [], "disclaimer": "僅供參考",
-    }
-    inst = AsyncMock()
-    inst.process_query = AsyncMock(return_value=result)
-    return patch(ORCH_CLASS, return_value=inst)
 
 
 async def _setup(client, superuser_headers, tax_id):
@@ -152,8 +139,7 @@ async def test_company_usage_summary(client: AsyncClient, superuser_headers: dic
     """測試公司用量摘要"""
     t, h = await _setup(client, superuser_headers, "US01")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "test"})
+    await client.post(CHAT_URL, headers=h, json={"question": "test"})
 
     r = await client.get("/api/v1/company/usage/summary", headers=h)
     assert r.status_code == 200
@@ -166,8 +152,7 @@ async def test_company_usage_by_user(client: AsyncClient, superuser_headers: dic
     """測試每位使用者用量"""
     t, h = await _setup(client, superuser_headers, "UU01")
 
-    with _mock_orchestrator():
-        await client.post(CHAT_URL, headers=h, json={"question": "owner q"})
+    await client.post(CHAT_URL, headers=h, json={"question": "owner q"})
 
     r = await client.get("/api/v1/company/usage/by-user", headers=h)
     assert r.status_code == 200

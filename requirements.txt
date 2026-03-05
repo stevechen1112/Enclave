@@ -36,10 +36,15 @@ aiofiles>=23.2.1
 python-magic>=0.4.27
 reportlab>=4.1.0
 
-# ── Phase 3: 進階文檔解析 ──
+# ?�?� Phase 3: ?��??��?�?? ?�?�
 jieba>=0.42.1
 llama-parse>=0.6.0
 llama-index-core>=0.14.0
 python-pptx>=1.0.0
 trafilatura>=2.0.0
 nest-asyncio>=1.6.0
+
+# Phase 10: Active Indexing Agent
+watchdog>=4.0.0
+APScheduler>=3.10.4
+psutil>=5.9.0

@@ -1,0 +1,30 @@
+{
+  "timestamp": "20260305_154719",
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0
+  },
+  "results": [
+    {
+      "status": "PASS",
+      "label": "健康檢查",
+      "detail": "env=development"
+    },
+    {
+      "status": "PASS",
+      "label": "Admin 登入",
+      "detail": "admin@example.com"
+    },
+    {
+      "status": "PASS",
+      "label": "建立測試 HR 帳號",
+      "detail": "hr_test@enclave.local"
+    },
+    {
+      "status": "PASS",
+      "label": "取得 me 資訊",
+      "detail": "role=owner tenant=fd39fa1a..."
+    }
+  ]
+}

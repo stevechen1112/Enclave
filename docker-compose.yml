@@ -23,7 +23,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=unihr_saas
+      - POSTGRES_DB=enclave
     ports:
       - "5435:5432"
 
@@ -50,13 +50,6 @@ services:
     build: ./frontend
     ports:
       - "3001:80"
-    depends_on:
-      - web
-
-  admin-frontend:
-    build: ./admin-frontend
-    ports:
-      - "3002:80"
     depends_on:
       - web
 

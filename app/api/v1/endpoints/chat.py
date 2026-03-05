@@ -24,7 +24,6 @@ from app.schemas.chat import (
 )
 from app.services.chat_orchestrator import ChatOrchestrator
 from app.api.v1.endpoints.audit import log_usage
-from app.services.quota_enforcement import enforce_query_quota
 
 router = APIRouter()
 
@@ -37,7 +36,6 @@ async def chat_stream(
     db: Session = Depends(deps.get_db),
     request: ChatRequest,
     current_user: User = Depends(deps.get_current_active_user),
-    _quota: None = Depends(enforce_query_quota),
 ) -> StreamingResponse:
     """
     串流式聊天（SSE）— T7-1
@@ -196,7 +194,6 @@ async def chat(
     db: Session = Depends(deps.get_db),
     request: ChatRequest,
     current_user: User = Depends(deps.get_current_active_user),
-    _quota: None = Depends(enforce_query_quota),
 ) -> Any:
     """
     發送聊天訊息（非串流，向下相容）
@@ -210,7 +207,21 @@ async def chat(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="問題不能為空"
         )
-    
+
+    # 0. 查詢配額檢查
+    from app.crud import crud_tenant
+    quota = crud_tenant.check_quota(db, current_user.tenant_id, "query")
+    if not quota.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "quota_exceeded",
+                "message": quota.get("message", "查詢配額已超過"),
+                "current": quota.get("current"),
+                "limit": quota.get("limit"),
+            },
+        )
+
     # 1. 獲取或建立對話
     conversation_id = request.conversation_id
     if conversation_id:
@@ -324,6 +335,26 @@ def list_conversations(
     return conversations
 
 
+# ──────────── T7-13: 對話搜尋 (must be BEFORE /conversations/{conversation_id}) ────────────
+
+@router.get("/conversations/search")
+async def search_conversations(
+    *,
+    db: Session = Depends(deps.get_db),
+    q: str = Query(..., min_length=1),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """搜尋對話內容"""
+    results = crud_chat.search_messages(
+        db,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+        query=q,
+        limit=20,
+    )
+    return results
+
+
 @router.get("/conversations/{conversation_id}", response_model=Conversation)
 def get_conversation(
     *,
@@ -432,6 +463,8 @@ async def feedback_stats(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """取得回饋統計（管理員）"""
+    if current_user.role not in ("owner", "admin", "hr") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="僅管理員可查看回饋統計")
     stats = crud_chat.get_feedback_stats(db, tenant_id=current_user.tenant_id)
     return stats
 
@@ -469,26 +502,6 @@ async def export_conversation(
             "Content-Disposition": f'attachment; filename="conversation_{conversation_id}.md"'
         },
     )
-
-
-# ──────────── T7-13: 對話搜尋 ────────────
-
-@router.get("/conversations/search")
-async def search_conversations(
-    *,
-    db: Session = Depends(deps.get_db),
-    q: str = Query(..., min_length=1),
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    """搜尋對話內容"""
-    results = crud_chat.search_messages(
-        db,
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.id,
-        query=q,
-        limit=20,
-    )
-    return results
 
 
 # ──────────── T7-12: RAG 品質儀表板 ────────────
@@ -552,3 +565,285 @@ def _strip_suggestions(text: str) -> str:
     if idx == -1:
         return text
     return text[:idx].rstrip()
+
+
+# ─────────────────────────────────────────────────────────────
+# P10-5: 問答日誌分析端點
+# ─────────────────────────────────────────────────────────────
+
+from datetime import datetime, timedelta, UTC
+from sqlalchemy import func as sqlfunc, cast, Date as SADate, text as sa_text, Text as SAText
+from app.models.chat import Conversation, Message, RetrievalTrace
+from pydantic import BaseModel as PydanticBase
+
+
+class QuerySummary(PydanticBase):
+    total_queries: int
+    answered_queries: int
+    unanswered_queries: int
+    answer_rate_pct: float
+    avg_latency_ms: Optional[float]
+    period_days: int
+
+
+class DailyQueryCount(PydanticBase):
+    date: str
+    total: int
+    answered: int
+    unanswered: int
+
+
+class TopQuery(PydanticBase):
+    question: str
+    count: int
+    last_seen: str
+
+
+class UnansweredQuery(PydanticBase):
+    question: str
+    asked_at: str
+    conversation_id: str
+
+
+@router.get("/analytics/summary", response_model=QuerySummary, tags=["analytics"])
+async def query_analytics_summary(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+    days: int = Query(30, ge=1, le=365, description="統計天數"),
+) -> QuerySummary:
+    """
+    P10-5 — 問答日誌摘要統計。
+
+    回傳指定天數內的查詢總數、答覆率、平均延遲。
+    """
+    if current_user.role not in ("admin", "owner") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="需要管理員或擁有者權限")
+
+    since = datetime.now(UTC) - timedelta(days=days)
+    tid = current_user.tenant_id
+
+    # 用戶訊息總數
+    total = (
+        db.query(sqlfunc.count(Message.id))
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            Conversation.tenant_id == tid,
+            Message.role == "user",
+            Message.created_at >= since,
+        )
+        .scalar()
+        or 0
+    )
+
+    # 有 sources 的回答數量（=已答覆）
+    answered = (
+        db.query(sqlfunc.count(RetrievalTrace.id))
+        .join(Message, RetrievalTrace.message_id == Message.id)
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            RetrievalTrace.tenant_id == tid,
+            Message.role == "user",
+            Message.created_at >= since,
+            RetrievalTrace.sources_json.isnot(None),
+            cast(RetrievalTrace.sources_json, SAText).notin_(['{}', '[]', 'null']),
+        )
+        .scalar()
+        or 0
+    )
+
+    # 平均延遲（assistant 訊息的 RetrievalTrace）
+    avg_latency = (
+        db.query(sqlfunc.avg(RetrievalTrace.latency_ms))
+        .join(Message, RetrievalTrace.message_id == Message.id)
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            RetrievalTrace.tenant_id == tid,
+            Message.created_at >= since,
+            RetrievalTrace.latency_ms.isnot(None),
+        )
+        .scalar()
+    )
+
+    unanswered = max(0, total - answered)
+    rate = round((answered / total * 100) if total > 0 else 0.0, 1)
+
+    return QuerySummary(
+        total_queries=total,
+        answered_queries=answered,
+        unanswered_queries=unanswered,
+        answer_rate_pct=rate,
+        avg_latency_ms=round(float(avg_latency), 1) if avg_latency else None,
+        period_days=days,
+    )
+
+
+@router.get("/analytics/trend", response_model=List[DailyQueryCount], tags=["analytics"])
+async def query_analytics_trend(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+    days: int = Query(30, ge=1, le=90, description="統計天數"),
+) -> List[DailyQueryCount]:
+    """
+    P10-5 — 每日問答趨勢。
+
+    回傳最近 N 天每日的查詢量（總計 / 已答覆 / 未答覆）。
+    """
+    if current_user.role not in ("admin", "owner") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="需要管理員或擁有者權限")
+
+    since = datetime.now(UTC) - timedelta(days=days)
+    tid = current_user.tenant_id
+
+    # 每日總數
+    daily_total = (
+        db.query(
+            sqlfunc.date_trunc("day", Message.created_at).label("day"),
+            sqlfunc.count(Message.id).label("cnt"),
+        )
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            Conversation.tenant_id == tid,
+            Message.role == "user",
+            Message.created_at >= since,
+        )
+        .group_by(sqlfunc.date_trunc("day", Message.created_at))
+        .all()
+    )
+
+    total_dict = {row.day.date(): row.cnt for row in daily_total}
+
+    # 每日已答覆數（有 sources 的）
+    daily_answered = (
+        db.query(
+            sqlfunc.date_trunc("day", Message.created_at).label("day"),
+            sqlfunc.count(RetrievalTrace.id).label("cnt"),
+        )
+        .join(Message, RetrievalTrace.message_id == Message.id)
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            RetrievalTrace.tenant_id == tid,
+            Message.role == "user",
+            Message.created_at >= since,
+        )
+        .group_by(sqlfunc.date_trunc("day", Message.created_at))
+        .all()
+    )
+
+    answered_dict = {row.day.date(): row.cnt for row in daily_answered}
+
+    results = []
+    import datetime as dt
+    today = dt.date.today()
+    for i in range(days - 1, -1, -1):
+        d = today - dt.timedelta(days=i)
+        tot = total_dict.get(d, 0)
+        ans = answered_dict.get(d, 0)
+        results.append(DailyQueryCount(
+            date=d.isoformat(),
+            total=tot,
+            answered=min(ans, tot),
+            unanswered=max(0, tot - ans),
+        ))
+    return results
+
+
+@router.get("/analytics/top-queries", response_model=List[TopQuery], tags=["analytics"])
+async def query_analytics_top(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+    days: int = Query(30, ge=1, le=365),
+    limit: int = Query(20, ge=1, le=100),
+) -> List[TopQuery]:
+    """
+    P10-5 — 問答熱門問題（頻繁度排行）。
+
+    回傳最常被問到的問題 Top N（完全相同的問題合併計次）。
+    """
+    if current_user.role not in ("admin", "owner") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="需要管理員或擁有者權限")
+
+    since = datetime.now(UTC) - timedelta(days=days)
+    tid = current_user.tenant_id
+
+    rows = (
+        db.query(
+            Message.content.label("question"),
+            sqlfunc.count(Message.id).label("cnt"),
+            sqlfunc.max(Message.created_at).label("last_seen"),
+        )
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            Conversation.tenant_id == tid,
+            Message.role == "user",
+            Message.created_at >= since,
+        )
+        .group_by(Message.content)
+        .order_by(sqlfunc.count(Message.id).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return [
+        TopQuery(
+            question=r.question[:200],
+            count=r.cnt,
+            last_seen=r.last_seen.isoformat() if r.last_seen else "",
+        )
+        for r in rows
+    ]
+
+
+@router.get("/analytics/unanswered", response_model=List[UnansweredQuery], tags=["analytics"])
+async def query_analytics_unanswered(
+    *,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+    days: int = Query(30, ge=1, le=365),
+    limit: int = Query(50, ge=1, le=200),
+) -> List[UnansweredQuery]:
+    """
+    P10-5 — 無法回答的問題清單。
+
+    查詢知識庫未找到相關文件（sources 為空）的問題，
+    供管理員判斷是否需要補充文件。
+    """
+    if current_user.role not in ("admin", "owner") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="需要管理員或擁有者權限")
+
+    since = datetime.now(UTC) - timedelta(days=days)
+    tid = current_user.tenant_id
+
+    # 取得有 RetrievalTrace 且 sources 為空陣列的用戶訊息
+    rows = (
+        db.query(Message, RetrievalTrace)
+        .join(RetrievalTrace, RetrievalTrace.message_id == Message.id, isouter=True)
+        .join(Conversation, Message.conversation_id == Conversation.id)
+        .filter(
+            Conversation.tenant_id == tid,
+            Message.role == "user",
+            Message.created_at >= since,
+            RetrievalTrace.id.isnot(None),
+        )
+        .order_by(Message.created_at.desc())
+        .limit(limit * 3)  # 拉多一點再 Python 端過濾
+        .all()
+    )
+
+    results = []
+    for msg, trace in rows:
+        sources = trace.sources_json if trace else []
+        if not sources:
+            results.append(UnansweredQuery(
+                question=msg.content[:200],
+                asked_at=msg.created_at.isoformat() if msg.created_at else "",
+                conversation_id=str(msg.conversation_id),
+            ))
+        if len(results) >= limit:
+            break
+
+    return results
+
+

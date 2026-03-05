@@ -14,8 +14,9 @@ _INSECURE_KEYS = {
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "UniHR SaaS"
+    APP_NAME: str = "Enclave"
     APP_ENV: str = "development"
+    ORGANIZATION_NAME: str = "My Organization"  # 地端組織名稱
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = "change_this"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
@@ -34,9 +35,10 @@ class Settings(BaseSettings):
 
     # Database
     POSTGRES_SERVER: str = "localhost"
+    POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
-    POSTGRES_DB: str = "unihr_saas"
+    POSTGRES_DB: str = "enclave"
     
     # Redis
     REDIS_HOST: str = "localhost"
@@ -56,6 +58,11 @@ class Settings(BaseSettings):
     VOYAGE_API_KEY: str = ""
     VOYAGE_MODEL: str = "voyage-4-lite"
     EMBEDDING_DIMENSION: int = 1024
+
+    # Embedding provider: "voyage" (cloud API) | "ollama" (local, free)
+    EMBEDDING_PROVIDER: str = "ollama"
+    OLLAMA_EMBED_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_EMBED_MODEL: str = "bge-m3"
 
     # LlamaParse（高品質文檔解析 — 跨頁表格、手寫 OCR、複雜佈局）
     LLAMAPARSE_API_KEY: str = ""
@@ -85,24 +92,41 @@ class Settings(BaseSettings):
     RETRIEVAL_CACHE_TTL: int = 300         # 快取秒數
     RETRIEVAL_TOP_K: int = 5               # 預設返回數量
 
-    # SSO / OAuth
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    MICROSOFT_CLIENT_ID: str = ""
-    MICROSOFT_CLIENT_SECRET: str = ""
-    SSO_DEFAULT_REDIRECT_URI: str = "http://localhost:3001/login/callback"
+    # LLM Provider (llm_provider: openai | gemini | ollama)
+    LLM_PROVIDER: str = "openai"           # openai = 呼叫 OpenAI API；gemini = Google Gemini；ollama = 本機 LLM
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.2"
+    # 資料夾掃描預覽專用 Ollama（輕量摘要，走 host.docker.internal 穿透 Docker）
+    OLLAMA_SCAN_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_SCAN_MODEL: str = "gemma3:27b"
+    # 內部任務 LLM（分類、改寫等非使用者面向任務，可用較輕量的本地模型省錢）
+    INTERNAL_LLM_PROVIDER: str = "ollama"     # ollama | gemini | openai
+    INTERNAL_OLLAMA_MODEL: str = "gemma3:27b"  # 內部任務使用的 Ollama 模型
+    # Gemini（透過 OpenAI 相容端點，無需額外 SDK）
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-3-flash-preview"
 
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_GLOBAL_PER_IP: int = 200     # requests / minute per IP
-    RATE_LIMIT_PER_USER: int = 60           # requests / minute per user
-    RATE_LIMIT_PER_TENANT: int = 300        # requests / minute per tenant
-    RATE_LIMIT_CHAT_PER_USER: int = 20      # chat requests / minute per user
+    RATE_LIMIT_GLOBAL_PER_IP: int = 200
+    RATE_LIMIT_PER_USER: int = 60
+    RATE_LIMIT_CHAT_PER_USER: int = 20
 
-    # Admin API Network Isolation (T4-4)
-    ADMIN_IP_WHITELIST_ENABLED: bool = False   # Enable in production
+    # Admin IP Whitelist
+    ADMIN_IP_WHITELIST_ENABLED: bool = False
     ADMIN_IP_WHITELIST: str = "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
     ADMIN_TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
+
+    # Phase 10 — Agent 主動索引設定
+    AGENT_WATCH_ENABLED: bool = False       # 是否啟用資料夾監控 Agent
+    AGENT_WATCH_FOLDERS: str = ""          # 逗號分隔的監控資料夾路徑
+    AGENT_SCAN_INTERVAL: int = 60           # 掃描間隔（秒）
+    AGENT_BATCH_HOUR: int = 2               # 排程批次處理時間（凌晨幾點）
+    AGENT_MAX_CPU_PERCENT: float = 50.0     # 批次處理 CPU 上限
+
+    # Phase 11 — 內容生成設定
+    GENERATION_MAX_TOKENS: int = 3000       # 生成文件最大 token
+    GENERATION_TEMPERATURE: float = 0.4     # 生成文件 temperature（略高於問答）
 
     model_config = SettingsConfigDict(
         env_file=".env",

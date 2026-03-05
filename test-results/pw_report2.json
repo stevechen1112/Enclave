@@ -1,0 +1,922 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\playwright.config.ts",
+    "rootDir": "C:/Users/User/Desktop/Enclave/frontend/e2e",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/User/Desktop/Enclave/frontend/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/User/Desktop/Enclave/frontend/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 60000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "core-flows.spec.ts",
+      "file": "core-flows.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication",
+          "file": "core-flows.spec.ts",
+          "line": 31,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-01: Login page loads",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 265,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:48:58.174Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-63f93cc2abaad69a744d",
+              "file": "core-flows.spec.ts",
+              "line": 32,
+              "column": 3
+            },
+            {
+              "title": "E2E-02: Login with valid credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10835,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/^\\/$|\\/chat/i\u001b[39m\nReceived string:  \u001b[31m\"http://localhost:3001/\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://localhost:3001/\"\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/^\\/$|\\/chat/i\u001b[39m\nReceived string:  \u001b[31m\"http://localhost:3001/\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://localhost:3001/\"\u001b[22m\n\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:40:24",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 24,
+                          "line": 40
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m login(page)\n \u001b[90m 39 |\u001b[39m     \u001b[90m// Should land on chat page (index route)\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 40 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page)\u001b[33m.\u001b[39mtoHaveURL(\u001b[35m/^\\/$|\\/chat/i\u001b[39m\u001b[33m,\u001b[39m { timeout\u001b[33m:\u001b[39m \u001b[35m10\u001b[39m_000 })\n \u001b[90m    |\u001b[39m                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 41 |\u001b[39m   })\n \u001b[90m 42 |\u001b[39m\n \u001b[90m 43 |\u001b[39m   test(\u001b[32m'E2E-03: Invalid credentials shows error'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 24,
+                            "line": 40
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mpage\u001b[39m\u001b[2m).\u001b[22mtoHaveURL\u001b[2m(\u001b[22m\u001b[32mexpected\u001b[39m\u001b[2m)\u001b[22m failed\n\nExpected pattern: \u001b[32m/^\\/$|\\/chat/i\u001b[39m\nReceived string:  \u001b[31m\"http://localhost:3001/\"\u001b[39m\nTimeout: 10000ms\n\nCall log:\n\u001b[2m  - Expect \"toHaveURL\" with timeout 10000ms\u001b[22m\n\u001b[2m    14 × unexpected value \"http://localhost:3001/\"\u001b[22m\n\n\n  38 |     await login(page)\n  39 |     // Should land on chat page (index route)\n> 40 |     await expect(page).toHaveURL(/^\\/$|\\/chat/i, { timeout: 10_000 })\n     |                        ^\n  41 |   })\n  42 |\n  43 |   test('E2E-03: Invalid credentials shows error', async ({ page }) => {\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:40:24"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:48:58.511Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--86e35-ogin-with-valid-credentials-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--86e35-ogin-with-valid-credentials-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Authentication--86e35-ogin-with-valid-credentials-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 24,
+                        "line": 40
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-26e1c7eb3b85132bd44a",
+              "file": "core-flows.spec.ts",
+              "line": 37,
+              "column": 3
+            },
+            {
+              "title": "E2E-03: Invalid credentials shows error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 409,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:10.146Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-689eda988690539fb239",
+              "file": "core-flows.spec.ts",
+              "line": 43,
+              "column": 3
+            },
+            {
+              "title": "E2E-04: Unauthenticated redirect to login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 232,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:10.620Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-e3d074690f59b929623e",
+              "file": "core-flows.spec.ts",
+              "line": 52,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Navigation",
+          "file": "core-flows.spec.ts",
+          "line": 58,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-05: Navigate to Documents page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 670,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:10.857Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-8cb9d1082b1da876049c",
+              "file": "core-flows.spec.ts",
+              "line": 63,
+              "column": 3
+            },
+            {
+              "title": "E2E-06: Navigate to Generate page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 688,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:11.533Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-10709a19e2f77f436ffa",
+              "file": "core-flows.spec.ts",
+              "line": 68,
+              "column": 3
+            },
+            {
+              "title": "E2E-07: Navigate to Agent page (admin)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 641,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:12.226Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-a22382584bc1db44ddad",
+              "file": "core-flows.spec.ts",
+              "line": 73,
+              "column": 3
+            },
+            {
+              "title": "E2E-08: Navigate to KB Health page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 636,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:12.873Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-fbe980640d45e6e42041",
+              "file": "core-flows.spec.ts",
+              "line": 78,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Documents",
+          "file": "core-flows.spec.ts",
+          "line": 88,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-09: Documents page renders table/list",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4726,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:13.515Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-81b6b3103e7c1dd7a274",
+              "file": "core-flows.spec.ts",
+              "line": 95,
+              "column": 3
+            },
+            {
+              "title": "E2E-10: Upload button exists",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 6272,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /上傳|upload/i }).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /上傳|upload/i }).first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /上傳|upload/i }).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /上傳|upload/i }).first()\u001b[22m\n\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:104:29",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 29,
+                          "line": 104
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 102 |\u001b[39m   test(\u001b[32m'E2E-10: Upload button exists'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\n \u001b[90m 103 |\u001b[39m     \u001b[36mconst\u001b[39m uploadBtn \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[35m/上傳|upload/i\u001b[39m })\u001b[33m.\u001b[39mfirst()\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 104 |\u001b[39m     \u001b[36mawait\u001b[39m expect(uploadBtn)\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m5\u001b[39m_000 })\n \u001b[90m     |\u001b[39m                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 105 |\u001b[39m   })\n \u001b[90m 106 |\u001b[39m\n \u001b[90m 107 |\u001b[39m   test(\u001b[32m'E2E-11: Document upload flow'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 29,
+                            "line": 104
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByRole('button', { name: /上傳|upload/i }).first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByRole('button', { name: /上傳|upload/i }).first()\u001b[22m\n\n\n  102 |   test('E2E-10: Upload button exists', async ({ page }) => {\n  103 |     const uploadBtn = page.getByRole('button', { name: /上傳|upload/i }).first()\n> 104 |     await expect(uploadBtn).toBeVisible({ timeout: 5_000 })\n      |                             ^\n  105 |   })\n  106 |\n  107 |   test('E2E-11: Document upload flow', async ({ page }) => {\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:104:29"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:18.246Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-button-exists-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-button-exists-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Documents-E2E-10-Upload-button-exists-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 29,
+                        "line": 104
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-cbdffce8ab4030012efd",
+              "file": "core-flows.spec.ts",
+              "line": 102,
+              "column": 3
+            },
+            {
+              "title": "E2E-11: Document upload flow",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4215,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:25.302Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-fd1d90f3b05973e54caf",
+              "file": "core-flows.spec.ts",
+              "line": 107,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Chat",
+          "file": "core-flows.spec.ts",
+          "line": 131,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-12: Chat page renders input area",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1150,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:29.583Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-f92b3e0563f6afc31f1a",
+              "file": "core-flows.spec.ts",
+              "line": 138,
+              "column": 3
+            },
+            {
+              "title": "E2E-13: Send a chat message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 6337,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:30.742Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-d3faa5058dee76755dcc",
+              "file": "core-flows.spec.ts",
+              "line": 143,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Generate",
+          "file": "core-flows.spec.ts",
+          "line": 164,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-14: Generate page renders template selector",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 3609,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:177:37",
+                        "location": {
+                          "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                          "column": 37,
+                          "line": 177
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 175 |\u001b[39m     \u001b[36mconst\u001b[39m hasCards \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'[class*=\"card\"], button:has-text(/函件|摘要|會議|報告|FAQ/i)'\u001b[39m)\u001b[33m.\u001b[39mfirst()\n \u001b[90m 176 |\u001b[39m       \u001b[33m.\u001b[39misVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m3\u001b[39m_000 })\u001b[33m.\u001b[39m\u001b[36mcatch\u001b[39m(() \u001b[33m=>\u001b[39m \u001b[36mfalse\u001b[39m)\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 177 |\u001b[39m     expect(hasSelector \u001b[33m||\u001b[39m hasCards)\u001b[33m.\u001b[39mtoBeTruthy()\n \u001b[90m     |\u001b[39m                                     \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 178 |\u001b[39m   })\n \u001b[90m 179 |\u001b[39m\n \u001b[90m 180 |\u001b[39m   test(\u001b[32m'E2E-15: Generate page has prompt input'\u001b[39m\u001b[33m,\u001b[39m \u001b[36masync\u001b[39m ({ page }) \u001b[33m=>\u001b[39m {\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                            "column": 37,
+                            "line": 177
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mreceived\u001b[39m\u001b[2m).\u001b[22mtoBeTruthy\u001b[2m()\u001b[22m\n\nReceived: \u001b[31mfalse\u001b[39m\n\n  175 |     const hasCards = await page.locator('[class*=\"card\"], button:has-text(/函件|摘要|會議|報告|FAQ/i)').first()\n  176 |       .isVisible({ timeout: 3_000 }).catch(() => false)\n> 177 |     expect(hasSelector || hasCards).toBeTruthy()\n      |                                     ^\n  178 |   })\n  179 |\n  180 |   test('E2E-15: Generate page has prompt input', async ({ page }) => {\n    at C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts:177:37"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:37.085Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "screenshot",
+                          "contentType": "image/png",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Generate-E2E-14-296a2-e-renders-template-selector-chromium\\test-failed-1.png"
+                        },
+                        {
+                          "name": "video",
+                          "contentType": "video/webm",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Generate-E2E-14-296a2-e-renders-template-selector-chromium\\video.webm"
+                        },
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\test-results\\core-flows-Generate-E2E-14-296a2-e-renders-template-selector-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\User\\Desktop\\Enclave\\frontend\\e2e\\core-flows.spec.ts",
+                        "column": 37,
+                        "line": 177
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-05d7c3e278bdacab6cc7",
+              "file": "core-flows.spec.ts",
+              "line": 171,
+              "column": 3
+            },
+            {
+              "title": "E2E-15: Generate page has prompt input",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3606,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:41.488Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-4790ffb3f592ba738192",
+              "file": "core-flows.spec.ts",
+              "line": 180,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Admin Pages",
+          "file": "core-flows.spec.ts",
+          "line": 186,
+          "column": 6,
+          "specs": [
+            {
+              "title": "E2E-16: Usage page accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1192,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:45.159Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-bb298c3fdfc0edfde39b",
+              "file": "core-flows.spec.ts",
+              "line": 191,
+              "column": 3
+            },
+            {
+              "title": "E2E-17: Audit logs page accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1185,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:46.357Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-5c83657c8c2c344317b1",
+              "file": "core-flows.spec.ts",
+              "line": 198,
+              "column": 3
+            },
+            {
+              "title": "E2E-18: RAG Dashboard accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1166,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:47.549Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-d846ac6a22ff1df3f0ff",
+              "file": "core-flows.spec.ts",
+              "line": 204,
+              "column": 3
+            },
+            {
+              "title": "E2E-19: Query Analytics accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1211,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:48.720Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-f3287383624e91d2902f",
+              "file": "core-flows.spec.ts",
+              "line": 210,
+              "column": 3
+            },
+            {
+              "title": "E2E-20: Usage Report accessible",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 60000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1190,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-02-25T10:49:49.936Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "28695e5e3430c54ac89e-3f873f9003166b6c3993",
+              "file": "core-flows.spec.ts",
+              "line": 216,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-02-25T10:48:57.309Z",
+    "duration": 53871.971999999994,
+    "expected": 17,
+    "skipped": 0,
+    "unexpected": 3,
+    "flaky": 0
+  }
+}
