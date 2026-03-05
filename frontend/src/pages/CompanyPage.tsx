@@ -337,7 +337,7 @@ function DeploymentTab() {
             className={`rounded-xl border p-4 text-left transition ${mode === 'gpu' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} disabled:opacity-60`}
           >
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-800"><Cpu className="h-4 w-4" /> 有 GPU（固定本地）</div>
-            <div className="mt-2 text-xs text-gray-600">主/副/掃描皆固定 qwen3:14b，Embedding 固定 bge-m3:latest</div>
+            <div className="mt-2 text-xs text-gray-600">主模型固定 qwen3.5:27b；內部改寫/掃描固定 qwen3:14b；Embedding 固定 bge-m3:latest</div>
           </button>
         </div>
 

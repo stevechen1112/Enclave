@@ -85,7 +85,7 @@ def resolve_runtime_profiles(db: Session) -> Dict[str, Any]:
             "mode": mode,
             "main": {
                 "provider": "ollama",
-                "model": "qwen3:14b",
+                "model": "qwen3.5:27b",
                 "base_url": getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434"),
             },
             "internal": {
