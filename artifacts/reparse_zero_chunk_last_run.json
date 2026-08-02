@@ -1,0 +1,11 @@
+{
+  "results": [
+    {
+      "id": "358da9a68dfd11f1ac81dd2c1fc90d74",
+      "name": "c91aad3e-8a58-4b80-a334-7ff36884c41f.pdf",
+      "run": "DONE",
+      "chunk_count": 31,
+      "progress_msg": "\n16:07:17 Task has been received.\n16:07:17 Page(1~13): Start to parse.\n16:07:17 Page(1~13): OCR started\n16:07:23 Page(1~13): Processing...\n16:07:32 Page(1~13): Processing...\n16:07:32 Page(1~13): OCR finished (14.45s)\n16:07:37 Page(1~13): Layout analysis (4.35s)\n16:07:37 Page(1~13): Table analysis (0.00s)\n16:07:37 Page(1~13): Text merged (0.10s)\n16:07:37 Page(1~13): Finish parsing.\n16:07:40 Page(1~13): Generate 10 chunks\n16:07:40 Page(1~13): Embedding chunks (0.54s)\n16:07:43 Page(1~13): Indexing done (2.45s).\n16:07:43 Page(1~13): Task done (24.95s)\n\n16:07:17 Task has been received.\n16:07:40 Page(13~25): Start to parse.\n16:07:40 Page(13~25): OCR started\n16:07:51 Page(13~25): Processing...\n16:08:04 Page(13~25): Processing...\n16:08:04 Page(13~25): OCR finished (23.11s)\n16:08:09 Page(13~25): Layout analysis (4.94s)\n16:08:09 Page(13~25): Table analysis (0.00s)\n16:08:09 Page(13~25): Text merged (0.12s)\n16:08:09 Page(13~25): Finish parsing.\n16:08:12 Page(13~25): Generate 16 chunks\n16:08:12 Page(13~25): Embedding chunks (0.62s)\n16:08:16 Page(13~25): Indexing done (3.57s).\n16:08:16 Page(13~25): Task done (56.81s)\n\n16:07:17 Task has been received.\n16:08:11 Page(25~31): Start to parse.\n16:08:12 Page(25~31): OCR started\n16:08:19 Page(25~31): Processing...\n16:08:19 Page(25~31): OCR finished (7.08s)\n16:08:22 Page(25~31): Layout analysis (3.21s)\n16:08:22 Page(25~31): Table analysis (0.00s)\n16:08:22 Page(25~31): Text merged (0.05s)\n16:08:22 Page(25~31): Finish parsing.\n16:08:22 Page(25~31): Generate 5 chunks\n16:08:22 Page(25~31): Embedding chunks (0.35s)\n16:08:24 Page(25~31): Indexing done (1.28s).\n16:08:24 Page(25~31): Task done (64.43s)"
+    }
+  ]
+}

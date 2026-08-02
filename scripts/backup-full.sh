@@ -30,12 +30,10 @@ echo "════════════════════════�
 
 mkdir -p "${SNAPSHOT_DIR}"
 
-# ── 1. Database ──
+# ── 1. Database + uploads (canonical ops_lifecycle; credentials excluded) ──
 echo ""
-echo "━━━ [1/3] PostgreSQL Database ━━━"
-BACKUP_DIR="${SNAPSHOT_DIR}" bash scripts/backup.sh
-
-# Move the dump into the snapshot folder (already there via BACKUP_DIR)
+echo "━━━ [1/3] PostgreSQL + Uploads (ops_lifecycle) ━━━"
+BACKUP_DIR="${SNAPSHOT_DIR}" python scripts/ops_lifecycle.py backup
 
 # ── 2. Redis ──
 echo ""
@@ -55,18 +53,10 @@ else
     echo "⚠ Redis dump.rdb not found (cache-only mode, skipping)"
 fi
 
-# ── 3. Uploads ──
+# ── 3. Note: uploads already in uploads_*.tgz from ops_lifecycle; never pack var/credentials ──
 echo ""
-echo "━━━ [3/3] Uploaded Files ━━━"
-
-UPLOADS_DIR="./uploads"
-if [[ -d "${UPLOADS_DIR}" ]] && [[ -n "$(ls -A ${UPLOADS_DIR} 2>/dev/null)" ]]; then
-    tar -czf "${SNAPSHOT_DIR}/uploads.tar.gz" -C "${UPLOADS_DIR}" .
-    UPLOADS_SIZE=$(du -sh "${SNAPSHOT_DIR}/uploads.tar.gz" | cut -f1)
-    echo "✓ Uploads archived (${UPLOADS_SIZE})"
-else
-    echo "⚠ No uploads directory or empty, skipping"
-fi
+echo "━━━ [3/3] Credential vault ━━━"
+echo "✓ var/credentials is intentionally excluded from backups (DD-M14)"
 
 # ── Summary ──
 echo ""

@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-08-01T01:32:53.528208+00:00",
+  "action": "n1_upgrade",
+  "dry_run": true,
+  "status": "ok",
+  "steps": [
+    {
+      "step": "current",
+      "rc": 0,
+      "out": "p3_parent_chunk_001 (head)\n"
+    },
+    {
+      "step": "dry_run",
+      "note": "Pass --execute to run alembic upgrade head && downgrade -1",
+      "planned": [
+        "alembic upgrade head",
+        "alembic downgrade -1",
+        "alembic upgrade head"
+      ]
+    }
+  ],
+  "human_gate": "on-site DR/sign-off still required"
+}

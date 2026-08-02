@@ -1,0 +1,47 @@
+{
+  "gate": "CV-PH-05",
+  "generated_at": "2026-08-02T12:30:00.819768+00:00",
+  "product_default": "OFF",
+  "delta_min": 0.1,
+  "user": "carol.both@enclave.test",
+  "neo4j": {
+    "reachable": true,
+    "n_records": 16,
+    "rel_tail": "t, c\n\"PERMISSION\", 56\n\"BELONGS_TO\", 30\n\"ORGDEPARTMENTRELATION\", 24\n\"IS_OF_TYPE\", 16\n\"USER_APP_RELATION\", 9\n\"ORG_APP_RELATION\", 5\n\"INHERIT_PERMISSIONS\", 4\n",
+    "error": null
+  },
+  "useGraph_flag_changes_hits": true,
+  "status": "PASS",
+  "judgement": "NO_VALUE",
+  "reason": "delta_zero_graph_does_not_improve_context_queries",
+  "plain_hit_rate": 0.0,
+  "treatment_hit_rate": 0.0,
+  "delta": 0.0,
+  "rows": [
+    {
+      "id": "hr_salary_owner",
+      "plain_ok": false,
+      "treatment_ok": false,
+      "treatment": "useGraph_flag",
+      "plain_n": 11,
+      "treatment_n": 11
+    },
+    {
+      "id": "eng_release_owner",
+      "plain_ok": false,
+      "treatment_ok": false,
+      "treatment": "useGraph_flag",
+      "plain_n": 11,
+      "treatment_n": 10
+    },
+    {
+      "id": "shared_handbook",
+      "plain_ok": false,
+      "treatment_ok": false,
+      "treatment": "useGraph_flag",
+      "plain_n": 12,
+      "treatment_n": 12
+    }
+  ],
+  "note": "PipesHub Neo4j holds identity/ACL edges (PERMISSION etc.), not a document knowledge graph. useGraph API flag observed as no-op when hit sets identical. Keep enterprise-graph retrieval OFF in product."
+}

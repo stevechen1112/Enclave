@@ -1,0 +1,346 @@
+{
+ "gate": "E1",
+ "generated_at": "2026-08-02T19:39:26",
+ "question_set": "z1_retrieve_questions.yaml",
+ "n_questions": 20,
+ "top_k": 5,
+ "score_threshold": 0.2,
+ "arms": [
+  "canonical",
+  "ragflow"
+ ],
+ "summary": {
+  "canonical": {
+   "hit_at_5": 0.25,
+   "mrr": 0.0,
+   "ndcg_at_5": 0.0
+  },
+  "ragflow": {
+   "hit_at_5": 0.7,
+   "mrr": 0.65,
+   "ndcg_at_5": 0.6348
+  }
+ },
+ "judgements": {
+  "canonical_vs_ragflow": {
+   "judgement": "MARGINAL",
+   "delta": 0.45,
+   "ci_low": 0.023,
+   "ci_high": 0.7257,
+   "n": 20,
+   "threshold": 0.2,
+   "baseline_rate": 0.25,
+   "treatment_rate": 0.7,
+   "mcnemar_p": 0.063568,
+   "discordant": [
+    5,
+    14
+   ],
+   "ci_method": "mcnemar_paired"
+  }
+ },
+ "per_question": [
+  {
+   "id": "R01",
+   "category": "factual",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_12",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_05",
+    "scan_02"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R02",
+   "category": "factual",
+   "query": "由你人資 MOU 的簽約雙方是誰？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_07",
+    "scan_01",
+    "scan_11",
+    "scan_03"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R03",
+   "category": "factual",
+   "query": "KiGo 使用手冊說明的主要功能有哪些？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_03"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R04",
+   "category": "factual",
+   "query": "補印發票切結書需要填哪些欄位？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_12",
+    "scan_05",
+    "scan_03"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R05",
+   "category": "factual",
+   "query": "ETI Base Code 對工時有什麼規定？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_09",
+    "scan_11",
+    "scan_01",
+    "scan_03",
+    "scan_04",
+    "scan_05",
+    "scan_08",
+    "scan_06",
+    "scan_07"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R06",
+   "category": "unanswerable",
+   "query": "這批文件裡有沒有提到火星殖民計畫的預算？",
+   "canonical_refused": true,
+   "canonical_top_score": 0.032,
+   "ragflow_refused": false,
+   "ragflow_top_score": 0.2329
+  },
+  {
+   "id": "R07",
+   "category": "unanswerable",
+   "query": "CEO 的私人手機號碼是多少？",
+   "canonical_refused": true,
+   "canonical_top_score": 0.0164,
+   "ragflow_refused": false,
+   "ragflow_top_score": 0.2399
+  },
+  {
+   "id": "R08",
+   "category": "unanswerable",
+   "query": "2028 年的營收預測數字？",
+   "canonical_refused": true,
+   "canonical_top_score": 0.0318,
+   "ragflow_refused": false,
+   "ragflow_top_score": 0.3511
+  },
+  {
+   "id": "R09",
+   "category": "unanswerable",
+   "query": "哪一份文件授權刪除所有稽核日誌？",
+   "canonical_refused": true,
+   "canonical_top_score": 0.0315,
+   "ragflow_refused": false,
+   "ragflow_top_score": 0.2671
+  },
+  {
+   "id": "R10",
+   "category": "unanswerable",
+   "query": "未收錄產品的隱藏折扣碼是什麼？",
+   "canonical_refused": true,
+   "canonical_top_score": 0.0306,
+   "ragflow_refused": false,
+   "ragflow_top_score": 0.2747
+  },
+  {
+   "id": "R11",
+   "category": "multi_hop",
+   "query": "比較兩份營業稅繳款書的期間與稅額差異",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_11",
+    "scan_02"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R12",
+   "category": "multi_hop",
+   "query": "合約類文件與手冊類文件分別涵蓋哪些主題？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_11",
+    "scan_01"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R13",
+   "category": "multi_hop",
+   "query": "MOU 與家長同意書在簽署主體上有何不同？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_02",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_03"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R14",
+   "category": "multi_hop",
+   "query": "哪些掃描件屬於財務憑證？列出文件名",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_11",
+    "scan_05",
+    "scan_01",
+    "scan_03",
+    "scan_04"
+   ],
+   "ragflow_hit": false
+  },
+  {
+   "id": "R15",
+   "category": "multi_hop",
+   "query": "入出境相關文件與人資相關文件各有哪些？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_06",
+    "scan_08",
+    "scan_04",
+    "scan_03",
+    "scan_05"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R16",
+   "category": "table_lookup",
+   "query": "營業稅繳款書上的應納稅額是多少？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_01",
+    "scan_11"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R17",
+   "category": "table_lookup",
+   "query": "KiGo 手冊中功能對照表列出的第一個功能名稱？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_03",
+    "scan_01",
+    "scan_04"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R18",
+   "category": "table_lookup",
+   "query": "AI 機器人報告中的市場規模數字？",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_05",
+    "scan_11",
+    "scan_03",
+    "scan_01"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R19",
+   "category": "table_lookup",
+   "query": "ETI Base Code 條款編號與標題對照",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_09",
+    "scan_11",
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_03",
+    "scan_05"
+   ],
+   "ragflow_hit": true
+  },
+  {
+   "id": "R20",
+   "category": "table_lookup",
+   "query": "韓國 e-Arrival card 上的護照號碼欄位值",
+   "canonical_ranked": [],
+   "canonical_hit": false,
+   "ragflow_ranked": [
+    "scan_10",
+    "scan_05",
+    "scan_12",
+    "scan_03",
+    "scan_04",
+    "scan_01"
+   ],
+   "ragflow_hit": true
+  }
+ ],
+ "answerable_only": {
+  "n": 15,
+  "canonical_hits": 0,
+  "ragflow_hits": 14,
+  "canonical_hit_at_5": 0.0,
+  "ragflow_hit_at_5": 0.9333,
+  "judgement": {
+   "judgement": "PROVEN",
+   "delta": 0.9333,
+   "ci_low": 0.5314,
+   "ci_high": 0.9333,
+   "n": 15,
+   "threshold": 0.2,
+   "baseline_rate": 0.0,
+   "treatment_rate": 0.9333,
+   "mcnemar_p": 0.000122,
+   "discordant": [
+    0,
+    14
+   ],
+   "ci_method": "mcnemar_paired"
+  }
+ },
+ "unanswerable": {
+  "n": 5,
+  "canonical_refused": 5,
+  "ragflow_refused": 0,
+  "note": "ragflow over-retrieves on unanswerable; refusal proxy fails"
+ }
+}

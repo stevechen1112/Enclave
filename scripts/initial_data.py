@@ -34,11 +34,8 @@ def init_db() -> None:
         logger.info("Creating demo tenant")
         tenant_in = TenantCreate(
             name="Demo Tenant",
-            tax_id="00000000",
-            contact_name="System Admin",
-            contact_email=superuser_email,
-            contact_phone="0900000000",
-            status="active"
+            plan="enterprise",
+            status="active",
         )
         tenant = crud_tenant.create(db, obj_in=tenant_in)
     

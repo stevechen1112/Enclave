@@ -1,0 +1,24 @@
+{
+  "gate": "C2-C3-bookstack-connector",
+  "status": "PASS",
+  "generated_at": "2026-08-02T16:45:00",
+  "bookstack_url": "http://localhost:8090",
+  "bookstack_internal_url": "http://bookstack",
+  "instance_name": "enclave-bookstack-acl",
+  "connector_id": "9a6a0119-32bd-4577-a96c-dd08c7272edd",
+  "connector_type": "BookStack",
+  "records_total": 16,
+  "indexing": {
+    "COMPLETED": 16,
+    "FAILED": 0,
+    "IN_PROGRESS": 0,
+    "QUEUED": 0
+  },
+  "prerequisites_fixed": [
+    "docker network connect pipeshub-ai_network bookstack",
+    "minted BookStack API token enclavepipeshubtokenid0000000001",
+    "registered ollama embedding bge-m3:latest as indexing role",
+    "registered ollama llm cwchang/llama-3-taiwan-8b-instruct as default"
+  ],
+  "note": "PH-02 proven: live BookStack connector sync + index. CV-PH-03 (ACL-aware search) is the next gate."
+}

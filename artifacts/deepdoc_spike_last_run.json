@@ -1,0 +1,34 @@
+{
+ "gate": "B0b-deepdoc-spike",
+ "generated_at": "2026-08-02T09:08:11",
+ "target": {
+  "name": "優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf",
+  "size": 1577151
+ },
+ "arms": [
+  {
+   "arm": "plaintext",
+   "layout_recognize": "Plain Text",
+   "dataset_id": "779238f68e0e11f1ac81dd2c1fc90d74",
+   "document_id": "779594a68e0e11f1ac81dd2c1fc90d74",
+   "run": "DONE",
+   "chunk_count": 0,
+   "elapsed_s": 5.1,
+   "progress_msg_tail": "有限公司－工作規則（114年10月版）（含函報公文）.pdf 09:07:04 Page(1~13): Task done (0.51s)  09:07:04 Task has been received. 09:07:05 Page(25~31): Start to parse. 09:07:05 Page(25~31): Finish parsing. 09:07:05 Page(25~31): No chunk built from 優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf 09:07:05 Page(25~31): Task done (0.53s)",
+   "chunk_sample": ""
+  },
+  {
+   "arm": "deepdoc",
+   "layout_recognize": "DeepDOC",
+   "dataset_id": "7aaf3eee8e0e11f1ac81dd2c1fc90d74",
+   "document_id": "7ab2e0b28e0e11f1ac81dd2c1fc90d74",
+   "run": "DONE",
+   "chunk_count": 31,
+   "elapsed_s": 65.5,
+   "progress_msg_tail": "s) 09:08:08 Page(25~31): Table analysis (0.00s) 09:08:08 Page(25~31): Text merged (0.07s) 09:08:08 Page(25~31): Finish parsing. 09:08:09 Page(25~31): Generate 5 chunks 09:08:09 Page(25~31): Embedding chunks (0.54s) 09:08:10 Page(25~31): Indexing done (1.30s). 09:08:10 Page(25~31): Task done (60.18s)",
+   "chunk_sample": "\n優利國際資源整合有限公司函\n地址：100024臺北市中正區忠孝东路一段140号10楼 承辨人：余惠娟 電话：02-7755-7985 傅真：02-2322-2799\n受文者：臺北市政府動局\n发文日期：中华民國114年11月26日 发文字号：優國際字第1141100044號 速别：普通 密等及解密條件或保密期限：普通 附件：工作规则\n主旨：送本公司修正後之工作规则乙份，請查照。\n説明：\n、依臺北市 || \n第十條\n（發放資遣費）\n.3\n第十一條\n（不經预告终止動契约；解倔原因）\n.4\n第十二條\n（離職手續）\n第十三條（服務證明書）\n.. 4\n**...\n第十四條（調動）\n4\n第十五（調職移交手續）\n.5\n工資·津貼及金\n.5\n第十六條 \n(工資之定）\n第十七條\n（工資定羲）\n.5\n第十八條\n（工資計算及發放時間）\n.5\n第十九條\n（延長工時之工資加給棵）\n.6\n（平日及休息日工作後之補休約定）\n第 || \n第二十四條\n（休息時間）\n.. 10\n第二十四條之一\n（實施輪班工作之换班休息時間）\n....10\n第二十五條\n（例假及休息目）….\n.....10\n第二十六條\n（休假日）：\n10\n第二十七條\n（特别休假之日數及排定方式）\n.11\n第二十七條之一\n（未休特别休假工資發給及通知）\n..11\n第二十七條之二\n（邂延之特别休假實施期限及属期仍未休時工資之發給）\n..12\n第二十八條\n（休假日工作）\n."
+  }
+ ],
+ "verdict": "DEEPDOC_WINS",
+ "note": "single-document spike; feasibility + timing only, not a value proof (n=1)"
+}

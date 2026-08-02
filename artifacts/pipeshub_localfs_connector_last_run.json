@@ -1,0 +1,28 @@
+{
+  "gate": "C2",
+  "generated_at": "2026-08-02T12:30:00+00:00",
+  "status": "BLOCKED",
+  "reason": "LOCAL_FS_not_in_pipeshub_registry",
+  "instance_name": "enclave-localfs-golden",
+  "disclaimer": "PipesHub LOCAL_FS — not nas_local Enclave lite",
+  "evidence": {
+    "registry_has_LOCAL_FS": false,
+    "registry_sample_includes": [
+      "BookStack",
+      "S3",
+      "MinIO",
+      "SharePoint Online",
+      "OneDrive",
+      "Web",
+      "RSS"
+    ],
+    "create_error": "Connector type 'LOCAL_FS' not found in registry",
+    "enclave_name_map": "nas_smb/local_fs → LOCAL_FS (C1 mapping correct; upstream build lacks connector)",
+    "nas_local_not_certifying": true
+  },
+  "phase_c_exit": {
+    "real_pipeshub_connector": "PASS via BookStack (CV-PH-02 / C3)",
+    "c2_localfs": "BLOCKED on this pipeshubai/pipeshub-ai:latest image — LOCAL_FS appears Electron/desktop-only or not shipped in server registry",
+    "note": "Do not treat nas_local_connector / certify_connector mode=local as PipesHub LOCAL_FS certification."
+  }
+}

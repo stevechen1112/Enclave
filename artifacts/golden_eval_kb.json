@@ -1,0 +1,67 @@
+{
+ "dataset_id": "6ee5d1848e6511f1ac81dd2c1fc90d74",
+ "dataset_name": "enclave-golden-eval",
+ "generated_at": "2026-08-02T19:34:42",
+ "documents": {
+  "6fbb2b188e6511f1ac81dd2c1fc90d74": {
+   "name": "010_補印發票切結書.pdf",
+   "run": "DONE",
+   "chunk_count": 1
+  },
+  "6fae94a28e6511f1ac81dd2c1fc90d74": {
+   "name": "009_DOC003~3.pdf",
+   "run": "DONE",
+   "chunk_count": 10
+  },
+  "6f9c490a8e6511f1ac81dd2c1fc90d74": {
+   "name": "008_Korea e-Arrivalcard_363545709.pdf",
+   "run": "DONE",
+   "chunk_count": 5
+  },
+  "6f8de75c8e6511f1ac81dd2c1fc90d74": {
+   "name": "006_ETI-Base-Code-Burmese.pdf",
+   "run": "DONE",
+   "chunk_count": 1
+  },
+  "6f7e7d4e8e6511f1ac81dd2c1fc90d74": {
+   "name": "005_11408_83028948_營業稅繳款書(401)_.pdf",
+   "run": "DONE",
+   "chunk_count": 4
+  },
+  "6f715f9c8e6511f1ac81dd2c1fc90d74": {
+   "name": "003_由你人資MOU.pdf",
+   "run": "DONE",
+   "chunk_count": 1
+  },
+  "6f614eae8e6511f1ac81dd2c1fc90d74": {
+   "name": "002_11410_83028948_營業稅繳款書(401)_.pdf",
+   "run": "DONE",
+   "chunk_count": 4
+  },
+  "6f39e4c28e6511f1ac81dd2c1fc90d74": {
+   "name": "014_AI 機器人全球 7 大勢力關鍵報告.pdf",
+   "run": "DONE",
+   "chunk_count": 19
+  },
+  "6f2247868e6511f1ac81dd2c1fc90d74": {
+   "name": "007_DOC_0001.pdf",
+   "run": "DONE",
+   "chunk_count": 4
+  },
+  "6f13ba868e6511f1ac81dd2c1fc90d74": {
+   "name": "023_KiGo使用手冊.pdf",
+   "run": "DONE",
+   "chunk_count": 46
+  },
+  "6f037d9c8e6511f1ac81dd2c1fc90d74": {
+   "name": "001_四屆新生入團申請家長同意書.pdf",
+   "run": "DONE",
+   "chunk_count": 1
+  },
+  "6ef322bc8e6511f1ac81dd2c1fc90d74": {
+   "name": "000_nueip 合約(1).pdf",
+   "run": "DONE",
+   "chunk_count": 8
+  }
+ }
+}

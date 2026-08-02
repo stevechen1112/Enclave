@@ -1,0 +1,12 @@
+{
+ "gate": "BS-fixture-validation",
+ "status": "PASS",
+ "generated_at": "2026-08-02T09:37:20",
+ "source": "bookstack",
+ "pairs": 48,
+ "matches": 48,
+ "leaks": 0,
+ "missing_access": 0,
+ "note": "Confirms BookStack enforces the generated matrix; prerequisite for CV-PH-03.",
+ "mismatches": []
+}

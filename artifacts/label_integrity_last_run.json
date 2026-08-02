@@ -1,0 +1,26 @@
+{
+ "gate": "CV-INT",
+ "status": "PASS",
+ "generated_at": "2026-08-02T16:52:59",
+ "checks": {
+  "static_source_scan": {
+   "violations": 0
+  },
+  "dynamic_db_vs_ragflow": {
+   "violations": 0,
+   "dataset_layouts": {
+    "38b5af5a8e2711f1ac81dd2c1fc90d74": "DeepDOC",
+    "21066f0c8e2711f1ac81dd2c1fc90d74": "Plain Text",
+    "99a8942a8e1e11f1ac81dd2c1fc90d74": "DeepDOC",
+    "599692668d0511f199eeb37ca37a0366": "DeepDOC"
+   },
+   "production_dataset_id": "599692668d0511f199eeb37ca37a0366",
+   "production_layout_recognize": "DeepDOC",
+   "documents_checked": 10,
+   "documents_claiming_deepdoc": 7,
+   "production_is_deepdoc": true
+  }
+ },
+ "findings": [],
+ "rule": "parse_engine must reflect upstream layout_recognize; ocr_used must reflect what RAGFlow ran, not the Enclave route."
+}

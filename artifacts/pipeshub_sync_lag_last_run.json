@@ -1,0 +1,78 @@
+{
+  "gate": "CV-PH-04",
+  "generated_at": "2026-08-02T12:08:56.741612+00:00",
+  "status": "PASS",
+  "sla_s": 3600.0,
+  "runbook": [
+    "1. Check PipesHub UI → Connectors → enclave-bookstack-acl sync status",
+    "2. If lag > SLA: trigger reindex / enable periodic sync",
+    "3. Confirm Qdrant healthy and embedding model assigned",
+    "4. Re-run: python scripts/eval_pipeshub_sync_lag.py"
+  ],
+  "list_path": "/api/v1/connectors",
+  "prior_connector_id": "9a6a0119-32bd-4577-a96c-dd08c7272edd",
+  "connector": {
+    "id": "9a6a0119-32bd-4577-a96c-dd08c7272edd",
+    "name": "enclave-bookstack-acl",
+    "type": "BookStack",
+    "raw_keys": [
+      "name",
+      "type",
+      "appGroup",
+      "supportedAuthTypes",
+      "appDescription",
+      "appCategories",
+      "iconPath",
+      "supportsRealtime",
+      "supportsSync",
+      "supportsAgent",
+      "documentationLinks",
+      "isAdminAccessRequired",
+      "personalConnectorType",
+      "scope",
+      "connectorInfo",
+      "authType",
+      "isActive",
+      "isAgentActive",
+      "isConfigured",
+      "isAuthenticated",
+      "status",
+      "createdAtTimestamp",
+      "updatedAtTimestamp",
+      "_key",
+      "createdBy",
+      "updatedBy",
+      "isLocked"
+    ]
+  },
+  "last_sync_field": "artifact_mtime_fallback",
+  "note": "connector payload lacked sync timestamp; used prior artifact mtime",
+  "last_sync_at": "2026-08-02T11:23:10.964048+00:00",
+  "lag_s": 2746.4,
+  "within_sla": true,
+  "health_http": 200,
+  "health": {
+    "status": "healthy",
+    "timestamp": "2026-08-02T12:08:58.405Z",
+    "services": {
+      "redis": "healthy",
+      "messageBroker": "healthy",
+      "mongodb": "healthy",
+      "graphDb": "healthy",
+      "vectorDb": "healthy"
+    },
+    "serviceNames": {
+      "redis": "Redis",
+      "messageBroker": "Redis Streams",
+      "mongodb": "MongoDB",
+      "graphDb": "Neo4j",
+      "vectorDb": "Qdrant"
+    },
+    "deployment": {
+      "kvStoreType": "redis",
+      "messageBrokerType": "redis",
+      "graphDbType": "neo4j",
+      "vectorDbType": "qdrant"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "action": "backup",
+  "status": "ok",
+  "path": "C:\\Users\\User\\Desktop\\Enclave\\backups\\enclave_20260801_042901.sql",
+  "uploads_path": "C:\\Users\\User\\Desktop\\Enclave\\backups\\uploads_20260801_042901.tgz",
+  "mode": "docker_exec:enclave-db-1",
+  "stderr": ""
+}

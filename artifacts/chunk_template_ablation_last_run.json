@@ -1,0 +1,599 @@
+{
+ "gate": "CV-RF-02",
+ "generated_at": "2026-08-02T20:43:36",
+ "status": "FAIL",
+ "n_questions": 15,
+ "summary": {
+  "naive": {
+   "hit_at_5": 0.9333,
+   "total_chunks": 104,
+   "elapsed_s": 357.3
+  },
+  "laws": {
+   "hit_at_5": 0.9333,
+   "total_chunks": 380,
+   "elapsed_s": 539.0
+  },
+  "manual": {
+   "hit_at_5": 0.9333,
+   "total_chunks": 190,
+   "elapsed_s": 327.1
+  },
+  "table": {
+   "hit_at_5": 0.0,
+   "total_chunks": 0,
+   "elapsed_s": 25.0
+  }
+ },
+ "judgements": {
+  "naive_vs_laws": {
+   "judgement": "NO_VALUE",
+   "delta": 0.0,
+   "ci_low": 0.0,
+   "ci_high": 0.0,
+   "n": 15,
+   "threshold": 0.1,
+   "baseline_rate": 0.9333,
+   "treatment_rate": 0.9333,
+   "mcnemar_p": 1.0,
+   "discordant": [
+    0,
+    0
+   ]
+  },
+  "naive_vs_manual": {
+   "judgement": "NO_VALUE",
+   "delta": 0.0,
+   "ci_low": 0.0,
+   "ci_high": 0.0,
+   "n": 15,
+   "threshold": 0.1,
+   "baseline_rate": 0.9333,
+   "treatment_rate": 0.9333,
+   "mcnemar_p": 1.0,
+   "discordant": [
+    0,
+    0
+   ]
+  },
+  "naive_vs_table": {
+   "judgement": "NO_VALUE",
+   "delta": -0.9333,
+   "ci_low": -0.9333,
+   "ci_high": -0.5314,
+   "n": 15,
+   "threshold": 0.1,
+   "baseline_rate": 0.9333,
+   "treatment_rate": 0.0,
+   "mcnemar_p": 0.000122,
+   "discordant": [
+    14,
+    0
+   ],
+   "ci_method": "mcnemar_paired"
+  }
+ },
+ "best_treatment": "laws",
+ "best_judgement": {
+  "judgement": "NO_VALUE",
+  "delta": 0.0,
+  "ci_low": 0.0,
+  "ci_high": 0.0,
+  "n": 15,
+  "threshold": 0.1,
+  "baseline_rate": 0.9333,
+  "treatment_rate": 0.9333,
+  "mcnemar_p": 1.0,
+  "discordant": [
+   0,
+   0
+  ]
+ },
+ "per_question": [
+  {
+   "id": "R01",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "relevant": [
+    "scan_06",
+    "scan_08"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_12",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_05",
+    "scan_02"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_12",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_10"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_12",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_05",
+    "scan_02"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R02",
+   "query": "由你人資 MOU 的簽約雙方是誰？",
+   "relevant": [
+    "scan_07"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_07",
+    "scan_01",
+    "scan_11",
+    "scan_03"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_07"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_07",
+    "scan_01",
+    "scan_11",
+    "scan_03"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R03",
+   "query": "KiGo 使用手冊說明的主要功能有哪些？",
+   "relevant": [
+    "scan_03"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_03"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_03"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_03"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R04",
+   "query": "補印發票切結書需要填哪些欄位？",
+   "relevant": [
+    "scan_12"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_12",
+    "scan_05",
+    "scan_03"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_12",
+    "scan_03"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_12",
+    "scan_05",
+    "scan_03"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R05",
+   "query": "ETI Base Code 對工時有什麼規定？",
+   "relevant": [
+    "scan_09"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_09",
+    "scan_11",
+    "scan_01",
+    "scan_03",
+    "scan_04",
+    "scan_05",
+    "scan_08",
+    "scan_06",
+    "scan_07"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_09",
+    "scan_01",
+    "scan_04",
+    "scan_11",
+    "scan_03",
+    "scan_05",
+    "scan_08",
+    "scan_06"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_09",
+    "scan_01",
+    "scan_11",
+    "scan_05",
+    "scan_04",
+    "scan_03",
+    "scan_08",
+    "scan_06"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R11",
+   "query": "比較兩份營業稅繳款書的期間與稅額差異",
+   "relevant": [
+    "scan_06",
+    "scan_08"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_11",
+    "scan_02"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_01",
+    "scan_11",
+    "scan_02"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_01",
+    "scan_11",
+    "scan_02"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R12",
+   "query": "合約類文件與手冊類文件分別涵蓋哪些主題？",
+   "relevant": [
+    "scan_01",
+    "scan_07",
+    "scan_12",
+    "scan_03"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_11",
+    "scan_01"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_11",
+    "scan_01"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_11",
+    "scan_01"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R13",
+   "query": "MOU 與家長同意書在簽署主體上有何不同？",
+   "relevant": [
+    "scan_07",
+    "scan_02"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_02",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_03"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_02",
+    "scan_07",
+    "scan_11"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_02",
+    "scan_11",
+    "scan_07",
+    "scan_03",
+    "scan_01"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R14",
+   "query": "哪些掃描件屬於財務憑證？列出文件名",
+   "relevant": [
+    "scan_06",
+    "scan_08",
+    "scan_12"
+   ],
+   "naive_hit": false,
+   "naive_ranked": [
+    "scan_11",
+    "scan_05",
+    "scan_01",
+    "scan_03",
+    "scan_04"
+   ],
+   "laws_hit": false,
+   "laws_ranked": [
+    "scan_11",
+    "scan_03",
+    "scan_05",
+    "scan_04",
+    "scan_01"
+   ],
+   "manual_hit": false,
+   "manual_ranked": [
+    "scan_11",
+    "scan_03",
+    "scan_04",
+    "scan_05",
+    "scan_01"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R15",
+   "query": "入出境相關文件與人資相關文件各有哪些？",
+   "relevant": [
+    "scan_10",
+    "scan_01",
+    "scan_07"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_06",
+    "scan_08",
+    "scan_04",
+    "scan_03",
+    "scan_05"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_11",
+    "scan_07",
+    "scan_01"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_06",
+    "scan_08",
+    "scan_03",
+    "scan_04",
+    "scan_05"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R16",
+   "query": "營業稅繳款書上的應納稅額是多少？",
+   "relevant": [
+    "scan_06",
+    "scan_08"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_01",
+    "scan_11"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_01",
+    "scan_11"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_01",
+    "scan_11"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R17",
+   "query": "KiGo 手冊中功能對照表列出的第一個功能名稱？",
+   "relevant": [
+    "scan_03"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_03",
+    "scan_01",
+    "scan_04"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_03",
+    "scan_01"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_03",
+    "scan_01",
+    "scan_04"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R18",
+   "query": "AI 機器人報告中的市場規模數字？",
+   "relevant": [
+    "scan_05"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_05",
+    "scan_11",
+    "scan_03",
+    "scan_01"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_05"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_05",
+    "scan_11",
+    "scan_03",
+    "scan_01"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R19",
+   "query": "ETI Base Code 條款編號與標題對照",
+   "relevant": [
+    "scan_09"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_09",
+    "scan_11",
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_03",
+    "scan_05"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_09",
+    "scan_08",
+    "scan_06",
+    "scan_11",
+    "scan_07",
+    "scan_12",
+    "scan_03",
+    "scan_05",
+    "scan_01",
+    "scan_10"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_09",
+    "scan_06",
+    "scan_08",
+    "scan_11",
+    "scan_01",
+    "scan_12",
+    "scan_07",
+    "scan_10",
+    "scan_03",
+    "scan_05"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  },
+  {
+   "id": "R20",
+   "query": "韓國 e-Arrival card 上的護照號碼欄位值",
+   "relevant": [
+    "scan_10"
+   ],
+   "naive_hit": true,
+   "naive_ranked": [
+    "scan_10",
+    "scan_05",
+    "scan_12",
+    "scan_03",
+    "scan_04",
+    "scan_01"
+   ],
+   "laws_hit": true,
+   "laws_ranked": [
+    "scan_10",
+    "scan_05",
+    "scan_03",
+    "scan_12",
+    "scan_04",
+    "scan_01"
+   ],
+   "manual_hit": true,
+   "manual_ranked": [
+    "scan_10",
+    "scan_05",
+    "scan_03",
+    "scan_12",
+    "scan_04",
+    "scan_01"
+   ],
+   "table_hit": false,
+   "table_ranked": []
+  }
+ ],
+ "datasets": {
+  "naive": "bb5254be8e6c11f1ac81dd2c1fc90d74",
+  "laws": "91993c228e6d11f1ac81dd2c1fc90d74",
+  "manual": "d5740ce68e6e11f1ac81dd2c1fc90d74",
+  "table": "9a7b5c1a8e6f11f1ac81dd2c1fc90d74"
+ },
+ "product_default": "naive"
+}

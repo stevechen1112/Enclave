@@ -1,0 +1,118 @@
+"""Regressions for code-review P1–P3 fixes."""
+from __future__ import annotations
+
+import inspect
+import uuid
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class TestResourceWideDeny:
+    def test_is_denied_honors_resource_wide_sentinel(self):
+        from app.services.policy_deny import RESOURCE_WIDE_DENY_SUBJECT, is_denied
+        from app.models.policy_deny import PolicyDenyEntry
+
+        db = MagicMock()
+        row = MagicMock()
+        row.expires_at = None
+        q = MagicMock()
+        q.filter.return_value = q
+        q.first.return_value = row
+        db.query.return_value = q
+
+        assert is_denied(db, "document", "doc-1", uuid.uuid4()) is True
+        # filter used resource_id path
+        db.query.assert_called_with(PolicyDenyEntry)
+        assert RESOURCE_WIDE_DENY_SUBJECT == uuid.UUID(int=0)
+
+    def test_authorizer_memory_resource_deny_blocks_other_subject(self):
+        from app.gateway.authorization import GatewayAuthorizer
+        from app.services.policy_deny import RESOURCE_WIDE_DENY_SUBJECT
+
+        auth = GatewayAuthorizer()
+        doc = str(uuid.uuid4())
+        auth._deny_cache[doc] = {RESOURCE_WIDE_DENY_SUBJECT}
+        other = uuid.uuid4()
+        with patch("app.services.policy_deny.is_denied", return_value=False):
+            # bypass DB by making SessionLocal fail → would fail-closed; instead
+            # ensure memory path hits first
+            assert auth.is_denied(doc, other) is True
+
+    def test_revocation_calls_deny_resource(self):
+        from app.services import document_revocation as dr
+
+        src = inspect.getsource(dr.DocumentRevocationService.revoke)
+        assert "deny_resource" in src
+        assert "add_deny_entry" not in src
+
+
+class TestWatcherReviewClearsStale:
+    def test_watcher_clears_chunks_before_review_enqueue(self):
+        from app.tasks import document_tasks as dt
+
+        src = inspect.getsource(dt.watcher_ingest_file_task)
+        assert "pending_review" in src
+        assert "awaiting_review" in src
+        assert "stale_index_cleared" in src
+        clear_idx = src.find("DocumentChunk")
+        enqueue_idx = src.find(".enqueue(")
+        assert clear_idx != -1 and enqueue_idx != -1
+        assert clear_idx < enqueue_idx
+
+
+class TestSsoCallbackTenantFilter:
+    def test_callback_filters_tenant_and_provider(self):
+        from app.api.v1.endpoints import sso as sso_mod
+
+        src = inspect.getsource(sso_mod.sso_callback)
+        assert "tenant_id" in src
+        assert "provider" in src
+        assert ".first()" in src
+        assert "db.query(_SSOModel or object).first()" not in src
+        assert "_SSOModel.tenant_id" in src or "tenant_id ==" in src
+
+
+class TestDeployStopBeforeMigrate:
+    def test_prod_and_staging_stop_then_migrate_then_up(self):
+        for name in ("deploy-production.yml", "deploy-staging.yml"):
+            text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+            stop_idx = text.find("stop web worker worker-beat")
+            mig_idx = text.find("alembic upgrade head")
+            up_idx = text.find("up -d --no-build --remove-orphans")
+            assert stop_idx != -1 and mig_idx != -1 and up_idx != -1, name
+            assert stop_idx < mig_idx < up_idx, name
+
+
+class TestCredentialVaultEncryption:
+    def test_roundtrip_seal_open(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-vault-32chars!!")
+        from app.services import credential_vault as cv
+
+        monkeypatch.setattr(cv, "_REPO_ROOT", tmp_path)
+        monkeypatch.setattr(cv, "_DEFAULT_DIR", tmp_path / "var" / "credentials")
+        path = cv.ensure_credential_dir() / "x.bin"
+        payload = {"access_token": "tok", "refresh_token": "ref"}
+        cv.write_credential_file(path, payload)
+        raw = path.read_bytes()
+        assert b"access_token" not in raw
+        assert cv.read_credential_file(path)["access_token"] == "tok"
+
+    def test_legacy_plaintext_json_still_readable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-vault-32chars!!")
+        from app.services import credential_vault as cv
+
+        monkeypatch.setattr(cv, "_REPO_ROOT", tmp_path)
+        p = tmp_path / "legacy.json"
+        p.write_text('{"access_token":"plain"}', encoding="utf-8")
+        assert cv.read_credential_file(p)["access_token"] == "plain"
+
+
+class TestGatewayRuntimeNoEmptyAuthorizer:
+    def test_runtime_raises_when_authorizer_unavailable(self):
+        from app.gateway import runtime as rt
+
+        src = inspect.getsource(rt.get_configured_gateway_router)
+        assert "GatewayAuthorizer()" not in src or "refusing empty deny cache" in src
+        assert "refusing empty deny cache" in src

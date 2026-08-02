@@ -1,0 +1,54 @@
+{
+  "generated_at": "2026-08-02T22:42:12.528432+00:00",
+  "status": "PASS",
+  "checks": {
+    "enabled": true,
+    "base_url": "http://localhost:8081",
+    "kb": {
+      "kb_id": "0c1eb831-7a17-4f87-9a52-51f2b64a1e02",
+      "source": "WEKNORA_KB_ID"
+    },
+    "total_pages": 4,
+    "index_pages": 1,
+    "summary_pages": 3,
+    "real_summary_pages": 3,
+    "pages": [
+      {
+        "slug": "summary/1d9c3c0e-7dd5-40eb-b8c7-c4ade4c13a67",
+        "page_type": "summary",
+        "status": "published",
+        "content_len": 935,
+        "source_refs": [
+          "1d9c3c0e-7dd5-40eb-b8c7-c4ade4c13a67"
+        ]
+      },
+      {
+        "slug": "summary/939b299d-4fba-4597-829b-b2351ebb214c",
+        "page_type": "summary",
+        "status": "published",
+        "content_len": 502,
+        "source_refs": [
+          "939b299d-4fba-4597-829b-b2351ebb214c"
+        ]
+      },
+      {
+        "slug": "summary/545cdcfd-d088-4c7e-80f5-4941d04c7806",
+        "page_type": "summary",
+        "status": "published",
+        "content_len": 769,
+        "source_refs": [
+          "545cdcfd-d088-4c7e-80f5-4941d04c7806"
+        ]
+      },
+      {
+        "slug": "index",
+        "page_type": "index",
+        "status": "published",
+        "content_len": 200,
+        "source_refs": null
+      }
+    ],
+    "passed": true
+  },
+  "note": "D3: PASS requires a live wiki KB with an index page and >=1 summary page carrying >=100 chars and source_refs (not a health check)."
+}

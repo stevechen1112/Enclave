@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-08-02T22:41:57.469123+00:00",
+  "status": "PASS",
+  "checks": {
+    "page_types": 6,
+    "six_types": true,
+    "weknora_live": {
+      "enabled": true,
+      "base_url": "http://localhost:8081",
+      "healthy": true,
+      "http_status": 200,
+      "path": "/health"
+    },
+    "no_placeholder_publish": true,
+    "revoke_tombstone": true,
+    "graph_visible_before": true,
+    "graph_hidden_after_revoke": true,
+    "passed": true
+  },
+  "note": "Local revoke/schema + optional live WeKnora health; production corpus quality still expandable"
+}

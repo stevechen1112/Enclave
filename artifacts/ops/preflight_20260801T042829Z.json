@@ -1,0 +1,39 @@
+{
+  "action": "preflight",
+  "profile": "standard",
+  "passed": true,
+  "checks": [
+    {
+      "check": "cpu_cores",
+      "required": 8,
+      "actual": 24,
+      "passed": true
+    },
+    {
+      "check": "ram_gb",
+      "required": 32,
+      "actual": 127.4,
+      "passed": true
+    },
+    {
+      "check": "disk_gb",
+      "required": 200,
+      "actual": 540.0,
+      "passed": true
+    },
+    {
+      "check": "gpu_available",
+      "required": true,
+      "actual": true,
+      "passed": true
+    },
+    {
+      "check": "docker",
+      "required": true,
+      "actual": true,
+      "passed": true
+    }
+  ],
+  "errors": [],
+  "warnings": []
+}

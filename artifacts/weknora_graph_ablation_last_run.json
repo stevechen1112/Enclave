@@ -1,0 +1,53 @@
+{
+  "gate": "CV-WK-05",
+  "generated_at": "2026-08-02T20:38:22",
+  "status": "READY",
+  "reason": "graph_extract_evidence_present entities=8 ablation_delta_not_yet_proven",
+  "judgement": "WIRING_PASS",
+  "adr": "docs/adr/ADR-007-graph-store-boundary.md",
+  "neo4j": {
+    "reachable": true,
+    "container": "WeKnora-neo4j",
+    "nodes": 8,
+    "weknora_entity_nodes": 8,
+    "raw_tail": "nodes\n8\n"
+  },
+  "weknora": {
+    "base_url": "http://localhost:8081",
+    "knowledge_bases": [
+      {
+        "id": "e63adcb8-1293-4cb4-a4b5-83e26c41f8ee",
+        "name": "Enclave Graph KB v2",
+        "graph_enabled": true,
+        "type": "document"
+      },
+      {
+        "id": "223c0173-da9c-4fa4-b4ca-db4aa67175b3",
+        "name": "Enclave Graph KB",
+        "graph_enabled": true,
+        "type": "document"
+      },
+      {
+        "id": "0c1eb831-7a17-4f87-9a52-51f2b64a1e02",
+        "name": "Enclave Wiki KB",
+        "graph_enabled": false,
+        "type": "wiki"
+      },
+      {
+        "id": "45873939-cbe3-4c69-934a-edab2a4366e3",
+        "name": "Enclave Test KB",
+        "graph_enabled": false,
+        "type": "document"
+      }
+    ],
+    "graph_enabled_any": true,
+    "list_path": "/api/v1/knowledge-bases"
+  },
+  "product_default": "OFF",
+  "note": "Use WeKnora-neo4j entity counts as GraphRAG evidence — never PipesHub neo4j PERMISSION/Record counts. Value ablation (relationship Hit@K Δ) still required before product ON.",
+  "value_ablation": {
+    "judgement": "NO_VALUE",
+    "delta": 0.0,
+    "artifact": "weknora_graph_value_ablation_last_run.json"
+  }
+}

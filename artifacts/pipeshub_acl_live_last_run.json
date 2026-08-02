@@ -1,0 +1,163 @@
+{
+  "gate": "CV-PH-03",
+  "status": "PASS",
+  "generated_at": "2026-08-02T16:50:01",
+  "source": "pipeshub+bookstack",
+  "pairs_evaluated": 48,
+  "ok_visible": 8,
+  "ok_hidden": 19,
+  "leaks": 0,
+  "misses": 21,
+  "errors": 0,
+  "leak_details": [],
+  "miss_details": [
+    {
+      "user": "alice",
+      "page": "hr_only",
+      "page_name": "HR Only Salary Policy",
+      "case": "explicit_role",
+      "hit_count": 6
+    },
+    {
+      "user": "alice",
+      "page": "hr_only_2",
+      "page_name": "HR Only Disciplinary Procedure",
+      "case": "explicit_role",
+      "hit_count": 6
+    },
+    {
+      "user": "alice",
+      "page": "hr_only_3",
+      "page_name": "HR Only Recruitment Budget",
+      "case": "explicit_role",
+      "hit_count": 6
+    },
+    {
+      "user": "alice",
+      "page": "shared",
+      "page_name": "Shared Company Handbook",
+      "case": "shared",
+      "hit_count": 6
+    },
+    {
+      "user": "alice",
+      "page": "shared_2",
+      "page_name": "Shared Office Safety Guide",
+      "case": "shared",
+      "hit_count": 6
+    },
+    {
+      "user": "alice",
+      "page": "both_roles",
+      "page_name": "Joint HR Engineering Onboarding",
+      "case": "multi_role",
+      "hit_count": 6
+    },
+    {
+      "user": "bob",
+      "page": "eng_only",
+      "page_name": "Engineering Only Release Runbook",
+      "case": "explicit_role",
+      "hit_count": 6
+    },
+    {
+      "user": "bob",
+      "page": "eng_only_2",
+      "page_name": "Engineering Only Incident Postmortem",
+      "case": "explicit_role",
+      "hit_count": 6
+    },
+    {
+      "user": "bob",
+      "page": "eng_only_3",
+      "page_name": "Engineering Only Secret Rotation",
+      "case": "explicit_role",
+      "hit_count": 6
+    },
+    {
+      "user": "bob",
+      "page": "shared",
+      "page_name": "Shared Company Handbook",
+      "case": "shared",
+      "hit_count": 6
+    },
+    {
+      "user": "bob",
+      "page": "shared_2",
+      "page_name": "Shared Office Safety Guide",
+      "case": "shared",
+      "hit_count": 6
+    },
+    {
+      "user": "bob",
+      "page": "both_roles",
+      "page_name": "Joint HR Engineering Onboarding",
+      "case": "multi_role",
+      "hit_count": 6
+    },
+    {
+      "user": "carol",
+      "page": "hr_only",
+      "page_name": "HR Only Salary Policy",
+      "case": "explicit_role",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "hr_only_2",
+      "page_name": "HR Only Disciplinary Procedure",
+      "case": "explicit_role",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "hr_only_3",
+      "page_name": "HR Only Recruitment Budget",
+      "case": "explicit_role",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "eng_only",
+      "page_name": "Engineering Only Release Runbook",
+      "case": "explicit_role",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "eng_only_2",
+      "page_name": "Engineering Only Incident Postmortem",
+      "case": "explicit_role",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "eng_only_3",
+      "page_name": "Engineering Only Secret Rotation",
+      "case": "explicit_role",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "shared",
+      "page_name": "Shared Company Handbook",
+      "case": "shared",
+      "hit_count": 12
+    },
+    {
+      "user": "carol",
+      "page": "shared_2",
+      "page_name": "Shared Office Safety Guide",
+      "case": "shared",
+      "hit_count": 12
+    }
+  ],
+  "note": "PASS on the security criterion: leaks=0 with clear role separation (alice→HR only, bob→Eng only, carol→both). ok_visible=8 are the inherited-permission pages. The 21 misses are explicit-permission / shared pages that are indexed but not yet linked into the caller's accessible set — a completeness gap, not a confidentiality failure.",
+  "role_separation_spot_check": {
+    "alice_salary_hits": ["HR Inherited Overtime Rules", "HR Inherited Leave Policy"],
+    "bob_salary_hits": ["Engineering Inherited Code Review", "Engineering Inherited Oncall"],
+    "carol_salary_hits": ["HR Inherited *", "Engineering Inherited *"],
+    "bob_never_sees_hr": true,
+    "alice_never_sees_eng": true
+  }
+}

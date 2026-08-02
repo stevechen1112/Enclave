@@ -1,0 +1,9 @@
+{
+  "generated_at": "2026-08-01T04:28:26.921147+00:00",
+  "status": "PASS",
+  "hit_rate": 0.6666666666666666,
+  "hit_at_k_min": 0.6,
+  "acl_leakage": 0,
+  "document_count": 193,
+  "error": null
+}

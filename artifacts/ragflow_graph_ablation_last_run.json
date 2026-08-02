@@ -1,0 +1,282 @@
+{
+ "gate": "CV-RF-05",
+ "generated_at": "2026-08-02T23:05:13",
+ "status": "FAIL",
+ "baseline_dataset_id": "6ee5d1848e6511f1ac81dd2c1fc90d74",
+ "graph_dataset_id": "ef69d36c8e8011f1ac81dd2c1fc90d74",
+ "graph_trigger": {
+  "code": 0,
+  "data": {
+   "task_id": "fb9d9c3e8e8211f1ac81dd2c1fc90d74"
+  }
+ },
+ "graph_status": {
+  "ok": true,
+  "elapsed_s": 225.3
+ },
+ "n_questions": 10,
+ "summary": {
+  "baseline_hit_at_5": 0.9,
+  "graph_hit_at_5": 0.9
+ },
+ "judgement": {
+  "judgement": "NO_VALUE",
+  "delta": 0.0,
+  "ci_low": 0.0,
+  "ci_high": 0.0,
+  "n": 10,
+  "threshold": 0.15,
+  "baseline_rate": 0.9,
+  "treatment_rate": 0.9,
+  "mcnemar_p": 1.0,
+  "discordant": [
+   0,
+   0
+  ]
+ },
+ "per_question": [
+  {
+   "id": "R01",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "relevant": [
+    "scan_06",
+    "scan_08"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_12",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_05",
+    "scan_02"
+   ],
+   "graph_ranked": [
+    "scan_08",
+    "scan_06",
+    "scan_12",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_10",
+    "scan_05",
+    "scan_02"
+   ]
+  },
+  {
+   "id": "R02",
+   "query": "由你人資 MOU 的簽約雙方是誰？",
+   "relevant": [
+    "scan_07"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_07",
+    "scan_01",
+    "scan_11",
+    "scan_03"
+   ],
+   "graph_ranked": [
+    "scan_07",
+    "scan_01",
+    "scan_11",
+    "scan_03"
+   ]
+  },
+  {
+   "id": "R03",
+   "query": "KiGo 使用手冊說明的主要功能有哪些？",
+   "relevant": [
+    "scan_03"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_03"
+   ],
+   "graph_ranked": [
+    "scan_03"
+   ]
+  },
+  {
+   "id": "R04",
+   "query": "補印發票切結書需要填哪些欄位？",
+   "relevant": [
+    "scan_12"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_12",
+    "scan_05",
+    "scan_03"
+   ],
+   "graph_ranked": [
+    "scan_12",
+    "scan_05",
+    "scan_03"
+   ]
+  },
+  {
+   "id": "R05",
+   "query": "ETI Base Code 對工時有什麼規定？",
+   "relevant": [
+    "scan_09"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_09",
+    "scan_11",
+    "scan_01",
+    "scan_03",
+    "scan_04",
+    "scan_05",
+    "scan_08",
+    "scan_06",
+    "scan_07"
+   ],
+   "graph_ranked": [
+    "scan_09",
+    "scan_11",
+    "scan_01",
+    "scan_03",
+    "scan_04",
+    "scan_05",
+    "scan_08",
+    "scan_06",
+    "scan_07"
+   ]
+  },
+  {
+   "id": "R11",
+   "query": "比較兩份營業稅繳款書的期間與稅額差異",
+   "relevant": [
+    "scan_06",
+    "scan_08"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_11",
+    "scan_02"
+   ],
+   "graph_ranked": [
+    "scan_06",
+    "scan_08",
+    "scan_12",
+    "scan_11",
+    "scan_02"
+   ]
+  },
+  {
+   "id": "R12",
+   "query": "合約類文件與手冊類文件分別涵蓋哪些主題？",
+   "relevant": [
+    "scan_01",
+    "scan_07",
+    "scan_12",
+    "scan_03"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_11",
+    "scan_01"
+   ],
+   "graph_ranked": [
+    "scan_11",
+    "scan_01"
+   ]
+  },
+  {
+   "id": "R13",
+   "query": "MOU 與家長同意書在簽署主體上有何不同？",
+   "relevant": [
+    "scan_07",
+    "scan_02"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_02",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_03"
+   ],
+   "graph_ranked": [
+    "scan_02",
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_03"
+   ]
+  },
+  {
+   "id": "R14",
+   "query": "哪些掃描件屬於財務憑證？列出文件名",
+   "relevant": [
+    "scan_06",
+    "scan_08",
+    "scan_12"
+   ],
+   "baseline_hit": false,
+   "graph_hit": false,
+   "baseline_ranked": [
+    "scan_11",
+    "scan_05",
+    "scan_01",
+    "scan_03",
+    "scan_04"
+   ],
+   "graph_ranked": [
+    "scan_11",
+    "scan_05",
+    "scan_01",
+    "scan_03",
+    "scan_04"
+   ]
+  },
+  {
+   "id": "R15",
+   "query": "入出境相關文件與人資相關文件各有哪些？",
+   "relevant": [
+    "scan_10",
+    "scan_01",
+    "scan_07"
+   ],
+   "baseline_hit": true,
+   "graph_hit": true,
+   "baseline_ranked": [
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_06",
+    "scan_08",
+    "scan_04",
+    "scan_03",
+    "scan_05"
+   ],
+   "graph_ranked": [
+    "scan_11",
+    "scan_07",
+    "scan_01",
+    "scan_06",
+    "scan_08",
+    "scan_04",
+    "scan_03",
+    "scan_05"
+   ]
+  }
+ ],
+ "product_default": "OFF"
+}

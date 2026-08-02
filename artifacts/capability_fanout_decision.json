@@ -1,0 +1,61 @@
+{
+  "gate": "E2",
+  "status": "DECIDED",
+  "generated_at": "2026-08-02T12:00:00+00:00",
+  "decision": {
+    "ragflow_specialist_retrieval": {
+      "flag": "RAGFLOW_SPECIALIST_ENABLED",
+      "default": false,
+      "admit_to_default_fanout": false,
+      "reason": "E1 answerable-only PROVEN (+93.3pp Hit@5) proves RAGFlow retrieval value on golden scans, but (1) unanswerable over-retrieval 0/5 refuse, (2) specialist path not yet latency-budgeted (B6), (3) search fan-out currently has no ragflow domain — only projection. Keep OFF until B6 PASS and refusal policy exists."
+    },
+    "ragflow_parent_child": {
+      "default": false,
+      "reason": "CV-WK-04: structure activated (509 chunks / 37 parent hints) but Hit@5 NO_VALUE vs naive (both 100% on Tier-1) — ceiling effect; no incremental claim."
+    },
+    "ragflow_raptor": {
+      "default": false,
+      "reason": "CV-RF-04 NO_VALUE: progress=-1 (chat TenantModelInstance wiring); Hit@5 Δ=0 vs baseline. Keep OFF."
+    },
+    "ragflow_graph": {
+      "default": false,
+      "reason": "CV-RF-05 index OK but Hit@5 NO_VALUE; ADR-007 forbids conflating with Enclave PG graph."
+    },
+    "ragflow_chunk_templates": {
+      "default": "naive",
+      "reason": "CV-RF-02: laws/manual Hit@5 == naive 93.3% (NO_VALUE); table parser rejects PDF scans."
+    },
+    "pipeshub_enterprise_graph": {
+      "default": false,
+      "reason": "CV-PH-05 NO_VALUE: Neo4j holds ACL/PERMISSION edges; useGraph flag does not improve context queries."
+    },
+    "weknora_neo4j_graphrag": {
+      "default": false,
+      "profiles_allowed_after_proven": ["standard", "enterprise"],
+      "reason": "ADR-007; WeKnora-neo4j + graph KB extract WIRING_PASS (8 ENTITY) but value ablation Δ=0 — keep OFF."
+    },
+    "weknora_wiki": {
+      "default": "opt-in",
+      "reason": "CV-WK-03 live compile PASS; CV-WK-06 revoke/recompile PASS. Not default fan-out; available when KNOWLEDGE_COMPILER module enabled."
+    },
+    "pipeshub_acl_search": {
+      "default": "opt-in",
+      "reason": "CV-PH-03 leaks=0 PROVEN for BookStack fixture; SharePoint/Drive still OPEN_GATES (OAuth)."
+    }
+  },
+  "honest_claims_allowed": [
+    "DeepDOC turns scanned PDFs from unretrievable (0 chunks) to retrievable",
+    "On clean printed scans, field extraction can reach usable CER (~0.18–0.33)",
+    "RAGFlow retrieval Hit@5 on answerable golden questions: 14/15 vs canonical 0/15",
+    "BookStack ACL via PipesHub: zero leaks on fixture matrix",
+    "WeKnora Auto-Wiki compiled real pages with source_refs; revoke tombstones sole-source pages"
+  ],
+  "claims_forbidden": [
+    "DeepDOC OCR quality is production-ready on all scans (handwritten/photo fails)",
+    "RAGFlow refuses unanswerable queries (currently over-retrieves)",
+    "parent-child / RAPTOR / GraphRAG / chunk templates improve retrieval (not PROVEN)",
+    "Neo4j GraphRAG is Enclave's knowledge graph (separate store — see ADR-007)",
+    "PipesHub LOCAL_FS is certified on this image (registry lacks LOCAL_FS; BookStack is the live connector proof)",
+    "SharePoint/Drive connectors are GA"
+  ]
+}

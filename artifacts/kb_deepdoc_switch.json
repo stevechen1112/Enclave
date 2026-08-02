@@ -1,0 +1,8 @@
+{
+  "dataset_id": "599692668d0511f199eeb37ca37a0366",
+  "dataset_name": "Enclave Test KB",
+  "before": "Plain Text",
+  "after": "DeepDOC",
+  "applied": true,
+  "verified_after": "DeepDOC"
+}

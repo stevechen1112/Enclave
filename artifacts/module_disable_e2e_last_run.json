@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-08-01T01:32:49.278716+00:00",
+  "status": "PASS",
+  "error": null,
+  "checks": {
+    "base_enabled": true,
+    "packs_disabled": {
+      "document_intelligence": true,
+      "enterprise_connect": true,
+      "knowledge_compiler": true
+    },
+    "gateway_adapters": [
+      "document"
+    ],
+    "projection_adapters": [
+      "enclave"
+    ],
+    "module_gates": {
+      "document_intelligence_pack": "blocked_403",
+      "enterprise_connect_pack": "blocked_403",
+      "knowledge_compiler_pack": "blocked_403"
+    },
+    "core_gateway_status": "success",
+    "core_gateway_ok": true,
+    "passed": true
+  }
+}
