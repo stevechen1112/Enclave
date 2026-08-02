@@ -167,6 +167,61 @@ async def _parse_via_ragflow(
     )
 
 
+def _maybe_enhance_with_cloud_ocr(
+    file_path: str,
+    file_type: str,
+    text: str,
+    metadata: Dict[str, Any],
+    artifact: ParseArtifact,
+) -> Tuple[str, Dict[str, Any], ParseArtifact]:
+    """Cloud OCR enhancement arm (CV-RF-01b): when the primary parser yields
+    near-zero text on a scanned PDF/image, re-transcribe via the configured
+    cloud OCR provider. Adopts the cloud result only when it yields strictly
+    more text; the original engine is recorded in metadata either way."""
+    from app.services import cloud_ocr
+
+    ext = (file_type or "").lower().strip()
+    if not cloud_ocr.is_enabled() or ext not in cloud_ocr.SUPPORTED_EXTS:
+        return text, metadata, artifact
+    trigger = int(os.getenv("CLOUD_OCR_TRIGGER_MIN_CHARS", "200"))
+    if len((text or "").strip()) >= trigger:
+        return text, metadata, artifact
+
+    original_engine = artifact.parser
+    try:
+        result = cloud_ocr.transcribe(file_path, ext)
+    except Exception as exc:
+        artifact.warnings.append({"code": "cloud_ocr_failed", "error": str(exc)[:200]})
+        return text, metadata, artifact
+
+    metadata["cloud_ocr"] = {
+        "provider": result.provider,
+        "model": result.model,
+        "pages": result.pages,
+        "elapsed_ms": result.elapsed_ms,
+        "retries": result.retries,
+        "errors": result.errors,
+        "trigger": f"primary_yield_below_{trigger}_chars",
+        "original_engine": original_engine,
+    }
+    if len(result.text.strip()) <= len((text or "").strip()):
+        artifact.warnings.append({"code": "cloud_ocr_no_better_yield"})
+        return text, metadata, artifact
+
+    artifact.parser = f"cloud/{result.provider}:{result.model}"
+    artifact.ocr_used = True
+    artifact.chunks = [ParseChunk(text=result.text, chunk_index=0)]
+    artifact.warnings.append({
+        "code": "cloud_ocr_adopted",
+        "original_engine": original_engine,
+        "original_chars": len((text or "").strip()),
+        "cloud_chars": len(result.text.strip()),
+    })
+    metadata["parse_engine"] = artifact.parser
+    metadata["ocr_used"] = True
+    return result.text, metadata, artifact
+
+
 def parse_document(
     file_path: str,
     file_type: str,
@@ -202,7 +257,7 @@ def parse_document(
                 "layout_recognize_actual": artifact.metadata.get("layout_recognize_actual"),
                 "chunk_method_actual": artifact.metadata.get("chunk_method_actual"),
             }
-            return text, metadata, artifact
+            return _maybe_enhance_with_cloud_ocr(file_path, file_type, text, metadata, artifact)
         except Exception as exc:
             if force_ragflow:
                 raise RuntimeError(f"RAGFlow parse required but failed: {exc}") from exc
@@ -232,4 +287,4 @@ def parse_document(
     )
     metadata["parse_route"] = ParseRoute.NATIVE_FAST.value
     metadata["content_hash"] = content_hash
-    return text_content, metadata, artifact
+    return _maybe_enhance_with_cloud_ocr(file_path, file_type, text_content, metadata, artifact)

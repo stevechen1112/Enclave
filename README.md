@@ -198,7 +198,7 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 | gemini-3-flash-preview | **30.3%** | 並列最佳；手寫切結書 4/4 全對 |
 | mistral-ocr-latest（OCR 4） | **30.3%** | 並列最佳；最快（586s）、最便宜（$4/千頁）、含 typed blocks＋bbox |
 
-結論：OCR 專精模型 > 通用模型；雲端臂仍未達 +20pp 全語料門檻（剩餘未命中屬真困難樣本）。**預設維持地端 DeepDOC**；雲端 OCR 為可選增強（`.env` 設 `OPENAI_API_KEY`／`GEMINI_API_KEY`／`MISTRAL_API_KEY`）。
+結論：OCR 專精模型 > 通用模型；雲端臂仍未達 +20pp 全語料門檻（剩餘未命中屬真困難樣本）。**預設維持地端 DeepDOC**；雲端 OCR 已接為**選配增強臂**（`.env` 設 `CLOUD_OCR_PROVIDER=gemini|mistral|openai` + 對應 API key，僅在主解析產出過少時觸發，見 `app/services/cloud_ocr.py`）。
 
 ---
 

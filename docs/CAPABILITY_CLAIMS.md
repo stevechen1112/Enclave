@@ -20,7 +20,7 @@
 
 | 能力 | 現況 |
 |------|------|
-| DeepDOC 對**全語料**抽取品質 | CV-RF-01b 整體 MARGINAL／FAIL（手寫／拍照 CER 0.8+）；雲端四臂：luna 24.2%（幻覺風險）、terra 25.8%、**gemini-3-flash-preview 與 mistral-ocr-4 並列最佳 30.3%**（命中欄位完全相同、DeepDOC 嚴格超集、手寫切結書 4/4），仍未達 20pp 門檻（`cloud_vision_{ocr,terra,gemini,mistral}_ablation_last_run.json`） |
+| DeepDOC 對**全語料**抽取品質 | CV-RF-01b 整體 MARGINAL／FAIL（手寫／拍照 CER 0.8+）；雲端四臂：luna 24.2%（幻覺風險）、terra 25.8%、**gemini-3-flash-preview 與 mistral-ocr-4 並列最佳 30.3%**（命中欄位完全相同、DeepDOC 嚴格超集、手寫切結書 4/4），仍未達 20pp 門檻（`cloud_vision_{ocr,terra,gemini,mistral}_ablation_last_run.json`）。2026-08-03 起雲端 OCR 已接為**選配增強臂**（`CLOUD_OCR_PROVIDER`，預設關閉；僅在主解析產出過少時觸發，見 `app/services/cloud_ocr.py`） |
 | parent-child 分塊 | 結構已啟動；Hit@5 vs naive = NO_VALUE（天花板） |
 | 切片模板 laws/manual/table | CV-RF-02：與 naive 同 Hit@5（NO_VALUE）；table 臂失敗 |
 | RAPTOR | CV-RF-04 NO_VALUE（OpenAI gpt-5.6-luna 真實跑完索引 465.8s；Hit@5 90% vs 90% Δ=0）；預設關閉 |
