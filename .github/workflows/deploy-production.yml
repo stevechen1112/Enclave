@@ -93,26 +93,30 @@ jobs:
             docker tag ${{ env.IMAGE_PREFIX }}/backend:${TAG} ${{ env.IMAGE_PREFIX }}/backend:latest
             docker tag ${{ env.IMAGE_PREFIX }}/frontend:${TAG} ${{ env.IMAGE_PREFIX }}/frontend:latest
 
-            # Rolling restart
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
+            export IMAGE_TAG="$TAG"
 
-            # Health check with retries
+            # 縮短舊程式與新 schema 重疊：先停 web/worker/beat，migrate，再起全栈
+            docker compose -f docker-compose.prod.yml stop web worker worker-beat || true
+            docker compose -f docker-compose.prod.yml run --rm -T web alembic upgrade head
+            docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+
+            # Health：必須經 edge 對外路徑通過（容器內 8000 僅作除錯，不可單獨判定成功）
             for i in $(seq 1 6); do
               sleep 10
-              if curl -sf http://localhost:8000/health; then
+              if curl -sf http://localhost/health; then
                 echo ""
                 echo "✅ Health check passed on attempt $i"
                 break
               fi
+              echo "edge /health failed; container probe (diagnostic only):"
+              docker compose -f docker-compose.prod.yml exec -T web curl -sf http://localhost:8000/health || true
               if [ $i -eq 6 ]; then
-                echo "❌ Health check failed after 60s"
+                echo "❌ Health check failed after 60s (edge unreachable)"
                 exit 1
               fi
               echo "⏳ Waiting for health check... ($i/6)"
             done
-
-            # Run database migrations
-            docker compose -f docker-compose.prod.yml exec -T web alembic upgrade head || true
 
             # Clean up
             docker image prune -f
@@ -130,9 +134,14 @@ jobs:
             set -e
             echo "🔍 Running smoke tests..."
 
-            # API health
-            curl -sf http://localhost:8000/health | grep -q '"status":"ok"'
-            echo "  ✅ API health OK"
+            # API health：必須經 edge；容器內 8000 僅診斷，不可單獨判定成功
+            if curl -sf http://localhost/health | grep -q '"status":"ok"'; then
+              echo "  ✅ API health OK (edge)"
+            else
+              echo "  ❌ edge /health failed; container probe (diagnostic only):"
+              docker compose -f docker-compose.prod.yml exec -T web curl -sf http://localhost:8000/health || true
+              exit 1
+            fi
 
             # Frontend loads
             curl -sf -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"

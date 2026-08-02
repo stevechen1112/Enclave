@@ -336,3 +336,7 @@ Grafana Dashboard 提供：
 - **用量報表** — 稽核 → 用量統計 → 匯出（CSV/JSON）
 - **對話記錄** — 目前需透過 API 匯出
 - **文件清單** — 知識庫 → 文件管理 可查看完整清單
+
+### Q9：哪些進階能力已正式啟用？
+
+請參閱 [`CAPABILITY_CLAIMS.md`](./CAPABILITY_CLAIMS.md)。摘要：DeepDOC 掃描可檢索、BookStack ACL、WeKnora Wiki 編譯／撤權已有證據；RAPTOR／GraphRAG／Specialist 預設 fan-out 仍關閉。

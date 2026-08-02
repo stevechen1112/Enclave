@@ -1,113 +1,59 @@
-# Enclave Mobile (Phase 12)
+# Enclave Mobile（Experimental）
 
-React Native + Expo 地端企業 AI 知識大腦行動應用程式。
+React Native + Expo 行動端子集。**非 Enclave 2.0 GA 路徑**——詳見同目錄 `EXPERIMENTAL.md`。
+
+後端仍保留 `/api/v1/mobile`；Web 控制面為正式產品面（見根目錄與 `frontend/README.md`）。
 
 ## 環境需求
 
 | 工具 | 版本 |
 |------|------|
 | Node.js | ≥ 18 |
-| npm / yarn | npm ≥ 9 |
-| Expo CLI | `npm install -g expo-cli` |
-| Expo Go App | iOS / Android |
-
----
+| npm | ≥ 9 |
+| Expo Go | iOS／Android |
 
 ## 快速開始
-
-### 1. 安裝依賴
 
 ```bash
 cd mobile
 npm install
 ```
 
-### 2. 設定伺服器 IP
-
-編輯 `src/config.ts`，將 `API_BASE_URL` 改為後端伺服器的實際網路位址：
+編輯 `src/config.ts`，將 `API_BASE_URL` 設為後端位址（手機無法用 `localhost`）：
 
 ```ts
-// Expo Go 使用手機時不能用 localhost，須改用電腦區域網路 IP
 export const API_BASE_URL = 'http://192.168.x.x:8000/api/v1'
 ```
 
-> **提示**：在 Windows 上執行 `ipconfig`，找 `IPv4 位址` 那行。
-
-### 3. 確保後端允許區域網路連線
-
-確認 CORS 設定中已加入手機 IP，或開放所有來源（僅限開發環境）。
-
-### 4. 啟動開發伺服器
+Windows 可用 `ipconfig` 查 IPv4。確認後端 CORS 允許該來源（開發環境）。
 
 ```bash
 npm start
-# 或指定平台
-npm run android
-npm run ios
+# 或 npm run android / npm run ios
 ```
 
-用手機開啟 **Expo Go**，掃描終端機顯示的 QR Code。
+用 Expo Go 掃 QR Code。
 
----
+## 功能對照（與 Web）
 
-## 專案結構
-
-```
-mobile/
-├── App.tsx                     # 入口，掛載 AuthProvider + AppNavigator
-├── app.json                    # Expo 設定
-├── package.json
-├── tsconfig.json
-├── babel.config.js
-└── src/
-    ├── config.ts               # 伺服器 URL 設定
-    ├── types.ts                # 共用 TypeScript 型別（與 web 一致）
-    ├── api.ts                  # Axios client + API 函式
-    ├── auth.tsx                # AuthContext（SecureStore 取代 localStorage）
-    ├── navigation/
-    │   ├── AppNavigator.tsx    # Root Stack（Login / Main）
-    │   └── MainNavigator.tsx   # Bottom Tabs（AI問答/內容生成/文件/審核）
-    ├── screens/
-    │   ├── LoginScreen.tsx     # 登入畫面
-    │   ├── ChatListScreen.tsx  # 對話列表（新增 / 刪除）
-    │   ├── ChatDetailScreen.tsx# 對話詳情（SSE 串流）
-    │   ├── DocumentsScreen.tsx # 文件列表 + 上傳（expo-document-picker）
-    │   ├── GenerateScreen.tsx  # 內容生成（SSE 串流，5 種模板）
-    │   └── ReviewQueueScreen.tsx # 審核佇列（read-only，P12-2 補完）
-    └── components/
-        └── LoadingScreen.tsx   # 全屏 loading fallback
-```
-
----
-
-## API 接線對照表（P12-1）
-
-| 功能 | Web 路由 | Mobile 畫面 | Endpoint |
-|------|----------|-------------|---------|
+| 功能 | Web | Mobile | API |
+|------|-----|--------|-----|
 | 登入 | `/login` | `LoginScreen` | `POST /auth/login/access-token` |
-| 取得使用者 | — | auth context | `GET /users/me` |
-| 對話列表 | ChatPage 左欄 | `ChatListScreen` | `GET /chat/conversations` |
-| 對話訊息 | ChatPage 右欄 | `ChatDetailScreen` | `GET /chat/conversations/{id}/messages` |
-| SSE 串流問答 | ChatPage | `ChatDetailScreen` | `POST /chat/chat/stream` |
-| 文件列表 | DocumentsPage | `DocumentsScreen` | `GET /documents/` |
-| 文件上傳 | DocumentsPage | `DocumentsScreen` | `POST /documents/upload` |
-| 內容生成 SSE | GeneratePage | `GenerateScreen` | `POST /generate/stream` |
-| 審核佇列 | ReviewQueuePage | `ReviewQueueScreen` | `GET /agent/review` |
+| 問答 SSE | `/ask` | Chat 畫面 | `POST /chat/chat/stream` |
+| 文件 | `/knowledge/documents` | `DocumentsScreen` | `/documents` |
+| 生成 | `/create` | `GenerateScreen` | `/generate/stream` |
+| 審核（唯讀／部分） | `/knowledge/review` | `ReviewQueueScreen` | `/agent/review` |
 
----
+Mobile **未實作**完整 UI 2.0 IA（總覽／治理／系統等）。
 
-## Phase 12 計劃
+## Token
 
-| 版本 | 功能 |
+使用 `expo-secure-store` 存 JWT（非 `localStorage`）。
+
+## 狀態
+
+| 項目 | 說明 |
 |------|------|
-| **P12-1** ✅ | 專案骨架、Login、Chat（SSE）、Documents（上傳）、Generate（SSE）、ReviewQueue（唯讀） |
-| P12-2 | ReviewQueue 核准/拒絕操作、ProgressDashboard、Export DOCX/PDF |
-| P12-3 | Push Notification（審核通知）、離線快取（AsyncStorage）|
-| P12-4 | 生物辨識解鎖、App Store / Play Store 發布設定 |
-
----
-
-## Token 安全
-
-行動端使用 `expo-secure-store` 加密儲存 JWT token（iOS 使用 Keychain，Android 使用 Keystore），
-取代 web 端的 `localStorage`。
+| 產品定位 | Experimental；不宣稱 GA |
+| CI／lockfile | 未達 Web 同等水準 |
+| 後續 | 見歷史 Phase 12 計畫；優先級低於 Web Control Plane |

@@ -1,0 +1,146 @@
+# Enclave Docker Compose — Multi-Profile Deployment (core + overlays)
+#
+# Overlays (DD-M10):
+#   compose/sidecars.yml   — RAGFlow / PipesHub / WeKnora / Ollama / Neo4j / Langfuse
+#   compose/enterprise.yml — MinIO / Grafana extras
+#   compose/pack-enabled.env — pack flags when starting standard/enterprise
+#   compose/image-pins.env — immutable tags/digests (DD-M11)
+#
+# Usage:
+#   docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled.env \
+#     -f docker-compose.profiles.yml --profile standard up -d
+#
+#   docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled.env \
+#     -f docker-compose.profiles.yml --profile enterprise up -d
+#
+#   docker compose -f docker-compose.profiles.yml --profile lite up -d
+
+include:
+  - path: compose/sidecars.yml
+  - path: compose/enterprise.yml
+
+x-enclave-base: &enclave-base
+  build: .
+  volumes:
+    - .:/code
+  environment: &enclave-env
+    - POSTGRES_SERVER=db
+    - POSTGRES_PORT=5432
+    - REDIS_HOST=redis
+    - REDIS_PORT=6379
+    - CELERY_BROKER_URL=redis://redis:6379/0
+    - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    - APP_ENV=${APP_ENV:-production}
+    # Pack defaults stay false for lite; standard/enterprise must pass compose/pack-enabled.env
+    - RAGFLOW_ENABLED=${RAGFLOW_ENABLED:-false}
+    - PIPESHUB_ENABLED=${PIPESHUB_ENABLED:-false}
+    - WEKNORA_ENABLED=${WEKNORA_ENABLED:-false}
+    - AGENT_AUTOMATION_ENABLED=${AGENT_AUTOMATION_ENABLED:-false}
+    - RAGFLOW_BASE_URL=${RAGFLOW_BASE_URL:-http://ragflow:9380}
+    - PIPESHUB_BASE_URL=${PIPESHUB_BASE_URL:-http://pipeshub-api:3000}
+    - WEKNORA_BASE_URL=${WEKNORA_BASE_URL:-http://weknora:8080}
+    - RAGFLOW_API_KEY=${RAGFLOW_API_KEY:-}
+    - PIPESHUB_API_KEY=${PIPESHUB_API_KEY:-}
+    - WEKNORA_API_KEY=${WEKNORA_API_KEY:-}
+    - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
+    - WEKNORA_DEFAULT_KB_ID=${WEKNORA_DEFAULT_KB_ID:-}
+    - PIPESHUB_ALLOW_MOCK=${PIPESHUB_ALLOW_MOCK:-false}
+  networks:
+    - enclave-net
+
+services:
+  web:
+    <<: *enclave-base
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    profiles: ["lite", "standard", "enterprise"]
+    ports:
+      - "${ENCLAVE_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    <<: *enclave-base
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=2
+    profiles: ["lite", "standard", "enterprise"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-beat:
+    <<: *enclave-base
+    command: celery -A app.celery_app beat --loglevel=info
+    profiles: ["lite", "standard", "enterprise"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: pgvector/pgvector:pg16
+    profiles: ["lite", "standard", "enterprise"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-pgvector.sql:/docker-entrypoint-initdb.d/10-pgvector.sql
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-enclave}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Downstream data plane: internal Docker network first; host bind is loopback-only.
+    expose:
+      - "5432"
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - enclave-net
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["lite", "standard", "enterprise"]
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "6379"
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    networks:
+      - enclave-net
+
+  frontend:
+    build: ./frontend
+    profiles: ["lite", "standard", "enterprise"]
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - web
+    networks:
+      - enclave-net
+
+networks:
+  enclave-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

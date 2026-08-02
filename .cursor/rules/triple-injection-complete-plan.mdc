@@ -1,0 +1,21 @@
+---
+description: 三重注入計畫必須連續施工至完成，不要中途詢問是否繼續
+alwaysApply: true
+---
+
+# Enclave Triple Injection — 完成整份計畫
+
+使用者目標是完成 `docs/DEVELOPMENT_PLAN_TRIPLE_INJECTION.md` **整份計畫**，不是分段請示。
+
+## 必須遵守
+
+- **連續推進**：完成一段後直接做下一段，不要問「要不要繼續」。
+- **進度管制**：以計畫 checkbox、`scripts/plan_progress_gate.py`、`docs/PLAN_PROGRESS.md`、`docs/OPEN_GATES.md` 為準。
+- **誠實勾選**：不可用假綠 artifact 關閉閘門；人工項（滲透、真實 OAuth、法律、現場簽核）缺證據就保持未勾。
+- **僅在缺外部輸入時中斷**：需要客戶 OAuth secret、滲透報告、法律簽核、客戶環境時，明確列出缺什麼，然後繼續做其他可做項。
+
+## 仍開放時優先順序
+
+1. `security_findings_gate.py` / Pilot E2E / retrieval / wiki-graph / ops backup
+2. SharePoint/Drive 認證（有憑證才跑）
+3. 更新 `OPEN_GATES.md` 與計畫 §16，標明只剩不可代勞項

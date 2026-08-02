@@ -37,6 +37,14 @@ htmlcov/
 uploads/*
 !uploads/.gitkeep
 
+# ---------- Connector 憑證（不得進 uploads／備份）----------
+var/credentials/*
+!var/credentials/.gitkeep
+var/bookstack_app_key.txt
+
+# ---------- 本機備份產出（含真實資料，不入庫）----------
+backups/
+
 # ---------- 測試產出（保留目錄結構）----------
 test-results/*
 !test-results/.gitkeep

@@ -10,7 +10,9 @@ services:
       - "8001:8000"
     environment:
       - POSTGRES_SERVER=db
+      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
     depends_on:
       db:
         condition: service_healthy
@@ -52,9 +54,16 @@ services:
     command: celery -A app.celery_app worker --loglevel=info
     volumes:
       - .:/code
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 3
     environment:
       - POSTGRES_SERVER=db
+      - POSTGRES_PORT=5432
       - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     depends_on:

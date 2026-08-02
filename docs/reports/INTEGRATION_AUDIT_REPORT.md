@@ -2,8 +2,17 @@
 
 > **審查角色**: 資深產品經理
 > **審查範圍**: Phase 1-8 (aihr 原始系統) + Phase 9-13 (Enclave 延伸)
-> **審查日期**: 2026-02-24
-> **結論**: **未達到完美整合，存在 14 項必修缺陷與 19 項應修問題**
+> **審查日期**: 2026-02-24  
+> **2026-08-01 複核（簡表）**：下列 Critical 多數已關閉或降級；完整現況以 `ENCLAVE_2_0_TECHNICAL_DD.md` 與本計畫閘門為準。  
+>
+> | 舊 ID | 2026-08 複核 | 證據 |
+> |-------|--------------|------|
+> | C-01 缺 Phase13 migration | **已關** | `app/db/migrations/versions/d1e2f3a4b5c6_phase10_13_tables.py` |
+> | C-02 雙 migration 目錄 | **已關** | 殘檔已移至 `docs/archive/alembic_versions_orphaned/`；`alembic/versions/` 僅留說明 README |
+> | C-03 org_id vs tenant_id | **已關** | Agent／Review 模型與 API 使用 `tenant_id` |
+> | C-04 Category relationship | **需再驗** | `Category.parent_id` self-FK 存在；若仍有反轉請對 API 測一輪 |
+>
+> **結論**: **未達到完美整合，存在 14 項必修缺陷與 19 項應修問題**（以下為 2026-02 原文；請搭配上方複核表閱讀）
 
 ---
 

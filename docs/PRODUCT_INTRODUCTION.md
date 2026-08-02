@@ -226,3 +226,9 @@ UniAI人資長：資遣費計算公式：年資(年) x 1/2 x 月平均工資。
 | JPG / PNG | 掃描件、照片檔（自動OCR辨識） |
 | Word / TXT | 各類文字文件 |
 
+---
+
+## 工程誠信附註
+
+差異化能力（DeepDOC／ACL 感知搜尋／Auto-Wiki 等）的**已證明／已接線未證明／未啟用**邊界，見 [`CAPABILITY_CLAIMS.md`](./CAPABILITY_CLAIMS.md)。行銷敘事不以未通過價值閘門的能力為賣點。
+

@@ -72,19 +72,35 @@ jobs:
             set -e
             cd /opt/enclave
 
-            # Pull latest images
-            docker compose -f docker-compose.prod.yml pull
+            export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
+            export IMAGE_TAG="${{ github.sha }}"
 
-            # Rolling restart (zero-downtime)
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker pull ${IMAGE_PREFIX}/backend:${IMAGE_TAG}
+            docker pull ${IMAGE_PREFIX}/frontend:${IMAGE_TAG}
+            docker tag ${IMAGE_PREFIX}/backend:${IMAGE_TAG} ${IMAGE_PREFIX}/backend:latest
+            docker tag ${IMAGE_PREFIX}/frontend:${IMAGE_TAG} ${IMAGE_PREFIX}/frontend:latest
 
-            # Wait for health check
-            sleep 10
-            curl -sf http://localhost:8000/health || exit 1
+            # 縮短舊程式與新 schema 重疊：先停 app 層，migrate，再起全栈
+            docker compose -f docker-compose.prod.yml stop web worker worker-beat || true
+            docker compose -f docker-compose.prod.yml run --rm -T web alembic upgrade head
+            docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
-            # Clean up old images
+            # Health：必須經 edge 對外路徑（容器內 8000 僅診斷）
+            for i in $(seq 1 6); do
+              sleep 10
+              if curl -sf http://localhost/health; then
+                echo "✅ Staging health check passed on attempt $i"
+                break
+              fi
+              echo "edge /health failed; container probe (diagnostic only):"
+              docker compose -f docker-compose.prod.yml exec -T web curl -sf http://localhost:8000/health || true
+              if [ $i -eq 6 ]; then
+                echo "❌ Staging health check failed after 60s (edge unreachable)"
+                exit 1
+              fi
+            done
+
             docker image prune -f
-
             echo "✅ Staging deployment complete: ${{ github.sha }}"
 
       # ── Notify ──

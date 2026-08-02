@@ -1,0 +1,34 @@
+# Enterprise extras overlay (MinIO + Grafana UI beyond core monitoring)
+
+services:
+  minio:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2024-12-18T13-15-44Z}
+    profiles: ["enterprise"]
+    command: server /data --console-address ":9001"
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_PASSWORD:-minioadmin}
+    volumes:
+      - minio_data:/data
+    networks:
+      - enclave-net
+
+  grafana:
+    image: ${GRAFANA_IMAGE:-grafana/grafana:10.4.0}
+    profiles: ["enterprise"]
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - enclave-net
+
+volumes:
+  minio_data:
+  grafana_data:

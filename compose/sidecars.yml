@@ -1,0 +1,127 @@
+# Sidecar overlay — RAGFlow / PipesHub / WeKnora / Ollama / Neo4j / Langfuse
+# Merge with profiles or prod:
+#   -f docker-compose.profiles.yml   (already includes this file)
+#   -f docker-compose.prod.yml -f compose/sidecars.yml --profile standard
+
+services:
+  ragflow:
+    image: ${RAGFLOW_IMAGE:-infiniflow/ragflow:v0.26.4}
+    profiles: ["standard", "enterprise"]
+    expose:
+      - "9380"
+    environment:
+      - DOC_ENGINE=infinity
+      - LLM_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - ragflow_data:/ragflow/data
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - enclave-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  pipeshub-api:
+    image: ${PIPESHUB_IMAGE:-pipeshubai/pipeshub-ai:0.4.5@sha256:e312a7acdaf8f5bb86a39061ced57b28c8f2c39028e55fc3b0d49bba2ca583a2}
+    profiles: ["standard", "enterprise"]
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=mongodb://pipeshub-mongo:27017/pipeshub
+      - REDIS_URL=redis://redis:6379/1
+    depends_on:
+      - pipeshub-mongo
+    networks:
+      - enclave-net
+
+  pipeshub-mongo:
+    image: ${MONGO_IMAGE:-mongo:7.0.14}
+    profiles: ["standard", "enterprise"]
+    volumes:
+      - pipeshub_mongo_data:/data/db
+    networks:
+      - enclave-net
+
+  weknora:
+    image: ${WEKNORA_IMAGE:-wechatopenai/weknora-app:v0.7.1@sha256:d88bef9912f6abb8bc7c22144ee7f314016055b8075bda4ea8fbb28af41c3bcf}
+    profiles: ["standard", "enterprise"]
+    expose:
+      - "8080"
+    environment:
+      - DB_DRIVER=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${POSTGRES_USER:-postgres}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - DB_NAME=weknora
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+    depends_on:
+      db:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+    networks:
+      - enclave-net
+
+  neo4j:
+    image: ${NEO4J_IMAGE:-neo4j:5.26-community}
+    profiles: ["standard", "enterprise"]
+    expose:
+      - "7474"
+      - "7687"
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-password}
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - enclave-net
+
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.9.0}
+    profiles: ["standard", "enterprise"]
+    expose:
+      - "11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - enclave-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  langfuse:
+    image: ${LANGFUSE_IMAGE:-langfuse/langfuse:2.92.0}
+    profiles: ["standard", "enterprise"]
+    ports:
+      - "${LANGFUSE_PORT:-3002}:3000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/langfuse
+      - NEXTAUTH_SECRET=${LANGFUSE_SECRET:-change-me-in-production}
+      - SALT=${LANGFUSE_SALT:-change-me-in-production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - enclave-net
+
+volumes:
+  ragflow_data:
+  pipeshub_mongo_data:
+  neo4j_data:
+  ollama_data:

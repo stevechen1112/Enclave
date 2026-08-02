@@ -1,0 +1,63 @@
+# ACL evidence source for CV-PH-03 (plan §2.2, decided v1.4).
+#
+# BookStack is used because its PipesHub connector genuinely projects source ACLs:
+# _parse_bookstack_permissions is actually called during sync and emits ROLE/USER
+# permissions with READ/WRITE plus book->chapter->page inheritance. This is an
+# evaluation fixture, not a production dependency.
+#
+#   docker compose -p enclave-acl -f compose/acl-source-bookstack.yml up -d
+#
+# Then http://localhost:8090 (admin@admin.com / password on first boot).
+
+services:
+  bookstack-db:
+    image: ${BOOKSTACK_DB_IMAGE:-mariadb:11.4}
+    container_name: bookstack-db
+    environment:
+      - MARIADB_ROOT_PASSWORD=${BOOKSTACK_DB_ROOT_PASSWORD:-bookstack_root_pw}
+      - MARIADB_DATABASE=bookstackapp
+      - MARIADB_USER=bookstack
+      - MARIADB_PASSWORD=${BOOKSTACK_DB_PASSWORD:-bookstack_pw}
+    volumes:
+      - bookstack_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - acl-net
+
+  bookstack:
+    image: ${BOOKSTACK_IMAGE:-lscr.io/linuxserver/bookstack:latest}
+    container_name: bookstack
+    depends_on:
+      bookstack-db:
+        condition: service_healthy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Taipei
+      - APP_URL=http://localhost:${BOOKSTACK_PORT:-8090}
+      # Must be a base64-encoded 32-byte key; shorter values fail with
+      # "Unsupported cipher or incorrect key length" at request time, not at boot.
+      - APP_KEY=${BOOKSTACK_APP_KEY:-base64:YnlXVmvIy+jI91dloe5+3P6gSJn6vTtILnYrZ2MoX1s=}
+      - DB_HOST=bookstack-db
+      - DB_PORT=3306
+      - DB_DATABASE=bookstackapp
+      - DB_USERNAME=bookstack
+      - DB_PASSWORD=${BOOKSTACK_DB_PASSWORD:-bookstack_pw}
+    ports:
+      - "${BOOKSTACK_PORT:-8090}:80"
+    volumes:
+      - bookstack_app_data:/config
+    networks:
+      - acl-net
+
+volumes:
+  bookstack_db_data:
+  bookstack_app_data:
+
+networks:
+  acl-net:
+    driver: bridge
