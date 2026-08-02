@@ -12,6 +12,7 @@ import {
   Wand2, Plus, Filter
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const TEMPLATES = [
   { id: 'draft_response', label: '函件草稿', icon: '✉️' },
@@ -114,20 +115,27 @@ export default function ReportsPage() {
     }
   }
 
-  const handleDelete = async (report: ReportSummary) => {
-    if (!confirm(`確定要刪除「${report.title}」？此操作無法復原。`)) return
+  const [deleteTarget, setDeleteTarget] = useState<ReportSummary | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
     const token = localStorage.getItem('token')
     if (!token) return
+    setDeleting(true)
     try {
-      const res = await fetch(`/api/v1/generate/reports/${report.id}`, {
+      const res = await fetch(`/api/v1/generate/reports/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error()
       toast.success('已刪除報告')
+      setDeleteTarget(null)
       fetchReports()
     } catch {
       toast.error('刪除失敗')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -185,7 +193,7 @@ export default function ReportsPage() {
     const tpl = getTemplateMeta(report.template)
     return (
       <div
-        onClick={() => navigate(`/reports/${report.id}`)}
+        onClick={() => navigate(`/create/reports/${report.id}`)}
         className="flex items-center gap-4 bg-white border rounded-xl px-4 py-3 hover:border-blue-200 hover:shadow-sm transition cursor-pointer group"
       >
         <span className="text-xl flex-shrink-0">{tpl?.icon ?? '📄'}</span>
@@ -215,7 +223,7 @@ export default function ReportsPage() {
             {report.is_pinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
           </button>
           <button
-            onClick={e => { e.stopPropagation(); handleDelete(report) }}
+            onClick={e => { e.stopPropagation(); setDeleteTarget(report) }}
             className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500"
             title="刪除"
           >
@@ -237,7 +245,7 @@ export default function ReportsPage() {
             <span className="text-sm text-gray-400">{total} 份</span>
           </div>
           <button
-            onClick={() => navigate('/generate')}
+            onClick={() => navigate('/create')}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
           >
             <Plus className="w-4 h-4" /> 新增生成
@@ -333,7 +341,7 @@ export default function ReportsPage() {
             </p>
             {!search && !templateFilter && (
               <button
-                onClick={() => navigate('/generate')}
+                onClick={() => navigate('/create')}
                 className="mt-3 text-sm text-blue-600 hover:underline"
               >
                 前往「內容生成」建立第一份報告
@@ -399,6 +407,16 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        danger
+        busy={deleting}
+        title="刪除此報告？"
+        description={deleteTarget ? `「${deleteTarget.title}」將被移除且無法復原。` : ''}
+        confirmLabel="確認刪除"
+        onCancel={() => !deleting && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

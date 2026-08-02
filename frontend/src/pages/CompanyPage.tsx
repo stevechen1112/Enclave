@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { companyApi } from '../api'
 import {
   Loader2, AlertCircle, Building2, Users, FileText,
   MessageSquare, UserPlus, MoreVertical,
   BarChart3, CheckCircle2,
-  Mail, Eye, EyeOff,
-  Cpu, Cloud,
+  Mail, Eye, EyeOff, Cpu,
 } from 'lucide-react'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { ROLE_LABELS } from '../navigation/capabilities'
 
-type Tab = 'dashboard' | 'users' | 'deployment'
+type Tab = 'dashboard' | 'users'
 
 // ─── Shared ───
 function Loader() {
@@ -67,7 +69,7 @@ function DashboardTab() {
             <h3 className="text-sm font-semibold text-gray-700">系統授權資訊</h3>
             <span className="ml-auto inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">地端版 On-Premise</span>
           </div>
-          <p className="text-sm text-gray-500">智識庫資料在地端獨立運行，未設受使用者數、文件數、API 呼叫次數限制。</p>
+          <p className="text-sm text-gray-500">知識資料在地端獨立運行，未設使用者數、文件數或呼叫次數上限。</p>
         </div>
       )}
     </div>
@@ -117,12 +119,18 @@ function UsersTab() {
     } catch { /* noop */ }
   }
 
-  const handleDeactivate = async (userId: string) => {
-    if (!confirm('確定要停用此使用者？')) return
+  const [deactivateId, setDeactivateId] = useState<string | null>(null)
+  const [deactivating, setDeactivating] = useState(false)
+
+  const handleDeactivate = async () => {
+    if (!deactivateId) return
+    setDeactivating(true)
     try {
-      await companyApi.deactivateUser(userId)
+      await companyApi.deactivateUser(deactivateId)
+      setDeactivateId(null)
       load()
     } catch { /* noop */ }
+    finally { setDeactivating(false) }
   }
 
   if (loading) return <Loader />
@@ -221,13 +229,15 @@ function UsersTab() {
                           onChange={e => setEditRole(e.target.value)}
                           className="rounded border border-gray-300 px-2 py-1 text-xs"
                         >
-                          {roles.map(r => <option key={r} value={r}>{r}</option>)}
+                          {roles.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
                         </select>
                         <button onClick={() => handleUpdateRole(u.id)} className="text-xs text-blue-600 hover:underline">確定</button>
                         <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:underline">取消</button>
                       </div>
                     ) : (
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">{u.role}</span>
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
+                        {ROLE_LABELS[u.role] || u.role}
+                      </span>
                     )}
                   </td>
                   <td className="px-5 py-3">
@@ -241,7 +251,7 @@ function UsersTab() {
                     <div className="relative inline-block">
                       <DropdownMenu
                         onEdit={() => { setEditingId(u.id); setEditRole(u.role || 'employee') }}
-                        onDeactivate={() => handleDeactivate(u.id)}
+                        onDeactivate={() => setDeactivateId(u.id)}
                         disabled={u.role === 'owner'}
                       />
                     </div>
@@ -252,6 +262,16 @@ function UsersTab() {
           </table>
         </div>
       )}
+      <ConfirmDialog
+        open={!!deactivateId}
+        danger
+        busy={deactivating}
+        title="停用此使用者？"
+        description="停用後對方將無法登入。"
+        confirmLabel="確認停用"
+        onCancel={() => !deactivating && setDeactivateId(null)}
+        onConfirm={handleDeactivate}
+      />
     </div>
   )
 }
@@ -277,78 +297,6 @@ function DropdownMenu({ onEdit, onDeactivate, disabled }: { onEdit: () => void; 
   )
 }
 
-function DeploymentTab() {
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [mode, setMode] = useState<'gpu' | 'nogpu'>('nogpu')
-  const [msg, setMsg] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setMsg('')
-    try {
-      const data = await companyApi.getDeploymentMode()
-      setMode((data?.mode || 'nogpu') as 'gpu' | 'nogpu')
-    } catch {
-      setMsg('無法讀取部署模式')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { void load() }, [load])
-
-  const switchMode = async (next: 'gpu' | 'nogpu') => {
-    if (next === mode) return
-    setSaving(true)
-    setMsg('')
-    try {
-      await companyApi.setDeploymentMode(next)
-      setMode(next)
-      setMsg(`已切換為 ${next === 'gpu' ? 'GPU 模式' : '無 GPU 模式'}（下一次請求立即生效）`)
-    } catch (err: any) {
-      setMsg(err.response?.data?.detail || '切換失敗')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  if (loading) return <Loader />
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <h3 className="text-sm font-semibold text-gray-800">部署模式切換（固定策略）</h3>
-        <p className="mt-1 text-sm text-gray-500">切換後會套用固定 LLM preset；不提供自由選模型，避免誤設。</p>
-
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-          <button
-            disabled={saving}
-            onClick={() => switchMode('nogpu')}
-            className={`rounded-xl border p-4 text-left transition ${mode === 'nogpu' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} disabled:opacity-60`}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800"><Cloud className="h-4 w-4" /> 無 GPU（目前雲端設定）</div>
-            <div className="mt-2 text-xs text-gray-600">①② Gemini、③④ Gemini Flash-Lite；其餘維持目前 .env 設定</div>
-          </button>
-
-          <button
-            disabled={saving}
-            onClick={() => switchMode('gpu')}
-            className={`rounded-xl border p-4 text-left transition ${mode === 'gpu' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'} disabled:opacity-60`}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-800"><Cpu className="h-4 w-4" /> 有 GPU（固定本地）</div>
-            <div className="mt-2 text-xs text-gray-600">主模型固定 Gemini（gemini-3-flash-preview）；內部改寫/掃描固定 qwen3:14b；Embedding 固定 bge-m3:latest</div>
-          </button>
-        </div>
-
-        {msg && (
-          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">{msg}</div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── Usage Tab moved to unified UsagePage ───
 
 // ═══ Main Page ═══
@@ -358,16 +306,26 @@ export default function CompanyPage() {
   const tabs: { key: Tab; label: string; icon: typeof Building2 }[] = [
     { key: 'dashboard', label: '總覽', icon: Building2 },
     { key: 'users', label: '成員管理', icon: Users },
-    { key: 'deployment', label: '部署模式', icon: Cpu },
   ]
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-blue-600" />
-          <h1 className="text-lg font-semibold text-gray-900">公司管理</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-blue-600" />
+            <div>
+          <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">組織</h2>
+              <p className="text-sm text-muted">成員與角色 — 決定誰能看什麼</p>
+            </div>
+          </div>
+          <Link
+            to="/system/deploy"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-sm text-muted hover:text-ink"
+          >
+            <Cpu className="h-4 w-4" aria-hidden /> 部署模式（系統）
+          </Link>
         </div>
         <div className="mt-3 flex gap-1">
           {tabs.map(t => (
@@ -388,7 +346,6 @@ export default function CompanyPage() {
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'dashboard' && <DashboardTab />}
         {tab === 'users' && <UsersTab />}
-        {tab === 'deployment' && <DeploymentTab />}
       </div>
     </div>
   )

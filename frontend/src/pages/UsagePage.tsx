@@ -27,6 +27,15 @@ import toast from 'react-hot-toast'
 
 /* ── helpers ──────────────────────────────────────────────────── */
 
+const ACTION_LABELS: Record<string, string> = {
+  chat_query: '問答',
+  document_upload: '文件上傳',
+  document_parse: '文件解析',
+  kb_search: '知識搜尋',
+  embedding: '索引處理',
+  content_generate: '內容生成',
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -124,9 +133,9 @@ function OverviewTab() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={MessageSquare} label="總操作次數" value={summary.total_actions.toLocaleString()} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={Cpu} label="輸入 Tokens" value={summary.total_input_tokens.toLocaleString()} sub={`輸出: ${summary.total_output_tokens.toLocaleString()}`} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={Database} label="向量查詢" value={summary.total_pinecone_queries.toLocaleString()} sub={`Embedding: ${summary.total_embedding_calls.toLocaleString()}`} color="bg-green-50 text-green-600" />
-        <StatCard icon={Coins} label="預估成本" value={`$${summary.total_cost.toFixed(4)}`} sub="USD" color="bg-amber-50 text-amber-600" />
+        <StatCard icon={Cpu} label="輸入用量" value={summary.total_input_tokens.toLocaleString()} sub={`輸出：${summary.total_output_tokens.toLocaleString()}`} color="bg-purple-50 text-purple-600" />
+        <StatCard icon={Database} label="知識檢索" value={summary.total_pinecone_queries.toLocaleString()} sub={`索引處理：${summary.total_embedding_calls.toLocaleString()}`} color="bg-green-50 text-green-600" />
+        <StatCard icon={Coins} label="預估費用" value={`$${summary.total_cost.toFixed(4)}`} sub="USD（內部估算）" color="bg-amber-50 text-amber-600" />
       </div>
 
       {/* By action type */}
@@ -140,16 +149,18 @@ function OverviewTab() {
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <th className="px-5 py-3">操作類型</th>
                 <th className="px-5 py-3 text-right">次數</th>
-                <th className="px-5 py-3 text-right">輸入 Tokens</th>
-                <th className="px-5 py-3 text-right">輸出 Tokens</th>
-                <th className="px-5 py-3 text-right">預估成本</th>
+                <th className="px-5 py-3 text-right">輸入用量</th>
+                <th className="px-5 py-3 text-right">輸出用量</th>
+                <th className="px-5 py-3 text-right">預估費用</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {byAction.map(item => (
                 <tr key={item.action_type} className="hover:bg-gray-50">
                   <td className="px-5 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">{item.action_type}</span>
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                      {ACTION_LABELS[item.action_type] || item.action_type}
+                    </span>
                   </td>
                   <td className="px-5 py-3 text-right text-sm text-gray-700 font-medium">{item.count.toLocaleString()}</td>
                   <td className="px-5 py-3 text-right text-sm text-gray-500">{item.total_input_tokens.toLocaleString()}</td>
@@ -195,7 +206,7 @@ function DepartmentTab() {
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard icon={MessageSquare} label="總查詢數" value={fmtNum(report.total_queries)} color="bg-blue-50 text-blue-600" />
           <StatCard icon={Cpu} label="總生成次數" value={fmtNum(report.total_generations)} color="bg-purple-50 text-purple-600" />
-          <StatCard icon={BarChart3} label="Token 使用量" value={fmtNum(report.total_tokens)} color="bg-amber-50 text-amber-600" />
+          <StatCard icon={BarChart3} label="用量合計" value={fmtNum(report.total_tokens)} color="bg-amber-50 text-amber-600" />
           <StatCard icon={Users} label="活躍使用者" value={report.active_users} color="bg-green-50 text-green-600" />
         </div>
         <div className="flex items-center gap-2">
@@ -235,7 +246,7 @@ function DepartmentTab() {
                 <th className="pb-2 font-medium">部門</th>
                 <th className="pb-2 font-medium text-right">查詢</th>
                 <th className="pb-2 font-medium text-right">生成</th>
-                <th className="pb-2 font-medium text-right">Token</th>
+                <th className="pb-2 font-medium text-right">用量</th>
                 <th className="pb-2 font-medium text-right">使用者</th>
               </tr></thead>
               <tbody>
@@ -324,9 +335,9 @@ function MembersTab() {
       {/* Summary */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={BarChart3} label="總操作數" value={summary.total_actions} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={MessageSquare} label="總 Token" value={(summary.total_input_tokens + summary.total_output_tokens).toLocaleString()} color="bg-green-50 text-green-600" />
-        <StatCard icon={Database} label="向量查詢" value={summary.total_pinecone_queries} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={Coins} label="估計成本" value={`$${summary.total_cost?.toFixed(4) || '0'}`} color="bg-amber-50 text-amber-600" />
+        <StatCard icon={MessageSquare} label="總用量" value={(summary.total_input_tokens + summary.total_output_tokens).toLocaleString()} color="bg-green-50 text-green-600" />
+        <StatCard icon={Database} label="知識檢索" value={summary.total_pinecone_queries} color="bg-purple-50 text-purple-600" />
+        <StatCard icon={Coins} label="預估費用" value={`$${summary.total_cost?.toFixed(4) || '0'}`} color="bg-amber-50 text-amber-600" />
       </div>
 
       {/* By user */}
@@ -340,8 +351,8 @@ function MembersTab() {
               <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <th className="px-5 py-3">成員</th>
                 <th className="px-5 py-3 text-right">查詢次數</th>
-                <th className="px-5 py-3 text-right">Token</th>
-                <th className="px-5 py-3 text-right">成本</th>
+                <th className="px-5 py-3 text-right">用量</th>
+                <th className="px-5 py-3 text-right">預估費用</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -367,14 +378,6 @@ function MembersTab() {
 /* ════════════════════════════════════════════════════════════════
    Tab 4 — 我的用量（全員可見）
    ════════════════════════════════════════════════════════════════ */
-
-const ACTION_LABELS: Record<string, string> = {
-  chat_query: 'AI 問答',
-  document_upload: '文件上傳',
-  document_parse: '文件解析',
-  kb_search: '知識庫搜尋',
-  embedding: '向量化',
-}
 
 interface PersonalUsage {
   total_queries: number
@@ -423,9 +426,9 @@ function PersonalTab() {
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={MessageSquare} label="總操作次數" value={usage?.total_queries?.toLocaleString() ?? '0'} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={Cpu} label="輸入 Tokens" value={usage?.total_input_tokens?.toLocaleString() ?? '0'} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={Cpu} label="輸出 Tokens" value={usage?.total_output_tokens?.toLocaleString() ?? '0'} color="bg-indigo-50 text-indigo-600" />
-        <StatCard icon={Coins} label="估算費用" value={`$${(usage?.total_cost_usd ?? 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
+        <StatCard icon={Cpu} label="輸入用量" value={usage?.total_input_tokens?.toLocaleString() ?? '0'} color="bg-purple-50 text-purple-600" />
+        <StatCard icon={Cpu} label="輸出用量" value={usage?.total_output_tokens?.toLocaleString() ?? '0'} color="bg-indigo-50 text-indigo-600" />
+        <StatCard icon={Coins} label="內部估算" value={`$${(usage?.total_cost_usd ?? 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
       </div>
 
       {/* By action type */}
@@ -440,9 +443,9 @@ function PersonalTab() {
                 <tr className="border-b border-gray-100 text-left">
                   <th className="px-6 py-3 text-xs font-medium text-gray-500">操作類型</th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">次數</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸入 Tokens</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸出 Tokens</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">費用 (USD)</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸入用量</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸出用量</th>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">內部估算</th>
                 </tr>
               </thead>
               <tbody>
@@ -517,7 +520,7 @@ export default function UsagePage() {
           <h1 className="text-lg font-semibold text-gray-900">用量統計</h1>
         </div>
         <p className="text-sm text-gray-500 mb-3">
-          {isAdmin ? 'API 消耗、部門分佈、成員明細一站式查看' : '您的個人使用統計'}
+          {isAdmin ? '組織用量、部門分佈與成員明細' : '你最近的問答與操作次數'}
         </p>
         {tabs.length > 1 && (
           <div className="flex gap-1">

@@ -1,89 +1,67 @@
 import { useState } from 'react'
 import type { ChatSource } from '../../types'
-import { ClipboardList, Scale, ChevronDown, ChevronUp } from 'lucide-react'
-import clsx from 'clsx'
+import { ChevronDown, ChevronUp, Copy, Check } from 'lucide-react'
+import EvidenceCard from '../EvidenceCard'
+import toast from 'react-hot-toast'
 
 interface Props {
   sources: ChatSource[]
+  /** Prefer open by default for trust-first UX */
+  defaultOpen?: boolean
 }
 
-/**
- * T7-4: 來源展開面板
- * 顯示公司內規 / 勞動法規來源，可收合展開 snippet
- */
-export default function SourcePanel({ sources }: Props) {
-  const [expanded, setExpanded] = useState(false)
+export default function SourcePanel({ sources, defaultOpen = true }: Props) {
+  const [expanded, setExpanded] = useState(defaultOpen)
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
 
   if (!sources || sources.length === 0) return null
 
-  const policySources = sources.filter(s => s.type === 'policy')
-  const lawSources = sources.filter(s => s.type === 'law')
+  const copyCite = async (source: ChatSource, index: number) => {
+    const text = `「${source.title}」${source.snippet ? `：${source.snippet.slice(0, 200)}` : ''}`
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedIdx(index)
+      toast.success('已複製引用')
+      setTimeout(() => setCopiedIdx(null), 1500)
+    } catch {
+      toast.error('複製失敗')
+    }
+  }
 
   return (
-    <div className="mt-2 border-t border-gray-100 pt-2">
+    <div className="mt-3 border-t border-line pt-3">
       <button
+        type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        className="flex w-full min-h-11 items-center justify-between gap-2 text-left text-xs font-medium text-accent hover:text-accent-hover"
+        aria-expanded={expanded}
+        aria-label={`證據 ${sources.length} 則，${expanded ? '收合' : '展開'}`}
       >
-        <span>參考來源 ({sources.length})</span>
-        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        <span>證據（{sources.length}）</span>
+        {expanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
       </button>
 
       {expanded && (
-        <div className="mt-2 space-y-2 animate-fade-in">
-          {policySources.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1 text-xs font-medium text-blue-600 mb-1">
-                <ClipboardList className="h-3 w-3" />
-                公司內規
-              </div>
-              {policySources.map((s, i) => (
-                <SourceCard key={`policy-${i}`} source={s} />
-              ))}
+        <div className="mt-2 space-y-2 animate-fade-in" role="list">
+          {sources.map((s, i) => (
+            <div key={`${s.document_id || s.title}-${i}`} role="listitem" className="relative">
+              <EvidenceCard source={s} index={i + 1} />
+              <button
+                type="button"
+                onClick={() => copyCite(s, i)}
+                className="absolute right-2 top-2 rounded p-1.5 text-muted hover:bg-wash hover:text-ink"
+                aria-label={`複製引用 ${i + 1}`}
+              >
+                {copiedIdx === i
+                  ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+                  : <Copy className="h-3.5 w-3.5" aria-hidden />}
+              </button>
             </div>
-          )}
-          {lawSources.length > 0 && (
-            <div>
-              <div className="flex items-center gap-1 text-xs font-medium text-emerald-600 mb-1">
-                <Scale className="h-3 w-3" />
-                勞動法規
-              </div>
-              {lawSources.map((s, i) => (
-                <SourceCard key={`law-${i}`} source={s} />
-              ))}
-            </div>
-          )}
+          ))}
+          <p className="text-[11px] text-muted">
+            相似度僅供參考檢索相關度，不代表答案正確率。
+          </p>
         </div>
-      )}
-    </div>
-  )
-}
-
-function SourceCard({ source }: { source: ChatSource }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div
-      className={clsx(
-        'rounded-lg border px-3 py-2 text-xs cursor-pointer transition-colors',
-        source.type === 'policy'
-          ? 'border-blue-100 bg-blue-50/50 hover:bg-blue-50'
-          : 'border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50'
-      )}
-      onClick={() => setOpen(!open)}
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-medium text-gray-700 truncate">{source.title}</span>
-        {source.score != null && (
-          <span className="ml-2 shrink-0 text-gray-400">
-            {Math.round(source.score * 100)}%
-          </span>
-        )}
-      </div>
-      {open && source.snippet && (
-        <p className="mt-1.5 text-gray-500 leading-relaxed whitespace-pre-wrap">
-          {source.snippet}
-        </p>
       )}
     </div>
   )

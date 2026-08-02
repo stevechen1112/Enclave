@@ -1,27 +1,39 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { docApi, kbApi } from '../api'
 import api from '../api'
 import { useAuth } from '../auth'
 import type { Document } from '../types'
-import { Upload, FileText, Trash2, Loader2, CheckCircle, AlertCircle, Clock, RefreshCw, Filter, History, X, GitBranch } from 'lucide-react'
+import { Upload, FileText, Trash2, Loader2, Clock, RefreshCw, Filter, History, X, GitBranch } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { format } from 'date-fns'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
-
-const statusConfig: Record<string, { label: string; color: string; icon: typeof Loader2 }> = {
-  uploading: { label: '上傳中', color: 'text-yellow-600 bg-yellow-50', icon: Loader2 },
-  parsing: { label: '解析中', color: 'text-blue-600 bg-blue-50', icon: Loader2 },
-  embedding: { label: '向量化中', color: 'text-purple-600 bg-purple-50', icon: Loader2 },
-  completed: { label: '完成', color: 'text-green-600 bg-green-50', icon: CheckCircle },
-  failed: { label: '失敗', color: 'text-red-600 bg-red-50', icon: AlertCircle },
-}
+import LifecycleBadge from '../components/LifecycleBadge'
+import ConfirmDialog from '../components/ConfirmDialog'
+import AsyncState from '../components/AsyncState'
+import { hasCapability } from '../navigation/capabilities'
+import { parseApiError, formatErrorWithTrace, type ApiErrorInfo } from '../api'
 
 function formatFileSize(bytes: number | null) {
   if (!bytes) return '-'
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+/** User-facing source label (UIUX §9.5) — prefer source_system over default file type */
+function documentSourceLabel(doc: Document): string {
+  const sys = (doc.source_system || '').toLowerCase()
+  const typ = (doc.source_type || '').toLowerCase()
+  if (sys === 'nas_smb' || sys.includes('nas')) return 'NAS'
+  if (sys.includes('sharepoint')) return 'SharePoint'
+  if (sys.includes('google') || sys.includes('drive')) return 'Google Drive'
+  if (sys === 'upload' || sys === 'manual') return '上傳'
+  if (typ === 'web') return '網頁'
+  if (sys) return '來源系統'
+  if (typ === 'connector') return '來源系統'
+  return '上傳'
 }
 
 export default function DocumentsPage() {
@@ -35,7 +47,11 @@ export default function DocumentsPage() {
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
   const [selectedDept, setSelectedDept] = useState<string>('')
 
-  const canManage = ['owner', 'admin', 'hr'].includes(user?.role ?? '')
+  const canManage = hasCapability(user?.role, 'upload_documents', user?.is_superuser)
+  const [revokeTarget, setRevokeTarget] = useState<Document | null>(null)
+  const [revoking, setRevoking] = useState(false)
+  const [listError, setListError] = useState<ApiErrorInfo | null>(null)
+  const [lastRevokeTrace, setLastRevokeTrace] = useState<string | null>(null)
 
   // ── Version history drawer ──
   const [versionDoc, setVersionDoc] = useState<Document | null>(null)
@@ -51,8 +67,10 @@ export default function DocumentsPage() {
     try {
       const data = await kbApi.listVersions(doc.id)
       setVersions(Array.isArray(data) ? data : (data.versions ?? []))
-    } catch { setVersions([]) }
-    finally { setVersionLoading(false) }
+    } catch (err) {
+      setVersions([])
+      toast.error(formatErrorWithTrace(parseApiError(err, '無法載入版本記錄')))
+    } finally { setVersionLoading(false) }
   }
 
   const handleReupload = async () => {
@@ -64,24 +82,28 @@ export default function DocumentsPage() {
       setReuploadFile(null); setReuploadNote('')
       await openVersions(versionDoc)
       loadDocs()
-    } catch { toast.error('上傳失敗') }
-    finally { setReuploading(false) }
+    } catch (err) {
+      toast.error(formatErrorWithTrace(parseApiError(err, '上傳失敗')))
+    } finally { setReuploading(false) }
   }
 
   // Load departments for filter
   useEffect(() => {
     api.get<{ id: string; name: string }[]>('/departments/')
       .then(r => setDepartments(r.data))
-      .catch(() => {})
+      .catch((err) => {
+        toast.error(formatErrorWithTrace(parseApiError(err, '無法載入部門篩選')))
+      })
   }, [])
 
   const loadDocs = useCallback(async () => {
     try {
       const params = selectedDept ? { department_id: selectedDept } : undefined
-      const list = await docApi.list(params)
+      const list = await docApi.listAll(params)
       setDocs(list)
-    } catch {
-      // ignore
+      setListError(null)
+    } catch (err) {
+      setListError(parseApiError(err, '無法載入文件列表'))
     } finally {
       setLoading(false)
     }
@@ -91,7 +113,9 @@ export default function DocumentsPage() {
 
   // Poll for processing status
   useEffect(() => {
-    const processing = docs.some(d => ['uploading', 'parsing', 'embedding'].includes(d.status))
+    const processing = docs.some(d =>
+      ['uploading', 'parsing', 'embedding', 'processing', 'pending_review'].includes(d.status),
+    )
     if (!processing) return
     const timer = setInterval(loadDocs, 3000)
     return () => clearInterval(timer)
@@ -140,14 +164,20 @@ export default function DocumentsPage() {
     multiple: true,
   })
 
-  const handleDelete = async (doc: Document) => {
-    if (!confirm(`確定要刪除「${doc.filename}」？此操作無法復原。`)) return
+  const handleRevoke = async () => {
+    if (!revokeTarget) return
+    setRevoking(true)
     try {
-      await docApi.delete(doc.id)
-      setDocs(prev => prev.filter(d => d.id !== doc.id))
-      toast.success('文件已刪除')
-    } catch {
-      toast.error('刪除失敗')
+      await docApi.delete(revokeTarget.id)
+      const trace = revokeTarget.id
+      setDocs(prev => prev.filter(d => d.id !== revokeTarget.id))
+      setLastRevokeTrace(trace)
+      toast.success(`知識已撤銷：問答將立即無法引用（追蹤：${trace.slice(0, 8)}…）`)
+      setRevokeTarget(null)
+    } catch (err) {
+      toast.error(formatErrorWithTrace(parseApiError(err, '撤銷失敗，請稍後重試')))
+    } finally {
+      setRevoking(false)
     }
   }
 
@@ -156,8 +186,8 @@ export default function DocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">文件管理</h1>
-          <p className="text-sm text-gray-500">{docs.length} 個文件</p>
+          <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">文件</h2>
+          <p className="text-sm text-muted">{docs.length} 份 · 狀態顯示是否可被問到</p>
         </div>
         <div className="flex items-center gap-3">
           {departments.length > 0 && (
@@ -175,13 +205,24 @@ export default function DocumentsPage() {
               </select>
             </div>
           )}
-          <button onClick={loadDocs} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors" title="重新整理">
-            <RefreshCw className="h-4 w-4" />
+          <button
+            type="button"
+            onClick={() => { setLoading(true); loadDocs() }}
+            className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors min-h-11 min-w-11"
+            aria-label="重新整理"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden />
           </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {lastRevokeTrace && (
+          <p className="rounded-lg border border-line bg-wash px-3 py-2 text-xs text-muted">
+            最近撤銷追蹤：<span className="font-mono text-ink">{lastRevokeTrace}</span>
+            （問答立即不可見；投影可能稍後收斂）
+          </p>
+        )}
         {/* Upload zone */}
         {canManage && (
           <div
@@ -214,79 +255,96 @@ export default function DocumentsPage() {
           </div>
         )}
 
-        {/* Document list */}
-        {loading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
-        ) : docs.length === 0 ? (
-          <div className="flex flex-col items-center py-12 text-gray-400">
-            <FileText className="mb-3 h-10 w-10" />
-            <p className="text-sm">尚無文件</p>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <table className="w-full">
+        <AsyncState
+          loading={loading}
+          error={listError}
+          onRetry={() => { setLoading(true); loadDocs() }}
+          empty={!listError && docs.length === 0}
+          emptyTitle="尚無可存取的文件"
+          emptyDescription={canManage ? '上傳第一份文件，或到「來源」接上 NAS／監控資料夾。' : '目前沒有你可存取的知識文件。'}
+          emptyActionLabel={canManage ? '了解來源設定' : undefined}
+          onEmptyAction={canManage ? () => { window.location.href = '/knowledge/sources' } : undefined}
+        >
+          <div className="overflow-x-auto rounded-2xl border border-line/80 bg-surface shadow-sm">
+            <table className="w-full min-w-[720px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  <th className="px-4 py-3">文件名稱</th>
-                  <th className="px-4 py-3">類型</th>
-                  <th className="px-4 py-3">大小</th>
-                  <th className="px-4 py-3">狀態</th>
-                  <th className="px-4 py-3">切片數</th>
-                  <th className="px-4 py-3">上傳時間</th>
-                  {canManage && <th className="px-4 py-3 w-16"></th>}
+                <tr className="border-b border-line/80 bg-wash/70 text-left text-[11px] font-medium tracking-wide text-muted">
+                  <th className="px-4 py-3.5">名稱</th>
+                  <th className="px-4 py-3.5">來源</th>
+                  <th className="px-4 py-3.5">部門</th>
+                  <th className="px-4 py-3.5">生命週期</th>
+                  <th className="px-4 py-3.5">版本</th>
+                  <th className="px-4 py-3.5">最近更新</th>
+                  <th className="px-4 py-3.5">被引用</th>
+                  {canManage && <th className="px-4 py-3.5 w-16"></th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-line/70">
                 {docs.map(doc => {
-                  const st = statusConfig[doc.status] || statusConfig.failed
-                  const StatusIcon = st.icon
+                  const deptName = departments.find(d => d.id === doc.department_id)?.name
+                  const versionLabel =
+                    doc.external_version ||
+                    (doc.version != null ? String(doc.version) : null)
                   return (
-                    <tr key={doc.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
+                    <tr key={doc.id} className="transition-colors hover:bg-wash/50">
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-gray-400 shrink-0" />
-                          <span className="text-sm font-medium text-gray-900 truncate max-w-[200px]">{doc.filename}</span>
+                          <FileText className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+                          <Link
+                            to={`/knowledge/documents/${doc.id}`}
+                            className="max-w-[200px] truncate text-sm font-medium text-ink hover:text-accent hover:underline"
+                          >
+                            {doc.filename}
+                          </Link>
                           {doc.is_new && (
-                            <span className="inline-flex shrink-0 items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">
-                              NEW
+                            <span className="inline-flex shrink-0 items-center rounded-md bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">
+                              新
                             </span>
                           )}
                         </div>
                         {doc.error_message && (
-                          <p className="mt-0.5 text-xs text-red-500 truncate max-w-[250px]">{doc.error_message}</p>
+                          <p className="mt-0.5 max-w-[250px] truncate text-xs text-danger">{doc.error_message}</p>
                         )}
+                        <p className="mt-0.5 text-[11px] text-muted">{doc.file_type || '—'} · {formatFileSize(doc.file_size)}</p>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500 uppercase">{doc.file_type || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{formatFileSize(doc.file_size)}</td>
-                      <td className="px-4 py-3">
-                        <span className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', st.color)}>
-                          <StatusIcon className={clsx('h-3 w-3', ['uploading','parsing','embedding'].includes(doc.status) && 'animate-spin')} />
-                          {st.label}
-                        </span>
+                      <td className="px-4 py-3.5 text-sm text-muted">{documentSourceLabel(doc)}</td>
+                      <td className="px-4 py-3.5 text-sm text-muted">{deptName || '—'}</td>
+                      <td className="px-4 py-3.5">
+                        <LifecycleBadge status={doc.status} />
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">{doc.chunk_count ?? '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
+                      <td className="px-4 py-3.5 text-sm text-muted">{versionLabel || '—'}</td>
+                      <td className="px-4 py-3.5 text-sm text-muted">
                         <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {doc.created_at ? format(new Date(doc.created_at), 'yyyy/MM/dd HH:mm') : '-'}
+                          <Clock className="h-3 w-3" aria-hidden />
+                          {(doc.updated_at || doc.created_at)
+                            ? format(new Date(doc.updated_at || doc.created_at!), 'yyyy/MM/dd HH:mm')
+                            : '—'}
                         </div>
+                      </td>
+                      <td
+                        className="px-4 py-3.5 text-sm text-muted/70"
+                        title="引用計數契約待補"
+                      >
+                        —
                       </td>
                       {canManage && (
                         <td className="px-4 py-3">
                           <div className="flex gap-1">
                             <button
+                              type="button"
                               onClick={() => openVersions(doc)}
-                              className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
-                              title="版本記錄"
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-500 transition-colors min-h-11 min-w-11"
+                              aria-label={`版本記錄 ${doc.filename}`}
                             >
-                              <GitBranch className="h-4 w-4" />
+                              <GitBranch className="h-4 w-4" aria-hidden />
                             </button>
                             <button
-                              onClick={() => handleDelete(doc)}
-                              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                              title="刪除"
+                              type="button"
+                              onClick={() => setRevokeTarget(doc)}
+                              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors min-h-11 min-w-11"
+                              aria-label={`撤銷知識 ${doc.filename}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
                         </td>
@@ -297,24 +355,49 @@ export default function DocumentsPage() {
               </tbody>
             </table>
           </div>
-        )}
+        </AsyncState>
       </div>
+
+      <ConfirmDialog
+        open={!!revokeTarget}
+        danger
+        busy={revoking}
+        title="撤銷此知識？"
+        description={
+          revokeTarget
+            ? `「${revokeTarget.filename}」將立即停止出現在問答與搜尋中。後端投影可能稍後收斂；這不是單純的本機刪除。追蹤識別：${revokeTarget.id}`
+            : ''
+        }
+        confirmLabel="確認撤銷"
+        onCancel={() => !revoking && setRevokeTarget(null)}
+        onConfirm={handleRevoke}
+      />
 
       {/* Version History Drawer */}
       {versionDoc && (
-        <div className="fixed inset-0 z-40 flex">
-          <div className="flex-1 bg-black/30" onClick={() => setVersionDoc(null)} />
-          <div className="w-full max-w-md bg-white shadow-xl flex flex-col">
+        <div className="fixed inset-0 z-40 flex" role="presentation">
+          <div className="flex-1 bg-black/30" onClick={() => setVersionDoc(null)} aria-hidden />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="version-drawer-title"
+            className="w-full max-w-md bg-white shadow-xl flex flex-col"
+          >
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
                 <div className="flex items-center gap-2">
-                  <History className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-sm font-semibold text-gray-900">版本記錄</h2>
+                  <History className="h-5 w-5 text-blue-600" aria-hidden />
+                  <h2 id="version-drawer-title" className="text-sm font-semibold text-gray-900">版本記錄</h2>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[280px]">{versionDoc.filename}</p>
               </div>
-              <button onClick={() => setVersionDoc(null)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                <X className="h-5 w-5" />
+              <button
+                type="button"
+                onClick={() => setVersionDoc(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg min-h-11 min-w-11"
+                aria-label="關閉版本記錄"
+              >
+                <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
 

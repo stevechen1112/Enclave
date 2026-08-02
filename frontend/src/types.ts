@@ -24,17 +24,55 @@ export interface Document {
   id: string
   filename: string
   file_type: string | null
-  status: string // uploading | parsing | embedding | completed | failed
+  status: string // uploading | parsing | embedding | completed | failed | pending_review
   tenant_id: string
   uploaded_by: string | null
   department_id: string | null
   file_size: number | null
   chunk_count: number | null
   error_message: string | null
+  source_type?: string | null
+  source_system?: string | null
+  version?: number | null
+  external_version?: string | null
+  tombstoned_at?: string | null
   created_at: string | null
   updated_at: string | null
   /** P10-3: true 若文件於 7 天內新增或重新索引 */
   is_new: boolean
+}
+
+export interface ExperienceBootstrap {
+  product: {
+    name: string
+    version_label: string
+    maturity: string
+    maturity_label: string
+  }
+  user: {
+    id: string
+    email: string
+    full_name: string | null
+    role: string
+    tenant_id: string | null
+    is_superuser: boolean
+  }
+  capabilities: string[]
+  default_home: string
+  packs: Record<string, {
+    enabled?: boolean
+    state?: string
+    label?: string
+    items?: string[]
+    not_certified?: string[]
+  }>
+  inference: {
+    mode: string
+    main_provider: string
+    data_stays_on_prem_for_inference: boolean
+    message: string
+  }
+  features: Record<string, boolean>
 }
 
 // ─── Chat ───
@@ -75,12 +113,13 @@ export interface Message {
 }
 
 // ─── T7-1 SSE Streaming ───
-export type SSEEventType = 'status' | 'sources' | 'token' | 'suggestions' | 'done' | 'error'
+export type SSEEventType = 'status' | 'sources' | 'token' | 'suggestions' | 'done' | 'error' | 'retrieval'
 
 export interface SSEEvent {
   type: SSEEventType
   content?: string
   sources?: ChatSource[]
+  retrieval?: RetrievalInfo
   items?: string[]
   message_id?: string
   conversation_id?: string
@@ -92,8 +131,20 @@ export interface ChatSource {
   title: string          // display — mapped from backend `filename`
   snippet: string        // display — mapped from backend `content`
   document_id?: string
+  document_revision?: string | number | null
+  provider?: string | null
+  updated_at?: string | null
   score?: number
   chunk_index?: number
+  page?: number | null
+  accessible?: boolean
+}
+
+export interface RetrievalInfo {
+  mode: string
+  degraded: boolean
+  request_id?: string
+  label?: string
 }
 
 // ─── T7-5 Feedback ───

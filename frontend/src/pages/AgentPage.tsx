@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import api, { docApi, agentApi } from '../api'
 import { useAuth } from '../auth'
 import {
@@ -22,6 +22,8 @@ import {
   Download,
 } from 'lucide-react'
 import clsx from 'clsx'
+import ConfirmDialog from '../components/ConfirmDialog'
+import toast from 'react-hot-toast'
 
 // Wizard sub-components
 import WizardStepSelect from './wizard/WizardStepSelect'
@@ -294,7 +296,7 @@ const STATUS_LABEL: Record<string, string> = {
   approved: '已核准',
   modified: '修改確認',
   rejected: '已拒絕',
-  processing: '向量化中',
+  processing: '處理中',
   indexed: '已入庫',
   failed: '失敗',
 }
@@ -402,7 +404,7 @@ function ProgressTab({ agentStatus, loading: parentLoading }: { agentStatus: Age
         {[
           { icon: FileText, label: '已入庫文件', value: isLoading ? '—' : indexedCount.toLocaleString(), color: 'bg-green-100 text-green-600' },
           { icon: Clock, label: '待審核', value: isLoading ? '—' : pendingCount.toLocaleString(), color: 'bg-orange-100 text-orange-600' },
-          { icon: BarChart2, label: '向量化中', value: isLoading ? '—' : processingCount.toLocaleString(), color: 'bg-purple-100 text-purple-600' },
+          { icon: BarChart2, label: '處理中', value: isLoading ? '—' : processingCount.toLocaleString(), color: 'bg-purple-100 text-purple-600' },
           { icon: FileText, label: '總提案數', value: isLoading ? '—' : totalDocs.toLocaleString(), color: 'bg-blue-100 text-blue-600' },
         ].map(({ icon: Icon, label, value, color }) => (
           <div key={label} className="rounded-xl border border-gray-200 bg-white p-4">
@@ -417,7 +419,7 @@ function ProgressTab({ agentStatus, loading: parentLoading }: { agentStatus: Age
 
       {/* Agent status */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <h2 className="mb-3 font-semibold text-gray-800">Agent 狀態</h2>
+        <h2 className="mb-3 font-semibold text-gray-800">監控狀態</h2>
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
             {agentStatus?.watcher_running ? <CheckCircle className="h-4 w-4 text-green-500" /> : <AlertCircle className="h-4 w-4 text-gray-400" />}
@@ -465,7 +467,7 @@ function ProgressTab({ agentStatus, loading: parentLoading }: { agentStatus: Age
         ) : Object.keys(summary).length === 0 ? (
           <div className="flex flex-col items-center py-10 text-gray-400">
             <BarChart2 className="mb-2 h-10 w-10 opacity-30" />
-            <p className="text-sm">尚無紀錄，Agent 啟動後自動統計</p>
+            <p className="text-sm">尚無紀錄，啟用監控後會自動統計</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -500,7 +502,7 @@ function ProgressTab({ agentStatus, loading: parentLoading }: { agentStatus: Age
         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-4">
           <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
           <div className="text-sm text-red-700">
-            <p className="font-medium">有 {summary['failed']} 個文件向量化失敗</p>
+            <p className="font-medium">有 {summary['failed']} 個文件處理失敗</p>
             <p className="mt-0.5 text-xs">請檢查 Celery Worker 日誌，或重新觸發批次重建索引。</p>
           </div>
         </div>
@@ -558,10 +560,21 @@ export default function AgentPage() {
     try { await api.post('/agent/scan'); await reload() } finally { setActing(false) }
   }
 
-  const handleDeleteFolder = async (id: string) => {
-    if (!confirm('確定移除此監控資料夾設定？')) return
-    await api.delete(`/agent/folders/${id}`)
-    await reload()
+  const [deleteFolderId, setDeleteFolderId] = useState<string | null>(null)
+  const [deletingFolder, setDeletingFolder] = useState(false)
+
+  const handleDeleteFolder = async () => {
+    if (!deleteFolderId) return
+    setDeletingFolder(true)
+    try {
+      await api.delete(`/agent/folders/${deleteFolderId}`)
+      setDeleteFolderId(null)
+      await reload()
+    } catch {
+      toast.error('移除失敗')
+    } finally {
+      setDeletingFolder(false)
+    }
   }
 
   const handleToggleFolder = async (id: string) => {
@@ -577,8 +590,16 @@ export default function AgentPage() {
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-semibold text-gray-900">智能索引 Agent</h1>
-            <p className="text-sm text-gray-500">監控本機資料夾，自動發現並分類新文件</p>
+            <h1 className="text-lg font-semibold text-gray-900">資料夾監控（進階）</h1>
+            <p className="text-sm text-gray-500">
+              監控本機資料夾，自動發現並分類新文件。日常設定請優先使用「知識 → 來源」。
+            </p>
+            <Link
+              to="/knowledge/sources"
+              className="mt-1 inline-flex text-sm text-accent underline"
+            >
+              回到來源設定
+            </Link>
           </div>
           <div className="flex items-center gap-2">
             {running ? (
@@ -700,7 +721,7 @@ export default function AgentPage() {
                 <div className="flex flex-col items-center py-12 text-gray-400">
                   <FolderOpen className="mb-3 h-12 w-12 opacity-30" />
                   <p>尚未設定監控資料夾</p>
-                  <p className="mt-1 text-sm">新增資料夾後，Agent 將自動發現並分類其中的文件</p>
+                  <p className="mt-1 text-sm">新增資料夾後，系統會自動發現並分類其中的文件</p>
                 </div>
               ) : (
                 <table className="w-full">
@@ -743,8 +764,9 @@ export default function AgentPage() {
                         </td>
                         <td className="px-5 py-3 text-right">
                           <button
-                            onClick={() => handleDeleteFolder(f.id)}
+                            onClick={() => setDeleteFolderId(f.id)}
                             className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            aria-label="移除監控資料夾"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -788,6 +810,16 @@ export default function AgentPage() {
           onAdded={reload}
         />
       )}
+      <ConfirmDialog
+        open={!!deleteFolderId}
+        danger
+        busy={deletingFolder}
+        title="移除此監控資料夾？"
+        description="僅移除監控設定，不會自動撤銷已入庫知識。"
+        confirmLabel="確認移除"
+        onCancel={() => !deletingFolder && setDeleteFolderId(null)}
+        onConfirm={handleDeleteFolder}
+      />
     </div>
   )
 }

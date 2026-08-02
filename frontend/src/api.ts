@@ -2,9 +2,10 @@ import axios from 'axios'
 import type {
   User, Document, ChatRequest, ChatResponse,
   Conversation, Message, UsageSummary, UsageByAction,
-  UsageRecord, AuditLog,
+  UsageRecord, AuditLog, ExperienceBootstrap,
   SSEEvent, FeedbackCreate, FeedbackResponse, SearchResult,
 } from './types'
+import { parseApiError } from './lib/apiError'
 
 const api = axios.create({ baseURL: '/api/v1' })
 
@@ -15,7 +16,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// ─── Response interceptor: auto-logout on 401 ───
+// ─── Response interceptor: 401 logout + attach normalized ApiErrorInfo ───
 api.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -23,9 +24,13 @@ api.interceptors.response.use(
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
+    err.apiError = parseApiError(err)
     return Promise.reject(err)
   },
 )
+
+export { parseApiError, formatErrorWithTrace } from './lib/apiError'
+export type { ApiErrorInfo } from './lib/apiError'
 
 // ─── Auth ───
 export const authApi = {
@@ -39,6 +44,7 @@ export const authApi = {
     return data
   },
   me: () => api.get<User>('/users/me').then(r => r.data),
+  experience: () => api.get<ExperienceBootstrap>('/experience/bootstrap').then(r => r.data),
 }
 
 // ─── Documents ───
@@ -68,7 +74,26 @@ export const docApi = {
     return promise
   },
 
-  list: (params?: { department_id?: string }) => api.get<Document[]>('/documents/', { params }).then(r => r.data),
+  list: (params?: { department_id?: string; skip?: number; limit?: number }) =>
+    api.get<Document[]>('/documents/', { params }).then(r => r.data),
+  /** Paginate past default limit=100 so list UIs see full tenant corpus. */
+  listAll: async (params?: { department_id?: string; pageSize?: number; maxPages?: number }) => {
+    const pageSize = params?.pageSize ?? 200
+    const maxPages = params?.maxPages ?? 50
+    const all: Document[] = []
+    for (let page = 0; page < maxPages; page += 1) {
+      const batch = await api.get<Document[]>('/documents/', {
+        params: {
+          department_id: params?.department_id,
+          skip: page * pageSize,
+          limit: pageSize,
+        },
+      }).then(r => r.data)
+      all.push(...batch)
+      if (batch.length < pageSize) break
+    }
+    return all
+  },
   get: (id: string) => api.get<Document>(`/documents/${id}`).then(r => r.data),
   upload: (file: File, onProgress?: (pct: number) => void) => {
     const form = new FormData()
@@ -89,7 +114,19 @@ export const docApi = {
 export const chatApi = {
   send: (req: ChatRequest) => api.post<ChatResponse>('/chat/chat', req).then(r => r.data),
   conversations: () => api.get<Conversation[]>('/chat/conversations').then(r => r.data),
-  messages: (convId: string) => api.get<Message[]>(`/chat/conversations/${convId}/messages`).then(r => r.data),
+  messages: (convId: string) =>
+    api.get<Message[]>(`/chat/conversations/${convId}/messages`).then(r =>
+      r.data.map(m => ({
+        ...m,
+        sources: Array.isArray(m.sources)
+          ? m.sources.map((s) => ({
+              ...s,
+              title: s.title || (s as { filename?: string }).filename || '',
+              snippet: s.snippet || (s as { content?: string }).content || '',
+            }))
+          : m.sources,
+      })),
+    ),
   deleteConversation: (convId: string) => api.delete(`/chat/conversations/${convId}`).then(r => r.data),
 
   /** T7-1: SSE streaming chat */

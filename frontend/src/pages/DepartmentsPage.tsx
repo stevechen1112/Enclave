@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Building2, Plus, Loader2, Trash2, ChevronRight, ChevronDown, FolderTree, Pencil, Check, X } from 'lucide-react'
 import api from '../api'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 interface Department {
   id: string
@@ -209,13 +210,20 @@ export default function DepartmentsPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('確定要停用此部門嗎？')) return
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!deleteId) return
+    setDeleting(true)
     try {
-      await api.delete(`/departments/${id}`)
+      await api.delete(`/departments/${deleteId}`)
+      setDeleteId(null)
       load()
     } catch {
       toast.error('停用失敗')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -244,7 +252,8 @@ export default function DepartmentsPage() {
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center gap-2">
           <FolderTree className="h-5 w-5 text-blue-600" />
-          <h1 className="text-lg font-semibold text-gray-900">部門管理</h1>
+          <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">部門</h2>
+          <p className="mt-1 text-sm text-muted">部門邊界決定文件與問答可見範圍</p>
         </div>
         <p className="text-sm text-gray-500">管理組織架構與部門層級</p>
       </div>
@@ -323,7 +332,7 @@ export default function DepartmentsPage() {
                     dept={dept}
                     collapsed={collapsed}
                     onToggle={toggleCollapse}
-                    onDelete={handleDelete}
+                    onDelete={setDeleteId}
                     onUpdate={handleUpdate}
                   />
                 ))}
@@ -332,6 +341,16 @@ export default function DepartmentsPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!deleteId}
+        danger
+        busy={deleting}
+        title="停用此部門？"
+        description="停用後該部門將不再出現在可用清單；已歸屬文件的權限語意可能受影響。"
+        confirmLabel="確認停用"
+        onCancel={() => !deleting && setDeleteId(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

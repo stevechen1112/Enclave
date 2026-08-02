@@ -161,11 +161,11 @@ function OverviewTab({ days }: { days: number }) {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{data.p50_latency_ms}<span className="text-sm text-gray-400">ms</span></p>
-              <p className="text-xs text-gray-500 mt-1">P50</p>
+              <p className="text-xs text-gray-500 mt-1">中位</p>
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">{data.p95_latency_ms}<span className="text-sm text-gray-400">ms</span></p>
-              <p className="text-xs text-gray-500 mt-1">P95</p>
+              <p className="text-xs text-gray-500 mt-1">較慢情況</p>
             </div>
           </div>
         </div>
@@ -354,7 +354,7 @@ export default function QueryAnalyticsPage() {
   const tabItems: { key: ActiveTab; label: string; icon: typeof BarChart2; badge?: number }[] = [
     { key: 'overview', label: '概覽', icon: TrendingUp },
     { key: 'top', label: '熱門問題', icon: MessageSquare },
-    { key: 'gaps', label: '知識缺口', icon: AlertTriangle, badge: unanswered.length || undefined },
+    { key: 'gaps', label: '未答覆問題', icon: AlertTriangle, badge: unanswered.length || undefined },
   ]
 
   return (
@@ -365,9 +365,9 @@ export default function QueryAnalyticsPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <BarChart2 className="h-5 w-5 text-blue-600" />
-              <h1 className="text-lg font-semibold text-gray-900">問答分析</h1>
+              <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">問答品質</h2>
             </div>
-            <p className="text-sm text-gray-500">RAG 品質監控、熱門問題、知識缺口一站式掌握</p>
+            <p className="text-sm text-gray-500">問答品質、熱門問題與未答覆問題（與知識區「結構化缺口」不同）</p>
           </div>
           <div className="flex items-center gap-3">
             <select value={days} onChange={e => setDays(Number(e.target.value))}
@@ -389,7 +389,7 @@ export default function QueryAnalyticsPage() {
             <StatCard title="總查詢" value={summary.total_queries.toLocaleString()} sub={`最近 ${summary.period_days} 天`} icon={MessageSquare} color="bg-blue-100 text-blue-600" />
             <StatCard title="答覆率" value={`${summary.answer_rate_pct}%`} sub={`${summary.answered_queries} / ${summary.total_queries}`} icon={CheckCircle} color="bg-green-100 text-green-600" />
             <StatCard title="未答覆" value={summary.unanswered_queries.toLocaleString()} icon={AlertTriangle} color="bg-orange-100 text-orange-600" />
-            <StatCard title="平均延遲" value={summary.avg_latency_ms !== null ? `${(summary.avg_latency_ms / 1000).toFixed(1)}s` : '-'} icon={Clock} color="bg-purple-100 text-purple-600" />
+            <StatCard title="平均等待" value={summary.avg_latency_ms !== null ? `${(summary.avg_latency_ms / 1000).toFixed(1)}s` : '-'} icon={Clock} color="bg-purple-100 text-purple-600" />
           </div>
         )}
 

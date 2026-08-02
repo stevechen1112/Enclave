@@ -14,6 +14,7 @@ import {
   Pencil, Wand2, Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 const TEMPLATE_LABELS: Record<string, string> = {
   draft_response: '函件草稿',
@@ -55,6 +56,8 @@ export default function ReportDetailPage() {
   const [justCopied, setJustCopied] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
   const token = localStorage.getItem('token') || ''
@@ -76,7 +79,7 @@ export default function ReportDetailPage() {
       setTitleDraft(data.title)
     } catch {
       toast.error('載入報告失敗')
-      navigate('/reports')
+      navigate('/create/reports')
     } finally {
       setLoading(false)
     }
@@ -161,12 +164,12 @@ export default function ReportDetailPage() {
 
   const handleRegenerate = () => {
     if (!report) return
-    navigate(`/generate?from=${report.id}`)
+    navigate(`/create?from=${report.id}`)
   }
 
   const handleDelete = async () => {
     if (!report) return
-    if (!confirm(`確定要刪除「${report.title}」？此操作無法復原。`)) return
+    setDeleting(true)
     try {
       const res = await fetch(`/api/v1/generate/reports/${report.id}`, {
         method: 'DELETE',
@@ -174,9 +177,12 @@ export default function ReportDetailPage() {
       })
       if (!res.ok) throw new Error()
       toast.success('已刪除報告')
-      navigate('/reports')
+      setDeleteOpen(false)
+      navigate('/create/reports')
     } catch {
       toast.error('刪除失敗')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -204,7 +210,7 @@ export default function ReportDetailPage() {
         {/* Back button + toolbar */}
         <div className="flex items-center justify-between mb-4">
           <button
-            onClick={() => navigate('/reports')}
+            onClick={() => navigate('/create/reports')}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition"
           >
             <ArrowLeft className="w-4 h-4" /> 返回報告列表
@@ -244,7 +250,7 @@ export default function ReportDetailPage() {
               <Wand2 className="w-3.5 h-3.5" /> 重新生成
             </button>
             <button
-              onClick={handleDelete}
+              onClick={() => setDeleteOpen(true)}
               className="flex items-center gap-1 px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50 text-red-500"
             >
               <Trash2 className="w-3.5 h-3.5" /> 刪除
@@ -336,6 +342,16 @@ export default function ReportDetailPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={deleteOpen}
+        danger
+        busy={deleting}
+        title="刪除此報告？"
+        description={report ? `「${report.title}」將被移除且無法復原。` : ''}
+        confirmLabel="確認刪除"
+        onCancel={() => !deleting && setDeleteOpen(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

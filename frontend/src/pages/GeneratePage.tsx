@@ -254,8 +254,8 @@ export default function GeneratePage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">AI 內容生成</h1>
-        <p className="text-gray-500 mt-1">基於知識庫文件，生成各種文稿草稿</p>
+        <h2 className="text-lg font-semibold text-gray-900">新建草稿</h2>
+        <p className="text-gray-500 mt-1 text-sm">依可存取知識產生文稿；儲存後可在「報告」查看</p>
       </div>
 
       <div className="grid grid-cols-12 gap-6">
@@ -349,7 +349,7 @@ export default function GeneratePage() {
                 {selectedTemplateMeta.icon} {selectedTemplateMeta.label}
               </h2>
               <button
-                onClick={() => navigate('/reports')}
+                onClick={() => navigate('/create/reports')}
                 className="flex items-center gap-1 text-xs text-gray-500 border rounded-lg px-2 py-1 hover:bg-gray-50"
               >
                 <FileText className="w-3.5 h-3.5" /> 我的報告
@@ -359,7 +359,7 @@ export default function GeneratePage() {
             <textarea
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
-              placeholder={`描述你的需求，例如：\n「根據王小明的離婚案件文件，起草一份給對方律師的和解提案函件」`}
+              placeholder={`描述你的需求，例如：\n「根據本季部門會議紀錄，整理一份給主管的重點摘要與待辦清單」`}
               className="w-full h-32 text-sm border border-gray-200 rounded-lg p-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
             <div className="flex justify-end gap-2 mt-2">
@@ -389,7 +389,7 @@ export default function GeneratePage() {
                 <h2 className="text-sm font-semibold text-gray-700">生成結果</h2>
                 {savedReportId && !isGenerating && (
                   <button
-                    onClick={() => navigate(`/reports/${savedReportId}`)}
+                    onClick={() => navigate(`/create/reports/${savedReportId}`)}
                     className="flex items-center gap-1 text-xs text-green-600 bg-green-50 border border-green-200 rounded-lg px-2 py-0.5 hover:bg-green-100 transition"
                   >
                     <Check className="w-3 h-3" /> 已自動儲存 · 查看報告
