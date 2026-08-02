@@ -39,7 +39,9 @@ class RetrievalTrace(Base):
     
     sources_json = Column(JSON, default=dict)  # List[dict] of source chunks returned to the user
     latency_ms = Column(Integer, nullable=True)
-    
+    # A6: which retrieval providers actually answered (audit / ablation evidence).
+    providers_called = Column(JSON, nullable=True)  # List[str] e.g. ["document","wiki","connector"]
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

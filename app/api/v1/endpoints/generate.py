@@ -122,31 +122,34 @@ async def generate_stream(
     tenant_id = str(current_user.tenant_id)
     generator = _get_generator()
 
-    # P11-3: Fetch content of explicitly specified documents from DB
+    # Phase 0: 建立 ACL 上下文
+    from app.core.authorization import AuthorizationContext
+    authz = AuthorizationContext.from_user(current_user)
+
+    # P11-3: 指定文件必須經 Resource PEP（部門／來源 ACL／deny／tombstone）
     extra_context = ""
     if req.document_ids:
-        from app.models.document import Document, DocumentChunk
         from uuid import UUID
+        from app.services.resource_policy import get_resource_policy
+        policy = get_resource_policy()
         parts = []
-        for doc_id in req.document_ids[:10]:  # cap at 10 docs
+        denied = []
+        for doc_id in req.document_ids[:10]:
             try:
-                doc = db.query(Document).filter(
-                    Document.id == UUID(doc_id),
-                    Document.tenant_id == current_user.tenant_id,
-                ).first()
-                if doc:
-                    # Fetch chunk text as document content
-                    chunks = (
-                        db.query(DocumentChunk.text)
-                        .filter(DocumentChunk.document_id == doc.id)
-                        .order_by(DocumentChunk.chunk_index)
-                        .limit(20)
-                        .all()
-                    )
-                    content_preview = "\n".join(c.text for c in chunks)[:2000]
-                    parts.append(f"【{doc.filename or doc_id}】\n{content_preview}")
+                text = policy.load_authorized_document_text(
+                    db, authz, UUID(doc_id),
+                )
             except Exception:
-                pass
+                text = None
+            if text:
+                parts.append(text)
+            else:
+                denied.append(doc_id)
+        if denied and not parts:
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "document_access_denied", "document_ids": denied},
+            )
         extra_context = "\n\n".join(parts)
 
     async def event_stream():
@@ -161,6 +164,7 @@ async def generate_stream(
                 tenant_id=tenant_id,
                 max_tokens=req.max_tokens,
                 extra_context=extra_context,
+                authz=authz,  # Phase 0: ACL 過濾
             ):
                 total_output += len(chunk)
                 all_chunks.append(chunk)

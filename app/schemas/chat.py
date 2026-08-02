@@ -34,6 +34,8 @@ class Message(MessageBase):
     id: UUID
     conversation_id: UUID
     created_at: datetime
+    # Evidence attachments (from RetrievalTrace.sources_json when present)
+    sources: Optional[List[Dict[str, Any]]] = None
 
     model_config = ConfigDict(from_attributes=True)
 

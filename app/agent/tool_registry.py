@@ -213,9 +213,10 @@ class KBSearchTool(Tool):
         ),
     ]
 
-    def __init__(self, tenant_id: UUID, kb_retriever=None) -> None:
+    def __init__(self, tenant_id: UUID, kb_retriever=None, authz=None) -> None:
         self.tenant_id = tenant_id
         self._retriever = kb_retriever
+        self._authz = authz
 
     async def execute(self, query: str, top_k: int = 5, **kwargs) -> ToolResult:
         import asyncio
@@ -234,6 +235,7 @@ class KBSearchTool(Tool):
                     tenant_id=self.tenant_id,
                     query=query,
                     top_k=top_k,
+                    authz=self._authz,
                 ),
             )
             return ToolResult(
@@ -289,8 +291,9 @@ class DocumentListTool(Tool):
         ),
     ]
 
-    def __init__(self, tenant_id: UUID) -> None:
+    def __init__(self, tenant_id: UUID, authz=None) -> None:
         self.tenant_id = tenant_id
+        self._authz = authz
 
     async def execute(
         self,
@@ -307,7 +310,19 @@ class DocumentListTool(Tool):
             query = db.query(Document).filter(
                 Document.tenant_id == self.tenant_id,
                 Document.status == "completed",
+                Document.tombstoned_at.is_(None),
             )
+            if self._authz:
+                dept_ids = self._authz.department_filter_ids()
+                if dept_ids is None:
+                    pass
+                elif dept_ids:
+                    query = query.filter(
+                        (Document.department_id.is_(None)) |
+                        (Document.department_id.in_(dept_ids))
+                    )
+                else:
+                    query = query.filter(Document.department_id.is_(None))
             if file_type:
                 query = query.filter(Document.file_type == file_type.lower())
             docs = query.order_by(Document.created_at.desc()).limit(limit).all()
@@ -350,13 +365,11 @@ def get_registry() -> ToolRegistry:
     return _global_registry
 
 
-def build_tenant_registry(tenant_id: UUID, kb_retriever=None) -> ToolRegistry:
+def build_tenant_registry(tenant_id: UUID, kb_retriever=None, authz=None) -> ToolRegistry:
     """
     為指定租戶建立工具 Registry，並預先載入內建工具。
-
-    應在處理每個 chat request 前呼叫，避免不同租戶資料交叉。
     """
     registry = ToolRegistry()
-    registry.register(KBSearchTool(tenant_id=tenant_id, kb_retriever=kb_retriever))
-    registry.register(DocumentListTool(tenant_id=tenant_id))
+    registry.register(KBSearchTool(tenant_id=tenant_id, kb_retriever=kb_retriever, authz=authz))
+    registry.register(DocumentListTool(tenant_id=tenant_id, authz=authz))
     return registry

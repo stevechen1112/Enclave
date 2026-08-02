@@ -141,17 +141,11 @@ def check_feature_enabled(db: Session, user: User, feature: str) -> None:
 
 def can_access_document_by_department(user: User, document_department_id: Optional[UUID]) -> bool:
     """
-    部門級文件存取判斷
-    - superuser / owner / admin: 可存取所有部門文件
-    - hr: 可存取所有部門文件
-    - employee / viewer: 只能存取自己部門的文件 或 無部門限制的文件
+    部門級文件存取判斷 — 與 AuthorizationContext / 檢索 / Agent 同一 PEP。
+
+    bypass 僅限 is_superuser 或 role=kb_admin；owner/admin/hr 走部門繼承。
     """
-    if user.is_superuser or user.role in ["owner", "admin", "hr"]:
-        return True
-    # 文件未指定部門 → 全員可見
-    if document_department_id is None:
-        return True
-    # 使用者未指定部門 → 只能看無部門限制的文件
-    if user.department_id is None:
-        return False
-    return user.department_id == document_department_id
+    from app.core.authorization import AuthorizationContext
+
+    authz = AuthorizationContext.from_user(user)
+    return authz.can_access_document(user.tenant_id, document_department_id)

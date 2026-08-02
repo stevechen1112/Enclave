@@ -110,14 +110,18 @@ class LLMClient:
             return self._ollama_complete(system_prompt, user_message, temperature, max_tokens)
 
     def _openai_complete(self, system_prompt, user_message, temperature, max_tokens) -> str:
+        from app.services.openai_compat import chat_completion_kwargs
+
         resp = self._openai_sync.chat.completions.create(
-            model=self._model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_message},
             ],
-            temperature=temperature,
-            max_tokens=max_tokens,
+            **chat_completion_kwargs(
+                self._model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+            ),
         )
         return resp.choices[0].message.content or ""
 
@@ -158,15 +162,19 @@ class LLMClient:
                 yield chunk
 
     async def _openai_stream(self, system_prompt, user_message, temperature, max_tokens) -> AsyncIterator[str]:
+        from app.services.openai_compat import chat_completion_kwargs
+
         stream = await self._openai_async.chat.completions.create(
-            model=self._model,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user",   "content": user_message},
             ],
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=True,
+            **chat_completion_kwargs(
+                self._model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=True,
+            ),
         )
         async for chunk in stream:
             delta = chunk.choices[0].delta.content

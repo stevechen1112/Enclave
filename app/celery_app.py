@@ -1,3 +1,9 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+
 from celery import Celery
 from app.config import settings
 
@@ -31,3 +37,21 @@ celery_app.autodiscover_tasks(['app.tasks'])
 # Explicitly import tasks to ensure they are registered
 import app.tasks.document_tasks  # noqa: F401, E402
 import app.tasks.kb_maintenance_tasks  # noqa: F401, E402
+import app.tasks.outbox_worker  # noqa: F401, E402
+import app.tasks.reconciliation_tasks  # noqa: F401, E402
+import app.tasks.connector_tasks  # noqa: F401, E402
+
+celery_app.conf.beat_schedule = {
+    "process-outbox-batch": {
+        "task": "tasks.process_outbox",
+        "schedule": 5.0,
+    },
+    "reconcile-projections": {
+        "task": "tasks.reconcile_projections",
+        "schedule": 300.0,
+    },
+    "poll-pending-connectors": {
+        "task": "tasks.poll_pending_connectors",
+        "schedule": 60.0,
+    },
+}

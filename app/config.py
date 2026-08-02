@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # Core API
     CORE_API_URL: str = "http://localhost:5000"
     CORE_SERVICE_TOKEN: str = ""
+    # Gateway → sidecar 短效 service token TTL（秒）
+    SERVICE_TOKEN_TTL_SECONDS: int = 300
+    # 可選 mTLS client 憑證（生產建議啟用）
+    MTLS_CLIENT_CERT: str = ""
+    MTLS_CLIENT_KEY: str = ""
+    MTLS_CA_CERT: str = ""
 
     # Database
     POSTGRES_SERVER: str = "localhost"
@@ -50,9 +56,9 @@ class Settings(BaseSettings):
     
     # OpenAI（用於 Generation 回答生成 + HyDE 查詢擴展）
     OPENAI_API_KEY: str = ""
-    OPENAI_MODEL: str = "gpt-4o-mini"  # Generation 使用的模型
+    OPENAI_MODEL: str = "gpt-5.6-luna"  # 問答／生成主模型（可被 .env 覆寫）
     OPENAI_TEMPERATURE: float = 0.3     # 回答生成溫度（低 = 更精確）
-    OPENAI_MAX_TOKENS: int = 1500       # 回答最大 token 數
+    OPENAI_MAX_TOKENS: int = 4000       # gpt-5 系含 reasoning；過低會吃光額度導致空回答
 
     # Voyage AI + pgvector
     VOYAGE_API_KEY: str = ""

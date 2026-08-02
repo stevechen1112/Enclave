@@ -95,13 +95,21 @@ async def chat_stream(
 
     orchestrator = _get_orchestrator()
 
+    # SSE generator 在 endpoint return 後才執行；get_current_user 的 Session 會先關閉，
+    # 導致 current_user 變成 DetachedInstance。必須在此先物化 AuthZ 與純量 ID。
+    from app.core.authorization import AuthorizationContext
+    authz = AuthorizationContext.from_user(current_user)
+    tenant_id = current_user.tenant_id
+    user_id = current_user.id
+    conversation_id_val = conversation.id
+
     async def event_generator():
         start_time = time.time()
         full_answer = ""
 
         try:
             # Phase 1: 狀態 — 正在檢索
-            yield _sse({"type": "status", "content": "正在搜尋知識庫..."})
+            yield _sse({"type": "status", "content": "正在搜尋可存取知識…"})
 
             # T7-2: 查詢改寫
             effective_question = request.question
@@ -110,18 +118,27 @@ async def chat_stream(
                     request.question, history
                 )
 
-            # Phase 2: 檢索
+            # Phase 2: 檢索（Phase 0：傳遞 AuthorizationContext）
             ctx = await orchestrator.retrieve_context(
-                tenant_id=current_user.tenant_id,
+                tenant_id=tenant_id,
                 question=effective_question,
                 top_k=request.top_k,
+                authz=authz,
             )
 
-            # 立即推送來源
+            # Retrieval honesty (degraded / request_id) before sources
+            retrieval = ctx.get("retrieval") or {
+                "mode": "canonical",
+                "degraded": False,
+                "request_id": ctx.get("request_id"),
+            }
+            yield _sse({"type": "retrieval", "retrieval": retrieval})
+
+            # 立即推送來源（含 document_revision 等欄位）
             yield _sse({"type": "sources", "sources": ctx["sources"]})
 
             # Phase 3: 串流生成
-            yield _sse({"type": "status", "content": "正在生成回答..."})
+            yield _sse({"type": "status", "content": "正在整理證據並產生回答…"})
 
             async for chunk in orchestrator.stream_answer(
                 question=request.question,
@@ -142,7 +159,7 @@ async def chat_stream(
             clean_answer = _strip_suggestions(full_answer)
             assistant_message = crud_chat.create_message(
                 db,
-                conversation_id=conversation.id,
+                conversation_id=conversation_id_val,
                 role="assistant",
                 content=clean_answer,
             )
@@ -150,11 +167,12 @@ async def chat_stream(
             # 儲存 retrieval trace
             crud_chat.create_retrieval_trace(
                 db,
-                tenant_id=current_user.tenant_id,
-                conversation_id=conversation.id,
+                tenant_id=tenant_id,
+                conversation_id=conversation_id_val,
                 message_id=assistant_message.id,
                 sources_json=ctx["sources"],
                 latency_ms=int((time.time() - start_time) * 1000),
+                providers_called=(ctx.get("retrieval") or {}).get("providers_called"),
             )
 
             # 記錄用量
@@ -170,20 +188,20 @@ async def chat_stream(
 
             log_usage(
                 db,
-                tenant_id=current_user.tenant_id,
-                user_id=current_user.id,
+                tenant_id=tenant_id,
+                user_id=user_id,
                 action_type="chat_query",
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 pinecone_queries=1 if ctx["has_policy"] else 0,
                 embedding_calls=0,
-                metadata={"conversation_id": str(conversation.id)},
+                metadata={"conversation_id": str(conversation_id_val)},
             )
 
             yield _sse({
                 "type": "done",
                 "message_id": str(assistant_message.id),
-                "conversation_id": str(conversation.id),
+                "conversation_id": str(conversation_id_val),
             })
 
         except Exception as e:
@@ -268,13 +286,16 @@ async def chat(
     # 3. 取得歷史對話（T7-2）
     history = _get_history(db, conversation.id, exclude_message_id=user_message.id)
 
-    # 4. 使用協調器處理查詢
+    # 4. 使用協調器處理查詢（Phase 0: 傳遞 ACL）
     orchestrator = _get_orchestrator()
+    from app.core.authorization import AuthorizationContext
+    authz = AuthorizationContext.from_user(current_user)
     result = await orchestrator.process_query(
         tenant_id=current_user.tenant_id,
         question=request.question,
         top_k=request.top_k,
         history=history,
+        authz=authz,
     )
     
     # 5. 儲存助手回應
@@ -283,6 +304,16 @@ async def chat(
         conversation_id=conversation.id,
         role="assistant",
         content=result["answer"]
+    )
+
+    # 5b. 持久化證據（與 SSE 路徑對齊；否則歷史對話右側證據欄永遠空白）
+    crud_chat.create_retrieval_trace(
+        db,
+        tenant_id=current_user.tenant_id,
+        conversation_id=conversation.id,
+        message_id=assistant_message.id,
+        sources_json=result.get("sources") or [],
+        providers_called=(result.get("retrieval") or {}).get("providers_called"),
     )
     
     # 6. 記錄用量
@@ -414,7 +445,26 @@ def get_conversation_messages(
     messages = crud_chat.get_conversation_messages(
         db, conversation_id=conversation_id, skip=skip, limit=limit
     )
-    return messages
+    out: list[Message] = []
+    for m in messages:
+        raw_sources = None
+        trace = getattr(m, "retrieval_trace", None)
+        if trace is not None and trace.sources_json is not None:
+            sj = trace.sources_json
+            raw_sources = sj if isinstance(sj, list) else []
+        out.append(
+            Message.model_validate(
+                {
+                    "id": m.id,
+                    "conversation_id": m.conversation_id,
+                    "role": m.role,
+                    "content": m.content,
+                    "created_at": m.created_at,
+                    "sources": raw_sources,
+                }
+            )
+        )
+    return out
 
 
 @router.delete("/conversations/{conversation_id}")

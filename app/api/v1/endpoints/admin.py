@@ -1,4 +1,4 @@
-﻿"""
+"""
 地端版管理後台 API（Superuser 專用）
 P9-1/P9-2: 移除跨租戶管理、訂閱方案、配額管理。
 保留：單一組織儀表板、使用者管理、系統健康監控。
@@ -19,6 +19,10 @@ from app.models.document import Document
 from app.models.audit import AuditLog, UsageRecord
 from app.models.chat import Conversation
 from app.schemas.admin import AdminUserInfo, OrgDashboard, SystemHealth
+from app.schemas.tenant import (
+    QuotaStatus, QuotaUpdate, SecurityConfig, SecurityConfigUpdate,
+)
+from app.crud import crud_tenant
 
 router = APIRouter()
 
@@ -287,9 +291,92 @@ def system_health(
 
 
 # ===============================================
-#  Quota Management — 已移除（地端版不需要 SaaS 配額管理）
+#  Quota Management（平台超管跨租戶）
 # ===============================================
 
+@router.get("/tenants/{tenant_id}/quota", response_model=QuotaStatus)
+def get_tenant_quota(
+    tenant_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """取得指定租戶配額狀態。"""
+    status_data = crud_tenant.get_quota_status(db, tenant_id)
+    if not status_data:
+        raise HTTPException(status_code=404, detail="租戶不存在")
+    return QuotaStatus(**status_data)
+
+
+@router.put("/tenants/{tenant_id}/quota", response_model=QuotaStatus)
+def update_tenant_quota(
+    tenant_id: UUID,
+    body: QuotaUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """更新指定租戶配額。"""
+    tenant = crud_tenant.update_quota(db, tenant_id, body.model_dump(exclude_unset=True))
+    if not tenant:
+        raise HTTPException(status_code=404, detail="租戶不存在")
+    return QuotaStatus(**crud_tenant.get_quota_status(db, tenant_id))
+
+
+@router.post("/tenants/{tenant_id}/quota/apply-plan")
+def apply_plan_quota(
+    tenant_id: UUID,
+    plan: str = Query(..., description="free | pro | enterprise"),
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """套用方案預設配額。"""
+    tenant = crud_tenant.apply_plan_quota(db, tenant_id, plan)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="租戶不存在或方案無效")
+    return {"tenant_id": str(tenant_id), "plan": tenant.plan}
+
+
+@router.get("/quota/plans")
+def list_plan_quotas(
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """列出所有方案的預設配額。"""
+    from app.schemas.tenant import PLAN_QUOTAS
+    return PLAN_QUOTAS
+
+
 # ===============================================
-#  Security Config — 已移除（地端版不需要多租戶安全組態）
+#  Security Config（平台超管跨租戶）
 # ===============================================
+
+@router.get("/tenants/{tenant_id}/security", response_model=SecurityConfig)
+def get_tenant_security(
+    tenant_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """取得租戶安全組態。"""
+    config = crud_tenant.get_security_config(db, tenant_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="租戶不存在")
+    return SecurityConfig(**config)
+
+
+@router.put("/tenants/{tenant_id}/security", response_model=SecurityConfig)
+def update_tenant_security(
+    tenant_id: UUID,
+    body: SecurityConfigUpdate,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """更新租戶安全組態。"""
+    try:
+        config = crud_tenant.update_security_config(
+            db, tenant_id, body.model_dump(exclude_unset=True),
+        )
+    except ValueError as exc:
+        if "invalid_isolation_level" in str(exc):
+            raise HTTPException(status_code=400, detail="無效的隔離等級")
+        raise
+    if not config:
+        raise HTTPException(status_code=404, detail="租戶不存在")
+    return SecurityConfig(**config)

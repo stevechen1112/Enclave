@@ -492,12 +492,16 @@ async def _cloud_summarize_folder(
 
     prompt, max_tokens = _build_scan_prompt(name, path, files, content_samples)
     try:
+        from app.services.openai_compat import chat_completion_kwargs
+
         client = openai_lib.AsyncOpenAI(api_key=api_key, base_url=base_url)
         resp = await client.chat.completions.create(
-            model=model,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=max_tokens,
+            **chat_completion_kwargs(
+                model,
+                max_tokens=max_tokens,
+                temperature=0.3,
+            ),
         )
         return (resp.choices[0].message.content or "").strip()
     except Exception as exc:
@@ -684,8 +688,9 @@ def get_review_queue(
     current_user=Depends(get_current_active_user),
 ):
     """取得待審核清單（支援信心度、狀態篩選）。"""
-    if current_user.role not in ("admin", "owner", "manager") and not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="需要管理員或審核員權限")
+    # Formal roles only (manager is not in UserRole enum)
+    if current_user.role not in ("admin", "owner") and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="需要管理員權限")
 
     mgr = ReviewQueueManager(db)
     items, total = mgr.get_pending_items(

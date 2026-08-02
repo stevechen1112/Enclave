@@ -58,12 +58,13 @@ class ContentGenerator:
         tenant_id: str,
         max_tokens: int = 3000,
         extra_context: str = "",  # P11-3: pre-fetched document content injected by caller
+        authz = None,  # Phase 0: AuthorizationContext for ACL filtering
     ) -> AsyncIterator[str]:
         """
         RAG 增強生成，以 SSE 串流回傳。
 
         流程：
-          1. 用 context_query 從知識庫檢索相關文件
+          1. 用 context_query 從知識庫檢索相關文件（ACL-aware）
           2. 組合 system prompt（依 template）+ 相關文件 + user_prompt
           3. 呼叫 LLM，串流回傳生成內容
           4. 在最後附上引用來源清單
@@ -71,11 +72,27 @@ class ContentGenerator:
         import asyncio
         from uuid import UUID
 
-        # ── 1. 知識庫檢索 ───────────────────────────────────────────
+        # ── 1. 知識庫檢索（Phase 0: ACL-aware） ──────────────────────
         sources: List[dict] = []
         context_text = ""
 
-        if context_query and self.retriever:
+        if context_query and authz is not None:
+            try:
+                from app.services.retrieval_facade import get_retrieval_facade
+                loop = asyncio.get_event_loop()
+                retrieved = await loop.run_in_executor(
+                    None,
+                    lambda: get_retrieval_facade().search(
+                        authz=authz,
+                        query=context_query,
+                        top_k=5,
+                    ),
+                )
+                sources = retrieved.results or []
+            except Exception as exc:
+                logger.warning("KB retrieval via facade failed: %s", exc)
+                sources = []
+        elif context_query and self.retriever:
             try:
                 loop = asyncio.get_event_loop()
                 results = await loop.run_in_executor(
@@ -84,22 +101,24 @@ class ContentGenerator:
                         tenant_id=UUID(tenant_id),
                         query=context_query,
                         top_k=5,
+                        authz=authz,
                     ),
                 )
                 sources = results or []
-                if sources:
-                    parts: List[str] = []
-                    for i, r in enumerate(sources, 1):
-                        doc_name = (
-                            r.get("document_name")
-                            or r.get("filename")
-                            or f"文件{i}"
-                        )
-                        text = r.get("content") or r.get("text") or ""
-                        parts.append(f"【文件 {i}：{doc_name}】\n{text[:1500]}")
-                    context_text = "\n\n".join(parts)
             except Exception as exc:
                 logger.warning("KB retrieval failed: %s", exc)
+
+        if sources:
+            parts: List[str] = []
+            for i, r in enumerate(sources, 1):
+                doc_name = (
+                    r.get("document_name")
+                    or r.get("filename")
+                    or f"文件{i}"
+                )
+                text = r.get("content") or r.get("text") or ""
+                parts.append(f"【文件 {i}：{doc_name}】\n{text[:1500]}")
+            context_text = "\n\n".join(parts)
 
         # ── 2. 組合 system prompt ────────────────────────────────────
         system_prompt = self._get_system_prompt(template)

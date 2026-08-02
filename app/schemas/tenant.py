@@ -117,5 +117,20 @@ PLAN_QUOTAS = {
         "monthly_token_limit": None,
     },
 }
+
+
+class SecurityConfig(BaseModel):
+    tenant_id: Optional[str] = None
+    isolation_level: str = "standard"
+    require_mfa: bool = False
+    ip_whitelist: Optional[str] = ""
+
+
+class SecurityConfigUpdate(BaseModel):
+    isolation_level: Optional[str] = None
+    require_mfa: Optional[bool] = None
+    ip_whitelist: Optional[str] = None
+
+
 class TenantInDB(TenantInDBBase):
     pass

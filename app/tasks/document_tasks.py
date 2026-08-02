@@ -86,9 +86,29 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             obj_in=DocumentUpdate(status="parsing")
         )
         
-        # 3. 解析文件（自動選擇 LlamaParse 或內建解析器）
+        # 3. 解析文件（capability router: native / RAGFlow）
         try:
-            text_content, metadata = DocumentParser.parse(file_path, doc.file_type)
+            from app.services.parse_pipeline import parse_document
+            text_content, metadata, artifact = parse_document(
+                file_path, doc.file_type or "txt",
+                document_id=UUID(document_id),
+                revision=doc.version or 1,
+            )
+            # 儲存 ParseArtifact 到 document_artifacts
+            from app.models.knowledge_base import DocumentArtifact
+            db.add(DocumentArtifact(
+                document_id=UUID(document_id),
+                revision=doc.version or 1,
+                artifact_type="parse",
+                provider=artifact.parser.split("/")[0] if "/" in artifact.parser else "enclave",
+                provider_version=artifact.version,
+                checksum=artifact.source_hash,
+                status="active",
+                metadata_json=artifact.model_dump(),
+            ))
+            if artifact.source_hash:
+                doc.content_hash = artifact.source_hash
+            db.flush()
         except Exception as e:
             crud_document.update(
                 db,
@@ -196,28 +216,90 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         if skipped:
             logger.info(f"去重: 跳過 {skipped} 個重複 chunk，寫入 {inserted} 個")
         
-        # 8. 更新狀態：完成
-        crud_document.update(
+        # 8. 狀態 completed 與 outbox document_processed 必須同一交易
+        from app.services.outbox_events import publish_event
+        doc.status = "completed"
+        doc.chunk_count = inserted
+        doc.quality_report = metadata
+        db.add(doc)
+        payload = {
+            "filename": doc.filename,
+            "file_type": doc.file_type,
+            "tenant_id": tenant_id,
+            "chunk_count": inserted,
+            "parse_engine": metadata.get("parse_engine", "native"),
+            "content_hash": doc.content_hash,
+            "file_path": doc.file_path,
+            "content_uri": doc.file_path,
+            "uploaded_by": str(doc.uploaded_by) if doc.uploaded_by else None,
+            "ragflow_already_ingested": bool(metadata.get("ragflow_already_ingested")),
+            "ragflow_doc_ids": list(metadata.get("ragflow_doc_ids") or []),
+        }
+        dataset_id = os.getenv("RAGFLOW_DATASET_ID", "").strip()
+        if dataset_id:
+            payload["dataset_id"] = dataset_id
+        kb_id = os.getenv("WEKNORA_DEFAULT_KB_ID", "").strip()
+        if kb_id:
+            payload["kb_id"] = kb_id
+        # DD-H09：parse 已寫入 RAGFlow 時先登記 mapping，outbox 只 reconcile
+        if payload["ragflow_already_ingested"] and payload["ragflow_doc_ids"]:
+            try:
+                from app.gateway.resource_registry import ResourceRegistry
+                from app.models.outbox import ProjectionStatus
+                rid = str(payload["ragflow_doc_ids"][0])
+                ResourceRegistry().upsert_mapping(
+                    db,
+                    enclave_resource_type="document",
+                    enclave_resource_id=document_id,
+                    enclave_revision=doc.version or 1,
+                    provider="ragflow",
+                    provider_resource_id=rid,
+                    provider_revision=doc.version or 1,
+                    checksum=doc.content_hash,
+                    state="pending",
+                )
+                existing = (
+                    db.query(ProjectionStatus)
+                    .filter(
+                        ProjectionStatus.resource_type == "document",
+                        ProjectionStatus.resource_id == document_id,
+                        ProjectionStatus.provider == "ragflow",
+                    )
+                    .first()
+                )
+                if existing:
+                    existing.state = "pending"
+                    existing.desired_revision = doc.version or 1
+                else:
+                    db.add(
+                        ProjectionStatus(
+                            resource_type="document",
+                            resource_id=document_id,
+                            provider="ragflow",
+                            desired_revision=doc.version or 1,
+                            applied_revision=0,
+                            state="pending",
+                        )
+                    )
+            except Exception as exc:
+                logger.warning("ragflow parse mapping upsert failed: %s", exc)
+        publish_event(
             db,
-            db_obj=doc,
-            obj_in=DocumentUpdate(
-                status="completed",
-                chunk_count=inserted,
-                quality_report=metadata
-            )
+            aggregate_type="document",
+            aggregate_id=document_id,
+            event_type="document_processed",
+            revision=doc.version or 1,
+            payload=payload,
         )
-        
-        # 8.5 清除租戶檢索快取（新文件上傳後失效舊快取）
+        db.commit()
+
+        # 8.6 清除租戶檢索快取（新文件上傳後失效舊快取）
         try:
             from app.services.kb_retrieval import KnowledgeBaseRetriever
-            retriever = KnowledgeBaseRetriever()
-            retriever.invalidate_cache(UUID(tenant_id))
+            KnowledgeBaseRetriever().invalidate_cache(UUID(tenant_id))
         except Exception:
-            pass  # 快取清除失敗不影響主流程
-        
-        # 9. 清理臨時文件（可選）
-        # os.remove(file_path)
-        
+            pass
+
         return {
             "status": "completed",
             "document_id": document_id,
@@ -354,14 +436,32 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
 
         db.commit()
 
-        crud_document.update(
-            db, db_obj=doc,
-            obj_in=DocumentUpdate(
-                status="completed",
-                chunk_count=inserted,
-                quality_report=metadata,
-            ),
+        # completed + document_processed 同一交易（與 process_document_task 對齊）
+        from app.services.outbox_events import publish_event
+        doc.status = "completed"
+        doc.chunk_count = inserted
+        doc.quality_report = metadata
+        db.add(doc)
+        publish_event(
+            db,
+            aggregate_type="document",
+            aggregate_id=document_id,
+            event_type="document_processed",
+            revision=doc.version or 1,
+            payload={
+                "filename": doc.filename,
+                "file_type": doc.file_type or "html",
+                "tenant_id": tenant_id,
+                "chunk_count": inserted,
+                "parse_engine": "trafilatura",
+                "content_hash": doc.content_hash,
+                "file_path": doc.file_path,
+                "content_uri": url,
+                "source_url": url,
+                "uploaded_by": str(doc.uploaded_by) if doc.uploaded_by else None,
+            },
         )
+        db.commit()
 
         # 清除快取
         try:
@@ -405,6 +505,7 @@ def watcher_ingest_file_task(
     tenant_id: str,
     user_id: str,
     skip_if_current: bool = False,
+    skip_review: bool = False,
 ):
     """
     File Watcher 觸發的文件索引任務。
@@ -412,6 +513,7 @@ def watcher_ingest_file_task(
     - 新檔案：建立 Document 記錄，觸發 process_document_task
     - 修改檔案：刪除舊 chunks，重新索引
     - skip_if_current=True：若已索引且 file mtime 沒變，直接跳過（初始掃描用）
+    - skip_review=True：審核通過後入庫，略過再進 review queue（DD-H12）
     """
     db = SessionLocal()
     try:
@@ -437,8 +539,12 @@ def watcher_ingest_file_task(
         )
 
         if existing:
-            # skip_if_current：比較 updated_at vs file mtime
-            if skip_if_current and existing.status == "completed":
+            # skip_if_current：比較 updated_at vs file mtime（已撤銷不可視為 current）
+            if (
+                skip_if_current
+                and existing.status == "completed"
+                and existing.tombstoned_at is None
+            ):
                 if existing.updated_at and existing.updated_at >= file_mtime:
                     return {
                         "status": "skipped",
@@ -446,7 +552,54 @@ def watcher_ingest_file_task(
                         "document_id": str(existing.id),
                     }
 
-            # 修改：清除舊 chunks，重新索引
+        # DD-H12：watcher → classifier → enqueue；核准後以 skip_review 入庫
+        review_enabled = os.getenv("REVIEW_QUEUE_ENABLED", "true").lower() == "true"
+        if review_enabled and not skip_review:
+            import asyncio
+            from app.agent.classifier import get_classifier
+            from app.agent.review_queue import ReviewQueueManager
+
+            # 既有可搜尋文件：先清 chunks／標記 pending_review，避免審核前繼續命中過期內容
+            if existing and existing.tombstoned_at is None:
+                db.query(DocumentChunk).filter(
+                    DocumentChunk.document_id == existing.id
+                ).delete(synchronize_session=False)
+                existing.status = "pending_review"
+                existing.error_message = "awaiting_review"
+                existing.chunk_count = 0
+                db.commit()
+                try:
+                    from app.services.kb_retrieval import KnowledgeBaseRetriever
+                    KnowledgeBaseRetriever().invalidate_cache(UUID(tenant_id))
+                except Exception:
+                    pass
+
+            proposal = asyncio.run(get_classifier().classify_file(path))
+            review_id = ReviewQueueManager(db).enqueue(proposal, UUID(tenant_id))
+            logger.info(
+                "[WatcherTask] queued for review: %s review_id=%s confidence=%.2f",
+                filename,
+                review_id,
+                proposal.confidence_score,
+            )
+            return {
+                "status": "queued_for_review",
+                "review_item_id": review_id,
+                "filename": filename,
+                "needs_review": proposal.needs_review,
+                "confidence_score": proposal.confidence_score,
+                "stale_index_cleared": bool(existing),
+            }
+
+        if existing:
+            # 修改／撤銷後重入庫：清除 tombstone + 舊 chunks，重新索引
+            if existing.tombstoned_at is not None:
+                existing.tombstoned_at = None
+                try:
+                    from app.gateway.authorization import get_gateway_authorizer
+                    get_gateway_authorizer().clear_resource_deny(str(existing.id))
+                except Exception as exc:
+                    logger.warning("[WatcherTask] clear deny after restore failed: %s", exc)
             db.query(DocumentChunk).filter(
                 DocumentChunk.document_id == existing.id
             ).delete(synchronize_session=False)
@@ -463,7 +616,7 @@ def watcher_ingest_file_task(
 
             doc = DocModel(
                 tenant_id=UUID(tenant_id),
-                uploaded_by=UUID(user_id),
+                uploaded_by=UUID(user_id) if user_id else None,
                 filename=filename,
                 file_type=ext,
                 file_path=str(path),
@@ -508,6 +661,7 @@ def watcher_delete_file_task(self, file_path: str, tenant_id: str):
             .filter(
                 Document.tenant_id == UUID(tenant_id),
                 Document.file_path == file_path,
+                Document.tombstoned_at.is_(None),
             )
             .first()
         )
@@ -516,17 +670,27 @@ def watcher_delete_file_task(self, file_path: str, tenant_id: str):
             return {"status": "not_found", "path": file_path}
 
         doc_id = str(existing.id)
-        crud_document.delete(db, document_id=existing.id)
+        from app.services.document_revocation import get_document_revocation
+
+        actor_id = existing.uploaded_by or UUID(int=0)
+        result = get_document_revocation().revoke(
+            db,
+            document_id=existing.id,
+            actor_id=actor_id,
+            tenant_id=UUID(tenant_id),
+            reason="watcher_file_deleted",
+        )
+        if not result.get("ok"):
+            logger.info(
+                "[WatcherTask] revoke skipped: %s reason=%s",
+                file_path,
+                result.get("reason"),
+            )
+            return {"status": "not_found", "path": file_path, "reason": result.get("reason")}
+
         logger.info(f"[WatcherTask] 已從知識庫移除：{Path(file_path).name} (doc={doc_id})")
 
-        # 清除檢索快取
-        try:
-            from app.services.kb_retrieval import KnowledgeBaseRetriever
-            KnowledgeBaseRetriever().invalidate_cache(UUID(tenant_id))
-        except Exception:
-            pass
-
-        return {"status": "deleted", "document_id": doc_id}
+        return {"status": "deleted", "document_id": doc_id, "deny_first": True}
 
     except Exception as exc:
         logger.error(f"[WatcherTask] 刪除任務失敗 {file_path}: {exc}")

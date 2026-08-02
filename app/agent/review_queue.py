@@ -239,6 +239,7 @@ class ReviewQueueManager:
                 tenant_id=str(item.tenant_id),
                 user_id=str(item.reviewer_id) if item.reviewer_id else None,
                 skip_if_current=False,
+                skip_review=True,  # DD-H12：核准後直接 ingest，勿再進 queue
             )
             item.status = ReviewStatus.PROCESSING
             self.db.commit()

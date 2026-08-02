@@ -70,9 +70,16 @@ def get_conversation_messages(
     skip: int = 0,
     limit: int = 100
 ) -> List[Message]:
-    return db.query(Message).filter(
-        Message.conversation_id == conversation_id
-    ).order_by(Message.created_at).offset(skip).limit(limit).all()
+    from sqlalchemy.orm import joinedload
+    return (
+        db.query(Message)
+        .options(joinedload(Message.retrieval_trace))
+        .filter(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 def delete_conversation(db: Session, conversation_id: UUID) -> bool:
@@ -96,14 +103,16 @@ def create_retrieval_trace(
     message_id: UUID,
     sources_json: Any = None,
     latency_ms: int = None,
+    providers_called: Any = None,
 ) -> RetrievalTrace:
     """儲存檢索追蹤記錄（SSE 串流用）。"""
     db_obj = RetrievalTrace(
         tenant_id=tenant_id,
         conversation_id=conversation_id,
         message_id=message_id,
-        sources_json=sources_json or {},
+        sources_json=sources_json if sources_json is not None else [],
         latency_ms=latency_ms,
+        providers_called=providers_called,
     )
     db.add(db_obj)
     db.commit()

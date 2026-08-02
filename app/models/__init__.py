@@ -7,6 +7,23 @@ from app.models.feedback import ChatFeedback
 from app.models.audit import AuditLog, UsageRecord
 from app.models.permission import Department, FeaturePermission
 from app.models.feature_flag import FeatureFlag
+# Phase 0: Knowledge Base domain model
+from app.models.knowledge_base import (
+    KnowledgeBase, KnowledgeBaseMember,
+    KnowledgeBaseRevision, DocumentArtifact,
+)
+# Phase 0: Event sourcing & consistency
+from app.models.outbox import (
+    OutboxEvent, ProjectionStatus, SyncCursor, DeadLetterEvent,
+)
+from app.models.gateway_resource import GatewayResource
+from app.models.connector import (
+    ConnectorInstance, ExternalPrincipal, SourceAclEntry, ConnectorResource,
+)
+from app.models.wiki import WikiPage, WikiRevision
+from app.models.graph import GraphEntity, GraphEdge
+from app.models.policy_deny import PolicyDenyEntry
+from app.models.agent_approval import AgentApprovalRequest
 # Phase 10: Agent models
 from app.models.watch_folder import WatchFolder
 from app.models.review_item import ReviewItem

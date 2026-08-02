@@ -47,20 +47,24 @@ def search_knowledge_base(
         )
     
     try:
-        retriever = KnowledgeBaseRetriever()
-        results = retriever.search(
-            tenant_id=current_user.tenant_id,
+        from app.core.authorization import AuthorizationContext
+        from app.services.retrieval_facade import get_retrieval_facade
+        authz = AuthorizationContext.from_user(current_user)
+        facade = get_retrieval_facade()
+        retrieved = facade.search(
+            authz=authz,
             query=request.query,
-            top_k=request.top_k
+            top_k=request.top_k,
         )
+        results = retrieved.results
         
         search_results = [
             SearchResult(
                 score=r["score"],
-                content=r["content"],
-                filename=r["filename"],
+                content=r.get("content") or r.get("text") or "",
+                filename=r.get("filename") or "",
                 document_id=r["document_id"],
-                chunk_index=r["chunk_index"]
+                chunk_index=r.get("chunk_index") or 0,
             )
             for r in results
         ]

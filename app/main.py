@@ -1,5 +1,11 @@
 from contextlib import asynccontextmanager
 import ipaddress
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# 確保 os.getenv("RAGFLOW_*" 等) 與 pydantic Settings 同源讀取 .env
+load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +28,13 @@ setup_logging()
 async def lifespan(app: FastAPI):
     """啟動 / 關閉鉤子：管理 File Watcher 和排程器生命週期。"""
     # ── Startup ──
+    try:
+        from app.services.telemetry import init_telemetry
+        init_telemetry("enclave")
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(f"[Startup] Telemetry init failed: {exc}")
+
     try:
         from app.agent.file_watcher import start_agent_watcher
         start_agent_watcher()
@@ -76,6 +89,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Trust boundary: strip forged X-Enclave-* / X-Service-* from clients
+from app.middleware.trust_boundary import TrustBoundaryMiddleware
+app.add_middleware(TrustBoundaryMiddleware)
 
 # API versioning middleware
 app.add_middleware(APIVersionMiddleware)

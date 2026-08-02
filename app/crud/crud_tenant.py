@@ -72,7 +72,8 @@ def get_current_usage(db: Session, tenant_id: UUID) -> Dict[str, Any]:
     ).scalar() or 0
 
     doc_count = db.query(func.count(Document.id)).filter(
-        Document.tenant_id == tenant_id
+        Document.tenant_id == tenant_id,
+        Document.tombstoned_at.is_(None),
     ).scalar() or 0
 
     # 月度查詢次數和 token 數
@@ -190,3 +191,75 @@ def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
             "limit": limit,
         }
     return {"allowed": True, "message": "OK", "current": current, "limit": limit}
+
+
+def update_quota(db: Session, tenant_id: UUID, quota_data: Dict[str, Any]) -> Optional[Tenant]:
+    """更新租戶配額設定。"""
+    tenant = get(db, tenant_id)
+    if not tenant:
+        return None
+    for field in (
+        "max_users", "max_documents", "max_storage_mb",
+        "monthly_query_limit", "monthly_token_limit",
+        "quota_alert_threshold", "quota_alert_email",
+    ):
+        if field in quota_data and quota_data[field] is not None:
+            setattr(tenant, field, quota_data[field])
+    db.add(tenant)
+    db.commit()
+    db.refresh(tenant)
+    return tenant
+
+
+def apply_plan_quota(db: Session, tenant_id: UUID, plan: str) -> Optional[Tenant]:
+    """套用方案預設配額。"""
+    tenant = get(db, tenant_id)
+    if not tenant:
+        return None
+    if plan not in PLAN_QUOTAS:
+        return None
+    defaults = PLAN_QUOTAS[plan]
+    tenant.plan = plan
+    tenant.max_users = defaults.get("max_users")
+    tenant.max_documents = defaults.get("max_documents")
+    tenant.max_storage_mb = defaults.get("max_storage_mb")
+    tenant.monthly_query_limit = defaults.get("monthly_query_limit")
+    tenant.monthly_token_limit = defaults.get("monthly_token_limit")
+    db.add(tenant)
+    db.commit()
+    db.refresh(tenant)
+    return tenant
+
+
+VALID_ISOLATION_LEVELS = {"standard", "enhanced", "strict"}
+
+
+def get_security_config(db: Session, tenant_id: UUID) -> Optional[Dict[str, Any]]:
+    tenant = get(db, tenant_id)
+    if not tenant:
+        return None
+    return {
+        "tenant_id": str(tenant_id),
+        "isolation_level": tenant.isolation_level or "standard",
+        "require_mfa": tenant.require_mfa or False,
+        "ip_whitelist": tenant.ip_whitelist or "",
+    }
+
+
+def update_security_config(db: Session, tenant_id: UUID, config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    tenant = get(db, tenant_id)
+    if not tenant:
+        return None
+    if "isolation_level" in config:
+        level = config["isolation_level"]
+        if level not in VALID_ISOLATION_LEVELS:
+            raise ValueError(f"invalid_isolation_level:{level}")
+        tenant.isolation_level = level
+    if "require_mfa" in config:
+        tenant.require_mfa = bool(config["require_mfa"])
+    if "ip_whitelist" in config:
+        tenant.ip_whitelist = config["ip_whitelist"]
+    db.add(tenant)
+    db.commit()
+    db.refresh(tenant)
+    return get_security_config(db, tenant_id)

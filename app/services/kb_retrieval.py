@@ -7,8 +7,14 @@ Enclave 進階知識庫檢索服務（Advanced Knowledge Base Retriever）
   - 混合檢索（語意 + BM25 + RRF 融合）
   - 相似度閾值過濾
   - 重排序（Voyage Rerank）
-  - Redis 查詢快取
+  - Redis 查詢快取（ACL-aware：cache key 包含 policy fingerprint）
   - 批次搜尋
+
+Phase 0 安全修復：
+  - search() 接受 AuthorizationContext，不再只接受 tenant_id
+  - 所有檢索模式（semantic/keyword/hybrid）使用相同 ACL predicate
+  - 快取鍵包含 policy_fingerprint，防止跨使用者快取洩漏
+  - 權限變更時精確失效相關 cache
 """
 
 import hashlib
@@ -22,6 +28,9 @@ from app.config import settings
 from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.db.session import SessionLocal
 from app.models.document import DocumentChunk, Document
+from app.core.authorization import AuthorizationContext, SearchScope
+from sqlalchemy import or_, and_, exists
+from app.models.connector import SourceAclEntry, ExternalPrincipal
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +112,72 @@ class KnowledgeBaseRetriever:
                 logger.warning("Redis 連線失敗，檢索快取已停用")
                 self._redis = None
 
+    def _apply_source_acl_filter(self, query_obj, tenant_id: UUID, authz: AuthorizationContext, db):
+        """
+        Filter connector-sourced documents by source ACL projection.
+
+        Fail-closed：無 mapped principal 時，connector 來源文件全部不可見。
+        """
+        if authz.has_kb_admin:
+            return query_obj
+
+        principal_rows = (
+            db.query(ExternalPrincipal.id)
+            .filter(
+                ExternalPrincipal.tenant_id == tenant_id,
+                ExternalPrincipal.mapped_subject_id == authz.subject_id,
+            )
+            .all()
+        )
+        principal_ids = [row[0] for row in principal_rows]
+
+        if not principal_ids:
+            # 無映射 → 僅允許非 connector 來源
+            return query_obj.filter(Document.source_system.is_(None))
+
+        allow_exists = (
+            db.query(SourceAclEntry.id)
+            .filter(
+                SourceAclEntry.tenant_id == tenant_id,
+                SourceAclEntry.source_record_id == Document.source_record_id,
+                SourceAclEntry.principal_id.in_(principal_ids),
+                SourceAclEntry.effect == "allow",
+            )
+            .correlate(Document)
+            .exists()
+        )
+        deny_exists = (
+            db.query(SourceAclEntry.id)
+            .filter(
+                SourceAclEntry.tenant_id == tenant_id,
+                SourceAclEntry.source_record_id == Document.source_record_id,
+                SourceAclEntry.principal_id.in_(principal_ids),
+                SourceAclEntry.effect == "deny",
+            )
+            .correlate(Document)
+            .exists()
+        )
+        return query_obj.filter(
+            or_(
+                Document.source_system.is_(None),
+                and_(Document.source_record_id.isnot(None), allow_exists, ~deny_exists),
+            )
+        )
+
+    def _apply_department_acl_filter(self, query_obj, authz: AuthorizationContext):
+        """與 DocumentList / Agent 同一 PEP（含祖先；僅 kb_admin bypass）。"""
+        dept_ids = authz.department_filter_ids()
+        if dept_ids is None:
+            return query_obj
+        if dept_ids:
+            return query_obj.filter(
+                (Document.department_id.is_(None)) |
+                (Document.department_id.in_(dept_ids))
+            )
+        return query_obj.filter(Document.department_id.is_(None))
+
     # ─────────────────────────────────────────────
-    # 公開 API
+    # 公開 API（Phase 0：接受 AuthorizationContext）
     # ─────────────────────────────────────────────
 
     def search(
@@ -117,12 +190,16 @@ class KnowledgeBaseRetriever:
         rerank: bool = True,
         use_cache: bool = True,
         filter_dict: Optional[Dict] = None,
+        authz: Optional[AuthorizationContext] = None,
     ) -> List[Dict[str, Any]]:
         """
         在租戶知識庫中搜尋相關內容。
 
         Args:
-            tenant_id: 租戶 ID
+            tenant_id: 租戶 ID（向後相容；若提供 authz 則以 authz.tenant_id 為準）
+            authz: 授權上下文（Phase 0 新增）。若提供，則：
+                   - 檢索時套用部門 ACL 過濾
+                   - 快取鍵包含 policy_fingerprint
             query: 查詢問題
             top_k: 返回結果數量
             mode: 檢索模式 (semantic / keyword / hybrid)
@@ -134,9 +211,12 @@ class KnowledgeBaseRetriever:
         Returns:
             匹配結果列表，每個包含 content / score / metadata 等。
         """
-        # 1. 快取檢查
+        # 使用 authz 的 tenant_id（若提供）
+        effective_tenant_id = authz.tenant_id if authz else tenant_id
+
+        # 1. 快取檢查（ACL-aware：包含 policy_fingerprint）
         if use_cache and self._redis:
-            cached = self._cache_get(tenant_id, query, mode, top_k, min_score)
+            cached = self._cache_get(effective_tenant_id, query, mode, top_k, min_score, authz)
             if cached is not None:
                 return cached
 
@@ -145,22 +225,23 @@ class KnowledgeBaseRetriever:
         if mode in {"semantic", "hybrid"}:
             expanded_query = self._expand_query(query)
 
-        # 2. 執行檢索（語意使用擴展查詢，BM25 保持原始 query）
+        # 2. 執行檢索（傳遞 authz 做 ACL 過濾）
         if mode == "keyword":
-            results = self._keyword_search(tenant_id, query, top_k=top_k * 2)
+            results = self._keyword_search(effective_tenant_id, query, top_k=top_k * 2, authz=authz)
         elif mode == "hybrid":
             semantic_query = expanded_query or query
             results = self._hybrid_search(
-                tenant_id,
+                effective_tenant_id,
                 semantic_query=semantic_query,
                 keyword_query=query,
                 top_k=top_k * 2,
                 filter_dict=filter_dict,
+                authz=authz,
             )
         else:  # semantic
             search_query = expanded_query or query
             results = self._semantic_search(
-                tenant_id, search_query, top_k=top_k * 2, filter_dict=filter_dict,
+                effective_tenant_id, search_query, top_k=top_k * 2, filter_dict=filter_dict, authz=authz,
             )
 
         # 3. 閾值過濾
@@ -173,11 +254,30 @@ class KnowledgeBaseRetriever:
         else:
             results = results[:top_k]
 
-        # 5. 寫入快取
+        # 5. Deny-set 後過濾（與 Gateway 對齊；fail-closed on lookup errors）
+        if authz is not None and results:
+            results = self._filter_denied(results, authz)
+
+        # 6. 寫入快取（ACL-aware）
         if use_cache and self._redis:
-            self._cache_set(tenant_id, query, mode, top_k, min_score, results)
+            self._cache_set(effective_tenant_id, query, mode, top_k, min_score, results, authz)
 
         return results
+
+    def _filter_denied(self, results: List[Dict[str, Any]], authz: AuthorizationContext) -> List[Dict[str, Any]]:
+        try:
+            from app.gateway.authorization import get_gateway_authorizer
+            authorizer = get_gateway_authorizer()
+            kept = []
+            for r in results:
+                doc_id = r.get("document_id")
+                if doc_id and authorizer.is_denied(str(doc_id), authz.subject_id):
+                    continue
+                kept.append(r)
+            return kept
+        except Exception as exc:
+            logger.warning("deny-set filter failed, fail closed empty: %s", exc)
+            return []
 
     def batch_search(
         self,
@@ -228,8 +328,9 @@ class KnowledgeBaseRetriever:
         query: str,
         top_k: int = 10,
         filter_dict: Optional[Dict] = None,
+        authz: Optional[AuthorizationContext] = None,
     ) -> List[Dict[str, Any]]:
-        """使用 pgvector 的 cosine distance 進行語意檢索"""
+        """使用 pgvector 的 cosine distance 進行語意檢索（Phase 0：ACL-aware）。"""
         from app.tasks.document_tasks import embed_texts
 
         db = SessionLocal()
@@ -238,31 +339,34 @@ class KnowledgeBaseRetriever:
             query_embedding = embed_texts([query], input_type="query")[0]
 
             # 2. 使用 pgvector cosine distance 搜尋
-            #    cosine_distance = 1 - cosine_similarity
-            #    所以 score = 1 - cosine_distance
             query_obj = (
                 db.query(
                     DocumentChunk,
                     DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"),
                 )
+                .join(Document, DocumentChunk.document_id == Document.id)
                 .filter(
                     DocumentChunk.tenant_id == tenant_id,
                     DocumentChunk.embedding.isnot(None),
+                    Document.tombstoned_at.is_(None),  # Phase 0: 排除已標記刪除的文件
                 )
             )
+
+            # Phase 0: 部門 ACL 過濾
+            if authz:
+                query_obj = self._apply_department_acl_filter(query_obj, authz)
+                query_obj = self._apply_source_acl_filter(query_obj, tenant_id, authz, db)
 
             # ── filter_dict：metadata 過濾 ──
             if filter_dict:
                 for key, value in filter_dict.items():
                     if isinstance(value, list):
-                        # IN 條件：metadata_json->>'key' IN (...)
                         query_obj = query_obj.filter(
                             DocumentChunk.metadata_json[key].astext.in_(
                                 [str(v) for v in value]
                             )
                         )
                     else:
-                        # 精確比對：metadata_json->>'key' = value
                         query_obj = query_obj.filter(
                             DocumentChunk.metadata_json[key].astext == str(value)
                         )
@@ -274,10 +378,8 @@ class KnowledgeBaseRetriever:
             )
 
             results = []
-            # 取得文件名映射
             doc_map: Dict[UUID, str] = {}
             for chunk, distance in query_obj.all():
-                # 懶查文件名
                 if chunk.document_id not in doc_map:
                     doc = db.query(Document).filter(Document.id == chunk.document_id).first()
                     doc_map[chunk.document_id] = doc.filename if doc else ""
@@ -310,8 +412,9 @@ class KnowledgeBaseRetriever:
         tenant_id: UUID,
         query: str,
         top_k: int = 10,
+        authz: Optional[AuthorizationContext] = None,
     ) -> List[Dict[str, Any]]:
-        """使用 BM25 在 DB chunks 上做關鍵字檢索"""
+        """使用 BM25 在 DB chunks 上做關鍵字檢索（Phase 0：ACL-aware）。"""
         if not _HAS_BM25:
             logger.warning("rank_bm25 未安裝，關鍵字檢索不可用")
             return []
@@ -319,11 +422,21 @@ class KnowledgeBaseRetriever:
         try:
             db = SessionLocal()
             try:
-                chunks = (
+                # Phase 0: JOIN Document 做 ACL 過濾
+                chunks_q = (
                     db.query(DocumentChunk)
-                    .filter(DocumentChunk.tenant_id == tenant_id)
-                    .all()
+                    .join(Document, DocumentChunk.document_id == Document.id)
+                    .filter(
+                        DocumentChunk.tenant_id == tenant_id,
+                        Document.tombstoned_at.is_(None),
+                    )
                 )
+                # Phase 0: 部門 ACL 過濾
+                if authz:
+                    chunks_q = self._apply_department_acl_filter(chunks_q, authz)
+                    chunks_q = self._apply_source_acl_filter(chunks_q, tenant_id, authz, db)
+                chunks = chunks_q.all()
+
                 if not chunks:
                     return []
 
@@ -407,16 +520,16 @@ class KnowledgeBaseRetriever:
         top_k: int = 10,
         filter_dict: Optional[Dict] = None,
         rrf_k: int = 60,
+        authz: Optional[AuthorizationContext] = None,
     ) -> List[Dict[str, Any]]:
         """
         混合檢索：語意 + BM25，使用 Reciprocal Rank Fusion (RRF) 合併。
-
-        RRF 公式: score = Σ 1 / (k + rank)
+        Phase 0：傳遞 authz 到子檢索方法。
         """
         semantic_results = self._semantic_search(
-            tenant_id, semantic_query, top_k=top_k, filter_dict=filter_dict
+            tenant_id, semantic_query, top_k=top_k, filter_dict=filter_dict, authz=authz,
         )
-        keyword_results = self._keyword_search(tenant_id, keyword_query, top_k=top_k)
+        keyword_results = self._keyword_search(tenant_id, keyword_query, top_k=top_k, authz=authz)
 
         # 如果只有一種來源有結果，直接返回
         if not keyword_results:
@@ -575,25 +688,46 @@ class KnowledgeBaseRetriever:
         return reranked_results
 
     # ─────────────────────────────────────────────
-    # Redis 快取
+    # Redis 快取（Phase 0：ACL-aware）
     # ─────────────────────────────────────────────
 
     _CACHE_TTL = 300  # 5 分鐘
 
     def _cache_key(
-        self, tenant_id: UUID, query: str, mode: str, top_k: int, min_score: float
+        self,
+        tenant_id: UUID,
+        query: str,
+        mode: str,
+        top_k: int,
+        min_score: float,
+        authz: Optional[AuthorizationContext] = None,
     ) -> str:
-        raw = f"{tenant_id}:{query}:{mode}:{top_k}:{min_score}"
+        """
+        ACL-aware 快取鍵。
+
+        包含 policy_fingerprint，確保：
+          - 不同使用者的快取不會互相洩漏
+          - 權限變更後舊快取自動失效
+        """
+        auth_fragment = authz.to_cache_fragment() if authz else "auth:anon"
+        epoch = self._acl_epoch(tenant_id)
+        raw = f"{tenant_id}:{auth_fragment}:epoch:{epoch}:{query}:{mode}:{top_k}:{min_score}"
         h = hashlib.sha256(raw.encode()).hexdigest()[:16]
-        return f"kb:search:{h}"
+        return f"kb:search:{tenant_id}:{auth_fragment}:{h}"
 
     def _cache_get(
-        self, tenant_id: UUID, query: str, mode: str, top_k: int, min_score: float
+        self,
+        tenant_id: UUID,
+        query: str,
+        mode: str,
+        top_k: int,
+        min_score: float,
+        authz: Optional[AuthorizationContext] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         if not self._redis:
             return None
         try:
-            key = self._cache_key(tenant_id, query, mode, top_k, min_score)
+            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz)
             cached = self._redis.get(key)
             if cached:
                 logger.debug(f"快取命中: {key}")
@@ -610,30 +744,49 @@ class KnowledgeBaseRetriever:
         top_k: int,
         min_score: float,
         results: List[Dict[str, Any]],
+        authz: Optional[AuthorizationContext] = None,
     ):
         if not self._redis:
             return
         try:
-            key = self._cache_key(tenant_id, query, mode, top_k, min_score)
+            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz)
             self._redis.setex(key, self._CACHE_TTL, json.dumps(results, default=str))
         except Exception:
             pass
 
-    def invalidate_cache(self, tenant_id: UUID):
-        """清除租戶的所有檢索快取（文件新增/刪除時呼叫）"""
+    def invalidate_cache(self, tenant_id: UUID, policy_fingerprint: Optional[str] = None):
+        """
+        精確失效檢索快取。
+
+        計畫不變量：必須提供 policy_fingerprint；禁止掃描並刪除整個租戶 cache。
+        若未提供 fingerprint，改以 tenant 級 revision bump key 讓舊鍵自然 miss。
+        """
         if not self._redis:
             return
         try:
-            # 刪除所有此租戶的快取 key
-            cursor = 0
-            while True:
-                cursor, keys = self._redis.scan(cursor, match="kb:search:*", count=100)
-                if keys:
-                    self._redis.delete(*keys)
-                if cursor == 0:
-                    break
+            if policy_fingerprint:
+                pattern = f"kb:search:{tenant_id}:auth:{policy_fingerprint}:*"
+                cursor = 0
+                while True:
+                    cursor, keys = self._redis.scan(cursor, match=pattern, count=100)
+                    if keys:
+                        self._redis.delete(*keys)
+                    if cursor == 0:
+                        break
+                return
+            # 無 fingerprint：bump ACL epoch，舊鍵因 epoch 不匹配而失效（不 scan 全租戶）
+            epoch_key = f"kb:acl_epoch:{tenant_id}"
+            self._redis.incr(epoch_key)
         except Exception:
             pass
+
+    def _acl_epoch(self, tenant_id: UUID) -> str:
+        if not self._redis:
+            return "0"
+        try:
+            return str(self._redis.get(f"kb:acl_epoch:{tenant_id}") or "0")
+        except Exception:
+            return "0"
 
     # ─────────────────────────────────────────────
     # HyDE 查詢擴展（Hypothetical Document Embeddings）

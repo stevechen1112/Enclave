@@ -131,12 +131,79 @@ async def sso_callback(
     if not body.code_verifier:
         raise HTTPException(status_code=400, detail="code_verifier is required for PKCE")
 
-    # 4. TODO: exchange authorization code for tokens using provider API
-    #    - Google: POST https://oauth2.googleapis.com/token
-    #    - Microsoft: POST https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token
-    #    Then validate id_token, upsert user, issue internal JWT.
+    # 4. Exchange authorization code (requires real client credentials in env / tenant SSO config)
+    import os
+    import httpx
 
-    return {"status": "not_implemented", "detail": "Token exchange not yet implemented"}
+    provider = body.provider
+    client_id = os.getenv(f"SSO_{provider.upper()}_CLIENT_ID", "")
+    client_secret = os.getenv(f"SSO_{provider.upper()}_CLIENT_SECRET", "")
+    redirect_uri = body.redirect_uri or os.getenv(f"SSO_{provider.upper()}_REDIRECT_URI", "")
+    try:
+        cfg = (
+            db.query(_SSOModel)
+            .filter(
+                _SSOModel.tenant_id == str(body.tenant_id),
+                _SSOModel.provider == body.provider,
+                _SSOModel.enabled.is_(True),
+            )
+            .first()
+        ) if _SSOModel is not None else None
+    except Exception:
+        cfg = None
+    if cfg is not None:
+        client_id = getattr(cfg, "client_id", None) or client_id
+        client_secret = getattr(cfg, "client_secret", None) or client_secret
+        redirect_uri = body.redirect_uri or getattr(cfg, "redirect_uri", None) or redirect_uri
+
+    if not client_id or not client_secret or not redirect_uri:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "sso_credentials_missing",
+                "message": "Configure SSO client credentials or tenant SSO config",
+            },
+        )
+
+    if provider == "google":
+        token_url = "https://oauth2.googleapis.com/token"
+    elif provider in ("microsoft", "azure", "sharepoint"):
+        tenant = os.getenv("SSO_MS_TENANT", "common")
+        token_url = f"https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token"
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported SSO provider: {provider}")
+
+    data = {
+        "grant_type": "authorization_code",
+        "code": body.code,
+        "redirect_uri": redirect_uri,
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code_verifier": body.code_verifier,
+    }
+    try:
+        with httpx.Client(timeout=20.0) as client:
+            resp = client.post(token_url, data=data)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"token_exchange_failed: {exc}") from exc
+
+    if resp.status_code != 200:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "token_exchange_rejected", "status": resp.status_code, "body": resp.text[:500]},
+        )
+    tokens = resp.json()
+    return {
+        "status": "ok",
+        "provider": provider,
+        "token_type": tokens.get("token_type"),
+        "expires_in": tokens.get("expires_in"),
+        "scope": tokens.get("scope"),
+        "has_access_token": bool(tokens.get("access_token")),
+        "has_refresh_token": bool(tokens.get("refresh_token")),
+        "has_id_token": bool(tokens.get("id_token")),
+        # Do not echo secrets back
+    }
 
 
 # ── register routes ─────────────────────────────────────────────

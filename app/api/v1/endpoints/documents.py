@@ -64,6 +64,7 @@ def list_documents(
             .filter(
                 DocumentModel.tenant_id == current_user.tenant_id,
                 DocumentModel.department_id == department_id,
+                DocumentModel.tombstoned_at.is_(None),
             )
             .order_by(DocumentModel.created_at.desc())
             .offset(skip)
@@ -71,27 +72,31 @@ def list_documents(
             .all()
         )
     else:
-        if current_user.is_superuser or current_user.role in ["owner", "admin", "hr"]:
-            documents = crud_document.get_by_tenant(
-                db, tenant_id=current_user.tenant_id, skip=skip, limit=limit
+        # 與 kb_retrieval / Agent DocumentList 同一 PEP（含祖先；僅 kb_admin/superuser bypass）
+        from app.core.authorization import AuthorizationContext
+        authz = AuthorizationContext.from_user(current_user)
+        q = db.query(DocumentModel).filter(
+            DocumentModel.tenant_id == current_user.tenant_id,
+            DocumentModel.tombstoned_at.is_(None),
+        )
+        dept_ids = authz.department_filter_ids()
+        if dept_ids is None:
+            pass  # kb_admin / superuser：全租戶
+        elif dept_ids:
+            q = q.filter(
+                or_(
+                    DocumentModel.department_id.is_(None),
+                    DocumentModel.department_id.in_(dept_ids),
+                )
             )
         else:
-            q = db.query(DocumentModel).filter(DocumentModel.tenant_id == current_user.tenant_id)
-            if current_user.department_id is None:
-                q = q.filter(DocumentModel.department_id.is_(None))
-            else:
-                q = q.filter(
-                    or_(
-                        DocumentModel.department_id.is_(None),
-                        DocumentModel.department_id == current_user.department_id,
-                    )
-                )
-            documents = (
-                q.order_by(DocumentModel.created_at.desc())
-                .offset(skip)
-                .limit(limit)
-                .all()
-            )
+            q = q.filter(DocumentModel.department_id.is_(None))
+        documents = (
+            q.order_by(DocumentModel.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
     return documents
 
 
@@ -223,39 +228,45 @@ async def upload_document(
     return document
 
 
-@router.delete("/batch", summary="批次刪除所有文件")
+@router.delete("/batch", summary="批次撤銷所有文件（tombstone + outbox）")
 def batch_delete_documents(
     *,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
-    批次刪除當前租戶的所有文件（含 chunks、實體檔案）。
+    批次撤銷當前租戶文件：走與單筆刪除相同的 DocumentRevocationService。
     權限：owner, admin
     """
     if current_user.role not in ("owner", "admin") and not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="僅管理員可執行批次刪除")
 
+    from app.services.document_revocation import get_document_revocation
+
     docs = (
         db.query(DocumentModel)
-        .filter(DocumentModel.tenant_id == current_user.tenant_id)
+        .filter(
+            DocumentModel.tenant_id == current_user.tenant_id,
+            DocumentModel.tombstoned_at.is_(None),
+        )
         .all()
     )
-    deleted = 0
+    revoked = 0
+    failed = []
+    revocation = get_document_revocation()
     for doc in docs:
-        for chunk in doc.chunks:
-            db.delete(chunk)
-        try:
-            ext = os.path.splitext(doc.filename)[1]
-            fp = os.path.join(settings.UPLOAD_DIR, str(doc.tenant_id), f"{doc.id}{ext}")
-            if os.path.exists(fp):
-                os.remove(fp)
-        except Exception:
-            pass
-        db.delete(doc)
-        deleted += 1
-    db.commit()
-    return {"deleted": deleted}
+        result = revocation.revoke(
+            db,
+            document_id=doc.id,
+            actor_id=current_user.id,
+            tenant_id=current_user.tenant_id,
+            reason="batch_delete",
+        )
+        if result.get("ok"):
+            revoked += 1
+        else:
+            failed.append(result)
+    return {"deleted": revoked, "revoked": revoked, "failed": failed, "deny_first": True}
 
 
 @router.get("/{document_id}", response_model=Document)
@@ -270,17 +281,24 @@ def get_document(
     """
     document = crud_document.get(db, document_id=document_id)
     
-    if not document:
+    if not document or document.tombstoned_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在"
         )
     
-    # 權限檢查
+    # 租戶隔離
     if not current_user.is_superuser and document.tenant_id != current_user.tenant_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="無權限訪問此文件"
+        )
+
+    # 部門 ACL
+    if not can_access_document_by_department(current_user, document.department_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="無權限存取此部門的文件",
         )
     
     return document
@@ -305,7 +323,7 @@ def delete_document(
     
     document = crud_document.get(db, document_id=document_id)
     
-    if not document:
+    if not document or document.tombstoned_at is not None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="文件不存在"
@@ -317,32 +335,26 @@ def delete_document(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="無權限刪除此文件"
         )
-    
-    # 刪除向量（pgvector: chunks 含有 embedding，直接刪除 DB 記錄即可）
-    try:
-        chunks = crud_document.get_chunks(db, document_id=document_id)
-        for chunk in chunks:
-            db.delete(chunk)
-        db.commit()
-    except Exception as e:
-        logger.warning("刪除向量 chunks 失敗 (document_id=%s): %s", document_id, e)
-    
-    # 刪除實體文件
-    try:
-        file_ext = os.path.splitext(document.filename)[1]
-        file_path = os.path.join(
-            settings.UPLOAD_DIR,
-            str(document.tenant_id),
-            f"{document.id}{file_ext}"
+
+    if not can_access_document_by_department(current_user, document.department_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="無權限刪除此部門的文件",
         )
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except Exception as e:
-        logger.warning("刪除實體文件失敗 (document_id=%s): %s", document_id, e)
-    
-    # 刪除資料庫記錄
-    crud_document.delete(db, document_id=document_id)
-    
-    return {"message": "文件已刪除", "document_id": str(document_id)}
+
+    from app.services.document_revocation import get_document_revocation
+    result = get_document_revocation().revoke(
+        db,
+        document_id=document_id,
+        actor_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        reason="user_request",
+    )
+    if not result.get("ok"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="文件不存在或已刪除",
+        )
+    return {"message": "文件已刪除", "document_id": str(document_id), "deny_first": True}
 
 

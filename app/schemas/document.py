@@ -26,10 +26,16 @@ class DocumentInDBBase(DocumentBase):
     id: Optional[UUID] = None
     tenant_id: Optional[UUID] = None
     uploaded_by: Optional[UUID] = None
+    department_id: Optional[UUID] = None
     file_size: Optional[int] = None
     chunk_count: Optional[int] = None
     error_message: Optional[str] = None
     quality_report: Optional[dict] = None
+    source_type: Optional[str] = None  # file | web | connector
+    source_system: Optional[str] = None  # nas_smb | upload | …
+    version: Optional[int] = None
+    external_version: Optional[str] = None
+    tombstoned_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -55,6 +61,15 @@ class Document(DocumentInDBBase):
         # 確保時區一致
         ts_aware = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
         return (now - ts_aware) < timedelta(days=_NEW_THRESHOLD_DAYS)
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def parse_engine(self) -> Optional[str]:
+        """Expose parser identity for Pilot/E2E (ragflow/deepdoc/native)."""
+        report = self.quality_report or {}
+        if isinstance(report, dict):
+            return report.get("parse_engine") or report.get("parser")
+        return None
 
 
 class DocumentChunkBase(BaseModel):

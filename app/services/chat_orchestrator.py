@@ -9,8 +9,15 @@ from app.config import settings
 from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.services.kb_retrieval import KnowledgeBaseRetriever
 from app.services.structured_answers import try_structured_answer
+from app.gateway.contracts import SearchDomain
+from app.gateway.runtime import get_configured_gateway_router
+from app.services.unified_retriever import UnifiedRetriever
 
 logger = logging.getLogger(__name__)
+
+
+def _get_unified_retriever() -> UnifiedRetriever:
+    return UnifiedRetriever(get_configured_gateway_router())
 
 # ── 可選依賴 ──
 try:
@@ -125,29 +132,128 @@ class ChatOrchestrator:
         tenant_id: UUID,
         question: str,
         top_k: int = 5,
+        authz = None,  # Phase 0: AuthorizationContext
+        use_gateway: bool = True,
     ) -> Dict[str, Any]:
         """
         純檢索：查詢企業內部知識庫，回傳結構化上下文。
 
-        分離自原 process_query，使串流端點可先取得來源，再分段生成。
+        優先經 Gateway/UnifiedRetriever 聚合；失敗時回退 kb_retrieval。
         """
         request_id = str(uuid.uuid4())
+        company_policy_result: Dict[str, Any] = {"status": "error", "results": []}
 
-        try:
-            loop = asyncio.get_event_loop()
-            results = await loop.run_in_executor(
-                None,
-                lambda: self.kb_retriever.search(
-                    tenant_id=tenant_id,
+        if authz is None:
+            return self._build_context(
+                question=question,
+                company_policy={"status": "error", "error": "authz_required", "results": []},
+                request_id=request_id,
+            )
+
+        from app.services.retrieval_facade import get_retrieval_facade
+        facade = get_retrieval_facade()
+
+        if use_gateway:
+            try:
+                retrieved = await facade.search_gateway(
+                    authz=authz,
                     query=question,
                     top_k=top_k,
-                ),
-            )
-            company_policy_result = {"status": "success", "results": results}
-        except Exception as e:
-            company_policy_result = {"status": "error", "error": str(e), "results": []}
+                    domain=SearchDomain.HYBRID,
+                )
+                # CitationBuilder emits citations in the same order as the results
+                # it was built from; match each hit to its own citation by index so
+                # a hit never inherits another hit's lineage.
+                all_citations = list(retrieved.citations or [])
+                results = []
+                for i, r in enumerate(retrieved.results):
+                    c = all_citations[i] if i < len(all_citations) else None
+                    results.append(
+                        {
+                            "id": r.get("id"),
+                            "content": r.get("content") or r.get("text") or "",
+                            "score": r.get("score"),
+                            "document_id": r.get("document_id"),
+                            "filename": (r.get("metadata") or {}).get("filename", ""),
+                            "chunk_index": (r.get("metadata") or {}).get("chunk_index"),
+                            "source": r.get("provider"),
+                            "citations": (
+                                [
+                                    {
+                                        "citation_id": c.citation_id,
+                                        "document_id": str(c.canonical_document_id),
+                                        "document_revision": c.document_revision,
+                                        "provider": c.provider,
+                                    }
+                                ]
+                                if c is not None
+                                else []
+                            ),
+                        }
+                    )
+                gw_status = getattr(retrieved, "gateway_status", None) or "success"
+                company_policy_result = {
+                    "status": "success",
+                    "results": results,
+                    "retrieval_mode": "gateway",
+                    # partial adapter failures are degraded — do not claim full search.
+                    "degraded": gw_status == "partial",
+                    # A6: surface which providers actually answered for the audit trace.
+                    "providers_called": list(
+                        getattr(getattr(retrieved, "audit_trail", None), "providers_called", None)
+                        or []
+                    ),
+                }
+            except Exception as exc:
+                logger.warning("Gateway retrieval failed, fallback to canonical facade: %s", exc)
 
-        # ── 組裝結構化上下文 ──
+        if company_policy_result.get("status") != "success":
+            try:
+                loop = asyncio.get_event_loop()
+                retrieved = await loop.run_in_executor(
+                    None,
+                    lambda: facade.search(
+                        authz=authz,
+                        query=question,
+                        top_k=top_k,
+                    ),
+                )
+                # Preserve citation lineage on fallback the same way as gateway path.
+                all_citations = list(retrieved.citations or [])
+                fallback_results = []
+                for i, r in enumerate(retrieved.results):
+                    c = all_citations[i] if i < len(all_citations) else None
+                    row = dict(r) if isinstance(r, dict) else {
+                        "id": getattr(r, "id", None),
+                        "content": getattr(r, "content", None) or getattr(r, "text", None) or "",
+                        "score": getattr(r, "score", None),
+                        "document_id": getattr(r, "document_id", None),
+                    }
+                    if c is not None:
+                        row["citations"] = [{
+                            "citation_id": c.citation_id,
+                            "document_id": str(c.canonical_document_id),
+                            "document_revision": c.document_revision,
+                            "provider": c.provider,
+                        }]
+                    fallback_results.append(row)
+                # Honest degraded signal: gateway unavailable → canonical-only
+                company_policy_result = {
+                    "status": "success",
+                    "results": fallback_results,
+                    "retrieval_mode": "canonical_fallback",
+                    "degraded": True,
+                    "providers_called": ["document"],
+                }
+            except Exception as e:
+                company_policy_result = {
+                    "status": "error",
+                    "error": str(e),
+                    "results": [],
+                    "retrieval_mode": "error",
+                    "degraded": True,
+                }
+
         return self._build_context(
             question=question,
             company_policy=company_policy_result,
@@ -184,6 +290,8 @@ class ChatOrchestrator:
             and len(company_policy.get("results", [])) > 0
         )
 
+        retrieval_mode = company_policy.get("retrieval_mode") or "canonical"
+        degraded = bool(company_policy.get("degraded"))
         context: Dict[str, Any] = {
             "request_id": request_id,
             "question": question,
@@ -191,6 +299,19 @@ class ChatOrchestrator:
             "company_policy_raw": None,
             "context_parts": [],
             "sources": [],
+            "retrieval": {
+                "mode": retrieval_mode,
+                "degraded": degraded,
+                "request_id": request_id,
+                "providers_called": list(company_policy.get("providers_called") or []),
+                "label": (
+                    "僅使用本機主索引（外部來源／Gateway 暫時不可用）"
+                    if degraded and retrieval_mode == "canonical_fallback"
+                    else "已搜尋可存取知識"
+                    if has_policy
+                    else "未找到可存取證據"
+                ),
+            },
             "disclaimer": "本回答由 AI 根據知識庫文件生成，僅供參考。如有重要決策，請以正式文件為準。",
         }
 
@@ -210,11 +331,34 @@ class ChatOrchestrator:
                 ],
             }
             for r in top_results:
+                citations = r.get("citations") or []
+                cite0 = citations[0] if citations else {}
+                meta = r.get("metadata") or {}
+                revision = (
+                    cite0.get("document_revision")
+                    or r.get("document_revision")
+                    or meta.get("document_revision")
+                    or meta.get("version")
+                )
+                page = (
+                    r.get("page")
+                    if r.get("page") is not None
+                    else meta.get("page")
+                    if meta.get("page") is not None
+                    else meta.get("page_number")
+                )
                 context["sources"].append({
                     "type": "policy",
-                    "title": r.get("filename") or "",
+                    "title": r.get("filename") or meta.get("filename") or "",
                     "snippet": (r.get("content") or "")[:200],
                     "score": r.get("score") or 0,
+                    "document_id": str(r.get("document_id") or cite0.get("document_id") or "") or None,
+                    "document_revision": revision,
+                    "chunk_index": r.get("chunk_index") if r.get("chunk_index") is not None else meta.get("chunk_index"),
+                    "provider": r.get("source") or r.get("provider") or cite0.get("provider"),
+                    "updated_at": meta.get("updated_at") or r.get("updated_at"),
+                    "page": page,
+                    "accessible": True,
                 })
             for i, r in enumerate(top_results, 1):
                 content = r.get("content") or ""
@@ -248,17 +392,31 @@ class ChatOrchestrator:
         )
 
         try:
+            from app.services.openai_compat import chat_completion_kwargs
+
+            base_max = int(getattr(settings, "OPENAI_MAX_TOKENS", 1500) or 1500)
+            max_tokens = max(base_max, 4000)
             response = await self._openai_async.chat.completions.create(
-                model=self._llm_model,
                 messages=messages,
-                temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
-                max_tokens=getattr(settings, "OPENAI_MAX_TOKENS", 1500),
-                stream=True,
+                **chat_completion_kwargs(
+                    self._llm_model,
+                    max_tokens=max_tokens,
+                    temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
+                    stream=True,
+                ),
             )
+            produced = False
             async for chunk in response:
                 delta = chunk.choices[0].delta
                 if delta.content:
+                    produced = True
                     yield delta.content
+            if not produced:
+                logger.warning("LLM stream produced no content tokens; emitting fallback notice")
+                yield (
+                    "模型未產出可讀答案（可能將回應額度用在內部推理）。"
+                    "請縮小問題範圍，或改問可直接從文件摘錄的事實。"
+                )
         except Exception as e:
             logger.warning("LLM 串流生成失敗，回退到模板: %s", e)
             yield self._fallback_answer(context)
@@ -303,11 +461,15 @@ class ChatOrchestrator:
         ]
 
         try:
+            from app.services.openai_compat import chat_completion_kwargs
+
             response = await client.chat.completions.create(
-                model=model,
                 messages=messages,
-                temperature=0,
-                max_tokens=200,
+                **chat_completion_kwargs(
+                    model,
+                    max_tokens=200,
+                    temperature=0,
+                ),
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
@@ -323,11 +485,13 @@ class ChatOrchestrator:
         top_k: int = settings.RETRIEVAL_TOP_K,
         conversation_id: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
+        authz = None,  # Phase 0: AuthorizationContext
     ) -> Dict[str, Any]:
         """
         處理用戶查詢（非串流，向下相容）。
         
         新增 conversation_id / history 參數以支援多輪對話。
+        Phase 0: 接受 AuthorizationContext 做 ACL 過濾。
         """
         structured = try_structured_answer(tenant_id, question, history=history)
         if structured:
@@ -345,11 +509,12 @@ class ChatOrchestrator:
         if history:
             effective_question = await self.contextualize_query(question, history)
 
-        # 檢索
+        # 檢索（Phase 0: 傳遞 authz）
         ctx = await self.retrieve_context(
             tenant_id=tenant_id,
             question=effective_question,
             top_k=top_k,
+            authz=authz,
         )
 
         # 生成回答（非串流）
@@ -361,6 +526,8 @@ class ChatOrchestrator:
             "sources": ctx["sources"],
             "notes": [],
             "disclaimer": ctx["disclaimer"],
+            # A6: sync chat path must persist providers_called via RetrievalTrace
+            "retrieval": ctx.get("retrieval") or {},
         }
 
         if self._openai and ctx["has_policy"]:
@@ -444,15 +611,49 @@ class ChatOrchestrator:
         history: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         """同步 LLM 生成回答（非串流）。"""
-        messages = self._build_llm_messages(question, context, history=history)
+        from app.services.openai_compat import chat_completion_kwargs
 
-        response = self._openai.chat.completions.create(
-            model=self._llm_model,
-            messages=messages,
-            temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
-            max_tokens=getattr(settings, "OPENAI_MAX_TOKENS", 1500),
-        )
-        return response.choices[0].message.content.strip()
+        messages = self._build_llm_messages(question, context, history=history)
+        # gpt-5 系會把 completion budget 先花在 reasoning；複雜題 1500 常不夠留下正文
+        base_max = int(getattr(settings, "OPENAI_MAX_TOKENS", 1500) or 1500)
+        budgets = [base_max]
+        if base_max < 4000:
+            budgets.append(4000)
+
+        last_finish = None
+        last_reasoning = 0
+        for max_tokens in budgets:
+            response = self._openai.chat.completions.create(
+                messages=messages,
+                **chat_completion_kwargs(
+                    self._llm_model,
+                    max_tokens=max_tokens,
+                    temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
+                ),
+            )
+            choice = response.choices[0]
+            content = (choice.message.content or "").strip()
+            last_finish = choice.finish_reason
+            usage = getattr(response, "usage", None)
+            details = getattr(usage, "completion_tokens_details", None) if usage else None
+            last_reasoning = int(getattr(details, "reasoning_tokens", 0) or 0) if details else 0
+            if content:
+                return content
+            logger.warning(
+                "LLM returned empty content (finish=%s reasoning_tokens=%s max_tokens=%s); retry/fallback",
+                last_finish,
+                last_reasoning,
+                max_tokens,
+            )
+
+        # 推理耗盡預算仍無正文：不要回空字串假裝成功
+        if last_finish == "length" and last_reasoning > 0:
+            return (
+                "模型在推理階段用盡了回應額度，未能產出可讀答案。"
+                "請縮小問題範圍，或改問可直接從文件摘錄的事實。"
+                "（若涉及 Excel 公式計算結果，亦可能因檔案未含快取值而無法直接得出數字。）"
+            )
+        return self._fallback_answer(context)
 
     @staticmethod
     def _build_calc_guidance(question: str) -> str:
