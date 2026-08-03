@@ -69,7 +69,7 @@ export default function WikiListPage() {
             <h1 className="text-xl font-bold text-gray-900">Wiki</h1>
             <span className="text-sm text-gray-400">{pages.length} 頁</span>
             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-              Beta · 唯讀
+              Beta
             </span>
           </div>
         </div>

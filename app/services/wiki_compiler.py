@@ -142,6 +142,50 @@ class WikiCompiler:
         db.refresh(page)
         return page
 
+    def edit_page(
+        self,
+        db: Session,
+        page: WikiPage,
+        *,
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        editor_id: Optional[str] = None,
+    ) -> WikiPage:
+        """管理員手動編輯：內容變更建立新 revision（保留 citation_map），
+        標記 provenance 為 manual；重編譯仍會產生更新 revision，不覆寫歷史。"""
+        if title and title != page.title:
+            page.title = title
+        current_rev = (
+            db.query(WikiRevision)
+            .filter(WikiRevision.wiki_page_id == page.id, WikiRevision.revision == page.active_revision)
+            .first()
+        )
+        if content is not None and content != (current_rev.content if current_rev else ""):
+            revision_num = (page.active_revision or 0) + 1
+            rev = WikiRevision(
+                wiki_page_id=page.id,
+                revision=revision_num,
+                content=content,
+                content_hash=hashlib.sha256(content.encode()).hexdigest()[:16],
+                citation_map=list(current_rev.citation_map) if current_rev and current_rev.citation_map else [],
+                compile_job_id=f"manual-edit-{editor_id or 'unknown'}",
+            )
+            db.add(rev)
+            page.active_revision = revision_num
+        if page.status == "draft":
+            page.status = "published"
+        publish_event(
+            db,
+            aggregate_type="wiki",
+            aggregate_id=str(page.id),
+            event_type="edited",
+            revision=page.active_revision or 1,
+            payload={"editor_id": editor_id or "", "manual": True},
+        )
+        db.commit()
+        db.refresh(page)
+        return page
+
     def tombstone_page(self, db: Session, page_id: UUID) -> bool:
         page = db.query(WikiPage).filter(WikiPage.id == page_id).first()
         if not page:

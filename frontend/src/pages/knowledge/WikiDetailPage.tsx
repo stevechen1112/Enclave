@@ -9,8 +9,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ArrowLeft, BookOpen, FileText, Link2 } from 'lucide-react'
+import { ArrowLeft, BookOpen, FileText, Link2, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '../../auth'
 
 interface Citation {
   document_id?: string
@@ -34,8 +35,14 @@ interface WikiPageDetail {
 export default function WikiDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const canEdit = !!user && (user.is_superuser || user.role === 'owner' || user.role === 'admin')
   const [page, setPage] = useState<WikiPageDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -59,6 +66,37 @@ export default function WikiDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  const startEdit = () => {
+    if (!page) return
+    setEditTitle(page.title)
+    setEditContent(page.content)
+    setEditing(true)
+  }
+
+  const handleSave = async () => {
+    if (!page) return
+    setSaving(true)
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`/api/v1/wiki/pages/${page.id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: editTitle, content: editContent }),
+      })
+      if (!res.ok) throw new Error()
+      setPage({ ...page, title: editTitle, content: editContent })
+      setEditing(false)
+      toast.success('已儲存（新增 revision）')
+    } catch {
+      toast.error('儲存失敗')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -80,25 +118,75 @@ export default function WikiDetailPage() {
         </button>
 
         <div className="bg-white border rounded-xl p-5 mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen className="w-5 h-5 text-blue-500" />
-            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-              {page.page_type}
-            </span>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-              Beta · 唯讀
-            </span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-blue-500" />
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                {page.page_type}
+              </span>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                Beta
+              </span>
+            </div>
+            {canEdit && !editing && (
+              <button
+                onClick={startEdit}
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 border rounded-lg px-2.5 py-1.5 transition"
+              >
+                <Pencil className="w-3.5 h-3.5" /> 編輯
+              </button>
+            )}
           </div>
-          <h1 className="text-lg font-bold text-gray-900">{page.title}</h1>
-          <p className="text-xs text-gray-400 mt-1">{page.slug}</p>
+          {editing ? (
+            <input
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+              className="w-full text-lg font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          ) : (
+            <>
+              <h1 className="text-lg font-bold text-gray-900">{page.title}</h1>
+              <p className="text-xs text-gray-400 mt-1">{page.slug}</p>
+            </>
+          )}
         </div>
 
         <div className="bg-white border rounded-xl p-5 mb-4">
-          <div className="prose prose-sm max-w-none text-gray-800">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {page.content}
-            </ReactMarkdown>
-          </div>
+          {editing ? (
+            <div>
+              <textarea
+                value={editContent}
+                onChange={e => setEditContent(e.target.value)}
+                rows={18}
+                className="w-full font-mono text-sm text-gray-800 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+              <p className="text-[11px] text-gray-400 mt-2">
+                儲存會建立新 revision，不覆寫歷史；下次編譯會產生更新的 revision。
+              </p>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? '儲存中…' : '儲存'}
+                </button>
+                <button
+                  onClick={() => setEditing(false)}
+                  disabled={saving}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="prose prose-sm max-w-none text-gray-800">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {page.content}
+              </ReactMarkdown>
+            </div>
+          )}
         </div>
 
         {page.citation_map && page.citation_map.length > 0 && (

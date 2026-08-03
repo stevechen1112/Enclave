@@ -9,11 +9,12 @@ from fastapi import Response
 WIKI_PRODUCT_STATUS: Dict[str, Any] = {
     "pack": "knowledge_compiler",
     "surface": "wiki",
-    "status": "read_only_beta",
+    "status": "beta",
     "web_ui": True,
     "message": (
-        "Wiki 為唯讀 Beta：/knowledge/wiki 可瀏覽與閱讀（含來源引用）；"
-        "編譯與寫入仍僅限 /api/v1/wiki/*（管理員）。"
+        "Wiki 為 Beta：/knowledge/wiki 可瀏覽與閱讀（含來源引用）；"
+        "管理員可於閱讀頁手動編輯（新增 revision，不覆寫歷史）；"
+        "編譯仍由 WeKnora 觸發（/api/v1/wiki/compile，管理員）。"
     ),
     "docs": "docs/ENCLAVE_2_0_TECHNICAL_DD.md#DD-M08",
 }

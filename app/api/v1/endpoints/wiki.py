@@ -139,6 +139,42 @@ def get_wiki_page(
     }
 
 
+class WikiEditRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+
+
+@router.patch("/pages/{page_id}", response_model=WikiPageOut)
+def edit_wiki_page(
+    page_id: UUID,
+    body: WikiEditRequest,
+    response: Response,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_admin),
+) -> Any:
+    """管理員手動編輯（新增 revision，不覆寫歷史）。"""
+    _wiki_headers(response)
+    page = db.query(WikiPage).filter(
+        WikiPage.id == page_id,
+        WikiPage.tenant_id == current_user.tenant_id,
+        WikiPage.tombstoned_at.is_(None),
+    ).first()
+    if not page:
+        raise HTTPException(status_code=404, detail="Wiki 頁面不存在")
+    if body.title is None and body.content is None:
+        raise HTTPException(status_code=400, detail="未提供要更新的欄位")
+    page = _compiler.edit_page(
+        db, page,
+        title=body.title, content=body.content,
+        editor_id=str(current_user.id),
+    )
+    return WikiPageOut(
+        id=str(page.id), slug=page.slug, title=page.title,
+        page_type=page.page_type, status=page.status,
+        active_revision=page.active_revision or 1,
+    )
+
+
 @router.post("/compile", response_model=WikiPageOut)
 def compile_wiki(
     body: WikiCompileRequest,

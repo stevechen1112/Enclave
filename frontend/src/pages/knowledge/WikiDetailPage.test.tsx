@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import WikiDetailPage from './WikiDetailPage'
@@ -7,6 +8,13 @@ vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }))
 import toast from 'react-hot-toast'
+
+const mockAuth: { user: { role: string; is_superuser: boolean } | null } = {
+  user: { role: 'admin', is_superuser: false },
+}
+vi.mock('../../auth', () => ({
+  useAuth: () => ({ user: mockAuth.user }),
+}))
 
 const DETAIL = {
   id: 'p1',
@@ -53,6 +61,7 @@ describe('WikiDetailPage', () => {
   beforeEach(() => {
     localStorage.setItem('token', 'test-token')
     vi.clearAllMocks()
+    mockAuth.user = { role: 'admin', is_superuser: false }
   })
 
   it('renders title and markdown content', async () => {
@@ -91,5 +100,48 @@ describe('WikiDetailPage', () => {
       expect(toast.error).toHaveBeenCalledWith('Wiki 頁面不存在或無權限檢視'),
     )
     expect(screen.getByTestId('location')).toHaveTextContent('/knowledge/wiki')
+  })
+
+  it('admin sees edit button and saves via PATCH', async () => {
+    mockFetchOnce(DETAIL)
+    const { container } = renderDetail()
+    await userEvent.click(await screen.findByRole('button', { name: /編輯/ }))
+    const textarea = container.querySelector('textarea')!
+    expect(textarea.value).toBe(DETAIL.content)
+    await userEvent.clear(textarea)
+    await userEvent.type(textarea, '# 修正後')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: '儲存' }))
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith('已儲存（新增 revision）'),
+    )
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]
+    expect(url).toBe('/api/v1/wiki/pages/p1')
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body)).toEqual({ title: DETAIL.title, content: '# 修正後' })
+  })
+
+  it('save failure shows error toast and stays in edit mode', async () => {
+    mockFetchOnce(DETAIL)
+    renderDetail()
+    await userEvent.click(await screen.findByRole('button', { name: /編輯/ }))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: '儲存' }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('儲存失敗'))
+    expect(screen.getByRole('button', { name: '儲存' })).toBeInTheDocument()
+  })
+
+  it('employee role does not see the edit button', async () => {
+    mockAuth.user = { role: 'employee', is_superuser: false }
+    mockFetchOnce(DETAIL)
+    renderDetail()
+    await screen.findByText('公司制度總覽')
+    expect(screen.queryByRole('button', { name: /編輯/ })).not.toBeInTheDocument()
   })
 })

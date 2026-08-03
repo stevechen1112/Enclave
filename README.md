@@ -156,7 +156,7 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 
 | 缺口 | 說明 |
 |------|------|
-| Wiki 無**編輯型** Web UI | 唯讀瀏覽 UI 已上線（`/knowledge/wiki`）；編譯／寫入仍限 `/api/v1/wiki/*`（管理員） |
+| Wiki 編輯限管理員手動修訂 | 瀏覽全角色；管理員可在閱讀頁編輯（新增 revision 不覆寫歷史）；編譯仍由 WeKnora 觸發 |
 | Graph **無生產寫入路徑與產品 UI** | 僅 tests/eval |
 | Connector 表面過寬 | **真實認證僅 `nas_smb` + `bookstack`** |
 | SSO | 程式存在但未掛入產品導航 |

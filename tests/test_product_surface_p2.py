@@ -3,9 +3,10 @@ from app.api.v1.product_surface import GRAPH_PRODUCT_STATUS, WIKI_PRODUCT_STATUS
 
 
 def test_wiki_graph_product_status_payloads():
-    # Wiki: read-only browse/read UI exists (/knowledge/wiki); compile stays API-only.
+    # Wiki: browse/read UI exists (/knowledge/wiki); admin manual edit creates new
+    # revisions; compile stays admin-triggered via API.
     assert WIKI_PRODUCT_STATUS["web_ui"] is True
-    assert WIKI_PRODUCT_STATUS["status"] == "read_only_beta"
+    assert WIKI_PRODUCT_STATUS["status"] == "beta"
     assert GRAPH_PRODUCT_STATUS["web_ui"] is False
     assert GRAPH_PRODUCT_STATUS["production_write_path"] is False
     assert "api_only" in GRAPH_PRODUCT_STATUS["status"]

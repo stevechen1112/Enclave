@@ -12,7 +12,7 @@
 | 乾淨印刷掃描的欄位抽取可達可用水準（CER ≈ 0.18–0.33） | CV-RF-01b 子集 |
 | RAGFlow 檢索在可答黃金題上 Hit@5 = 14/15（vs 本機 canonical 0/15） | E1 answerable-only PROVEN |
 | BookStack → PipesHub ACL 搜尋：fixture 零洩漏 | CV-PH-03 |
-| WeKnora Auto-Wiki 真實編譯（含 source_refs）；sole-source 撤權後不可見 | CV-WK-03、CV-WK-06；唯讀瀏覽 UI 已上線（`/knowledge/wiki`，2026-08-03） |
+| WeKnora Auto-Wiki 真實編譯（含 source_refs）；sole-source 撤權後不可見 | CV-WK-03、CV-WK-06；瀏覽 UI＋管理員手動編輯（新增 revision）已上線（`/knowledge/wiki`，2026-08-03） |
 | page/bbox lineage 可從 DeepDOC `positions` 寫入 Citation | B4 / lineage 50/50 |
 | Specialist 路徑延遲 p95 ≈ 432ms（預算 3000ms）；旗標預設關閉 | CV-RF-06 PASS（仍不進預設 fan-out） |
 
