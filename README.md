@@ -8,7 +8,7 @@
 | 產品線名稱 | **Enclave 2.0**（Triple Injection：RAGFlow + PipesHub + WeKnora） |
 | 本機核心／計畫可自動化出口 | **已完成**（code 閘門 32/32、檢查點 67/73、false_green=0） |
 | 能力啟用與價值證明 | **已閉環**（見 `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md`／`docs/CAPABILITY_CLAIMS.md`） |
-| UI／UX 2.0 IA | **已落地**（總覽｜問答｜知識｜治理｜系統；知識含 **Wiki 唯讀瀏覽**） |
+| UI／UX 2.0 IA | **已落地**（總覽｜問答｜知識｜治理｜系統；知識含 Wiki 瀏覽＋管理員編輯） |
 | 本機 Pilot DB | **單一租戶乾淨庫**（`Demo Tenant`；見下方 §6.3） |
 | DD P0 Correctness Freeze | **已完成**（見 `docs/ENCLAVE_2_0_TECHNICAL_DD.md` §10.1） |
 | DD P1 Architecture Convergence | **主幹完成**（見同 DD §10.2） |
@@ -43,9 +43,9 @@
 | Pack | 環境開關 | 能力 | 本機現況 |
 |------|----------|------|----------|
 | **Enclave Base** | （永遠開） | 治理、上傳／NAS 進資料、解析管線、混合搜尋、聊天、稽核、備份腳本 | 核心可用 |
-| **Document Intelligence** | `RAGFLOW_ENABLED=true` | DeepDoc／OCR／版面解析（RAGFlow） | Pilot E2E 已驗證 `ragflow/deepdoc` |
+| **Document Intelligence** | `RAGFLOW_ENABLED=true` | DeepDoc／OCR／版面解析（RAGFlow）；**雲端 OCR 增強臂**（`CLOUD_OCR_PROVIDER`，預設關） | Pilot E2E 已驗證 `ragflow/deepdoc`；雲端臂見 §5.4 |
 | **Enterprise Connect** | `PIPESHUB_ENABLED=true` | 企業來源同步與 ACL；**首發 `nas_smb`** | NAS 已認證；SP／Drive OAuth 本機 SKIP |
-| **Knowledge Compiler** | `WEKNORA_ENABLED=true` | Wiki／Graph 編譯與引用（WeKnora） | Wiki **唯讀瀏覽 UI 已上線**（`/knowledge/wiki`，含來源引用）；編譯／寫入仍 API-only（管理員）；Graph 無產品 UI |
+| **Knowledge Compiler** | `WEKNORA_ENABLED=true` | Wiki／Graph 編譯與引用（WeKnora） | Wiki 瀏覽＋**管理員編輯 UI** 已上線（`/knowledge/wiki`，編輯建新 revision）；編譯仍 API 觸發（管理員）；Graph 無產品 UI |
 | **Agent Automation** | `AGENT_AUTOMATION_ENABLED` / `REVIEW_QUEUE_ENABLED` | 資料夾監控＋審核佇列（正式）；ReAct／MCP／Sandbox（experimental） | Watcher→Classifier→Review 已接線；工具型 Agent 不進預設導航 |
 
 部署建議：
@@ -140,7 +140,7 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 
 - 多租戶文件管線、混合檢索、聊天 SSE、部門權限與 tombstone／撤權
 - Outbox 投影、sidecar 可關、故障不假收斂
-- UI 2.0：角色導覽、知識生命週期（來源→審核→入庫→引用→撤銷）、總覽待辦、**Wiki 唯讀瀏覽（含來源引用）**
+- UI 2.0：角色導覽、知識生命週期（來源→審核→入庫→引用→撤銷）、總覽待辦、**Wiki 瀏覽＋管理員編輯（revision 制）**
 - NAS connector 認證、retrieval／security／module-disable 等 artifact PASS
 - 三 sidecar 差異化能力逐項啟用並以消融閘門定價（見 §5.4）
 - 嚴格進度閘門：`python scripts/plan_progress_gate.py --write-md --strict`
@@ -304,6 +304,9 @@ python scripts/eval_retrieval_gate.py
 python scripts/security_findings_gate.py
 python scripts/certify_connector.py --type nas_smb
 python scripts/ops_lifecycle.py backup
+
+python -m pytest tests/ -q          # 後端全套（含 wiki 整合／雲端 OCR 管線）
+cd frontend && npm test             # 前端 vitest（Wiki 列表／閱讀／編輯流程）
 ```
 
 ---
@@ -346,7 +349,7 @@ python scripts/ops_lifecycle.py backup
 ## 9. 前端與行動端
 
 **Web（`frontend/`）**  
-React 19 + Vite + Tailwind 4：Vault Control IA（總覽／問答／知識／治理／系統）。詳見 `frontend/README.md`。
+React 19 + Vite + Tailwind 4：Vault Control IA（總覽／問答／知識／治理／系統），知識含 Wiki 瀏覽與管理員編輯。單元測試：vitest + testing-library（`npm test`）。詳見 `frontend/README.md`。
 
 **Mobile（`mobile/`）**  
 Expo 子集；**非 2.0 GA 路徑**——見 `mobile/README.md`、`mobile/EXPERIMENTAL.md`。
