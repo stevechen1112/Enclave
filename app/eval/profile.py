@@ -106,7 +106,13 @@ class EvalProfile:
     @property
     def profile_hash(self) -> str:
         """Profile 內容的 hash，用於 artifact 追蹤。"""
-        content = f"{self.name}:{self.version}:{self.questions_file}:{self.retrieval_top_k}:{self.metrics}:{self.thresholds}"
+        content = (
+            f"{self.name}:{self.version}:{self.questions_file}:"
+            f"{self.questions_offset}:{self.questions_limit}:"
+            f"{self.retrieval_top_k}:{self.retrieval_mode}:{self.rerank}:"
+            f"{self.metrics}:{self.thresholds}:{self.judge_type}:"
+            f"{self.llm_judge_model}:{self.llm_judge_mode}"
+        )
         return hashlib.sha256(content.encode()).hexdigest()[:12]
 
     def to_dict(self) -> Dict[str, Any]:

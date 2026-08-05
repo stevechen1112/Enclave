@@ -331,37 +331,54 @@ class KnowledgeBaseRetriever:
             )
             chunk_by_id: Dict[str, DocumentChunk] = {str(c.id): c for c in fetched_chunks}
 
-            # 若啟用 sibling，需查詢相鄰 chunk
+            # 若啟用 sibling，批次查詢相鄰 chunks（避免 N+1 DB query）
             sibling_map: Dict[str, List[Dict[str, Any]]] = {}
             if sibling_enabled:
                 window = settings.SIBLING_EXPANSION_WINDOW
+                # 收集所有需要的 (document_id, chunk_index) 範圍
+                sibling_queries: Dict[str, List[int]] = {}  # document_id → [chunk_indices]
                 for r in results:
                     chunk_id = str(r.get("id") or "")
                     doc_id = r.get("document_id")
                     chunk_index = r.get("chunk_index", -1)
                     if not chunk_id or not doc_id or chunk_index < 0:
                         continue
-
-                    # 查詢同文件、相鄰 chunk_index 的 chunks
                     sibling_indices = list(range(max(0, chunk_index - window), chunk_index + window + 1))
                     sibling_indices = [i for i in sibling_indices if i != chunk_index]
                     if not sibling_indices:
                         continue
+                    doc_key = str(doc_id)
+                    if doc_key not in sibling_queries:
+                        sibling_queries[doc_key] = []
+                    sibling_queries[doc_key].extend(sibling_indices)
 
+                # 批次查詢每個文件的 sibling chunks
+                all_siblings_by_doc: Dict[str, List[DocumentChunk]] = {}
+                for doc_key, indices in sibling_queries.items():
+                    # 去重 indices
+                    unique_indices = list(set(indices))
                     siblings = (
                         db.query(DocumentChunk)
                         .filter(
                             DocumentChunk.tenant_id == tenant_id,
-                            DocumentChunk.document_id == UUID(str(doc_id)),
-                            DocumentChunk.chunk_index.in_(sibling_indices),
+                            DocumentChunk.document_id == UUID(doc_key),
+                            DocumentChunk.chunk_index.in_(unique_indices),
                         )
                         .all()
                     )
-
-                    # ACL 過濾 sibling
+                    # ACL 過濾 sibling（含部門 ACL + tombstone）
                     if authz:
                         siblings = [s for s in siblings if self._chunk_acl_ok(s, authz, db)]
+                    all_siblings_by_doc[doc_key] = siblings
 
+                # 構建 sibling_map
+                for r in results:
+                    chunk_id = str(r.get("id") or "")
+                    doc_id = str(r.get("document_id") or "")
+                    chunk_index = r.get("chunk_index", -1)
+                    if not chunk_id or chunk_index < 0:
+                        continue
+                    doc_siblings = all_siblings_by_doc.get(doc_id, [])
                     sibling_map[chunk_id] = [
                         {
                             "id": str(s.id),
@@ -374,7 +391,7 @@ class KnowledgeBaseRetriever:
                             "parent_chunk_id": str(s.parent_chunk_id) if s.parent_chunk_id else None,
                             "source": "sibling",
                         }
-                        for s in siblings
+                        for s in doc_siblings
                     ]
 
             # 構建 parent map
@@ -416,12 +433,29 @@ class KnowledgeBaseRetriever:
             db.close()
 
     def _chunk_acl_ok(self, chunk: DocumentChunk, authz: AuthorizationContext, db) -> bool:
-        """檢查 chunk 是否通過 ACL（用於 sibling 過濾）。"""
+        """檢查 chunk 是否通過 ACL（用於 sibling 過濾）。
+
+        包含：
+        - 文件未 tombstoned
+        - 部門 ACL（透過 _apply_department_acl_filter 的邏輯）
+        - deny-set 檢查
+        """
         try:
             # 基本檢查：文件未 tombstoned
             doc = db.query(Document).filter(Document.id == chunk.document_id).first()
             if not doc or doc.tombstoned_at is not None:
                 return False
+
+            # deny-set 檢查
+            try:
+                from app.gateway.authorization import get_gateway_authorizer
+                authorizer = get_gateway_authorizer()
+                if authorizer.is_denied(str(chunk.document_id), authz.subject_id):
+                    return False
+            except Exception:
+                # authorizer 不可用時 fail-closed
+                return False
+
             return True
         except Exception:
             return False
@@ -875,7 +909,14 @@ class KnowledgeBaseRetriever:
         auth_fragment = authz.to_cache_fragment() if authz else "auth:anon"
         epoch = self._acl_epoch(tenant_id)
         filt = self._filter_fragment(filter_dict)
-        raw = f"{tenant_id}:{auth_fragment}:epoch:{epoch}:{query}:{mode}:{top_k}:{min_score}:filter:{filt}"
+        # P0-1：快取鍵包含 feature flag 狀態，避免切換 flag 時用到舊快取
+        from app.config import settings
+        flag_fragment = (
+            f"p{int(settings.PARENT_DOC_ENABLED)}"
+            f"s{int(settings.SIBLING_EXPANSION_ENABLED)}"
+            f"c{int(settings.CONTEXT_FITTING_ENABLED)}"
+        )
+        raw = f"{tenant_id}:{auth_fragment}:epoch:{epoch}:{query}:{mode}:{top_k}:{min_score}:filter:{filt}:flags:{flag_fragment}"
         h = hashlib.sha256(raw.encode()).hexdigest()[:16]
         return f"kb:search:{tenant_id}:{auth_fragment}:{h}"
 

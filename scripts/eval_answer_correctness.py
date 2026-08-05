@@ -91,7 +91,11 @@ def login(client: httpx.Client) -> None:
     raise RuntimeError(f"login failed: {last.status_code if last else 'n/a'} {getattr(last, 'text', '')[:200]}")
 
 
-def stream_answer(client: httpx.Client, question: str, timeout: int = 600) -> str:
+def stream_answer(client: httpx.Client, question: str, timeout: int = 600) -> tuple[str, dict | None, list | None]:
+    """回傳 (answer_text, retrieval_info, sources_info)。
+
+    P0-3：額外 capture SSE retrieval/sources 事件，避免全域變數的執行緒安全問題。
+    """
     collected: list[str] = []
     retrieval_info: dict | None = None
     sources_info: list | None = None
@@ -104,7 +108,7 @@ def stream_answer(client: httpx.Client, question: str, timeout: int = 600) -> st
             timeout=httpx.Timeout(30.0, read=float(timeout)),
         ) as resp:
             if resp.status_code != 200:
-                return f"[ERROR {resp.status_code}] {resp.read().decode('utf-8', 'ignore')[:200]}"
+                return (f"[ERROR {resp.status_code}] {resp.read().decode('utf-8', 'ignore')[:200]}", None, None)
             for raw in resp.iter_lines():
                 if not raw:
                     continue
@@ -128,19 +132,8 @@ def stream_answer(client: httpx.Client, question: str, timeout: int = 600) -> st
                     collected.append(d["content"])
     except Exception as exc:  # keep suite alive on any stream failure
         partial = "".join(collected)
-        return f"[ERROR {type(exc).__name__}] {exc}; partial={partial[:200]}"
-    answer = "".join(collected)
-    # P0-3：將 retrieval 細節附加到 answer 物件（用特殊前綴，不影響 verdict 判定）
-    # 這些資訊會在 results.append 時被提取
-    global _last_retrieval_info, _last_sources_info
-    _last_retrieval_info = retrieval_info
-    _last_sources_info = sources_info
-    return answer
-
-
-# P0-3：全域暫存上次 SSE 的 retrieval/sources 事件
-_last_retrieval_info: dict | None = None
-_last_sources_info: list | None = None
+        return (f"[ERROR {type(exc).__name__}] {exc}; partial={partial[:200]}", retrieval_info, sources_info)
+    return ("".join(collected), retrieval_info, sources_info)
 
 
 def main() -> int:
@@ -186,9 +179,11 @@ def main() -> int:
         exp_docs = exp.get("document_ids") or []
         missing = [manifest.get(d, d) for d in exp_docs if manifest.get(d) not in online_names]
         try:
-            answer = stream_answer(client, q["query"], timeout=300)
+            answer, retrieval_info, sources_info = stream_answer(client, q["query"], timeout=300)
         except Exception as exc:  # noqa: BLE001 — keep suite running
             answer = f"[ERROR {type(exc).__name__}] {exc}"
+            retrieval_info = None
+            sources_info = None
         spans = exp.get("span_contains") or []
         span_hits = [s for s in spans if span_in_answer(s, answer)]
 
@@ -223,8 +218,8 @@ def main() -> int:
             note = "no transcribed ground truth — needs human/agent judgement"
 
         # P0-3：分層診斷 — 區分「文件沒找到／段落漏掉／生成漏寫／安全門檻」
-        retrieval_detail = _last_retrieval_info or {}
-        sources_detail = _last_sources_info or []
+        retrieval_detail = retrieval_info or {}
+        sources_detail = sources_info or []
         # 提取 retrieval rank 與 selected chunks
         retrieval_results = retrieval_detail.get("results") or retrieval_detail.get("chunks") or []
         retrieval_rank = [
@@ -250,8 +245,9 @@ def main() -> int:
         if verdict == "fail" and not exp.get("must_refuse"):
             if not retrieval_rank:
                 diagnosis = "retrieval_miss"  # 文件沒找到
-            elif span_hits and not all(s in answer for s in spans):
-                diagnosis = "generation_miss"  # 證據完整但生成漏寫
+            elif len(span_hits) == len(spans) and spans:
+                # 證據完整（所有 span 都在檢索結果中）但答案沒命中 → 生成漏寫
+                diagnosis = "generation_miss"
             else:
                 diagnosis = "chunk_miss"  # 文件找對但段落漏掉
         elif verdict == "pass" and exp.get("must_refuse"):

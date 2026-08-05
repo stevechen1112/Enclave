@@ -72,7 +72,7 @@ def fit_context(
     # citation 標記的額外 token 估算（約 10 token/chunk）
     citation_overhead = 10
 
-    for chunk in chunks:
+    for chunk_idx, chunk in enumerate(chunks):
         text = chunk.get("text") or chunk.get("content") or ""
         doc_id = str(chunk.get("document_id") or "")[:8]
         chunk_index = chunk.get("chunk_index", -1)
@@ -100,8 +100,8 @@ def fit_context(
                     current_tokens += estimate_tokens(truncated_text) + citation_overhead
 
             result.dropped_chunks.append(chunk)
-            # 預算用盡，後續全部 dropped
-            for remaining_chunk in chunks[chunks.index(chunk) + 1:]:
+            # 預算用盡，後續全部 dropped（用 enumerate 索引，避免 O(n²) 的 list.index）
+            for remaining_chunk in chunks[chunk_idx + 1:]:
                 if deduplicate:
                     rkey = (str(remaining_chunk.get("document_id") or ""), int(remaining_chunk.get("chunk_index", -1)))
                     if rkey in seen:
@@ -146,11 +146,16 @@ def merge_parent_and_chunks(
     merged: List[Dict[str, Any]] = []
     seen_parents: Set[str] = set()
 
+    # 在迴圈外讀取一次，避免每次迴圈都 import + 讀 settings
+    parent_enabled = PARENT_DOC_ENABLED_CHECK()
+    if not parent_enabled:
+        return list(original_chunks)
+
     for chunk in original_chunks:
         chunk_id = str(chunk.get("id") or "")
         parent = parent_map.get(chunk_id)
 
-        if parent and PARENT_DOC_ENABLED_CHECK():
+        if parent:
             parent_id = str(parent.get("id") or "")
             parent_doc_id = str(parent.get("document_id") or "")
             # parent 必須與 chunk 同文件（不混文件）
@@ -204,9 +209,15 @@ def expand_siblings(
             seen.add(key)
             expanded.append(chunk)
 
-        # siblings
+        # siblings — 按 chunk_index 排序後取前後各 window 個
         siblings = sibling_lookup.get(chunk_id, [])
-        for sibling in siblings[:window * 2]:  # 前後各 window 個
+        # 按 chunk_index 排序，確保取的是真正相鄰的 sibling
+        sorted_siblings = sorted(siblings, key=lambda s: int(s.get("chunk_index", -1)))
+        # 分前後各 window 個
+        prev_sibs = [s for s in sorted_siblings if int(s.get("chunk_index", -1)) < chunk_index][-window:]
+        next_sibs = [s for s in sorted_siblings if int(s.get("chunk_index", -1)) > chunk_index][:window]
+        selected_siblings = prev_sibs + next_sibs
+        for sibling in selected_siblings:
             sib_index = int(sibling.get("chunk_index", -1))
             sib_key = (str(sibling.get("document_id") or ""), sib_index)
             if sib_key in seen:
