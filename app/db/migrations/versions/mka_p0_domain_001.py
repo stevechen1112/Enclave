@@ -1,4 +1,5 @@
-"""MKA domain models — JobModule, InteractionSession, FormDefinition, FormInstance, RuleSet, ApprovalPolicy, KnowhowCard, TenantTermDictionary."""
+"""MKA domain models with tenant RLS and persistence contracts."""
+import os
 from typing import Sequence, Union
 
 from alembic import op
@@ -9,6 +10,52 @@ revision: str = "mka_p0_domain_001"
 down_revision: Union[str, None] = "p7_rls_new_tables_001"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
+
+_TENANT_TABLES = (
+    "tenant_module_bindings",
+    "interaction_sessions",
+    "tenant_term_dictionaries",
+    "form_instances",
+    "mka_approval_requests",
+    "knowhow_cards",
+)
+_GLOBAL_TEMPLATE_TABLES = (
+    "job_modules",
+    "form_definitions",
+    "rule_sets",
+    "approval_policies",
+)
+_TENANT_POLICY = """
+CREATE POLICY tenant_isolation ON "{table}"
+  USING (
+    tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+    OR current_setting('app.bypass_rls', true) = 'on'
+  )
+  WITH CHECK (
+    tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+    OR current_setting('app.bypass_rls', true) = 'on'
+  )
+"""
+_GLOBAL_TEMPLATE_POLICY = """
+CREATE POLICY tenant_isolation ON "{table}"
+  USING (
+    tenant_id IS NULL
+    OR tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+    OR current_setting('app.bypass_rls', true) = 'on'
+  )
+  WITH CHECK (
+    tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid
+    OR current_setting('app.bypass_rls', true) = 'on'
+  )
+"""
+
+
+def _enable_rls(table: str, policy: str, force: bool) -> None:
+    op.execute(f'ALTER TABLE "{table}" ENABLE ROW LEVEL SECURITY')
+    op.execute(f'DROP POLICY IF EXISTS tenant_isolation ON "{table}"')
+    op.execute(policy.format(table=table))
+    mode = "FORCE" if force else "NO FORCE"
+    op.execute(f'ALTER TABLE "{table}" {mode} ROW LEVEL SECURITY')
 
 
 def upgrade() -> None:
@@ -64,6 +111,7 @@ def upgrade() -> None:
         sa.Column("channel", sa.String, default="web"),
         sa.Column("scene_context", sa.JSON, default=dict),
         sa.Column("transcript", sa.Text, nullable=True),
+        sa.Column("transcript_metadata", sa.JSON, default=dict),
         sa.Column("transcript_confirmed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("detected_fields", sa.JSON, default=dict),
         sa.Column("pending_questions", sa.JSON, default=list),
@@ -123,12 +171,18 @@ def upgrade() -> None:
         sa.Column("module_key", sa.String, nullable=True),
         sa.Column("owner_id", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False, index=True),
         sa.Column("status", sa.String, default="draft"),
+        sa.Column("record_version", sa.Integer, nullable=False, default=1),
         sa.Column("values_json", sa.JSON, default=dict),
         sa.Column("provenance_json", sa.JSON, default=dict),
         sa.Column("calculation_snapshot", sa.JSON, default=dict),
         sa.Column("validation_result", sa.JSON, default=dict),
         sa.Column("source_document_ids", sa.JSON, default=list),
         sa.Column("scene_context", sa.JSON, default=dict),
+        sa.Column("approval_request_id", UUID(as_uuid=True), nullable=True),
+        sa.Column("immutable_snapshot", sa.JSON, default=dict),
+        sa.Column("export_artifacts", sa.JSON, default=list),
+        sa.Column("approved_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=True),
+        sa.Column("approved_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), onupdate=sa.func.now()),
         sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True),
@@ -159,6 +213,8 @@ def upgrade() -> None:
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id"), nullable=True, index=True),
         sa.Column("module_key", sa.String, nullable=True),
         sa.Column("object_type", sa.String, nullable=False),
+        sa.Column("version", sa.String, nullable=False, default="1.0"),
+        sa.Column("status", sa.String, default="active"),
         sa.Column("risk_level", sa.String, default="medium"),
         sa.Column("steps", sa.JSON, default=list),
         sa.Column("timeout_policy", sa.JSON, default=dict),
@@ -172,17 +228,22 @@ def upgrade() -> None:
         "mka_approval_requests",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id"), nullable=False, index=True),
+        sa.Column("approval_policy_id", UUID(as_uuid=True), sa.ForeignKey("approval_policies.id"), nullable=True),
         sa.Column("object_type", sa.String, nullable=False),
         sa.Column("object_id", UUID(as_uuid=True), nullable=False, index=True),
         sa.Column("policy_version", sa.String, default="1.0"),
         sa.Column("current_step", sa.Integer, default=0),
+        sa.Column("record_version", sa.Integer, nullable=False, default=1),
         sa.Column("status", sa.String, default="pending"),
         sa.Column("submitted_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("idempotency_key", sa.String, nullable=False),
         sa.Column("reviewers", sa.JSON, default=list),
         sa.Column("decision_log", sa.JSON, default=list),
         sa.Column("immutable_snapshot", sa.JSON, default=dict),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), onupdate=sa.func.now()),
+        sa.UniqueConstraint("tenant_id", "idempotency_key", name="uq_mka_approval_idempotency"),
     )
 
     # KnowhowCard
@@ -190,11 +251,12 @@ def upgrade() -> None:
         "knowhow_cards",
         sa.Column("id", UUID(as_uuid=True), primary_key=True),
         sa.Column("tenant_id", UUID(as_uuid=True), sa.ForeignKey("tenants.id"), nullable=False, index=True),
-        sa.Column("card_id", sa.String, nullable=True, index=True),
+        sa.Column("card_id", sa.String, nullable=False, index=True),
         sa.Column("title", sa.String, nullable=False),
         sa.Column("summary", sa.Text, nullable=True),
         sa.Column("status", sa.String, default="draft"),
         sa.Column("authority_level", sa.Integer, default=60),
+        sa.Column("risk_level", sa.String, default="medium"),
         sa.Column("applicable_roles", sa.JSON, default=list),
         sa.Column("equipment_ids", sa.JSON, default=list),
         sa.Column("product_ids", sa.JSON, default=list),
@@ -214,17 +276,48 @@ def upgrade() -> None:
         sa.Column("interviewee", sa.String, nullable=True),
         sa.Column("interviewer", sa.String, nullable=True),
         sa.Column("reviewer", UUID(as_uuid=True), nullable=True),
+        sa.Column("reviewed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("rejection_reason", sa.Text, nullable=True),
         sa.Column("related_sop_ids", sa.JSON, default=list),
         sa.Column("conflict_report", sa.JSON, default=list),
         sa.Column("version", sa.Integer, default=1),
         sa.Column("effective_from", sa.DateTime(timezone=True), nullable=True),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("retired_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("superseded_by_id", UUID(as_uuid=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), onupdate=sa.func.now()),
+        sa.UniqueConstraint("tenant_id", "card_id", name="uq_knowhow_card_tenant_card"),
     )
+    op.create_index("ix_knowhow_tenant_status", "knowhow_cards", ["tenant_id", "status"])
+
+    # Circular generic workflow reference is added after both tables exist.
+    op.create_foreign_key(
+        "fk_form_instance_approval_request",
+        "form_instances",
+        "mka_approval_requests",
+        ["approval_request_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+
+    force = os.environ.get("RLS_ENFORCEMENT_ENABLED", "false").lower() == "true"
+    for table in _TENANT_TABLES:
+        _enable_rls(table, _TENANT_POLICY, force)
+    for table in _GLOBAL_TEMPLATE_TABLES:
+        _enable_rls(table, _GLOBAL_TEMPLATE_POLICY, force)
 
 
 def downgrade() -> None:
+    for table in _TENANT_TABLES + _GLOBAL_TEMPLATE_TABLES:
+        op.execute(f'DROP POLICY IF EXISTS tenant_isolation ON "{table}"')
+        op.execute(f'ALTER TABLE "{table}" DISABLE ROW LEVEL SECURITY')
+    op.drop_constraint(
+        "fk_form_instance_approval_request",
+        "form_instances",
+        type_="foreignkey",
+    )
+    op.drop_index("ix_knowhow_tenant_status", table_name="knowhow_cards")
     op.drop_table("knowhow_cards")
     op.drop_table("mka_approval_requests")
     op.drop_table("approval_policies")

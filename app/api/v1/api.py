@@ -31,6 +31,8 @@ from app.api.v1.endpoints import (
     users,
     voice,
     internal_service_auth,
+    knowhow,
+    mka_approvals,
 )
 
 api_router = APIRouter()
@@ -67,6 +69,8 @@ api_router.include_router(connectors.router, tags=["connectors"])
 api_router.include_router(wiki.router, tags=["wiki"])
 api_router.include_router(operations.router, tags=["operations"])
 api_router.include_router(agent_approvals.router, tags=["agent-approvals"])
+api_router.include_router(mka_approvals.router, tags=["mka-approvals"])
+api_router.include_router(knowhow.router, tags=["knowhow"])
 api_router.include_router(graph.router, tags=["graph"])
 api_router.include_router(internal_service_auth.router, tags=["internal-service-auth"])
 # P3-2 — Read-only FastMCP Server

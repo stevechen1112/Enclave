@@ -1,16 +1,26 @@
 {
   "gate": "MKA-P0-ACL",
   "status": "pass",
-  "generated_at": "2026-08-05T18:30:03Z",
-  "git_sha": "0174aa6",
+  "generated_at": "2026-08-05T19:00:59Z",
+  "git_sha": "273a7eb",
   "metrics": {
     "module_acl": {
       "passed": true,
       "detail": "authz=None correctly returns empty"
+    },
+    "rls_contract": {
+      "passed": true,
+      "detail": "10/10 RLS tables; global read/tenant-write policy; deferred circular FK"
+    },
+    "persistence_contract": {
+      "passed": true,
+      "detail": "request DB session + explicit tenant filters + 4 API call sites"
     }
   },
   "failures": [],
   "evidence": [
-    "module_acl: authz=None correctly returns empty"
+    "module_acl: authz=None correctly returns empty",
+    "rls_contract: 10/10 RLS tables; global read/tenant-write policy; deferred circular FK",
+    "persistence_contract: request DB session + explicit tenant filters + 4 API call sites"
   ]
 }

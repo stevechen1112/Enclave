@@ -135,6 +135,7 @@ class ChatOrchestrator:
         top_k: int = 5,
         authz = None,  # Phase 0: AuthorizationContext
         use_gateway: bool = True,
+        db = None,  # request-scoped SQLAlchemy Session
     ) -> Dict[str, Any]:
         """純檢索：經 MultiStepOrchestrator（計劃→多臂→合成）組裝上下文。"""
         request_id = str(uuid.uuid4())
@@ -154,6 +155,7 @@ class ChatOrchestrator:
                 question=question,
                 top_k=top_k,
                 use_gateway=use_gateway,
+                db=db,
             )
         except Exception as exc:
             logger.warning("multi-step orchestration failed: %s", exc)
@@ -667,6 +669,7 @@ class ChatOrchestrator:
         conversation_id: Optional[str] = None,
         history: Optional[List[Dict[str, str]]] = None,
         authz = None,  # Phase 0: AuthorizationContext
+        db = None,  # request-scoped SQLAlchemy Session
     ) -> Dict[str, Any]:
         """
         處理用戶查詢（非串流，向下相容）。
@@ -696,6 +699,7 @@ class ChatOrchestrator:
             question=effective_question,
             top_k=top_k,
             authz=authz,
+            db=db,
         )
 
         # 生成回答（非串流）

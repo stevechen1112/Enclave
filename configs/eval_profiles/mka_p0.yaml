@@ -1,0 +1,61 @@
+# Eval Profile: MKA P0 — 製造業知識助理基線
+# 對照 ENGINEERING_PLAN.md §7.4 商品模組評測 + §7.5 Z5 hold-out
+name: mka_p0
+version: "1.0"
+description: "MKA P0 基線 — 製造業 SOP/規格 scoped retrieval、版本有效性、SOP vs know-how 衝突、關鍵欄位抽取"
+
+# ── 題庫（待建立 MKA 專用題目）──
+questions_file: mka_p0_questions.yaml
+
+# ── 語料（待建立 MKA 專用語料）──
+corpus_manifest: mka_p0/corpus_manifest.json
+
+# ── 檢索 ──
+retrieval_top_k: 5
+retrieval_mode: hybrid
+rerank: true
+
+# ── 指標與門檻 ──
+metrics:
+  - hit_at_k
+  - mrr
+  - answer_correctness
+  - field_extraction_accuracy
+  - sop_conflict_detection
+  - refusal_recovery
+thresholds:
+  hit_at_k_min: 0.85
+  mrr_min: 0.70
+  answer_correctness_min: 0.90
+  field_extraction_accuracy_min: 0.80
+  sop_conflict_detection_min: 0.90
+
+# ── Judge ──
+judge_type: deterministic
+llm_judge_model: ""
+
+# ── Artifact ──
+artifact_name: mka_p0_eval
+
+# ── MKA 專用評測項（§7.4）──
+# - 指定設備/產品/客戶 scoped retrieval
+# - 版本有效性
+# - 正式 SOP 與 know-how 衝突
+# - 關鍵欄位抽取
+# - 規則輸出
+# - 表單 provenance
+# - refusal recovery
+mka_eval_items:
+  - scoped_retrieval
+  - version_validity
+  - sop_knowhow_conflict
+  - field_extraction
+  - rule_output
+  - form_provenance
+  - refusal_recovery
+
+# ── Hold-out 特徵 ──
+gt_frozen: false  # 待凍結
+gt_frozen_at: ""
+intent_frozen: false
+anti_target_drawing: true

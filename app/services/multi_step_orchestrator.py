@@ -33,6 +33,7 @@ class MultiStepOrchestrator:
         top_k: int = 5,
         use_gateway: bool = True,
         plan: Optional[QueryPlan] = None,
+        db=None,
     ) -> Dict[str, Any]:
         from app.services.retrieval_facade import get_retrieval_facade
 
@@ -74,7 +75,7 @@ class MultiStepOrchestrator:
             queries = queries_for_arm(plan, arm, question)
             if arm == "catalog":
                 await self._run_catalog(
-                    facade, authz, queries, catalog_hits, trace
+                    facade, authz, queries, catalog_hits, trace, db=db
                 )
             elif arm == "chunk":
                 meta = await self._run_chunk(
@@ -88,6 +89,7 @@ class MultiStepOrchestrator:
                     plan=plan,
                     question=question,
                     catalog_hits=catalog_hits,
+                    db=db,
                 )
                 for p in meta.get("providers_called") or []:
                     if p not in providers_called:
@@ -251,14 +253,14 @@ class MultiStepOrchestrator:
                 )
         return out
 
-    async def _run_catalog(self, facade, authz, queries, out, trace) -> None:
+    async def _run_catalog(self, facade, authz, queries, out, trace, *, db=None) -> None:
         seen = set()
         loop = asyncio.get_event_loop()
         for q in queries:
             try:
                 hits = await loop.run_in_executor(
                     None,
-                    lambda qq=q: facade.search_catalog(authz=authz, query=qq),
+                    lambda qq=q: facade.search_catalog(authz=authz, query=qq, db=db),
                 )
                 titles = []
                 for h in hits:
@@ -278,6 +280,7 @@ class MultiStepOrchestrator:
     async def _run_chunk(
         self, facade, authz, queries, out, trace, *, top_k, use_gateway,
         plan=None, question: str = "", catalog_hits: Optional[List[Dict[str, Any]]] = None,
+        db=None,
     ) -> Dict[str, Any]:
         meta = {
             "providers_called": [],
@@ -321,7 +324,7 @@ class MultiStepOrchestrator:
             before = len(out)
             await self._run_scoped_chunk(
                 facade, authz, mentioned, question or (queries[0] if queries else ""),
-                out, trace, top_k=top_k, seen=seen,
+                out, trace, top_k=top_k, seen=seen, db=db,
             )
             hit_names = {
                 r.get("filename") for r in out[before:] if r.get("filename")
@@ -394,12 +397,15 @@ class MultiStepOrchestrator:
                         query=q,
                         top_k=top_k,
                         domain=SearchDomain.HYBRID,
+                        db=db,
                     )
                 else:
                     loop = asyncio.get_event_loop()
                     retrieved = await loop.run_in_executor(
                         None,
-                        lambda qq=q: facade.search(authz=authz, query=qq, top_k=top_k),
+                        lambda qq=q: facade.search(
+                            authz=authz, query=qq, top_k=top_k, db=db
+                        ),
                     )
                 titles = []
                 all_citations = list(retrieved.citations or [])
@@ -456,7 +462,9 @@ class MultiStepOrchestrator:
                     loop = asyncio.get_event_loop()
                     retrieved = await loop.run_in_executor(
                         None,
-                        lambda qq=q: facade.search(authz=authz, query=qq, top_k=top_k),
+                        lambda qq=q: facade.search(
+                            authz=authz, query=qq, top_k=top_k, db=db
+                        ),
                     )
                     titles = []
                     for r in retrieved.results or []:
@@ -476,7 +484,7 @@ class MultiStepOrchestrator:
         return meta
 
     async def _run_scoped_chunk(
-        self, facade, authz, filenames, query, out, trace, *, top_k, seen
+        self, facade, authz, filenames, query, out, trace, *, top_k, seen, db=None
     ) -> None:
         """檔名導向檢索：《檔名》提及時直接以 metadata filename scope 取證。
 
@@ -504,7 +512,7 @@ class MultiStepOrchestrator:
                     None,
                     lambda f=fn: facade.search(
                         authz=authz, query=clean_query, top_k=scoped_k,
-                        mode="semantic", scope={"filename": f},
+                        mode="semantic", scope={"filename": f}, db=db,
                     ),
                 )
                 hits = [
@@ -516,7 +524,12 @@ class MultiStepOrchestrator:
                     # 用檔名本身當 query 拉候選，再軟匹配（避免語意 query 擠掉目標檔）
                     broad = await loop.run_in_executor(
                         None,
-                        lambda: facade.search(authz=authz, query=fn, top_k=max(top_k * 4, 20)),
+                        lambda: facade.search(
+                            authz=authz,
+                            query=fn,
+                            top_k=max(top_k * 4, 20),
+                            db=db,
+                        ),
                     )
                     matched_name = None
                     for r in broad.results or []:
@@ -548,7 +561,7 @@ class MultiStepOrchestrator:
                             None,
                             lambda f=matched_name: facade.search(
                                 authz=authz, query=clean_query, top_k=scoped_k,
-                                mode="semantic", scope={"filename": f},
+                                mode="semantic", scope={"filename": f}, db=db,
                             ),
                         )
                         hits = [

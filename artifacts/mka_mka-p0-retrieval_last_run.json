@@ -1,16 +1,21 @@
 {
   "gate": "MKA-P0-RETRIEVAL",
   "status": "pass",
-  "generated_at": "2026-08-05T18:30:03Z",
-  "git_sha": "0174aa6",
+  "generated_at": "2026-08-05T19:04:51Z",
+  "git_sha": "273a7eb",
   "metrics": {
     "retrieval_flags": {
       "passed": true,
-      "detail": "flags=[False, False, False]"
+      "detail": "flags=[False, False, False], fit_context+merge+expand verified, _apply_parent_and_sibling exists"
+    },
+    "chat_db_call_chain": {
+      "passed": true,
+      "detail": "======================== 1 passed, 7 warnings in 1.25s ========================"
     }
   },
   "failures": [],
   "evidence": [
-    "retrieval_flags: flags=[False, False, False]"
+    "retrieval_flags: flags=[False, False, False], fit_context+merge+expand verified, _apply_parent_and_sibling exists",
+    "chat_db_call_chain: ======================== 1 passed, 7 warnings in 1.25s ========================"
   ]
 }

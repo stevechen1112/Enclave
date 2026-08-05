@@ -225,7 +225,9 @@ class FixedFormCalculator:
             elif formula.startswith("TAX("):
                 args = formula[4:-1].split(",")
                 subtotal = float(values.get(args[0].strip(), 0))
-                rate = float(args[1].strip().rstrip("%")) / 100
+                rate_token = args[1].strip()
+                rate_value = values.get(rate_token, rate_token.rstrip("%"))
+                rate = float(rate_value) / 100
                 return round(subtotal * rate, 2)
 
             elif formula.startswith("TOTAL("):

@@ -225,6 +225,7 @@ async def chat_stream(
                 question=effective_question,
                 top_k=request.top_k,
                 authz=authz,
+                db=db,
             )
 
             # Retrieval honesty (degraded / request_id) before sources
@@ -413,6 +414,7 @@ async def chat(
         top_k=request.top_k,
         history=history,
         authz=authz,
+        db=db,
     )
 
     record_retrieval_span(

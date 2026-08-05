@@ -1,0 +1,21 @@
+{
+  "gate": "MKA-P1-VOICE-PERSISTENCE",
+  "status": "pass",
+  "generated_at": "2026-08-05T19:01:12Z",
+  "git_sha": "273a7eb",
+  "metrics": {
+    "voice_persistence_test": {
+      "passed": true,
+      "detail": "============================== 1 passed in 0.35s =============================="
+    },
+    "persistence_contract": {
+      "passed": true,
+      "detail": "request DB session + explicit tenant filters + 4 API call sites"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "voice_persistence_test: ============================== 1 passed in 0.35s ==============================",
+    "persistence_contract: request DB session + explicit tenant filters + 4 API call sites"
+  ]
+}

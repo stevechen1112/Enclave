@@ -116,26 +116,8 @@ class RetrievalFacade:
         )
         chunks = self._dicts_to_chunks(raw)
 
-        # P2-1：Know-how Card draft isolation — draft 不可被命中
-        from app.config import settings
-        if settings.KNOWHOW_CARD_ENABLED and settings.KNOWHOW_DRAFT_ISOLATION:
-            from app.services.knowhow_card import get_knowhow_manager
-            mgr = get_knowhow_manager()
-            indexable_cards = mgr.get_indexable_cards()
-            if indexable_cards:
-                # 將 approved know-how cards 注入檢索結果
-                for card in indexable_cards:
-                    raw.append({
-                        "id": f"knowhow:{card.card_id}",
-                        "score": 0.85,
-                        "content": f"[知識卡] {card.title}\n{card.summary}",
-                        "document_id": card.source_document_id or card.card_id,
-                        "filename": f"knowhow:{card.title}",
-                        "chunk_index": 0,
-                        "metadata": {"type": "knowhow_card", "card_id": card.card_id, "version": card.version},
-                        "source": "knowhow",
-                    })
-                chunks = self._dicts_to_chunks(raw)
+        self._inject_approved_knowhow(authz=authz, raw=raw, db=db)
+        chunks = self._dicts_to_chunks(raw)
 
         citations = self._citation.build(
             chunks,
@@ -233,11 +215,6 @@ class RetrievalFacade:
             msgs = "; ".join(getattr(e, "message", str(e)) for e in errors) or "gateway_error"
             raise RuntimeError(msgs)
 
-        citations = self._citation.build(
-            list(response.results or []),
-            acl_revision=getattr(authz, "policy_revision", 1) or 1,
-            db=db,
-        )
         results = [
             {
                 "id": r.id,
@@ -250,15 +227,64 @@ class RetrievalFacade:
             }
             for r in (response.results or [])
         ]
+        self._inject_approved_knowhow(authz=authz, raw=results, db=db)
+        chunks = self._dicts_to_chunks(results)
+        citations = self._citation.build(
+            chunks,
+            acl_revision=getattr(authz, "policy_revision", 1) or 1,
+            db=db,
+        )
         return RetrievalResult(
             results=results,
-            chunk_results=list(response.results or []),
+            chunk_results=chunks,
             citations=citations,
             mode=str(domain),
             total=len(results),
             audit_trail=getattr(response, "audit_trail", None),
             gateway_status=getattr(response, "status", None),
         )
+
+    @staticmethod
+    def _inject_approved_knowhow(
+        *,
+        authz: AuthorizationContext,
+        raw: List[Dict[str, Any]],
+        db: Optional[Session],
+    ) -> None:
+        """Append approved cards from the current request session only."""
+        from app.config import settings
+
+        if not (
+            settings.KNOWHOW_CARD_ENABLED
+            and settings.KNOWHOW_DRAFT_ISOLATION
+            and db is not None
+        ):
+            return
+        from app.services.mka_persistence import MKARepository
+
+        for card in MKARepository(db).list_approved_knowhow(
+            tenant_id=authz.tenant_id
+        ):
+            raw.append(
+                {
+                    "id": f"knowhow:{card.card_id}",
+                    "score": 0.85,
+                    "content": (
+                        f"[知識卡] {card.title}\n{card.summary or ''}\n"
+                        + "\n".join(card.steps or [])
+                    ),
+                    "document_id": card.source_document_id or card.card_id,
+                    "filename": f"knowhow:{card.title}",
+                    "chunk_index": 0,
+                    "metadata": {
+                        "type": "knowhow_card",
+                        "card_id": card.card_id,
+                        "version": card.version,
+                    },
+                    "source": "knowhow",
+                    "provider": "knowhow",
+                }
+            )
 
     @staticmethod
     def _dicts_to_chunks(raw: List[Dict[str, Any]]) -> List[ChunkResult]:

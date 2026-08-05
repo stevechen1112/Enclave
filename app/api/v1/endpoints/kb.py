@@ -38,6 +38,7 @@ class SearchResponse(BaseModel):
 def search_knowledge_base(
     *,
     request: SearchRequest,
+    db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -75,6 +76,7 @@ def search_knowledge_base(
                     authz=authz,
                     query=cq,
                     top_k=max(request.top_k, 50),
+                    db=db,
                 ):
                     hid = h.document_id or h.filename
                     if hid in seen:
@@ -97,6 +99,7 @@ def search_knowledge_base(
                 authz=authz,
                 query=request.query,
                 top_k=request.top_k,
+                db=db,
             )
             search_results = [
                 SearchResult(

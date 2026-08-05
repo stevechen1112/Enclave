@@ -1,16 +1,21 @@
 {
   "gate": "MKA-KH-DRAFT-ISOLATION",
   "status": "pass",
-  "generated_at": "2026-08-05T18:30:04Z",
-  "git_sha": "0174aa6",
+  "generated_at": "2026-08-05T19:01:08Z",
+  "git_sha": "273a7eb",
   "metrics": {
     "draft_isolation": {
       "passed": true,
-      "detail": "draft not indexable"
+      "detail": "======================== 1 passed, 7 warnings in 1.58s ========================"
+    },
+    "db_retrieval_contract": {
+      "passed": true,
+      "detail": "approved-only tenant-scoped DB know-how retrieval"
     }
   },
   "failures": [],
   "evidence": [
-    "draft_isolation: draft not indexable"
+    "draft_isolation: ======================== 1 passed, 7 warnings in 1.58s ========================",
+    "db_retrieval_contract: approved-only tenant-scoped DB know-how retrieval"
   ]
 }

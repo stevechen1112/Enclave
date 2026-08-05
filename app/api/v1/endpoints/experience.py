@@ -106,6 +106,30 @@ def experience_bootstrap(
     Single bootstrap for UI navigation / honesty surface.
     """
     caps = _capabilities_for(current_user)
+
+    # MKA: job modules + interaction capabilities（§5.4）
+    job_modules: List[Dict[str, Any]] = []
+    interaction_caps: Dict[str, bool] = {
+        "voice": False, "camera": False, "qr": False, "offline": False,
+    }
+    default_job_home = "ask"
+    try:
+        from app.services.module_registry import get_module_registry
+        registry = get_module_registry(db)
+        available = registry.get_available_modules(
+            tenant_id=current_user.tenant_id,
+            user_roles=[current_user.role] if current_user.role else [],
+            user_department_ids=[str(current_user.department_id)] if hasattr(current_user, "department_id") and current_user.department_id else [],
+        )
+        job_modules = available
+        interaction_caps = registry.get_interaction_capabilities(current_user.tenant_id)
+        if available:
+            # 依第一個模組決定首頁
+            first_key = available[0].get("module_key", "")
+            default_job_home = f"module:{first_key}"
+    except Exception:
+        pass  # 誠實降級 — 不顯示假功能
+
     return {
         "product": {
             "name": "Enclave",
@@ -134,4 +158,8 @@ def experience_bootstrap(
             "google_drive_certified": False,
             "review_queue_enabled": os.getenv("REVIEW_QUEUE_ENABLED", "true").lower() == "true",
         },
+        # MKA §5.4: job modules + interaction capabilities
+        "job_modules": job_modules,
+        "default_job_home": default_job_home,
+        "interaction_capabilities": interaction_caps,
     }

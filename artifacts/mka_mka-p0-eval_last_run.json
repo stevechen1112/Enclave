@@ -1,16 +1,16 @@
 {
   "gate": "MKA-P0-EVAL",
   "status": "pass",
-  "generated_at": "2026-08-05T18:30:03Z",
-  "git_sha": "0174aa6",
+  "generated_at": "2026-08-05T19:04:56Z",
+  "git_sha": "273a7eb",
   "metrics": {
     "eval_profile": {
       "passed": true,
-      "detail": "profile=z3_blind, hash=669b728dff4a"
+      "detail": "profile=mka_p0, hash=6f9c987bcd3b, mka_eval_items present"
     }
   },
   "failures": [],
   "evidence": [
-    "eval_profile: profile=z3_blind, hash=669b728dff4a"
+    "eval_profile: profile=mka_p0, hash=6f9c987bcd3b, mka_eval_items present"
   ]
 }

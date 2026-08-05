@@ -95,6 +95,7 @@ class InteractionSession(Base):
     channel = Column(String, default="web")  # web | pwa | app | line
     scene_context = Column(JSON, default=dict)  # §4.4 SceneContext
     transcript = Column(Text, nullable=True)
+    transcript_metadata = Column(JSON, default=dict)  # provider/language/segments/confidence/duration
     transcript_confirmed_at = Column(DateTime(timezone=True), nullable=True)
     detected_fields = Column(JSON, default=dict)
     pending_questions = Column(JSON, default=list)
@@ -175,12 +176,18 @@ class FormInstance(Base):
     module_key = Column(String, nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     status = Column(String, default="draft")  # draft | pending_review | changes_requested | approved | finalized | void
+    record_version = Column(Integer, default=1, nullable=False)  # optimistic locking
     values_json = Column(JSON, default=dict)
     provenance_json = Column(JSON, default=dict)  # 每欄位來源
     calculation_snapshot = Column(JSON, default=dict)  # 計算快照
     validation_result = Column(JSON, default=dict)
     source_document_ids = Column(JSON, default=list)
     scene_context = Column(JSON, default=dict)
+    approval_request_id = Column(UUID(as_uuid=True), ForeignKey("mka_approval_requests.id"), nullable=True)
+    immutable_snapshot = Column(JSON, default=dict)
+    export_artifacts = Column(JSON, default=list)
+    approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     finalized_at = Column(DateTime(timezone=True), nullable=True)
@@ -224,6 +231,8 @@ class ApprovalPolicy(Base):
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True, index=True)
     module_key = Column(String, nullable=True)
     object_type = Column(String, nullable=False)  # form | knowhow | tool
+    version = Column(String, default="1.0", nullable=False)
+    status = Column(String, default="active")  # draft | active | deprecated
     risk_level = Column(String, default="medium")  # low | medium | high
     steps = Column(JSON, default=list)  # 多級簽核步驟
     timeout_policy = Column(JSON, default=dict)
@@ -238,17 +247,25 @@ class MKAApprovalRequest(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    approval_policy_id = Column(UUID(as_uuid=True), ForeignKey("approval_policies.id"), nullable=True)
     object_type = Column(String, nullable=False)  # form | knowhow | tool
     object_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     policy_version = Column(String, default="1.0")
     current_step = Column(Integer, default=0)
+    record_version = Column(Integer, default=1, nullable=False)  # optimistic locking
     status = Column(String, default="pending")  # pending | approved | rejected | expired
     submitted_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    idempotency_key = Column(String, nullable=False)
     reviewers = Column(JSON, default=list)
     decision_log = Column(JSON, default=list)
     immutable_snapshot = Column(JSON, default=dict)  # 核准後不可修改
+    expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_mka_approval_idempotency"),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -261,11 +278,12 @@ class KnowhowCardModel(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
-    card_id = Column(String, nullable=True, index=True)  # 與記憶體 KnowhowCard.card_id 對應
+    card_id = Column(String, nullable=False, index=True)  # 與記憶體 KnowhowCard.card_id 對應
     title = Column(String, nullable=False)
     summary = Column(Text, nullable=True)  # 補上記憶體 KnowhowCard 的 summary
     status = Column(String, default="draft")  # draft | pending_review | approved | rejected | retired
     authority_level = Column(Integer, default=60)  # §7.3 authority: 100/90/80/70/60/20/0
+    risk_level = Column(String, default="medium")  # low | medium | high
     applicable_roles = Column(JSON, default=list)
     equipment_ids = Column(JSON, default=list)
     product_ids = Column(JSON, default=list)
@@ -285,10 +303,19 @@ class KnowhowCardModel(Base):
     interviewee = Column(String, nullable=True)
     interviewer = Column(String, nullable=True)
     reviewer = Column(UUID(as_uuid=True), nullable=True)
+    reviewed_at = Column(DateTime(timezone=True), nullable=True)
+    rejection_reason = Column(Text, nullable=True)
     related_sop_ids = Column(JSON, default=list)
     conflict_report = Column(JSON, default=list)
     version = Column(Integer, default=1)
     effective_from = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
+    retired_at = Column(DateTime(timezone=True), nullable=True)
+    superseded_by_id = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "card_id", name="uq_knowhow_card_tenant_card"),
+        Index("ix_knowhow_tenant_status", "tenant_id", "status"),
+    )

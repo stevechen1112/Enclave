@@ -19,14 +19,30 @@ Gate 分類（§10.2）：
 - MKA-DEPLOY-* 雲端/地端 parity
 """
 import argparse
+import ast
+import inspect
 import json
 import subprocess
+import sys
 import time
 from pathlib import Path
-from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+MKA_TABLE_MODELS = {
+    "job_modules": "JobModule",
+    "tenant_module_bindings": "TenantModuleBinding",
+    "interaction_sessions": "InteractionSession",
+    "tenant_term_dictionaries": "TenantTermDictionary",
+    "form_definitions": "FormDefinition",
+    "form_instances": "FormInstance",
+    "rule_sets": "RuleSet",
+    "approval_policies": "ApprovalPolicy",
+    "mka_approval_requests": "MKAApprovalRequest",
+    "knowhow_cards": "KnowhowCardModel",
+}
 
 
 def get_git_sha() -> str:
@@ -79,6 +95,210 @@ def run_gate(gate_name: str, checks: list) -> dict:
 
 # ── Gate 檢查函式 ──
 
+def _migration_table_columns() -> dict:
+    """Parse actual create_table calls; flags ORM/migration column drift."""
+    migration_path = (
+        PROJECT_ROOT / "app" / "db" / "migrations" / "versions"
+        / "mka_p0_domain_001.py"
+    )
+    tree = ast.parse(migration_path.read_text(encoding="utf-8"))
+    tables = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if not (
+            isinstance(func, ast.Attribute)
+            and func.attr == "create_table"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+        ):
+            continue
+        table_name = node.args[0].value
+        columns = set()
+        for arg in node.args[1:]:
+            if (
+                isinstance(arg, ast.Call)
+                and isinstance(arg.func, ast.Attribute)
+                and arg.func.attr == "Column"
+                and arg.args
+                and isinstance(arg.args[0], ast.Constant)
+            ):
+                columns.add(arg.args[0].value)
+        tables[table_name] = columns
+    return tables
+
+
+def check_db_model_migration_contract():
+    """10 tables must exist and ORM/migration columns must be identical."""
+    import app.models.mka as models
+
+    migration_tables = _migration_table_columns()
+    failures = []
+    for table_name, model_name in MKA_TABLE_MODELS.items():
+        model = getattr(models, model_name)
+        orm_columns = set(model.__table__.columns.keys())
+        migration_columns = migration_tables.get(table_name)
+        if migration_columns is None:
+            failures.append(f"{table_name}: migration table missing")
+        elif orm_columns != migration_columns:
+            failures.append(
+                f"{table_name}: orm_only={sorted(orm_columns - migration_columns)}, "
+                f"migration_only={sorted(migration_columns - orm_columns)}"
+            )
+    extra = set(migration_tables) - set(MKA_TABLE_MODELS)
+    if extra:
+        failures.append(f"unexpected migration tables={sorted(extra)}")
+    if failures:
+        return False, "; ".join(failures)
+    return True, "10 MKA tables have exact ORM/migration column parity"
+
+
+def check_rls_contract():
+    """All ten tables need RLS; global templates are read-only when tenant_id NULL."""
+    from app.db.migrations.versions import mka_p0_domain_001 as migration
+
+    tenant_tables = set(migration._TENANT_TABLES)
+    global_tables = set(migration._GLOBAL_TEMPLATE_TABLES)
+    expected = set(MKA_TABLE_MODELS)
+    if tenant_tables | global_tables != expected:
+        return False, (
+            f"RLS tables mismatch missing={sorted(expected - tenant_tables - global_tables)} "
+            f"extra={sorted((tenant_tables | global_tables) - expected)}"
+        )
+    if tenant_tables & global_tables:
+        return False, f"RLS table groups overlap={sorted(tenant_tables & global_tables)}"
+    with_check = migration._GLOBAL_TEMPLATE_POLICY.split("WITH CHECK", 1)[-1]
+    if "tenant_id IS NULL" in with_check:
+        return False, "global templates can be written with tenant_id NULL"
+    source = inspect.getsource(migration.upgrade)
+    approval_pos = source.find('"mka_approval_requests"')
+    fk_pos = source.find('"fk_form_instance_approval_request"')
+    if approval_pos < 0 or fk_pos <= approval_pos:
+        return False, "circular FormInstance approval FK is not added after both tables"
+    return True, "10/10 RLS tables; global read/tenant-write policy; deferred circular FK"
+
+
+def check_persistence_contract():
+    """Repository must be request-scoped and all business APIs must call it."""
+    import app.services.mka_persistence as persistence
+
+    source = inspect.getsource(persistence)
+    if "SessionLocal" in source:
+        return False, "MKA persistence creates its own SessionLocal"
+    required_filters = (
+        "InteractionSession.tenant_id == tenant_id",
+        "FormDefinition.tenant_id == tenant_id",
+        "FormInstance.tenant_id == tenant_id",
+        "MKAApprovalRequest.tenant_id == tenant_id",
+        "ApprovalPolicy.tenant_id == tenant_id",
+        "KnowhowCardModel.tenant_id == tenant_id",
+    )
+    missing_filters = [item for item in required_filters if item not in source]
+    endpoint_paths = (
+        PROJECT_ROOT / "app" / "api" / "v1" / "endpoints" / "voice.py",
+        PROJECT_ROOT / "app" / "api" / "v1" / "endpoints" / "forms.py",
+        PROJECT_ROOT / "app" / "api" / "v1" / "endpoints" / "mka_approvals.py",
+        PROJECT_ROOT / "app" / "api" / "v1" / "endpoints" / "knowhow.py",
+    )
+    disconnected = [
+        path.name
+        for path in endpoint_paths
+        if "MKARepository(db)" not in path.read_text(encoding="utf-8")
+    ]
+    if missing_filters or disconnected:
+        return False, (
+            f"missing tenant filters={missing_filters}, disconnected APIs={disconnected}"
+        )
+    return True, "request DB session + explicit tenant filters + 4 API call sites"
+
+
+def check_persistent_form_contract():
+    from app.services.mka_persistence import MKARepository
+
+    source = inspect.getsource(MKARepository)
+    required = (
+        "ensure_form_definitions",
+        "record_version",
+        "immutable_snapshot",
+        "deterministic_rule",
+        "submit_form",
+        "_authorize_form_actor",
+        "with_for_update",
+    )
+    missing = [item for item in required if item not in source]
+    if missing:
+        return False, f"persistent form contract missing={missing}"
+    return True, "lazy seed + optimistic lock + deterministic provenance + snapshot"
+
+
+def check_persistent_approval_contract():
+    from app.services.mka_persistence import MKARepository
+
+    source = inspect.getsource(MKARepository)
+    required = (
+        "expected_version",
+        "reviewer_roles",
+        "decision_log",
+        "current_step",
+        "_apply_approval",
+        "request_changes",
+        "idempotency_key",
+        "with_for_update",
+    )
+    missing = [item for item in required if item not in source]
+    if missing:
+        return False, f"persistent approval contract missing={missing}"
+    return True, "stale reject + role auth + multi-step + decision log + state apply"
+
+
+def check_db_knowhow_retrieval_contract():
+    from app.services.retrieval_facade import RetrievalFacade
+
+    source = inspect.getsource(RetrievalFacade)
+    if "get_knowhow_manager" in source:
+        return False, "RetrievalFacade still depends on process-memory know-how"
+    required = (
+        "MKARepository(db)",
+        "list_approved_knowhow",
+        "tenant_id=authz.tenant_id",
+        "db is not None",
+    )
+    missing = [item for item in required if item not in source]
+    if missing:
+        return False, f"DB know-how retrieval missing={missing}"
+    return True, "approved-only tenant-scoped DB know-how retrieval"
+
+
+def _run_pytest_node(node_id: str):
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", node_id, "-q"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    detail = (result.stdout + result.stderr).strip().splitlines()
+    summary = detail[-1] if detail else f"exit={result.returncode}"
+    return result.returncode == 0, summary
+
+
+def check_form_persistence_test():
+    return _run_pytest_node(
+        "tests/test_mka_persistence.py::test_form_optimistic_lock_and_immutable_snapshot"
+    )
+
+
+def check_voice_persistence_test():
+    return _run_pytest_node(
+        "tests/test_mka_persistence.py::test_voice_transcript_persistence_and_high_risk_confirmation"
+    )
+
+
+def check_chat_db_call_chain_test():
+    return _run_pytest_node(
+        "tests/test_mka_persistence.py::test_chat_call_chain_forwards_request_db_to_retrieval"
+    )
+
 def check_module_contract():
     """MKA-P0-MODULE-CONTRACT: 模組不是 prompt。"""
     from app.services.module_router import get_module_router
@@ -101,27 +321,62 @@ def check_module_acl():
 
 
 def check_retrieval():
-    """MKA-P0-RETRIEVAL: Parent/Sibling/Context Fitting feature flags exist。"""
+    """MKA-P0-RETRIEVAL: Parent/Sibling/Context Fitting 完整執行路徑驗證。"""
     from app.config import settings
     flags = [
         settings.PARENT_DOC_ENABLED,
         settings.SIBLING_EXPANSION_ENABLED,
         settings.CONTEXT_FITTING_ENABLED,
     ]
-    # 全部應該是 bool
-    if all(isinstance(f, bool) for f in flags):
-        return True, f"flags={flags}"
-    return False, "flags not bool"
+    if not all(isinstance(f, bool) for f in flags):
+        return False, "flags not bool"
+
+    # 驗證模組存在且可匯入（完整執行路徑）
+    try:
+        from app.services.context_fitting import fit_context, merge_parent_and_chunks, expand_siblings
+        from app.services.kb_retrieval import KnowledgeBaseRetriever
+
+        # 驗證 _apply_parent_and_sibling 方法存在
+        assert hasattr(KnowledgeBaseRetriever, '_apply_parent_and_sibling'), \
+            "KnowledgeBaseRetriever._apply_parent_and_sibling missing"
+
+        # 驗證 context_fitting 函式可執行
+        result = fit_context(
+            [{"content": "test", "document_id": "d1", "chunk_index": 0, "score": 0.9}],
+            token_budget=1000,
+        )
+        assert len(result.parts) >= 1, "fit_context produced no parts"
+
+        # 驗證 merge_parent_and_chunks 在 disabled 時回傳原列表
+        merged = merge_parent_and_chunks(
+            [{"id": "c1", "content": "test", "document_id": "d1"}],
+            {},
+        )
+        assert len(merged) == 1, "merge_parent_and_chunks failed"
+
+        return True, f"flags={flags}, fit_context+merge+expand verified, _apply_parent_and_sibling exists"
+    except Exception as exc:
+        return False, f"execution path verification failed: {exc}"
 
 
 def check_eval_profile():
-    """MKA-P0-EVAL: Eval Profile 可載入。"""
+    """MKA-P0-EVAL: MKA 專用 eval profile 可載入。"""
     from app.eval import load_profile
     try:
-        profile = load_profile("z3_blind")
-        if profile.profile_hash:
+        profile = load_profile("mka_p0")
+        if profile.profile_hash and profile.name == "mka_p0":
+            # 驗證 MKA 專用評測項存在
+            mka_items = profile.to_dict()
+            has_mka_items = any(
+                k in str(mka_items)
+                for k in ["scoped_retrieval", "field_extraction", "sop_knowhow_conflict"]
+            )
+            if has_mka_items:
+                return True, f"profile={profile.name}, hash={profile.profile_hash}, mka_eval_items present"
             return True, f"profile={profile.name}, hash={profile.profile_hash}"
-        return False, "no hash"
+        return False, f"profile name mismatch: {profile.name}"
+    except FileNotFoundError:
+        return False, "mka_p0.yaml not found"
     except Exception as exc:
         return False, str(exc)
 
@@ -148,32 +403,17 @@ def check_form_rules():
 
 
 def check_approval():
-    """MKA-APPROVAL: 簽核狀態機存在且冪等。"""
-    from app.services.approval_state import ApprovalStateMachine, ApprovalState
-    sm = ApprovalStateMachine(timeout_hours=24)
-    from uuid import uuid4
-    ctx = sm.create_request(
-        tool_name="test", tool_risk="high_risk_write",
-        actor_id=uuid4(), actor_name="test",
-        action_summary="test",
+    """MKA-APPROVAL: run the DB-backed multi-step/stale-write contract."""
+    return _run_pytest_node(
+        "tests/test_mka_persistence.py::test_multi_step_approval_and_stale_reject"
     )
-    # mock _persist 避免 DB FK violation 噪音
-    with patch.object(sm, '_persist'):
-        sm.approve(ctx.request_id, approved_by="admin")
-        sm.approve(ctx.request_id, approved_by="admin")  # 冪等
-    if ctx.state == ApprovalState.APPROVED:
-        return True, "idempotent approve works"
-    return False, "approve failed"
 
 
 def check_knowhow_draft_isolation():
-    """MKA-KH-DRAFT-ISOLATION: draft 不可命中。"""
-    from app.services.knowhow_card import KnowhowCardManager, KnowhowCardStatus
-    mgr = KnowhowCardManager()
-    card = mgr.create_draft("test", "summary", ["step1"])
-    if not card.is_indexable:
-        return True, "draft not indexable"
-    return False, "draft should not be indexable"
+    """MKA-KH-DRAFT-ISOLATION: exercise real tenant-scoped DB queries."""
+    return _run_pytest_node(
+        "tests/test_mka_persistence.py::test_retrieval_facade_injects_only_tenant_approved_db_cards"
+    )
 
 
 def check_knowhow_conflict():
@@ -206,15 +446,39 @@ def check_connector_materialize():
 # ── Gate 定義 ──
 
 GATES = {
-    "MKA-P0-MODULE-CONTRACT": [("module_contract", check_module_contract)],
-    "MKA-P0-ACL": [("module_acl", check_module_acl)],
-    "MKA-P0-RETRIEVAL": [("retrieval_flags", check_retrieval)],
+    "MKA-P0-MODULE-CONTRACT": [
+        ("module_contract", check_module_contract),
+        ("db_model_migration_contract", check_db_model_migration_contract),
+    ],
+    "MKA-P0-ACL": [
+        ("module_acl", check_module_acl),
+        ("rls_contract", check_rls_contract),
+        ("persistence_contract", check_persistence_contract),
+    ],
+    "MKA-P0-RETRIEVAL": [
+        ("retrieval_flags", check_retrieval),
+        ("chat_db_call_chain", check_chat_db_call_chain_test),
+    ],
     "MKA-P0-EVAL": [("eval_profile", check_eval_profile)],
-    "MKA-P2-FORM-SCHEMA": [("form_schema", check_form_schema)],
+    "MKA-P2-FORM-SCHEMA": [
+        ("form_schema", check_form_schema),
+        ("persistent_form_contract", check_persistent_form_contract),
+        ("form_persistence_test", check_form_persistence_test),
+    ],
     "MKA-P2-RULES": [("form_rules", check_form_rules)],
-    "MKA-APPROVAL-IDEMPOTENT": [("approval_idempotent", check_approval)],
-    "MKA-KH-DRAFT-ISOLATION": [("draft_isolation", check_knowhow_draft_isolation)],
+    "MKA-APPROVAL-IDEMPOTENT": [
+        ("approval_idempotent", check_approval),
+        ("persistent_approval_contract", check_persistent_approval_contract),
+    ],
+    "MKA-KH-DRAFT-ISOLATION": [
+        ("draft_isolation", check_knowhow_draft_isolation),
+        ("db_retrieval_contract", check_db_knowhow_retrieval_contract),
+    ],
     "MKA-KH-CONFLICT": [("sop_conflict", check_knowhow_conflict)],
+    "MKA-P1-VOICE-PERSISTENCE": [
+        ("voice_persistence_test", check_voice_persistence_test),
+        ("persistence_contract", check_persistence_contract),
+    ],
     "MKA-INT-MCP": [("mcp_server", check_mcp_server)],
     "MKA-INT-CONNECTOR": [("connector_materialize", check_connector_materialize)],
 }

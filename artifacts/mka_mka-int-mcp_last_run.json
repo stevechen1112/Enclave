@@ -1,8 +1,8 @@
 {
   "gate": "MKA-INT-MCP",
   "status": "pass",
-  "generated_at": "2026-08-05T18:30:04Z",
-  "git_sha": "0174aa6",
+  "generated_at": "2026-08-05T19:01:14Z",
+  "git_sha": "273a7eb",
   "metrics": {
     "mcp_server": {
       "passed": true,
