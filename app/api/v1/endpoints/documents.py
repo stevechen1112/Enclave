@@ -196,6 +196,55 @@ async def upload_document(
             detail="文件為空"
         )
 
+    # CG-CLAMAV：上傳掃毒（fail-closed 於 SaaS／託管；地端 CLAMAV_ENABLED=false 跳過）
+    import asyncio
+    from app.services.file_scan import MalwareDetectedError, FileScanError, scan_file_path
+
+    loop = asyncio.get_event_loop()
+    try:
+        await loop.run_in_executor(
+            None, lambda: scan_file_path(temp_file_path, clean_filename)
+        )
+    except MalwareDetectedError as exc:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"檔案未通過安全掃描: {exc.signature}",
+        )
+    except FileScanError:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        if settings.CLAMAV_FAIL_CLOSED:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="檔案安全掃描服務暫時不可用，請稍後再試",
+            )
+
+    # 儲存配額檢查（FOR UPDATE + 同 transaction create，防 TOCTOU）
+    storage_quota = crud_tenant.lock_and_check_storage_quota(
+        db, current_user.tenant_id, file_size
+    )
+    if not storage_quota.get("allowed", True):
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        try:
+            from app.observability.business_metrics import record_quota_exceeded
+
+            record_quota_exceeded("storage")
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "quota_exceeded",
+                "axis": "storage",
+                "message": storage_quota.get("message", "儲存空間配額已超過"),
+                "current": storage_quota.get("current"),
+                "limit": storage_quota.get("limit"),
+            },
+        )
+
     # 5. 建立文件記錄
     doc_in = DocumentCreate(
         filename=clean_filename,
@@ -215,16 +264,35 @@ async def upload_document(
             os.remove(temp_file_path)
         raise
 
-    file_path = os.path.join(upload_dir, f"{document.id}{file_ext}")
-    os.replace(temp_file_path, file_path)
-    
+    # 5.5 經 StorageBackend 上架（ADR-011）：local=搬入 UPLOAD_DIR；s3=上傳物件儲存
+    from app.services.storage import build_storage_key, get_storage_backend
+
+    backend = get_storage_backend()
+    storage_key = build_storage_key(current_user.tenant_id, document.id, file_ext)
+    try:
+        content_uri = backend.put(storage_key, temp_file_path)
+    except Exception:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        # 文件列已在 create 時 commit；put 失敗必須 tombstone，
+        # 否則留下無內容的孤兒記錄（S3 後端是網路操作，失敗率非零）
+        try:
+            crud_document.tombstone(db, document_id=document.id, reason="storage_put_failed")
+        except Exception:
+            logger.error("tombstone after storage put failure also failed: doc=%s", document.id)
+        raise
+
+    # content_uri 持久化（local=絕對路徑，向後相容；s3=s3://bucket/key）
+    document.file_path = content_uri
+    db.commit()
+
     # 6. 觸發背景任務處理
     process_document_task.delay(
         document_id=str(document.id),
-        file_path=file_path,
+        file_path=content_uri,
         tenant_id=str(current_user.tenant_id)
     )
-    
+
     return document
 
 

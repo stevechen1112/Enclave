@@ -1,0 +1,497 @@
+[
+  {
+    "id": "D01",
+    "client": "優利",
+    "name": "優利線上客服委任契約-初期合約-至0531.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\優利\\優利線上客服委任契約-初期合約-至0531.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\01_優利_優利線上客服委任契約-初期合約-至0531.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D02",
+    "client": "優利",
+    "name": "優利線上客服委任契約_正-已填.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\優利\\優利線上客服委任契約_正-已填.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\02_優利_優利線上客服委任契約_正-已填.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D03",
+    "client": "宏寰貿易",
+    "name": "亞馬遜電商委託營運報價合約_signed_20230607-20230831.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\宏寰貿易\\亞馬遜電商委託營運報價合約_signed_20230607-20230831.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\03_宏寰貿易_亞馬遜電商委託營運報價合約_signed_20230607-20230831.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D04",
+    "client": "優克美",
+    "name": "igreen合約（用印）.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\優克美\\igreen合約（用印）.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\04_優克美_igreen合約（用印）.txt",
+    "chars": 66,
+    "has_text": true
+  },
+  {
+    "id": "D05",
+    "client": "宏寰貿易",
+    "name": "宏寰貿易行銷報價合約_signed.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\宏寰貿易\\宏寰貿易行銷報價合約_signed.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\05_宏寰貿易_宏寰貿易行銷報價合約_signed.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D06",
+    "client": "安可",
+    "name": "委託合約-八策品牌.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\安可\\委託合約-八策品牌.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\06_安可_委託合約-八策品牌.txt",
+    "chars": 1991,
+    "has_text": true
+  },
+  {
+    "id": "D07",
+    "client": "地政e院",
+    "name": "2021.10.28_地政e院-合約書.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\地政e院\\2021.10.28_地政e院-合約書.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\07_地政e院_2021.10.28_地政e院-合約書.txt",
+    "chars": 2237,
+    "has_text": true
+  },
+  {
+    "id": "D08",
+    "client": "味特",
+    "name": "味特品牌研究企劃案報價暨合約.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\味特\\味特品牌研究企劃案報價暨合約.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\08_味特_味特品牌研究企劃案報價暨合約.txt",
+    "chars": 834,
+    "has_text": true
+  },
+  {
+    "id": "D09",
+    "client": "樂行家",
+    "name": "合約.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\樂行家\\合約.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\09_樂行家_合約.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D10",
+    "client": "貝昇",
+    "name": "品牌企劃案報價單暨合約書20170207_貝昇生技.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\貝昇\\品牌企劃案報價單暨合約書20170207_貝昇生技.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\10_貝昇_品牌企劃案報價單暨合約書20170207_貝昇生技.txt",
+    "chars": 1198,
+    "has_text": true
+  },
+  {
+    "id": "D11",
+    "client": "(root)",
+    "name": "SEO報價合約_用印版本.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\SEO報價合約_用印版本.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\11_(root)_SEO報價合約_用印版本.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D12",
+    "client": "光昱金屬",
+    "name": "徐嘉鴻3D設計 專案合約書_光昱金屬200424.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\光昱金屬\\徐嘉鴻3D設計 專案合約書_光昱金屬200424.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\12_光昱金屬_徐嘉鴻3D設計 專案合約書_光昱金屬200424.txt",
+    "chars": 1776,
+    "has_text": true
+  },
+  {
+    "id": "D13",
+    "client": "阿里巴巴",
+    "name": "RFQ報價技巧20231214.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\阿里巴巴\\SOP手冊\\RFQ報價技巧20231214.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\13_阿里巴巴_RFQ報價技巧20231214.txt",
+    "chars": 562,
+    "has_text": true
+  },
+  {
+    "id": "D14",
+    "client": "安可",
+    "name": "2024Q1安可系統開發報價調整版_0816.docx",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\安可\\2024Q1安可系統開發報價調整版_0816.docx",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\14_安可_2024Q1安可系統開發報價調整版_0816.txt",
+    "chars": 2340,
+    "has_text": true
+  },
+  {
+    "id": "D15",
+    "client": "光昱金屬",
+    "name": "亞馬遜暨B2B行銷提案報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\光昱金屬\\亞馬遜暨B2B行銷提案報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\15_光昱金屬_亞馬遜暨B2B行銷提案報價.txt",
+    "chars": 680,
+    "has_text": true
+  },
+  {
+    "id": "D16",
+    "client": "光昱金屬",
+    "name": "光昱亞馬遜暨B2B行銷提案報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\光昱金屬\\光昱亞馬遜暨B2B行銷提案報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\16_光昱金屬_光昱亞馬遜暨B2B行銷提案報價.txt",
+    "chars": 685,
+    "has_text": true
+  },
+  {
+    "id": "D17",
+    "client": "巽耘",
+    "name": "巽耘法律事務所視覺形象更新報價單.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\巽耘\\巽耘法律事務所視覺形象更新報價單.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\17_巽耘_巽耘法律事務所視覺形象更新報價單.txt",
+    "chars": 635,
+    "has_text": true
+  },
+  {
+    "id": "D18",
+    "client": "醫美圈圈",
+    "name": "「已用印」八策行銷報價單_醫美圈圈.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\醫美圈圈\\「已用印」八策行銷報價單_醫美圈圈.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\18_醫美圈圈_「已用印」八策行銷報價單_醫美圈圈.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D19",
+    "client": "瑪格麗特婚紗",
+    "name": "瑪格麗特婚紗工作室行銷提案報價_20181224.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\瑪格麗特婚紗\\瑪格麗特婚紗工作室行銷提案報價_20181224.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\19_瑪格麗特婚紗_瑪格麗特婚紗工作室行銷提案報價_20181224.txt",
+    "chars": 1201,
+    "has_text": true
+  },
+  {
+    "id": "D20",
+    "client": "MF Select",
+    "name": "M&F Select 電商行銷提案報價_0219.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\MF Select\\M&F Select 電商行銷提案報價_0219.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\20_MF Select_M&F Select 電商行銷提案報價_0219.txt",
+    "chars": 952,
+    "has_text": true
+  },
+  {
+    "id": "D21",
+    "client": "昇展Smat",
+    "name": "Smat 市場研究暨行銷企劃報價提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\昇展Smat\\Smat 市場研究暨行銷企劃報價提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\21_昇展Smat_Smat 市場研究暨行銷企劃報價提案.txt",
+    "chars": 777,
+    "has_text": true
+  },
+  {
+    "id": "D22",
+    "client": "好優",
+    "name": "2018 好優數位新聞服務報價方案 1101.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\好優\\2018 好優數位新聞服務報價方案 1101.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\22_好優_2018 好優數位新聞服務報價方案 1101.txt",
+    "chars": 1125,
+    "has_text": true
+  },
+  {
+    "id": "D23",
+    "client": "地政e院",
+    "name": "地政醫院行銷網站報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\地政e院\\地政醫院行銷網站報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\23_地政e院_地政醫院行銷網站報價.txt",
+    "chars": 573,
+    "has_text": true
+  },
+  {
+    "id": "D24",
+    "client": "立壕線板",
+    "name": "20230510 設計報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\立壕線板\\20230510 設計報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\24_立壕線板_20230510 設計報價.txt",
+    "chars": 1116,
+    "has_text": true
+  },
+  {
+    "id": "D25",
+    "client": "醫美圈圈",
+    "name": "《除了愛美還要變美！我的微醫美初體驗》徵文活動提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\醫美圈圈\\《除了愛美還要變美！我的微醫美初體驗》徵文活動提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\25_醫美圈圈_《除了愛美還要變美！我的微醫美初體驗》徵文活動提案.txt",
+    "chars": 1634,
+    "has_text": true
+  },
+  {
+    "id": "D26",
+    "client": "醫美圈圈",
+    "name": "1月_《除了愛美還要變美！我的微醫美初體驗》徵文活動提案_Yumi.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\醫美圈圈\\1月_《除了愛美還要變美！我的微醫美初體驗》徵文活動提案_Yumi.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\26_醫美圈圈_1月_《除了愛美還要變美！我的微醫美初體驗》徵文活動提案_Yumi.txt",
+    "chars": 1763,
+    "has_text": true
+  },
+  {
+    "id": "D27",
+    "client": "Dr.Kelly",
+    "name": "Dr. Kelly品牌設計_包裝設計提案 Phase 02_231124 (1).pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\Dr.Kelly\\Dr. Kelly品牌設計_包裝設計提案 Phase 02_231124 (1).pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\27_Dr.Kelly_Dr. Kelly品牌設計_包裝設計提案 Phase 02_231124 (1).txt",
+    "chars": 2513,
+    "has_text": true
+  },
+  {
+    "id": "D28",
+    "client": "生酮飲食",
+    "name": "滷味市場與品牌策略提案_好婆婆生酮.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\生酮飲食\\滷味市場與品牌策略提案_好婆婆生酮.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\28_生酮飲食_滷味市場與品牌策略提案_好婆婆生酮.txt",
+    "chars": 1109,
+    "has_text": true
+  },
+  {
+    "id": "D29",
+    "client": "MF Select",
+    "name": "MF建議及調整提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\MF Select\\MF建議及調整提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\29_MF Select_MF建議及調整提案.txt",
+    "chars": 484,
+    "has_text": true
+  },
+  {
+    "id": "D30",
+    "client": "(root)",
+    "name": "行銷傳播企劃.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\行銷傳播企劃.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\30_(root)_行銷傳播企劃.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D31",
+    "client": "bravomix",
+    "name": "THINK OFFICE 首頁提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\bravomix\\016.崇炘科技SBIR phase2\\016.崇炘科技SBIR phase2\\4 - 執行\\第一次期中審查\\第一次期中報告附件\\美術設計整理\\THINK OFFICE 首頁提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\31_bravomix_THINK OFFICE 首頁提案.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D32",
+    "client": "CYS假髮",
+    "name": "7份月臉書粉專貼文提案_20190630.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\CYS假髮\\7份月臉書粉專貼文提案_20190630.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\32_CYS假髮_7份月臉書粉專貼文提案_20190630.txt",
+    "chars": 624,
+    "has_text": true
+  },
+  {
+    "id": "D33",
+    "client": "八策數位",
+    "name": "合約-八策數位股份有限公司.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\八策數位\\2026營業登記資料\\合約-八策數位股份有限公司.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\33_八策數位_合約-八策數位股份有限公司.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D34",
+    "client": "八策數位",
+    "name": "201八策數位股份有限公司_辦公室合約_20240327.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\八策數位\\201八策數位股份有限公司_辦公室合約_20240327.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\34_八策數位_201八策數位股份有限公司_辦公室合約_20240327.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D35",
+    "client": "政府補助",
+    "name": "米克委託合約.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\政府補助\\新企劃申請政府補助\\台北產發局js\\米克委託合約.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\35_政府補助_米克委託合約.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D36",
+    "client": "八策公司",
+    "name": "購買發票及領取購票證委任書(附件2).pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\八策公司\\地址變更文件\\購買發票及領取購票證委任書(附件2).pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\36_八策公司_購買發票及領取購票證委任書(附件2).txt",
+    "chars": 453,
+    "has_text": true
+  },
+  {
+    "id": "D37",
+    "client": "(root)",
+    "name": "八策合約書1025.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\八策合約書1025.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\37_(root)_八策合約書1025.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D38",
+    "client": "政府補助",
+    "name": "創騰委託合約.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\政府補助\\新企劃申請政府補助\\台北產發局js\\創騰委託合約.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\38_政府補助_創騰委託合約.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D39",
+    "client": "政府補助",
+    "name": "八策數位股份有限公司補助期中報告-final.docx",
+    "path": "C:\\Users\\User\\Desktop\\八策\\政府補助\\新企劃申請政府補助\\台北產發局js\\八策數位股份有限公司補助期中報告-final.docx",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\39_政府補助_八策數位股份有限公司補助期中報告-final.txt",
+    "chars": 8067,
+    "has_text": true
+  },
+  {
+    "id": "D40",
+    "client": "八策公司",
+    "name": "營業登記.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\八策公司\\營業登記.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\40_八策公司_營業登記.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D41",
+    "client": "八策數位",
+    "name": "投保紀錄.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\八策數位\\投保紀錄.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\41_八策數位_投保紀錄.txt",
+    "chars": 0,
+    "has_text": false
+  },
+  {
+    "id": "D42",
+    "client": "(root)",
+    "name": "發票開立信件通知.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\發票開立信件通知.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\42_(root)_發票開立信件通知.txt",
+    "chars": 277,
+    "has_text": true
+  },
+  {
+    "id": "D43",
+    "client": "(root)",
+    "name": "捷報行銷提案報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\捷報行銷提案報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\43_(root)_捷報行銷提案報價.txt",
+    "chars": 1019,
+    "has_text": true
+  },
+  {
+    "id": "D44",
+    "client": "(root)",
+    "name": "捷報提案報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\捷報提案報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\44_(root)_捷報提案報價.txt",
+    "chars": 833,
+    "has_text": true
+  },
+  {
+    "id": "D45",
+    "client": "bravomix",
+    "name": "規格書.docx",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\bravomix\\016.崇炘科技SBIR phase2\\016.崇炘科技SBIR phase2\\4 - 執行\\第一次期中審查\\第一次期中報告附件\\規格書.docx",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\45_bravomix_規格書.txt",
+    "chars": 3061,
+    "has_text": true
+  },
+  {
+    "id": "D46",
+    "client": "康宇勞資顧問",
+    "name": "勞資會議說明手冊.docx",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\康宇勞資顧問\\109.12.17 -20201221T123729Z-001\\109.12.17\\勞檢專區\\勞資會議說明手冊.docx",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\46_康宇勞資顧問_勞資會議說明手冊.txt",
+    "chars": 7341,
+    "has_text": true
+  },
+  {
+    "id": "D47",
+    "client": "(root)",
+    "name": "宏茂五金提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\八策\\宏茂五金提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\47_(root)_宏茂五金提案.txt",
+    "chars": 833,
+    "has_text": true
+  },
+  {
+    "id": "D48",
+    "client": "JSwedding 婚紗",
+    "name": "Dapro Fitness 行銷提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\JSwedding 婚紗\\Dapro Fitness 行銷提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\48_JSwedding 婚紗_Dapro Fitness 行銷提案.txt",
+    "chars": 511,
+    "has_text": true
+  },
+  {
+    "id": "D49",
+    "client": "瑪謝",
+    "name": "瑪謝FB規劃提案202005.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\瑪謝\\瑪謝FB規劃提案202005.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\49_瑪謝_瑪謝FB規劃提案202005.txt",
+    "chars": 1687,
+    "has_text": true
+  },
+  {
+    "id": "D50",
+    "client": "Color髮廊",
+    "name": "Color髮廊行銷提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\Color髮廊\\Color髮廊行銷提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\50_Color髮廊_Color髮廊行銷提案.txt",
+    "chars": 812,
+    "has_text": true
+  },
+  {
+    "id": "D51",
+    "client": "街道沙龍",
+    "name": "街道沙龍品牌行銷提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\街道沙龍\\街道沙龍品牌行銷提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\51_街道沙龍_街道沙龍品牌行銷提案.txt",
+    "chars": 710,
+    "has_text": true
+  },
+  {
+    "id": "D52",
+    "client": "臺鍍",
+    "name": "網站提案_台鍍科技股份有限公司.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\臺鍍\\網站提案_台鍍科技股份有限公司.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\52_臺鍍_網站提案_台鍍科技股份有限公司.txt",
+    "chars": 1015,
+    "has_text": true
+  },
+  {
+    "id": "D53",
+    "client": "谷德",
+    "name": "Apigu瞬熱式飲水機 報價提案.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\谷德\\Apigu瞬熱式飲水機 報價提案.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\53_谷德_Apigu瞬熱式飲水機 報價提案.txt",
+    "chars": 781,
+    "has_text": true
+  },
+  {
+    "id": "D54",
+    "client": "艾科能德",
+    "name": "新元應材網站建置報價.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\艾科能德\\新元應材網站建置報價.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\54_艾科能德_新元應材網站建置報價.txt",
+    "chars": 2239,
+    "has_text": true
+  },
+  {
+    "id": "D55",
+    "client": "1028",
+    "name": "1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.pdf",
+    "path": "C:\\Users\\User\\Desktop\\客戶\\1028\\1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.pdf",
+    "extract": "C:\\Users\\User\\Desktop\\Enclave\\artifacts\\blind_z3\\extracts\\55_1028_1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.txt",
+    "chars": 2002,
+    "has_text": true
+  }
+]

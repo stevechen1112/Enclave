@@ -1,0 +1,7 @@
+===== E010: 根據文件《000_nueip 合約(1).pdf》，出租系統的廠商名稱是什麼？
+http 200
+[retrieval] {"type": "retrieval", "retrieval": {"mode": "gateway", "degraded": false, "request_id": "cd3ccb96-162b-4fbc-9b01-d772cc90463f", "providers_called": ["document"], "fusion_policy_version": "", "query_domain": "", "dropped_non_citable": 0, "label": "已搜尋可存取知識", "arms": ["chunk"], "query_plan": {"plan_version": "1.2", "intent": "fact", "arms": ["chunk"], "sub_queries": [], "domain": "internal_records"}, "trace": {"plan_version": "1.2", "intent": "fact", "steps": [{"step": 1, "arm": "chunk_scoped", "query": "《000_nueip 合約(1).pdf》根據文件《000_nueip 合約(1).pdf》，出租系統的廠商名稱是什麼？", "hit_count": 3, "hit_titles": ["000_nueip 合約(1).pdf", "000_nueip 合約(1).pdf", "000_nueip 合約(1).pdf"], "error": ""}, {"step": 2, "arm": "chunk", "query": "(skipped: filename-scoped hits sufficient)", "hit_count": 0, "hit_titles": [], "error": ""}], "refusal": null}}}
+[source] 000_nueip 合約(1).pdf | score=0.5167 | provider=semantic | chunk=0 | snippet='【000_nueip 合約(1).pdf】\nNUEiP 人易科技股份有限公司 NUEiP Technology Co., Ltd.\n系統服務租用訂單\n公司名稱： 八策數位股份有限公司 訂單日期： 2026-02-02\n統一編號： 83028'
+[source] 000_nueip 合約(1).pdf | score=0.4746 | provider=semantic | chunk=1 | snippet='【000_nueip 合約(1).pdf】\n服務範圍：系統基本操作諮詢、常見問題解答 註： 1. 服務回應時間為周一至周五09:00~18:00之間，國定假日及人事行政局調整的補休日除外 2. 諮詢時數超過上限或超出服務範圍的「深度系統諮詢'
+[source] 000_nueip 合約(1).pdf | score=0.4015 | provider=semantic | chunk=2 | snippet='【000_nueip 合約(1).pdf】\n求查閱本身資料， 或有符合個人資料保護法及相關法令規定，並以正式公文查詢外，雙方不得對第三人揭露。 如為故意侵害另一方秘密資訊，且因此而受有損害時，揭露方須負擔相關之賠償責任(包含但不限於律師費用'
+[answer] 

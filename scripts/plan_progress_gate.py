@@ -457,13 +457,27 @@ CAPABILITY_VALUE_GATES: List[Tuple[str, str, Tuple[str, ...]]] = [
     ("ADR-007", "docs/adr/ADR-007-graph-store-boundary.md", ()),
 ]
 
+# FOUNDATION FD-* gates（架構契約；舊 checkbox PASS 不繼承）
+FOUNDATION_GATES: List[Tuple[str, str, Tuple[str, ...]]] = [
+    ("FD-DELIVER", "artifacts/foundation_delivery_last_run.json", ("gate", "status", "summary")),
+    ("FD-CATALOG", "artifacts/foundation_catalog_last_run.json", ("gate", "status", "summary")),
+    ("FD-FUSION", "artifacts/foundation_fusion_last_run.json", ("gate", "status", "summary")),
+    ("FD-QUERYPLAN", "artifacts/foundation_queryplan_last_run.json", ("gate", "status", "summary")),
+    ("FD-CLAUSE", "artifacts/foundation_clause_last_run.json", ("gate", "status", "summary")),
+    ("VISION-ADV", "artifacts/adversarial_last_run.json", ("gate", "status", "summary")),
+    ("VISION-CEILING", "artifacts/capability_ceiling_last_run.json", ("gate", "status", "checks")),
+]
 
-def _evaluate_capability_value_gates(
+
+def _evaluate_named_gates(
+    gates: List[Tuple[str, str, Tuple[str, ...]]],
+    *,
+    source: str,
     max_age_hours: Optional[float],
 ) -> Dict[str, Any]:
-    """Inspect capability-value artifacts; do not invent PASS."""
+    """Inspect named gate artifacts; do not invent PASS."""
     items = []
-    for gate_id, rel, keys in CAPABILITY_VALUE_GATES:
+    for gate_id, rel, keys in gates:
         path = ROOT / rel
         if rel.endswith(".md"):
             ok = path.is_file()
@@ -499,12 +513,34 @@ def _evaluate_capability_value_gates(
             "detail": detail,
         })
     present = sum(1 for i in items if i.get("present"))
+    pass_n = sum(1 for i in items if str(i.get("status") or "").upper() == "PASS")
     return {
-        "source": "docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md",
+        "source": source,
         "total": len(items),
         "present": present,
+        "pass": pass_n,
         "items": items,
     }
+
+
+def _evaluate_capability_value_gates(
+    max_age_hours: Optional[float],
+) -> Dict[str, Any]:
+    return _evaluate_named_gates(
+        CAPABILITY_VALUE_GATES,
+        source="docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md",
+        max_age_hours=max_age_hours,
+    )
+
+
+def _evaluate_foundation_gates(
+    max_age_hours: Optional[float],
+) -> Dict[str, Any]:
+    return _evaluate_named_gates(
+        FOUNDATION_GATES,
+        source="docs/FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN.md",
+        max_age_hours=max_age_hours,
+    )
 
 
 def evaluate(
@@ -574,6 +610,7 @@ def evaluate(
         status = "FAIL"
 
     capability_value_gates = _evaluate_capability_value_gates(max_age_hours)
+    foundation_gates = _evaluate_foundation_gates(max_age_hours)
 
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -602,6 +639,7 @@ def evaluate(
         ],
         "gates": [asdict(g) for g in gates],
         "capability_value_gates": capability_value_gates,
+        "foundation_gates": foundation_gates,
         "status": status,
     }
 
@@ -638,6 +676,20 @@ def write_md(report: Dict[str, Any]) -> None:
             f"| {g['phase'][:32]} | [{plan}] | {ev} | {g['category']} | "
             f"{(g.get('detail') or '')[:40]} | {g['text'][:60]} |"
         )
+    fg = report.get("foundation_gates") or {}
+    lines += [
+        "",
+        "## 真治本閘門（FD-*）",
+        "",
+        f"來源：`{fg.get('source', '')}`；PASS {fg.get('pass', 0)}/{fg.get('total', 0)}",
+        "",
+        "| Gate | Status | Artifact |",
+        "|---|---|---|",
+    ]
+    for item in fg.get("items") or []:
+        lines.append(
+            f"| {item.get('gate')} | {item.get('status')} | `{item.get('artifact')}` |"
+        )
     lines += [
         "",
         "## 施工指令",
@@ -646,6 +698,7 @@ def write_md(report: Dict[str, Any]) -> None:
         "python scripts/plan_progress_gate.py --write-md --strict",
         "python scripts/plan_progress_gate.py --run-pytest --max-age-hours 168 --write-md --strict",
         "python -m pytest tests/test_p0_production_fixes.py tests/test_plan_phase_gates.py -q",
+        "make foundation-gates",
         "```",
         "",
     ]

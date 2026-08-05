@@ -202,6 +202,13 @@ jobs:
       - name: Build backend image
         run: docker build -t enclave-backend:ci .
 
+      # ADR-010：掃描解析依賴必須存在於映像內，缺失即建置失敗（不得等文件 failed 才發現）
+      - name: Assert scan-parse dependencies in image
+        run: |
+          docker run --rm enclave-backend:ci sh -c \
+            "which pdftoppm && which pdfinfo && which tesseract && \
+             python -c 'import pdf2image, pytesseract, PIL; print(\"scan deps ok\")'"
+
       - name: Build client frontend image
         run: docker build -t enclave-frontend:ci ./frontend
 

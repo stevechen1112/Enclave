@@ -1,0 +1,52 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T11:00:38",
+ "base_url": "http://localhost:8011",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 115.2,
+ "summary": {
+  "total": 2,
+  "pass": 1,
+  "fail": 0,
+  "review": 1,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z4-i-001",
+   "category": "blind_z4_A",
+   "query": "臺鍍網站架設專案合約（signed）的簽約雙方是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "臺鍍",
+    "姚建宇"
+   ],
+   "spans_hit": [
+    "臺鍍",
+    "姚建宇"
+   ],
+   "answer": "## 簽約雙方\n\n根據《臺鍍網站架設專案合約_signed.pdf》：\n\n- **甲方**：臺鍍方面，但合約提供內容中的甲方姓名、統一編號等欄位未填寫，無法確認具體名稱。\n- **乙方**：**姚建宇**。\n\n因此，合約的簽約雙方為**甲方（臺鍍方面，具體名稱未載明）與乙方姚建宇**。  \n\n[建議問題]  \n1. 這份合約的總金額與付款方式是什麼？  \n2. 合約預計何時交付網站？  \n3. 甲方取消合作時，訂金如何處理？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z4-i-002",
+   "category": "blind_z4_A",
+   "query": "宏茂五金「宏茂行銷報價合約.pdf」約略標的或服務是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "社群媒體",
+    "亞馬遜"
+   ],
+   "spans_hit": [
+    "社群媒體"
+   ],
+   "answer": "## 約略標的／服務\n\n根據《宏茂行銷報價合約.pdf》，本合約主要是**數位行銷與跨境電商營運服務**，內容包括：\n\n1. **社群媒體經營**\n   - 經營 LinkedIn、Twitter、Facebook 等英文社群\n   - 內容企劃與製作、圖片美編、客服協助、推廣\n   - 提供每月數據報表\n\n2. **跨境電商經營**\n   - 經營 Amazon、eBay 通路\n   - 協助帳戶開設、金物流設定、產品文案、關鍵字、客服、推廣及日常營運\n\n3. **搜尋引擎優化（SEO）**\n   - 以 Google 為目標搜尋引擎\n   - 針對「Buckle Man」網站進行英文關鍵字、網站內容、頁面標題、網址、圖片及站內外流量優化\n\n4. **網站數據分析與追蹤**\n   - 針對「Buckle Man」網站設定 Google Analytics、Google Search Console 及 Facebook Pixel\n   - 分析訪客來源、對象與行為，並提出強化策略\n\n5. **網路廣告投放**\n   - 可涵蓋 Facebook Ads、Google Ads、Bing/Yahoo Ads 等平台\n   - 包含廣告策略、帳戶開設、文案素材製作及投放操作\n   - 依廣告預算另加 15% 代操服務費\n\n6. **其他依需求議定的行銷服務**\n   - 外國媒體、網紅或新聞媒體曝光\n   - 影片拍攝、平面攝影、美編設計、網站建置等\n\n其中，項目一至四的優惠合計費用為**每月新臺幣 38,000 元（未稅）**；項目五至七則依需求另行議定。上述內容依據《宏茂行銷報價合約.pdf》第二條及第三條。\n\n> 補充：參考資料中的合約立書人為「捷豹電腦資訊社」與「八策品牌行銷有限公司」，文件內容未明載「宏茂五金」名稱。\n\n[建議問題]  \n1. 這份合約的總費用及付款方式是什麼？  \n2. 合約期間與提前終止條件為何？  \n3. 項目一至四各自提供哪些具體行銷成果？",
+   "verdict": "review",
+   "note": "spans 1/2"
+  }
+ ],
+ "partial": false
+}

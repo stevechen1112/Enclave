@@ -34,3 +34,5 @@ from app.models.kb_maintenance import (
 )
 # Phase 11-2: Generated Report persistence
 from app.models.generated_report import GeneratedReport
+from app.models.billing import BillingRecord
+from app.models.tenant import TenantSSOConfig

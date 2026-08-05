@@ -21,6 +21,10 @@ from app.logging_config import setup_logging
 # ── Initialize structured logging ──
 setup_logging()
 
+from app.observability.sentry import init_sentry
+
+init_sentry("enclave-api")
+
 
 # ── Application Lifespan ──
 

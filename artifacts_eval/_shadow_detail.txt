@@ -1,0 +1,10 @@
+﻿18:23:59 | INFO     | app.services.chat_orchestrator | [583fb349] source_verify[shadow] verified=False claims=3 unsupported=1 reason=unverified_claims
+18:24:48 | INFO     | app.services.chat_orchestrator | [76c62a36] source_verify[shadow] verified=True claims=2 unsupported=0 reason=ok
+18:25:33 | INFO     | app.services.chat_orchestrator | [8225bbca] source_verify[shadow] verified=False claims=8 unsupported=4 reason=unverified_claims
+18:27:20 | INFO     | app.services.chat_orchestrator | [aa6cef63] source_verify[shadow] verified=False claims=4 unsupported=1 reason=unverified_claims detail=['?镼踹?2024撟游漲??望??]
+18:27:42 | INFO     | app.services.chat_orchestrator | [ba692832] source_verify[shadow] verified=True claims=1 unsupported=0 reason=ok detail=
+18:28:15 | INFO     | app.services.chat_orchestrator | [e45df0fe] source_verify[shadow] verified=True claims=4 unsupported=0 reason=ok detail=
+18:28:36 | INFO     | app.services.chat_orchestrator | [4a8b3f16] source_verify[shadow] verified=True claims=4 unsupported=0 reason=ok detail=
+18:29:04 | INFO     | app.services.chat_orchestrator | [ed06d39a] source_verify[shadow] verified=True claims=3 unsupported=0 reason=ok detail=
+18:29:57 | INFO     | app.services.chat_orchestrator | [38d10220] source_verify[shadow] verified=False claims=3 unsupported=1 reason=unverified_claims detail=['摨怠?唬??喟?撅交風銝哨?撣??瑞迂?箝?擗葦???噩??單???]
+18:31:02 | INFO     | app.services.chat_orchestrator | [27a178be] source_verify[shadow] verified=False claims=3 unsupported=1 reason=unverified_claims detail=['靘?擃??拚?閮?嚗?00 ?砍? ? 60% 嚗??喳? 180 ?砍?']

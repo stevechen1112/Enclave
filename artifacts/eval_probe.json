@@ -1,0 +1,112 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-03T22:58:49",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 35.2,
+ "summary": {
+  "total": 6,
+  "pass": 5,
+  "fail": 1,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "E073",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，文件標題是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "顧問服務合約"
+   ],
+   "spans_hit": [
+    "顧問服務合約"
+   ],
+   "answer": "根據《009_DOC003~3.pdf》，文件標題是 **「顧問服務合約」**。\n\n[建議問題]\n1. 這份合約的有效期間為何？\n2. 合約約定的服務內容有哪些？\n3. 合約服務費用是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E021",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，副標題是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "玩家使用手冊"
+   ],
+   "spans_hit": [
+    "玩家使用手冊"
+   ],
+   "answer": "## 副標題\n\n根據《023_KiGo使用手冊.pdf》封面，主標題為「KiGo Guidebook」，副標題是 **「玩家使用手冊」**。\n\n[建議問題]\n1. 這份手冊包含哪些章節？\n2. KiGo 的主要功能是什麼？\n3. 安裝 KiGo 需要哪些硬體條件？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E010",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，出租系統的廠商名稱是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "人易科技股份有限公司"
+   ],
+   "spans_hit": [],
+   "answer": "## 出租系統廠商名稱\n\n根據《000_nueip 合約(1).pdf》的「公司名稱」欄位，出租系統的廠商為 **八策數位股份有限公司**。\n\n[建議問題]\n1. 這份合約的租用期間為何？\n2. 合約總金額是多少？\n3. 租用的系統名稱是什麼？",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "B02",
+   "category": "blind_scan",
+   "query": "根據文件《113年營所稅申報書_E42八策.pdf》，納稅的公司名稱是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 納稅公司名稱\n\n根據《113年營所稅申報書_E42八策.pdf》的網路申報附件封面，納稅公司為：\n\n**八策數位股份有限公司**  \n統一編號：**83028948**\n\n> 文件中的「營利事業所得基本稅額申報表」部分曾出現「八聚數位股份有限公司」，但同一欄所載統一編號仍為 **83028948**；其他多處及申報封面均記載為「八策數位股份有限公司」，應屬文字辨識或登載不一致。\n\n[建議問題]\n1. 該公司的113年度自繳稅額是多少？\n2. 該公司的營業地址及負責人是誰？\n3. 該公司的113年度課稅所得額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B13",
+   "category": "blind_report",
+   "query": "根據文件《巨大機械9921深度研究報告.pdf》，E-Bike 目前佔集團營收比重約多少？2030 年目標是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "50%"
+   ],
+   "spans_hit": [
+    "50%"
+   ],
+   "answer": "## E-Bike 營收占比\n\n根據《巨大機械9921深度研究報告.pdf》第 3 頁：\n\n- **目前占集團營收比重：約 20%～30%**\n- **2030 年目標：提升至 50%**\n\n[建議問題]\n1. E-Bike 占比提升對巨大機械毛利率有何影響？\n2. 巨大機械達成 2030 年目標的主要成長動能有哪些？\n3. 歐洲 E-Bike 庫存對巨大機械營運有何風險？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B23",
+   "category": "blind_audit",
+   "query": "根據文件《【將能數位行銷】-巽耘法律事務所-健診報告.pdf》，報告對該網站 sitemap.xml 的診斷結果是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "尚未",
+    "提交"
+   ],
+   "spans_hit": [
+    "尚未",
+    "提交"
+   ],
+   "answer": "## Sitemap.xml 診斷結果\n\n根據《【將能數位行銷】-巽耘法律事務所-健診報告.pdf》第 8–9 頁：\n\n- Google Search Console 顯示「找不到這個網站的 Sitemap」。\n- 網站 `https://sylaw.tw/` **尚未提交 sitemap.xml 檔案**。\n- 報告建議：**提交 sitemap.xml**，以協助 Google 等搜尋引擎快速掌握網站內容架構。\n- 在技術面小結中，此項被標記為 **需改善（△）**，且**優先程度為高**（第 28 頁）。\n\n[建議問題]\n1. 報告對 Robots.txt 的診斷結果是什麼？\n2. Sitemap.xml 應如何提交至 Google Search Console？\n3. 報告列出的其他高優先改善項目有哪些？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  }
+ ]
+}

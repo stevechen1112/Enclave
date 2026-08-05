@@ -1,0 +1,32 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T11:56:58",
+ "base_url": "http://localhost:8011",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 64.5,
+ "summary": {
+  "total": 1,
+  "pass": 0,
+  "fail": 1,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z4-i-028",
+   "category": "blind_z4_B",
+   "query": "金正昌報價提案談的是什麼、有無總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "34,000",
+    "65,000"
+   ],
+   "spans_hit": [],
+   "answer": "## 回答\n\n目前知識庫中沒有足夠的相關文件，無法確認「金正昌報價提案」具體談論的內容，也無法判斷是否有總價。\n\n目前提供的文件內容分別為：\n\n- 《CYS6份月臉書粉專貼文提案_20190531_Emma.pdf》：主要是 C.Y.S. 假髮品牌的臉書貼文提案。\n- 《滷味市場與品牌策略提案_好婆婆生酮.pdf》：主要是滷味品牌定位、市場與產品策略。\n- 《味特消費性品牌提案建議_20170522.pdf》：主要是味特品牌建設、消費市場與海外發展策略。\n\n上述資料中沒有出現「金正昌」或其報價提案的金額、服務項目及總價資訊，因此無法據此回答。\n\n[建議問題]\n1. 可以提供「金正昌報價提案」原始文件或相關頁面嗎？\n2. 想確認的是提案服務內容、報價明細，還是含稅總價？\n3. 是否有其他包含金正昌報價單、合約或議價紀錄的文件？",
+   "verdict": "fail",
+   "note": "spans 0/2"
+  }
+ ],
+ "partial": false
+}

@@ -33,6 +33,14 @@ def resolve_content_bytes(
     if meta.get("file_bytes"):
         return meta["file_bytes"]
 
+    # ADR-011：s3:// content_uri 經 StorageBackend 取 bytes
+    for candidate in (meta.get("file_path"), content_uri):
+        if isinstance(candidate, str) and candidate.startswith("s3://"):
+            from app.services.storage import get_storage_backend, parse_s3_uri
+
+            _, key = parse_s3_uri(candidate)
+            return get_storage_backend().get_bytes(key)
+
     file_path = meta.get("file_path")
     if file_path and os.path.isfile(file_path):
         with open(file_path, "rb") as f:

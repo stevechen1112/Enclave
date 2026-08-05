@@ -554,15 +554,16 @@ RAGFlow dataset 現用 `bge-m3@ollama-local`。若 Enclave canonical 與 WeKnora
 
 ---
 
-## 5. 與主計畫的關係
+## 5. 與主計畫／願景的關係
 
-| 主計畫狀態 | 本計畫態度 |
+| 計畫 | 本計畫態度 |
 |------------|------------|
 | Phase 0–1 Control Plane、Gateway 契約、outbox、PEP | **保留**；本計畫建立其上 |
 | Phase 2–4「驗收已勾」 | **重新定義**：舊勾代表「契約／可測性」；**價值證明**以本文件 ablation PASS 為準 |
 | Phase 5 specialist 預設關閉 | **維持**；僅 RF-06 達標後開啟 |
 | OPEN_GATES 外部滲透／法律／DR | **不變**；仍為商業 GA 人工閘門 |
 | `nas_smb` certify mode=local | **降級敘述**：證明的是 Enclave 本地掃描器，不是 PipesHub |
+| `FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN`／`VISION_POINT_A_TO_B` | **互補**：本文件證 sidecar 能力增量；彼文件證主路徑不被錯粒度／雜訊／假完成打穿（詳見 VISION「與 CAPABILITY 的差異」） |
 
 建議在 `DEVELOPMENT_PLAN_TRIPLE_INJECTION.md` §16 增加指向本文件的一行：
 

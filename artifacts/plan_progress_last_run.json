@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-02T22:59:46.811551+00:00",
+  "generated_at": "2026-08-05T01:06:55.004545+00:00",
   "plan": "C:\\Users\\User\\Desktop\\Enclave\\docs\\DEVELOPMENT_PLAN_TRIPLE_INJECTION.md",
   "mode": {
     "run_pytest": false,
@@ -680,6 +680,7 @@
     "source": "docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md",
     "total": 15,
     "present": 15,
+    "pass": 6,
     "items": [
       {
         "gate": "CV-RF-01a",
@@ -799,6 +800,70 @@
         "present": true,
         "status": "PRESENT",
         "detail": "adr file"
+      }
+    ]
+  },
+  "foundation_gates": {
+    "source": "docs/FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN.md",
+    "total": 7,
+    "present": 7,
+    "pass": 7,
+    "items": [
+      {
+        "gate": "FD-DELIVER",
+        "artifact": "artifacts/foundation_delivery_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "gate": "FD-CATALOG",
+        "artifact": "artifacts/foundation_catalog_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "gate": "FD-FUSION",
+        "artifact": "artifacts/foundation_fusion_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "gate": "FD-QUERYPLAN",
+        "artifact": "artifacts/foundation_queryplan_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "gate": "FD-CLAUSE",
+        "artifact": "artifacts/foundation_clause_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "gate": "VISION-ADV",
+        "artifact": "artifacts/adversarial_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
+      },
+      {
+        "gate": "VISION-CEILING",
+        "artifact": "artifacts/capability_ceiling_last_run.json",
+        "present": true,
+        "schema_ok": true,
+        "status": "PASS",
+        "detail": "ok"
       }
     ]
   },

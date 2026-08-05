@@ -3,6 +3,31 @@
 同步來源：`DEVELOPMENT_PLAN_TRIPLE_INJECTION.md`、`docs/PLAN_PROGRESS.md`、`artifacts/plan_progress_last_run.json`。  
 能力啟用／增量價值閘門（CV-*）：見 `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md`（與下方商業 GA 人工閘門互補；舊 checkbox PASS 不自動等同 CV PASS）。
 
+> **真治本（檢索粒度／融合／入庫交付）**：見 `docs/FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN.md`  
+> ADR：`ADR-008`（多粒度）、`ADR-009`（融合不變量）、`ADR-010`（入庫交付）。  
+> 閘門 ID：`FD-DELIVER`／`FD-CATALOG`／`FD-FUSION`（**不得**以題號特判或關 WeKnora 當完成）。  
+> 願景總綱：`docs/VISION_POINT_A_TO_B.md`（與能力消融計畫互補，見該文件 §與 CAPABILITY 的差異）。  
+> 雲端化／商業產品化（**✅ Accepted 2026-08-04，D1–D7 全定案**）：`docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md`（閘門 ID：`CG-*`／`HG-PENTEST-CLOUD`）。  
+> ADR：`ADR-003 v2`（SaaS 邊界擴張）、`ADR-011`（storage backend）、`ADR-012`（tenant RLS）、`ADR-013`（sidecar 綁定）。  
+> 2026-08-04 Phase 1 動工：**CG-STORAGE 程式層完成**（StorageBackend 抽象＋local/S3 雙實作＋測試；雙路徑驗收待雲端帳號）；**CG-RLS shadow 落地**（27 表 policy 已建、未 FORCE；live 繞過攻擊測試全綠含 commit 存活實證；superuser 跳過 RLS 已列 ADR-012 硬性部署前提）；**CG-SIDECAR-MT Phase A 落地**（binding 表＋DB 觸發器不變量＋控制面 fail-closed 解析＋靜態掃描把關；pack provision 流程屬 Phase 2）。  
+> 2026-08-04 code review：Bugbot 5 findings（3 高 2 中）全部修補並加回歸測試——RLS context 跨 commit 存活（after_begin 監聽器）、audit bypass 洩漏、上傳孤兒記錄、login 缺 bypass、worker S3 租戶前綴檢查。  
+> 2026-08-05 **CG-QUOTA 落地**：串流主路徑 `/chat/stream` 補上配額強制（原先只擋非串流，屬假綠）；查詢＋token 雙軸 429；儲存軸由 `file_size` 累計（原寫死 0）；方案矩陣對齊計畫 §3.3（pilot/team/business/enterprise，保留 free/pro 相容）；用量儀表沿用 admin/company 既有端點；532 tests 全綠。  
+> 2026-08-05 **CG-AUTH-SSO 落地**：SSO router 掛載且 callback 完成登入閉環（IdP userinfo→email 連結既有帳號→核發含正確 tenant 的 JWT；fail-closed：網域白名單、預設不自動開戶、跨租戶連結 403）；`TenantSSOConfig` 模型重建＋owner/admin 設定端點；email 驗證（HMAC token＋SMTP/log 雙模，`EMAIL_VERIFICATION_ENABLED` 開啟時未驗證不可聊天）；owner MFA（stdlib TOTP、partial token 雙 scope，`get_current_user` 一律拒絕局部 token＝挑戰不可繞，`MFA_ENFORCE_OWNER` 強制開通流程）；migration `p5_auth_hardening_001` 已套用（既有用戶回填已驗證）；555 tests 全綠。  
+> 2026-08-05 code review 修補（Bugbot 6 findings）：SSO callback 改走 `build_login_response`（不可繞 MFA）；`auto_create_user` schema 預設改 false；Microsoft 只接受 `mail`／非 #EXT# UPN；儲存軸上傳強制；聊天配額 `reserve_chat_quota`（FOR UPDATE 原子預留）；SMTP 未設時不寫驗證 token 至 log；561 tests 全綠。  
+> 2026-08-05 **CG-OBS 落地**：Sentry（web＋worker，`SENTRY_DSN` 未設則 no-op）；Langfuse 問答 trace（retrieval／generation／source_verification span 串聯）；Prometheus 業務指標 `enclave_quota_exceeded_total`、`enclave_source_verify_total`；569 tests 全綠。  
+> 2026-08-05 **CG-CLAMAV 落地**：`file_scan.py`（ClamAV INSTREAM）；上傳端點整合（惡意 400、fail-closed 503）；`compose/clamav.yml` overlay；production/staging + `CLAMAV_FAIL_CLOSED` 啟動檢查；576 tests 全綠。  
+> 2026-08-05 **託管 POC 實例（Phase 1）**：`docs/runbooks/MANAGED_PRIVATE_CLOUD.md`（Compose 拉起／開戶／交付 SOP）；`scripts/managed_poc_smoke.py`（煙霧閘門 → `artifacts/managed_poc_smoke_last_run.json`）。  
+> 2026-08-05 **CG-PAY 落地（程式層）**：NewebPay MPG checkout＋notify webhook；`billing_records` 表；付款成功 `apply_plan_quota`；未設 `NEWEBPAY_MERCHANT_ID` 時 checkout fail-closed 503；E2E 實測待商戶憑證。  
+> 2026-08-05 **WS-SECURITY 三層限流**：production/staging 啟用 IP＋user＋tenant Redis 滑窗；chat 路徑另限 `RATE_LIMIT_CHAT_PER_USER`；webhook／login 白名單。  
+> 2026-08-05 **CG-STORAGE 遷移腳本**：`scripts/migrate_storage_local_to_s3.py`（dry-run／execute；雲端帳號實測待辦）。  
+> 2026-08-05 **WS-QA-CLOUD 發布閘門**：`scripts/cloud_release_gate.py`（安全掃描＋答題 artifact 新鮮度＋託管 health smoke）。  
+> 2026-08-05 **Bugbot 8 findings 修補**：token 預留估算、payment 單一 transaction＋失敗回 500、chat 配額延後至對話驗證後、儲存 FOR UPDATE、SSO redirect_uri 釘選、p7 RLS 補表、移除 debug Celery tasks。  
+> 2026-08-05 **CG-PAY 模擬 E2E**：`scripts/e2e_payment_newebpay.py`（checkout→加密 notify→升等＋billing 冪等；真實藍新仍待商戶憑證）。  
+> 2026-08-05 **WS-GTM／DATA／AGENTIC**：`SAAS_TENANT_ONBOARDING.md`、`DATA_DELETION_AND_EXPORT.md`、`docs/legal/DPA_TEMPLATE.md`（草稿）、`scripts/provision_managed_instance.py`（開通骨架＋確認交付閘門）。  
+ 
+> 2026-08-03：FOUNDATION F0–F4 **全部完成並驗證**；FD-* 五閘門 PASS。  
+> VISION Point A→B：約 **75–85%**（Blind Z3 67/85；Blind Z4 39/50；Z2 27/27 不得單獨當 Point B；見 `VISION_POINT_A_TO_B.md`／`artifacts/blind_z*/BASELINE_TRIAGE.md`）。
+
 > **✅ CV-INT 已 PASS（2026-08-02 重跑）**：B1 正式 KB 切換 DeepDOC + B2 重解析後，動態查核 0 違規（正式 KB `layout_recognize=DeepDOC`，7 份宣稱 deepdoc 的文件與上游一致）。靜態掃描仍為 0；`tests/test_label_integrity_gate.py` 防回歸。
 >
 > 仍開放的能力閘門見 `CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md` §7。  
@@ -27,6 +52,23 @@ python scripts/plan_progress_gate.py --write-md --strict
 - false_green：**0**
 - 剩餘 human gate：**1**（外部滲透）
 - 本機階段 SKIP：SharePoint / Google Drive OAuth
+
+## 真治本閘門（FD-*，架構契約）
+
+| ID | 項目 | 狀態 | 計畫／ADR | 完成判準（防假綠） |
+|----|------|------|-----------|-------------------|
+| FD-DELIVER | 掃描／OCR 入庫交付不變量 | **✅ PASS（2026-08-03 重跑）** | ADR-010、F1 | 無 completed∧text_fallback；缺依賴必 failed |
+| FD-CATALOG | Catalog＋Chunk 多粒度契約 | **✅ PASS（2026-08-03）** | ADR-008、F2 | 盤點題走文件層；關題號特判仍過 |
+| FD-FUSION | Gateway 融合不變量 | **✅ PASS（2026-08-03）** | ADR-009、F3 | 無檔名 compiled 不得擠掉內部 document；禁靠關源過關 |
+| FD-QUERYPLAN | QueryPlan 結構化意圖 | **✅ PASS（2026-08-03）** | FOUNDATION F4 | intent／arms／sub_queries；複合盤點 multi_hop |
+| FD-CLAUSE | 跨語條款對照投影 | **✅ PASS（2026-08-03）** | FOUNDATION F4 | DB 投影＋Wiki 同步＋translate chat；R19 pass |
+| VISION-ADV | 對抗集 | **✅ PASS（8/8）** | VISION Phase 4 | 檔名誤導／拒答／跨檔期間／多語 |
+| VISION-CEILING | 能力上限就位 | **✅ PASS** | VISION Phase 5 | rerank／Phase2 模組／條款投影 |
+| ANSWER-40 | 主黃金集 40 題 | **✅ 40/40 pass** | VISION Phase 4 | `answer_correctness_last_run.json` |
+
+> FOUNDATION＋VISION 核心可重跑：`make foundation-gates`；另跑 `eval_adversarial_gate.py`／`eval_answer_correctness.py`／`eval_capability_ceiling.py`。
+
+詳見：`docs/FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN.md` §0.3／§5。
 
 ## 不可代勞（需外部人／客戶／憑證）
 

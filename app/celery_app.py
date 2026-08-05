@@ -41,6 +41,10 @@ import app.tasks.outbox_worker  # noqa: F401, E402
 import app.tasks.reconciliation_tasks  # noqa: F401, E402
 import app.tasks.connector_tasks  # noqa: F401, E402
 
+from app.observability.sentry import init_sentry
+
+init_sentry("enclave-worker")
+
 celery_app.conf.beat_schedule = {
     "process-outbox-batch": {
         "task": "tasks.process_outbox",

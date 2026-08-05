@@ -1,0 +1,2298 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-03T19:46:46",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 404.9,
+ "summary": {
+  "total": 128,
+  "pass": 125,
+  "fail": 3,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "R01",
+   "category": "factual",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## 統一編號\n\n營業稅繳款書上的**營利事業統一編號為：83028948**。\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》及《002_11410_83028948_營業稅繳款書(401)_.pdf》，營業人「八策數位股份有限公司」的營利事業統一編號均載為 **83028948**。\n\n[建議問題]\n1. 這張營業稅繳款書的繳納期限是何時？\n2. 114年7至8月營業稅的應納稅額是多少？\n3. 營業稅繳款書的稅籍編號是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R02",
+   "category": "factual",
+   "query": "由你人資 MOU 的簽約雙方是誰？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合股份有限公司",
+    "拉法智慧科技股份有限公司"
+   ],
+   "spans_hit": [
+    "優利資源整合股份有限公司",
+    "拉法智慧科技股份有限公司"
+   ],
+   "answer": "## 簽約雙方\n\n根據《003_由你人資MOU.pdf》：\n\n- **甲方：優利資源整合股份有限公司**\n- **乙方：拉法智慧科技股份有限公司**\n\n[建議問題]\n1. 此合作意向書的合作專案是什麼？\n2. MOU 的生效期間與終止條件為何？\n3. 雙方公司的負責人及統一編號分別為何？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R03",
+   "category": "factual",
+   "query": "KiGo 使用手冊說明的主要功能有哪些？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGo"
+   ],
+   "spans_hit": [
+    "KiGo"
+   ],
+   "answer": "## KiGo 使用手冊說明的主要功能\n\n根據《023_KiGo使用手冊.pdf》第 4.3 節，KiGo 的主要功能分為三大類：\n\n1. **上網下棋**\n   - 需登入 LGS 傳奇圍棋網。\n   - 可使用「自動找對手」或「自己挑對手」進行線上對弈。\n   - 可設定邀局的基本與進階參數。\n   - 支援棋局計地、投子、打掛暫停，以及斷線後自動打掛等對局流程。\n   - 也可載入先前打掛的棋局或查看棋局。\n\n2. **電腦對局**\n   - 可與電腦進行圍棋對局。\n   - 此功能**不需要登入** LGS 傳奇圍棋網即可使用。\n\n3. **練功房**\n   - 提供圍棋練習用途。\n   - 此功能同樣**不需要登入** LGS 傳奇圍棋網即可使用。\n\n此外，手冊也列出一些輔助功能，包括：\n\n- **打譜**：可在線上擺放棋譜，並選擇棋盤路數。\n- **語音對話**：可接收語音。\n- **進階設定**：調整 KiGo 的細項設定。\n- **個人資訊／個人信息**：查看個人資料、對戰戰績與留言信箱；並可查詢其他使用者、加入好友、封鎖、留言或邀局。\n- **線上說明**：連結至線上說明網頁。\n\n根據《023_KiGo使用手冊.pdf》第 4.3 節及「其他下棋功能」、「工具列」說明。\n\n[建議問題]\n1. KiGo 的「上網下棋」如何自動尋找對手？\n2. KiGo 如何進行邀局及設定讓子？\n3. 棋局打掛或斷線後，要如何載入並繼續對局？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R04",
+   "category": "factual",
+   "query": "補印發票切結書需要填哪些欄位？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "統一編號",
+    "發票號碼",
+    "立切結書人"
+   ],
+   "spans_hit": [
+    "統一編號",
+    "發票號碼",
+    "立切結書人"
+   ],
+   "answer": "## 補印發票切結書應填欄位\n\n根據《010_補印發票切結書.pdf》，切結書中應填寫以下資料：\n\n### 一、原發票資料\n1. **開立發票的公司名稱**\n2. **發票開立日期**\n3. **發票號碼**\n4. **買受人名稱**\n5. **買受人統一編號**\n6. **發票總金額**\n\n### 二、補印原因與聲明\n1. **補印原因**：例如因作業疏忽遺失統一發票。\n2. **補印用途**：例如「以利報帳用」。\n3. **未申報扣抵聲明**：確認原發票尚未向國稅局申報扣抵。\n4. **責任承諾**：若發生重複申報扣抵或內容虛偽不實，願負擔損害賠償、罰金、罰鍰、律師費及訴訟費用等責任。\n\n### 三、立切結書人資料\n1. **公司名稱**\n2. **負責人姓名**\n3. **公司地址**\n4. **聯絡電話**\n5. **切結日期**（中華民國年／月／日）\n\n文件範例中另明確載有「立切結書人」身分，因此填寫時應以申請補印發票的買受人公司資料為準。\n\n[建議問題]\n1. 可以提供補印發票切結書的空白範本嗎？\n2. 補印發票切結書是否需要公司大小章？\n3. 發票遺失後，除了切結書外還需要提供哪些文件？",
+   "verdict": "pass",
+   "note": "spans 3/3"
+  },
+  {
+   "id": "R05",
+   "category": "factual",
+   "query": "ETI Base Code 對工時有什麼規定？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "60",
+    "工時"
+   ],
+   "spans_hit": [
+    "60",
+    "工時"
+   ],
+   "answer": "## ETI Base Code 的工時規定\n\n根據《006_ETI-Base-Code-Burmese.pdf》之「條款對照投影」，ETI Base Code 對工時的主要要求如下：\n\n1. **每週總工時上限**\n   - 除符合例外條件外，勞工的**每週總工作時間不得超過 60 小時**。\n   - 依據：第 6.4 條〈每週最高工作時數〉。\n\n2. **超過每週 60 小時的例外條件**\n   - 僅可在下列情況下超過每週 60 小時：\n     - 法律允許；\n     - 已與具代表性的工人組織達成自由集體協議；\n     - 已具備健康與安全保障；或\n     - 有可證明的突發生產需求或緊急情況。\n   - 依據：第 6.5 條〈每週工時限制的例外〉。\n\n3. **每週休息日**\n   - 勞工**每週至少應有 1 天休息日**。\n   - 若法律允許，應在連續 **14 天期間內提供 2 天休息日**。\n   - 依據：第 6.6 條〈每週休息日〉。\n\n4. **加班不得視為正常工時，且須有較高報酬**\n   - 雇主不得將加班當成正常工作時間的一部分。\n   - 加班工資應高於正常工資，並建議至少為正常工資的 **125%**。\n   - 依據：第 5.2 條〈透明薪酬與加班加給〉。\n\n## 補充說明\n\nETI Base Code 的重點是以每週 **60 小時**作為一般總工時上限，並要求保障每週休息；如需超時，必須具備法定依據、集體協議、健康安全保護或可證明的緊急／突發生產理由等條件。\n\n[建議問題]\n1. ETI Base Code 對加班是否要求勞工自願同意？\n2. 公司工作規則的工時與加班上限，是否符合 ETI Base Code？\n3. ETI Base Code 對休息時間及輪班安排有何要求？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R06",
+   "category": "unanswerable",
+   "query": "這批文件裡有沒有提到火星殖民計畫的預算？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- SayCheez_作戰計畫.xlsx\n- 014_AI 機器人全球 7 大勢力關鍵報告.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R07",
+   "category": "unanswerable",
+   "query": "CEO 的私人手機號碼是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 023_KiGo使用手冊.pdf\n- 01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R08",
+   "category": "unanswerable",
+   "query": "2028 年的營收預測數字？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 014_AI 機器人全球 7 大勢力關鍵報告.pdf\n- 手工具產業供應鏈全局觀（完整版）.pdf\n- 023_KiGo使用手冊.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R09",
+   "category": "unanswerable",
+   "query": "哪一份文件授權刪除所有稽核日誌？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 部門工作職責.xlsx\n- 【公告】優利－費用申請流程（請購暨請款、暫借暨回沖）（11103A版）（1110407-1修）.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R10",
+   "category": "unanswerable",
+   "query": "未收錄產品的隱藏折扣碼是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 023_KiGo使用手冊.pdf\n- 007_DOC_0001.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R11",
+   "category": "multi_hop",
+   "query": "比較兩份營業稅繳款書的期間與稅額差異",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "spans_hit": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "answer": "## 兩份營業稅繳款書比較\n\n| 比較項目 | 114年07–08月期 | 114年09–10月期 | 差異 |\n|---|---:|---:|---:|\n| 文件 | 《005_11408_83028948_營業稅繳款書(401)_.pdf》 | 《002_11410_83028948_營業稅繳款書(401)_.pdf》 | — |\n| 所屬期間 | 114年07–08月 | 114年09–10月 | 後者為下一個雙月申報期間 |\n| 繳納期限 | 114年09月15日 | 114年11月15日 | 延後 2 個月 |\n| 本稅／應納稅額合計 | 24,919 元 | 36,733 元 | 增加 11,814 元 |\n\n## 稅額差異計算\n\n**稅額增加金額：**\n\n\\[\n36,733 - 24,919 = 11,814\\text{ 元}\n\\]\n\n**稅額增幅：**\n\n\\[\n\\frac{11,814}{24,919} \\times 100\\% \\approx 47.41\\%\n\\]\n\n因此，114年09–10月期的應納營業稅為 **36,733元**，較114年07–08月期的 **24,919元**，**增加11,814元，約增加47.41%**。\n\n兩份繳款書均為八策數位股份有限公司的「401一般稅額計算—專營應稅營業人使用」營業稅繳款書。  \n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》及《005_11408_83028948_營業稅繳款書(401)_.pdf》。\n\n[建議問題]\n1. 兩期營業稅的繳納期限分別是什麼時候？\n2. 114年09–10月期營業稅較前期增加的百分比是多少？\n3. 這兩份繳款書是否適用便利商店繳納？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R12",
+   "category": "multi_hop",
+   "query": "合約類文件與手冊類文件分別涵蓋哪些主題？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf",
+    "003_由你人資MOU.pdf",
+    "010_補印發票切結書.pdf",
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "nueip",
+    "KiGo"
+   ],
+   "spans_hit": [
+    "nueip",
+    "KiGo"
+   ],
+   "answer": "## 文件類型與涵蓋主題盤點\n\n依《庫內文件清單》所列 6 份文件，可區分如下；但部分文件僅提供檔名、未提供內容片段，因此無法進一步確認其詳細主題。\n\n### 一、合約／契約類文件\n\n1. **《000_nueip 合約(1).pdf》**\n   - 主題：與 **Nueip** 相關的合約。\n   - 目前提供的參考資料未含內文，無法確認合約標的、雙方權利義務或其他具體條款。\n\n2. **《01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx》**\n   - 主題包括：\n     - **員工保密義務**：涵蓋資料、成本與價格資料、人事資料、行銷計畫、Know-how 等；離職或公司要求時，須返還公司及相關第三人的供應品、設備與業務文件，且不得保留複本或電子紀錄。\n     - **保密義務的存續**：契約終止、撤銷、無效或不成立後，保密義務仍有效；違反者可能負民、刑事責任。\n     - **智慧財產權歸屬**：任職期間因工作完成或創作的構想、發明、技術、著作、營業秘密等相關權利與利益，無償歸屬公司。\n     - **合法取得資料與不侵權保證**：員工須保證工作所用文件、影音及情報均經合法管道取得。\n     - **智慧財產權申請限制與協助義務**：未經公司同意不得自行複製、主張或登記智慧財產權；公司需要時，員工應配合申請或登記。\n   - 根據《01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx》。\n\n3. **《05-1、契約：優利國際－工作規則與差勤管理要點（11501版）（教育部）.pdf》**\n   - 主題包括：\n     - **保密及文件返還**：職員須返還派駐單位的供應品、設備與業務文件資料，不得保留複本或電子紀錄；保密義務於契約終止後仍有效。\n     - **出勤與打卡管理**：規定簽到、簽退、遲到、早退，以及中途請假時的打卡方式。\n     - **差勤系統異常處理**：系統故障或不可抗力致無法打卡時，由專案管理師統一處理紀錄。\n     - **請假規定**：原則上應於前一日通知主管並取得同意；並規定請假申請方式、最小請假單位及可能須檢附的文件。\n   - 根據《05-1、契約：優利國際－工作規則與差勤管理要點（11501版）（教育部）.pdf》。\n\n4. **《003_由你人資MOU.pdf》**\n   - 主題：人力資源相關的 **MOU（合作備忘錄）**。\n   - 目前沒有內文片段，無法確認合作範圍、責任分工或其他具體約定。\n\n---\n\n### 二、手冊類文件\n\n1. **《023_KiGo使用手冊.pdf》**\n   - 主題包括：\n     - **交談／聊天功能**：正在交談的棋友、個人圖片、對話區、文字輸入、表情符號、簡易對話及字型大小調整。\n     - **使用者與好友狀態圖示**：說明藍色、紅色、粉紅色、灰色等交談狀態，以及好友是否在線、下棋中的圖示。\n     - **封鎖名單管理**：可封鎖騷擾使用者、解除封鎖，以及透過交談或棋友列表進行封鎖。\n     - **棋社功能**：棋社資訊、網頁連結、線上成員、棋社公告與對話區。\n   - 根據《023_KiGo使用手冊.pdf》。\n\n2. **《009_DOC003~3.pdf》**\n   - 檔名未能明確辨識其是否為手冊，且未提供內容片段。\n   - **目前知識庫中沒有足夠的相關文件**，無法確認其主題或是否應歸入手冊類。\n\n---\n\n## 補充：參考資料的清單與片段不一致\n\n參考資料另提供《【公告】優利－業務聯繫會辦要點（11206A）（1120620）.pdf》的內容片段，但該文件**未列於《庫內文件清單》的 6 份文件中**。因此，依題目要求以清單為準，本盤點不將其納入合約類或手冊類文件。\n\n該片段本身涵蓋的主題為：**跨部門業務聯繫會辦、文件提供與送件簽核、專案人數縮減或結束時的人員轉派及通知流程**。\n\n[建議問題]\n1. 優利國際勞動契約中的保密義務與智慧財產權條款有哪些重點？\n2. 工作規則與差勤管理要點對請假、遲到及打卡有哪些規定？\n3. KiGo 使用手冊中如何封鎖或解除封鎖其他使用者？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R13",
+   "category": "multi_hop",
+   "query": "MOU 與家長同意書在簽署主體上有何不同？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf",
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合股份有限公司",
+    "家長"
+   ],
+   "spans_hit": [
+    "優利資源整合股份有限公司",
+    "家長"
+   ],
+   "answer": "## 簽署主體差異\n\n| 文件 | 簽署／具名主體 | 性質 |\n|---|---|---|\n| MOU（合作意向書） | **兩家法人公司**：優利資源整合股份有限公司（甲方）與拉法智慧科技股份有限公司（乙方）；並分別由其**負責人李芃葳、陳瑞斌**代表具名。 | 法人與法人間的合作意向文件。 |\n| 家長同意書 | **學生家長**同意其子女加入團體，表單並要求填寫**學生名、家長名及家長聯絡電話**。 | 家長針對未成年子女參與活動所出具的同意文件。 |\n\n## 總結\n\nMOU 的簽署主體是**合作雙方公司（法人）**，由各自負責人代表；家長同意書的同意主體則是**學生家長（個人）**，其目的在於同意子女參加「心電心急救教育推廣團」。  \n\n根據《003_由你人資MOU.pdf》及《001_四屆新生入團申請家長同意書.pdf》。\n\n[建議問題]\n1. MOU 中甲乙雙方的合作內容與效力期間為何？\n2. 家長同意書中，學生參與團體的期間及退出限制為何？\n3. 兩份文件各自是否載明聯絡資訊或地址？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R14",
+   "category": "multi_hop",
+   "query": "哪些掃描件屬於財務憑證？列出文件名",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf",
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書",
+    "補印發票切結書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書",
+    "補印發票切結書"
+   ],
+   "answer": "## 屬於財務憑證的掃描件\n\n依《庫內文件清單》，以下為營業稅繳款書，屬於財務憑證：\n\n1. `002_11410_83028948_營業稅繳款書(401)_.pdf`\n2. `005_11408_83028948_營業稅繳款書(401)_.pdf`\n\n`010_補印發票切結書.pdf`為補印發票的切結文件，並非發票、收據或繳款書本身，因此不列為財務憑證。此判斷亦可參考《【公告】優利－費用申請流程（請購暨請款、暫借暨回沖）（11103A版）（1110407-1修）》所述消費憑證包括發票、收據、領據等。\n\n[建議問題]\n1. 這兩份營業稅繳款書的申報期間分別是什麼？\n2. 補印發票切結書可否作為費用報銷的附件？\n3. 庫內文件中有哪些與營業稅申報相關的文件？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R15",
+   "category": "multi_hop",
+   "query": "入出境相關文件與人資相關文件各有哪些？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf",
+    "000_nueip 合約(1).pdf",
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival",
+    "nueip"
+   ],
+   "spans_hit": [
+    "e-Arrival",
+    "nueip"
+   ],
+   "answer": "## 入出境相關文件\n\n依《庫內文件清單》，可明確辨識為入出境相關的文件如下：\n\n1. **008_Korea e-Arrivalcard_363545709.pdf**  \n   - 依檔名判斷，為韓國電子入境卡（Korea e-Arrival Card）相關文件。\n\n> **009_DOC003~3.pdf** 的檔名未顯示內容或用途，現有參考資料不足以確認其是否屬於入出境文件。\n\n---\n\n## 人資相關文件\n\n依檔名及已提供的文件內容，可辨識為人資相關的文件如下：\n\n1. **000_nueip 合約(1).pdf**  \n   - 檔名顯示為 nueip 相關合約；惟目前未提供內文，無法進一步說明合約範圍。\n\n2. **【公告】優利－業務聯繫會辦要點（11206A）（1120620）.pdf**  \n   - 涉及專案人員異動、縮減員額、專案結束及人員轉派流程。  \n   - 文件要求提供人員名冊資料，例如姓名、到職日、薪資、職務、工作表現、學經歷、聯絡資料等；並規範轉派通知及轉派意願確認作業。  \n   - 根據《【公告】優利－業務聯繫會辦要點（11206A）（1120620）.pdf》。\n\n3. **01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx**  \n   - 為勞動契約文件。  \n   - 內容包含員工保密義務、離職或公司要求時返還公司文件／設備，以及就業歧視與性騷擾防治相關規範。  \n   - 根據《01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx》。\n\n4. **05-1、契約：優利國際－工作規則與差勤管理要點（11501版）（教育部）.pdf**  \n   - 為工作規則及出勤／差勤管理相關文件。\n\n5. **部門工作職責.xlsx**  \n   - 為各部門工作職責相關文件，與組織職務管理具關聯。\n\n6. **003_由你人資MOU.pdf**  \n   - 檔名顯示為與「由你人資」相關的合作備忘錄（MOU）；但目前未提供內文，無法確認具體合作內容。\n\n7. **優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf**  \n   - 為公司工作規則及其函報公文相關文件。\n\n---\n\n## 未歸類為人資或入出境文件\n\n以下文件從檔名看較偏向費用或一般行政／業務流程，現有資料不足以歸入上述兩類：\n\n- **【公告】優利－費用申請流程（請購暨請款、暫借暨回沖）（11103A版）（1110407-1修）.pdf**\n- **009_DOC003~3.pdf**（無足夠內容可判斷）\n\n[建議問題]  \n1. 人資相關文件中，哪些文件規範了人員轉調、專案結束或員額縮減程序？  \n2. 勞動契約中對員工保密義務及離職返還資料有哪些要求？  \n3. 韓國電子入境卡文件是否有記載填寫方式或應備資料？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R16",
+   "category": "table_lookup",
+   "query": "營業稅繳款書上的所屬期間有哪些？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "spans_hit": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "answer": "## 營業稅繳款書所屬期間\n\n依據目前知識庫中的兩份營業稅繳款書，所屬期間如下：\n\n1. **114年07－08月**\n   - 繳納期限：**114年09月15日**\n   - 依據：《005_11408_83028948_營業稅繳款書(401)_.pdf》\n\n2. **114年09－10月**\n   - 繳納期限：**114年11月15日**\n   - 依據：《002_11410_83028948_營業稅繳款書(401)_.pdf》\n\n兩份繳款書皆為「**401一般稅額計算－專營應稅營業人使用**」的營業稅繳款書。\n\n[建議問題]\n1. 這兩期營業稅各自的應納稅額是多少？\n2. 114年09－10月營業稅的繳納期限是何時？\n3. 兩期營業稅應納稅額相差多少？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R17",
+   "category": "table_lookup",
+   "query": "KiGo 手冊或畫面提到的軟體版本有哪些？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Beta"
+   ],
+   "spans_hit": [
+    "Beta"
+   ],
+   "answer": "## KiGo 手冊／畫面提到的軟體版本\n\n根據《023_KiGo使用手冊.pdf》，文件中出現以下版本資訊：\n\n1. **KiGo 0.6.1 Beta**\n   - 出現在 KiGo 安裝精靈的歡迎畫面：「歡迎使用 KiGo 0.6.1 Beta 安裝精靈」。\n   - 依據：〈第二章 安裝KiGo〉相關畫面。\n\n2. **KiGo 0.0.1 Beta**\n   - 出現在安裝程式的授權協議、安裝位置、安裝進度及安裝完成等畫面。\n   - 依據：〈第二章 安裝KiGo〉相關畫面。\n\n3. **KiGo／登入畫面版本 0.0.1**\n   - 手冊中的 KiGo 主畫面顯示「版本 0.0.1」。\n   - 依據：〈第二章 安裝KiGo〉第 6 步畫面。\n\n4. **KiGo／登入畫面版本 1.1.1**\n   - 手冊在〈第三章 開始使用KiGo〉註冊新帳號流程的畫面中顯示「版本：1.1.1」。\n   - 依據：〈第三章 開始使用KiGo〉第 3.1 節。\n\n5. **GNU Go 0.0.1 Beta**\n   - 安裝相關畫面文字出現「Go 0.0.1 Beta」；依上下文可判斷為 GNU Go 的安裝版本資訊。\n   - 依據：〈第五章 安裝GNU Go〉相關安裝片段。\n\n6. **Internet Explorer 5.5 或以上版本**\n   - 作為 KiGo 的系統／軟體需求之一，手冊要求 Windows 2000 或 Windows XP，並安裝 Internet Explorer 5.5 或更高版本。\n   - 依據：〈第二章 安裝KiGo〉第 2.1 節「硬體需求」。\n\n## 文件內版本資訊的不一致處\n\n《023_KiGo使用手冊.pdf》的安裝與操作畫面同時出現 **KiGo 0.6.1 Beta**、**KiGo 0.0.1 Beta**、**0.0.1** 與 **1.1.1**。文件未說明這些版本間的更新關係、哪一個是正式適用版本，或為何不同畫面使用不同版本號，因此無法僅依手冊判定正確或最新的 KiGo 版本。\n\n[建議問題]\n1. KiGo 的安裝環境需求有哪些？\n2. KiGo 手冊中如何安裝 GNU Go？\n3. KiGo 如何註冊新帳號並登入？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R18",
+   "category": "table_lookup",
+   "query": "AI 機器人報告的檔名關鍵字？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "AI",
+    "機器人"
+   ],
+   "spans_hit": [
+    "AI",
+    "機器人"
+   ],
+   "answer": "## AI 機器人報告的檔名關鍵字\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，檔名關鍵字可為：\n\n- **AI 機器人**\n- **全球 7 大勢力**\n- **關鍵報告**\n- **014**\n\n完整檔名為：**014_AI 機器人全球 7 大勢力關鍵報告.pdf**\n\n[建議問題]\n1. 這份報告涵蓋哪 7 個國家／區域？\n2. 報告中台灣的 AI 機器人產業優勢有哪些？\n3. 各國 AI 機器人發展策略有何差異？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R19",
+   "category": "table_lookup",
+   "query": "ETI Base Code 條款編號與標題對照",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Employment Is Freely Chosen",
+    "就業"
+   ],
+   "spans_hit": [
+    "Employment Is Freely Chosen",
+    "就業"
+   ],
+   "answer": "## ETI Base Code 條款編號與標題對照\n\n根據《006_ETI-Base-Code-Burmese.pdf》之「條款對照投影」，條款編號與標題如下：\n\n| 條款編號 | 中文標題 | 英文標題 |\n|---|---|---|\n| 1 | 自由選擇就業 | Employment Is Freely Chosen |\n| 1.1 | 不得強迫或抵債勞動 | No Forced or Bonded Labour |\n| 1.2 | 自由離職 | Freedom to Leave Employment |\n| 2 | 結社自由與集體協商權 | Freedom of Association and Collective Bargaining |\n| 2.1 | 組織與集體協商權 | Right to Organise and Bargain Collectively |\n| 2.2 | 雇主與工人組織合作 | Employer Cooperation with Worker Organisations |\n| 2.3 | 保障勞工代表 | Protection of Worker Representatives |\n| 2.4 | 法律限制下的結社與協商權 | Freedom of Association Where Legally Restricted |\n| 3 | 安全與健康的工作條件 | Safe and Healthy Working Conditions |\n| 3.1 | 預防工作場所危害 | Prevention of Workplace Hazards |\n| 3.2 | 健康與安全培訓 | Health and Safety Training |\n| 3.3 | 衛生設施、飲用水與餐飲設施 | Sanitation, Drinking Water and Food Facilities |\n| 3.4 | 安全且適足的住宿 | Safe and Adequate Accommodation |\n| 3.5 | 管理層的健康安全責任 | Management Responsibility for Health and Safety |\n| 4 | 不得使用童工 | No Child Labour |\n| 4.1 | 不得招募童工 | No Recruitment of Child Labour |\n| 4.2 | 童工教育與補救措施 | Education and Remediation for Child Workers |\n| 4.3 | 兒童與青年勞工保護 | Protection of Children and Young Workers |\n| 4.4 | 遵守國際勞工組織標準 | Compliance with ILO Standards |\n| 5 | 支付足以維持生活的工資 | Payment of a Living Wage |\n| 5.1 | 工資與福利滿足基本需求 | Wages and Benefits Meet Basic Needs |\n| 5.2 | 透明薪酬與加班加給 | Transparent Pay and Overtime Premium |\n| 6.4 | 每週最高工作時數 | Maximum Weekly Working Hours |\n| 6.5 | 每週工時限制的例外 | Exceptions to Weekly Working-Hour Limits |\n| 6.6 | 每週休息日 | Weekly Rest Day |\n| 7 | 不得歧視 | No Discrimination |\n| 7.1 | 就業中的平等待遇 | Equal Treatment in Employment |\n| 8 | 正規且穩定的合法僱傭 | Regular Employment |\n| 8.1 | 依法認可的僱傭條件 | Legally Recognised Employment Conditions |\n| 8.2 | 不得規避勞動與社會保障義務 | No Evasion of Labour and Social Security Obligations |\n| 9 | 不得嚴苛或不人道對待 | No Harsh or Inhumane Treatment |\n| 9.1 | 禁止虐待與騷擾 | Prohibition of Abuse and Harassment |\n\n## 資料缺漏說明\n\n參考資料列出了第 **6.4、6.5、6.6** 條，但未提供第 **6 條** 以及第 **6.1 至 6.3 條**的標題；因此，目前知識庫中沒有足夠的相關文件可確認這些條款的正式中英文標題。\n\n依《006_ETI-Base-Code-Burmese.pdf》文件片段，第 6.6 條內容為每週至少一天休息日，並於法律允許時在 14 天內提供兩天休息日。\n\n[建議問題]\n1. ETI Base Code 第 6.4 至 6.6 條的具體要求是什麼？\n2. ETI Base Code 第 3 條的職業安全衛生要求有哪些？\n3. ETI Base Code 第 5.2 條對加班工資有何規定？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R20",
+   "category": "table_lookup",
+   "query": "韓國 e-Arrival card 上有哪些護照相關欄位名稱？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Passport"
+   ],
+   "spans_hit": [
+    "Passport"
+   ],
+   "answer": "## 韓國 e-Arrival Card 的護照相關欄位\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》中的「電子入境申報確認書」，與護照／身分資料相關的欄位名稱包括：\n\n- **Country/Region（國家／地區）**\n- **Full Name（姓名）**\n- **Date of Birth（出生日期）**\n- **Sex（性別）**\n- **Passport No（護照號）**\n\n其中，直接對應護照號碼的欄位為：**Passport No（護照號）**。\n\n[建議問題]\n1. 韓國 e-Arrival Card 上還有哪些入境行程相關欄位？\n2. e-Arrival Card 的有效期限與使用限制是什麼？\n3. 提交 e-Arrival Card 後，行程變更時應如何處理？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R21",
+   "category": "factual",
+   "query": "營業稅繳款書的繳納期限是哪一天？（114年09-10月那份）",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "11月15"
+   ],
+   "spans_hit": [
+    "11月15"
+   ],
+   "answer": "## 繳納期限\n\n114年09－10月營業稅繳款書的**繳納期限為 114年11月15日**。\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，所屬年月份為「114年09-10月」，文件明載「繳納期限：114年11月15日」。\n\n[建議問題]\n1. 這期營業稅的應納稅額是多少？\n2. 若超過繳納期限，滯納金如何計算？\n3. 這張繳款書可否至便利商店繳納？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R22",
+   "category": "factual",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## 營業稅繳款書統一編號\n\n營利事業統一編號為：**83028948**\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》及《002_11410_83028948_營業稅繳款書(401)_.pdf》，營業人「八策數位股份有限公司」的營利事業統一編號均為 **83028948**。\n\n[建議問題]\n1. 這張營業稅繳款書的繳納期限是什麼時候？\n2. 114年07－08月的應納營業稅額是多少？\n3. 營業稅繳款書上的稅籍編號是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R23",
+   "category": "factual",
+   "query": "補印發票切結書的標題是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "切結書"
+   ],
+   "spans_hit": [
+    "切結書"
+   ],
+   "answer": "## 標題\n\n補印發票切結書的標題是：**「補印發票切結書」**。\n\n根據《010_補印發票切結書.pdf》。\n\n[建議問題]\n1. 這份補印發票切結書的發票號碼是什麼？\n2. 切結書中的買受人公司名稱與統一編號為何？\n3. 這份切結書的立切結書日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R24",
+   "category": "factual",
+   "query": "KiGo 使用手冊的品牌名稱？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGO"
+   ],
+   "spans_hit": [
+    "KiGO"
+   ],
+   "answer": "## KiGo 使用手冊的品牌名稱\n\n根據《023_KiGo使用手冊.pdf》封面與內容，KiGo 所屬的品牌／平台名稱為：\n\n**LGS 傳奇圍棋網**（網址：`http://LGS.Taiwango.net`）\n\n手冊中亦提到，使用 KiGo 可登入「LGS傳奇圍棋網」進行網路對弈。\n\n[建議問題]\n1. KiGo 的安裝路徑預設為何？\n2. 如何註冊 LGS 傳奇圍棋網帳號？\n3. KiGo 練功房有哪些電腦對手難度？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R25",
+   "category": "factual",
+   "query": "ETI Base Code 是哪個組織發布的？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Ethical Trading Initiative"
+   ],
+   "spans_hit": [
+    "Ethical Trading Initiative"
+   ],
+   "answer": "## 發布組織\n\nETI Base Code 是由 **Ethical Trading Initiative（ETI，倫理貿易倡議組織／公平貿易倡議組織）** 發布。\n\n根據《006_ETI-Base-Code-Burmese.pdf》，文件首頁載明「Ethical Trading Initiative」，並將該文件稱為該組織的基本行為準則。\n\n[建議問題]\n1. ETI Base Code 包含哪些核心勞工權益要求？\n2. ETI Base Code 對每週工時及休息日有何規定？\n3. ETI Base Code 對童工與青年勞工有哪些保護措施？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R26",
+   "category": "factual",
+   "query": "e-Arrival Card 文件標題？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival"
+   ],
+   "spans_hit": [
+    "e-Arrival"
+   ],
+   "answer": "# e-Arrival Card 文件標題\n\n文件標題為：**電子入境申報確認書**  \n英文標題為：**Confirmation of e-Arrival card**\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》。\n\n[建議問題]\n1. e-Arrival Card 的有效期限是多久？\n2. 入境韓國時是否需要攜帶電子入境申報確認書？\n3. 文件中的預計入境日期與入境航班為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R27",
+   "category": "unanswerable",
+   "query": "庫內有沒有 SpaceX 星艦發射時程表？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 023_KiGo使用手冊.pdf\n- 007_DOC_0001.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R28",
+   "category": "unanswerable",
+   "query": "員工的私人銀行密碼是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 023_KiGo使用手冊.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R29",
+   "category": "unanswerable",
+   "query": "2030 年全球 GDP 預測？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 014_AI 機器人全球 7 大勢力關鍵報告.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R30",
+   "category": "inventory",
+   "query": "列出庫內與營業稅相關的掃描文件名",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書"
+   ],
+   "answer": "## 與營業稅相關的掃描文件\n\n根據《庫內文件清單》，庫內與營業稅直接相關的掃描文件共有 2 份：\n\n1. `002_11410_83028948_營業稅繳款書(401)_.pdf`\n2. `005_11408_83028948_營業稅繳款書(401)_.pdf`\n\n兩份皆為財政部臺北國稅局的《營業稅繳款書》，分別涵蓋 114 年 09–10 月及 114 年 07–08 月的營業稅資料。\n\n[建議問題]\n1. 這兩份營業稅繳款書的應納稅額各是多少？\n2. 這兩份營業稅的繳納期限分別為何？\n3. 營業稅繳款書上的營業人名稱與統一編號為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R31",
+   "category": "inventory",
+   "query": "有哪些入出境相關檔案？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival"
+   ],
+   "spans_hit": [
+    "e-Arrival"
+   ],
+   "answer": "## 入出境相關檔案\n\n根據《庫內文件清單》，目前共有 **1 份**入出境相關檔案：\n\n1. **008_Korea e-Arrivalcard_363545709.pdf**  \n   - 檔名顯示為韓國電子入境卡（Korea e-Arrivalcard）相關文件。\n\n[建議問題]\n1. 韓國電子入境卡需要在入境前多久填寫？\n2. 韓國電子入境卡須填寫哪些資料？\n3. 哪些旅客可免填韓國電子入境卡？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R32",
+   "category": "inventory",
+   "query": "手冊類文件有哪些？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGo"
+   ],
+   "spans_hit": [
+    "KiGo"
+   ],
+   "answer": "## 手冊類文件清單\n\n根據【庫內文件清單】，目前手冊類文件共 **1 份**：\n\n1. **023_KiGo使用手冊.pdf**\n\n[建議問題]\n1. 《023_KiGo使用手冊.pdf》包含哪些功能操作說明？\n2. KiGo 如何封鎖或解除封鎖使用者？\n3. KiGo 的電腦對局有哪些難度設定？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R33",
+   "category": "multi_hop",
+   "query": "比較 MOU 雙方與營業稅繳款書納稅義務人是否同一公司體系",
+   "expected_docs": [
+    "003_由你人資MOU.pdf",
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利"
+   ],
+   "spans_hit": [
+    "優利"
+   ],
+   "answer": "## 比較結論\n\n**MOU 雙方與營業稅繳款書的納稅義務人，並非同一法人公司；至於是否屬於「同一公司體系／關係企業」，目前知識庫中沒有足夠的相關文件可供確認。**\n\n## 公司資料比對\n\n| 文件／身分 | 公司名稱 | 統一編號 | 負責人 |\n|---|---|---:|---|\n| MOU 甲方 | 優利資源整合股份有限公司 | 54359503 | 李芃葳 |\n| MOU 乙方 | 拉法智慧科技股份有限公司 | 90599627 | 陳瑞斌 |\n| 營業稅繳款書納稅義務人 | 八策數位股份有限公司 | 83028948 | 陳宥竹 |\n\n## 判斷說明\n\n1. **法人身分不相同**\n   - MOU 的甲方為「優利資源整合股份有限公司」，統編 **54359503**。\n   - MOU 的乙方為「拉法智慧科技股份有限公司」，統編 **90599627**。\n   - 兩份營業稅繳款書的營業人／納稅義務人均為「八策數位股份有限公司」，統編 **83028948**。\n   - 三家公司名稱、統一編號及負責人均不同，因此可確認**不是同一家公司法人**。\n\n2. **兩份營業稅繳款書的納稅義務人一致**\n   - 114年07－08月及114年09－10月的營業稅繳款書，皆記載營業人為「八策數位股份有限公司」、統編 **83028948**、負責人「陳宥竹」。\n   - 因此，兩張繳款書屬於同一納稅義務人。  \n   依據：《005_11408_83028948_營業稅繳款書(401)_.pdf》及《002_11410_83028948_營業稅繳款書(401)_.pdf》。\n\n3. **無法確認是否為同一公司體系**\n   - 現有文件未提供三家公司間的股權結構、母子公司關係、實質控制關係、董事／股東資料，或集團組織圖。\n   - 因此，雖然可排除三者為**同一法人**，但**不能僅依公司名稱、地址或負責人不同，即直接判定彼此不屬於同一公司體系或關係企業**。\n\n## 文件依據\n\n- MOU 當事人資料：根據《003_由你人資MOU.pdf》，甲方為優利資源整合股份有限公司（統編54359503），乙方為拉法智慧科技股份有限公司（統編90599627）。\n- 營業稅納稅義務人資料：根據《002_11410_83028948_營業稅繳款書(401)_.pdf》及《005_11408_83028948_營業稅繳款書(401)_.pdf》，營業人均為八策數位股份有限公司（統編83028948）。\n\n[建議問題]\n1. 是否有三家公司之股東名冊、公司登記資料或集團組織圖，可進一步確認關係企業關係？\n2. MOU 中是否有條款載明八策數位股份有限公司與任一方的權利義務關係？\n3. 是否需要整理三家公司在現有文件中的地址、負責人及統編差異表？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R34",
+   "category": "factual",
+   "query": "合作意向書的乙方是哪家公司？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "spans_hit": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "answer": "## 乙方公司\n\n根據《003_由你人資MOU.pdf》〈合作意向書〉，乙方為**拉法智慧科技股份有限公司**。\n\n[建議問題]\n1. 合作意向書的甲方是哪家公司？\n2. 本合作意向書所涉專案為何？\n3. 乙方的負責人、地址及統一編號為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R35",
+   "category": "factual",
+   "query": "ETI 第二條與結社自由有關的英文標題？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Freedom of Association"
+   ],
+   "spans_hit": [
+    "Freedom of Association"
+   ],
+   "answer": "ETI 第二條與結社自由有關的英文標題是：\n\n**Freedom of Association and Collective Bargaining**\n\n根據《條款對照投影》，其中文標題為「結社自由與集體協商權」。\n\n[建議問題]\n1. ETI 第二條的中文內容是什麼？\n2. ETI 第 2.1 條的英文標題是什麼？\n3. ETI 中關於工人代表保障的是哪一條？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R36",
+   "category": "table_lookup",
+   "query": "營業稅繳款書表單代號？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "401"
+   ],
+   "spans_hit": [
+    "401"
+   ],
+   "answer": "## 營業稅繳款書表單代號\n\n營業稅繳款書的表單／申報書代號為 **401**，即：\n\n> **401 一般稅額計算－專營應稅營業人使用**\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》及《005_11408_83028948_營業稅繳款書(401)_.pdf》，文件均明確標示「(401一般稅額計算－專營應稅營業人使用)」，且收款機構留存聯亦列示稅目為「401」。\n\n另依繳款書說明第四點，**繳款書代號應與填報的申報書代號相同**。\n\n[建議問題]\n1. 這張營業稅繳款書的繳納期限是何時？\n2. 114年9－10月營業稅應納稅額是多少？\n3. 逾期繳納營業稅的滯納金如何計算？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R37",
+   "category": "factual",
+   "query": "KiGo 手冊第一章名稱？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "軟體"
+   ],
+   "spans_hit": [
+    "軟體"
+   ],
+   "answer": "KiGo 手冊第一章名稱為：**「軟體及網站介紹」**。\n\n根據《023_KiGo使用手冊.pdf》目錄及第一章內容。\n\n[建議問題]\n1. KiGo 的硬體與系統需求是什麼？\n2. KiGo 要如何安裝？\n3. KiGo 如何註冊新帳號？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R38",
+   "category": "factual",
+   "query": "e-Arrival 上的國家／地區欄位英文名？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Country"
+   ],
+   "spans_hit": [
+    "Country"
+   ],
+   "answer": "## e-Arrival 國家／地區欄位英文名\n\n英文欄位名稱為：**Country/Region**\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，該欄位顯示為「**Country/Region 國家／地區**」，文件中的填寫值為 **TAIWAN**。\n\n[建議問題]\n1. e-Arrival 上的姓名欄位英文名是什麼？\n2. e-Arrival 的預計入境日英文欄位名稱是什麼？\n3. e-Arrival 文件的到期時間是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R39",
+   "category": "unanswerable",
+   "query": "請給我未上傳合約的隱藏附錄全文",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 023_KiGo使用手冊.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R40",
+   "category": "translate",
+   "query": "ETI Base Code 禁止童工相關條款標題對照",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Child"
+   ],
+   "spans_hit": [
+    "Child"
+   ],
+   "answer": "## ETI Base Code「禁止童工」相關條款標題對照\n\n根據《006_ETI-Base-Code-Burmese.pdf》及《條款對照投影》，禁止童工相關內容屬於**第 4 條「不得使用童工／No Child Labour」**，其條款標題如下：\n\n| 條次 | 中文標題 | 英文標題 |\n|---|---|---|\n| 4 | 不得使用童工 | No Child Labour |\n| 4.1 | 不得招募童工 | No Recruitment of Child Labour |\n| 4.2 | 童工教育與補救措施 | Education and Remediation for Child Workers |\n| 4.3 | 兒童與青年勞工保護 | Protection of Children and Young Workers |\n| 4.4 | 遵守國際勞工組織標準 | Compliance with ILO Standards |\n\n其中，《006_ETI-Base-Code-Burmese.pdf》片段可直接確認：\n- **第 4.3 條**：禁止安排兒童及未滿 18 歲青年於夜間或危險環境工作。\n- **第 4.4 條**：童工相關政策及程序須符合適用的 ILO（國際勞工組織）標準。\n\n[建議問題]\n1. ETI Base Code 第 4.1 至 4.4 條的具體要求是什麼？\n2. 公司勞動契約中是否已有禁止童工或未成年勞工保護條款？\n3. ETI Base Code 對「兒童」與「青年勞工」的定義為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E001",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "服務租用訂單"
+   ],
+   "spans_hit": [
+    "服務租用訂單"
+   ],
+   "answer": "# 文件標題\n\n根據《000_nueip 合約(1).pdf》，文件標題為：\n\n**NUEiP 采統服務租用訂單**\n\n[建議問題]\n1. 此訂單的合約期間是多久？\n2. 訂單的總計金額是多少？\n3. 訂購公司名稱與訂單日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E002",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，客戶公司名稱是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 客戶公司名稱\n\n根據《000_nueip 合約(1).pdf》的「采統服務租用訂單」，客戶公司名稱為：\n\n**八策數位股份有限公司**\n\n[建議問題]\n1. 此合約的訂單日期與合約期間是什麼？\n2. 合約的總計金額是多少？\n3. 訂單中的聯絡人及電子郵件是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E003",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，聯絡人姓名是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳有竹"
+   ],
+   "spans_hit": [
+    "陳有竹"
+   ],
+   "answer": "## 聯絡人姓名\n\n根據《000_nueip 合約(1).pdf》，聯絡人姓名為：**陳有竹**。\n\n[建議問題]\n1. 該合約的聯絡人電話與電子郵件是什麼？\n2. 合約期間是從何時到何時？\n3. 訂單的總計金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E004",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，聯絡電話是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "0930168033"
+   ],
+   "spans_hit": [
+    "0930168033"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，聯絡電話為：**0930168033**。\n\n[建議問題]\n1. 該訂單的聯絡人是誰？\n2. 該訂單的電子郵件地址是什麼？\n3. 合約期間與付款期限分別是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E005",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，電子郵件是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "steve_chen@premierbiz.com.tw"
+   ],
+   "spans_hit": [
+    "steve_chen@premierbiz.com.tw"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，電子郵件為：**steve_chen@premierbiz.com.tw**\n\n[建議問題]\n1. 該訂單的聯絡人與電話是什麼？\n2. 合約期間為何？\n3. 訂單的總計金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E006",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，訂單日期是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "2026-02-02"
+   ],
+   "spans_hit": [
+    "2026-02-02"
+   ],
+   "answer": "## 訂單日期\n\n根據《000_nueip 合約(1).pdf》，訂單日期為 **2026 年 2 月 2 日**（2026-02-02）。\n\n[建議問題]\n1. 此訂單的合約期間是從何時到何時？\n2. 此訂單的付款期限為何？\n3. 此訂單的總計金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E007",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，訂單編號是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "20260202e-01"
+   ],
+   "spans_hit": [
+    "20260202e-01"
+   ],
+   "answer": "## 訂單編號\n\n根據《000_nueip 合約(1).pdf》，訂單編號為：**20260202e-01**。\n\n[建議問題]\n1. 此訂單的合約期間為何？\n2. 此訂單的付款期限與總計金額是多少？\n3. 此訂單租用的系統服務為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E008",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，統一編號是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，八策數位股份有限公司的統一編號為 **83028948**。\n\n[建議問題]\n1. 《000_nueip 合約(1).pdf》的合約期間是什麼時候？\n2. 該訂單的總計金額是多少？\n3. 合約中的付款期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E009",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，總計金額是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "32,130"
+   ],
+   "spans_hit": [
+    "32,130"
+   ],
+   "answer": "## 總計金額\n\n根據《000_nueip 合約(1).pdf》「采統服務租用訂單」的金額欄位：\n\n- 小計：NT$30,600\n- 營業稅：NT$1,530\n- **總計：NT$32,130**\n\n[建議問題]\n1. 此合約的租用期間是多久？\n2. 此訂單的付款期限為何？\n3. 合約中人數增加時，費用如何計算？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E010",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，出租系統的廠商名稱是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "人易科技股份有限公司"
+   ],
+   "spans_hit": [],
+   "answer": "## 出租系統的廠商名稱\n\n根據《000_nueip 合約(1).pdf》，出租系統的廠商名稱為 **NUEiP**。文件抬頭為「NUEiP 采統服務租用訂單」，租用項目包含「nuBPM 流程管理系統」。\n\n[建議問題]\n1. 這份系統租用合約的期間是多久？\n2. 租用的系統雲端容量上限是多少？\n3. 合約總金額（含稅）是多少？",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "E011",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "入團申請家長同意書"
+   ],
+   "spans_hit": [
+    "入團申請家長同意書"
+   ],
+   "answer": "## 文件標題\n\n根據《001_四屆新生入團申請家長同意書.pdf》，文件標題為：\n\n**「心電心急救教育推廣團 入團申請家長同意書」**\n\n[建議問題]\n1. 文件中列出的基本活動有哪些？\n2. 參與該團體的期間為多久？\n3. 該團體的指導單位是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E012",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，團體名稱是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "心電心急救教育推廣團"
+   ],
+   "spans_hit": [
+    "心電心急救教育推廣團"
+   ],
+   "answer": "## 團體名稱\n\n根據《001_四屆新生入團申請家長同意書.pdf》，團體名稱為：**心電心急救教育推廣團**。\n\n[建議問題]\n1. 該團體的主要活動有哪些？\n2. 參與該團體的期間是多久？\n3. 該團體的指導單位是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E013",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，指導單位是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "群蕊整合服務股份有限公司"
+   ],
+   "spans_hit": [
+    "群蕊整合服務股份有限公司"
+   ],
+   "answer": "## 指導單位\n\n根據《001_四屆新生入團申請家長同意書.pdf》，指導單位為：**群蕊整合服務股份有限公司**。\n\n[建議問題]\n1. 該團體的參與期間是多久？\n2. 加入團體後可取得哪些證照？\n3. 該團體的官方聯絡方式有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E014",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，參與期間是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "2年"
+   ],
+   "spans_hit": [
+    "2年"
+   ],
+   "answer": "## 參與期間\n\n根據《001_四屆新生入團申請家長同意書》，參與期間為 **2 年**；除非屬於不可抗力因素，否則無法退出。\n\n[建議問題]\n1. 入團後需要完成哪些基本活動？\n2. 可以取得哪些急救相關證照？\n3. 團體的指導單位與聯絡方式是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E015",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，Instagram 帳號是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "heartbeat.connection"
+   ],
+   "spans_hit": [
+    "heartbeat.connection"
+   ],
+   "answer": "根據《001_四屆新生入團申請家長同意書.pdf》，Instagram 帳號是：**heartbeat.connection**。\n\n[建議問題]\n1. 該團體的 Facebook 帳號是什麼？\n2. 加入團體的參與期間為多久？\n3. 團體主要推廣哪些急救相關活動？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E016",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，學生欄位的標籤文字是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "學生名"
+   ],
+   "spans_hit": [
+    "學生名"
+   ],
+   "answer": "## 學生欄位標籤\n\n根據《001_四屆新生入團申請家長同意書.pdf》，學生欄位的標籤文字是：\n\n**「學生名：」**\n\n[建議問題]\n1. 該同意書還需要填寫哪些家長資訊？\n2. 文件中規定的參與期間是多久？\n3. 團體的官方聯絡方式有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E017",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，家長欄位的標籤文字是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "家長名"
+   ],
+   "spans_hit": [
+    "家長名"
+   ],
+   "answer": "根據《001_四屆新生入團申請家長同意書.pdf》，家長欄位的標籤文字為：**「家長名：」**\n\n[建議問題]\n1. 文件中家長還需要填寫哪些資訊？\n2. 這份同意書的參與期間是多久？\n3. 學生加入該團體前需要取得哪些證照？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E018",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，家長聯絡電話欄位的標籤文字是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "家長聯絡電話"
+   ],
+   "spans_hit": [
+    "家長聯絡電話"
+   ],
+   "answer": "根據《001_四屆新生入團申請家長同意書.pdf》，該欄位的標籤文字是：**「家長聯絡電話：」**\n\n[建議問題]\n1. 該同意書中還有哪些家長或學生需填寫的欄位？\n2. 文件中載明的參與期間是多久？\n3. 該團體提供哪些官方聯絡方式？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E019",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，品牌名稱是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGO"
+   ],
+   "spans_hit": [
+    "KiGO"
+   ],
+   "answer": "## 品牌名稱\n\n根據《023_KiGo使用手冊.pdf》封面內容，品牌名稱為 **LGS 傳奇圍棋網**。\n\n[建議問題]\n1. KiGo 是什麼用途的軟體？\n2. 如何註冊 LGS 傳奇圍棋網帳號？\n3. KiGo 的官方網站網址是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E020",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，文件類型是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "使用手冊"
+   ],
+   "spans_hit": [
+    "使用手冊"
+   ],
+   "answer": "## 文件類型\n\n根據《023_KiGo使用手冊.pdf》封面所示，該文件類型為**玩家使用手冊（Guidebook）**。\n\n文件內容亦涵蓋 KiGo 軟體安裝、帳號註冊、網路對弈、練功房及 GNU Go 安裝等操作說明。  \n\n[建議問題]\n1. 《023_KiGo使用手冊.pdf》主要介紹哪些功能？\n2. KiGo 的適用對象是誰？\n3. 如何依照手冊安裝 KiGo？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E021",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，副標題是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "玩家使用手冊"
+   ],
+   "spans_hit": [
+    "玩家使用手冊"
+   ],
+   "answer": "根據《023_KiGo使用手冊.pdf》封面，副標題是：**「玩家使用手冊」**。\n\n[建議問題]\n1. 《023_KiGo使用手冊.pdf》主要介紹哪些章節？\n2. KiGo是為哪些使用者設計的軟體？\n3. 安裝KiGo的硬體需求有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E022",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，所屬網站是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "LGS傳奇圍棋網"
+   ],
+   "spans_hit": [
+    "LGS傳奇圍棋網"
+   ],
+   "answer": "## 所屬網站\n\n根據《023_KiGo使用手冊.pdf》，KiGo 所屬的網站為 **LGS 傳奇圍棋網**：\n\n- 網址：**http://LGS.Taiwango.net**\n- 手冊另列出 KiGo 的內容與最新消息網站為：**http://KiGo.Taiwango.net**\n\n[建議問題]\n1. KiGo 要如何註冊新的 LGS 帳號？\n2. LGS 傳奇圍棋網的 VIP 會員資格如何查詢？\n3. KiGo 的硬體與作業系統需求是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E023",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，軟體版本是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "0.6.1 Beta"
+   ],
+   "spans_hit": [
+    "0.6.1 Beta"
+   ],
+   "answer": "## 軟體版本\n\n根據《023_KiGo使用手冊.pdf》，文件中出現的 KiGo 版本資訊**不一致**：\n\n- 安裝精靈歡迎畫面顯示：**KiGo 0.6.1 Beta**。\n- 其他安裝流程畫面則顯示：**KiGo 0.0.1 Beta**。\n- KiGo 主畫面另有顯示：**版本 0.0.1**；後續畫面則顯示：**版本 1.1.1**。\n\n因此，若以手冊中最先出現的 KiGo 安裝精靈版本為準，軟體版本為 **KiGo 0.6.1 Beta**；但由於同一份文件內存在 **0.0.1 Beta、0.0.1 與 1.1.1** 等不同標示，目前無法僅依此文件確認唯一且一致的正式版本。\n\n[建議問題]\n1. 《023_KiGo使用手冊.pdf》列出的 KiGo 系統硬體需求有哪些？\n2. KiGo 要如何註冊新帳號？\n3. GNU Go 在 KiGo 中的用途是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E024",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，第一章章名是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "軟體及網站介紹"
+   ],
+   "spans_hit": [
+    "軟體及網站介紹"
+   ],
+   "answer": "## 第一章章名\n\n根據《023_KiGo使用手冊.pdf》，第一章章名是：\n\n**「軟體及網站介紹」**\n\n[建議問題]\n1. 《023_KiGo使用手冊.pdf》第二章的章名是什麼？\n2. KiGo 的三大功能有哪些？\n3. KiGo 的硬體與作業系統需求為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E025",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，第二章章名是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "安裝KiGo"
+   ],
+   "spans_hit": [
+    "安裝KiGo"
+   ],
+   "answer": "## 第二章章名\n\n根據《023_KiGo使用手冊.pdf》，第二章章名是：**「安裝KiGo」**。\n\n[建議問題]\n1. 《023_KiGo使用手冊.pdf》第三章的章名是什麼？\n2. 安裝 KiGo 的硬體需求有哪些？\n3. KiGo 安裝完成後如何啟動程式？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E026",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，第五章章名是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "安裝GNU Go"
+   ],
+   "spans_hit": [
+    "安裝GNU Go"
+   ],
+   "answer": "第五章章名是：**安裝 GNU Go**。\n\n根據《023_KiGo使用手冊.pdf》目錄及內文，第五章標示為「第五章 安裝GNU Go」。\n\n[建議問題]\n1. 第五章包含哪些小節？\n2. 如何安裝 GNU Go？\n3. 安裝 GNU Go 後可以使用哪些 KiGo 功能？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E027",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第一章章名是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "刑法的基本原則"
+   ],
+   "spans_hit": [
+    "刑法的基本原則"
+   ],
+   "answer": "## 第一章章名\n\n根據《007_DOC_0001.pdf》，第一章章名為：**刑法的基本原則**。\n\n[建議問題]\n1. 《007_DOC_0001.pdf》第二章的章名是什麼？\n2. 第一章列舉了哪些刑法基本原則？\n3. 罪刑法定原則的意義為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E028",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第一篇篇名是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "總論"
+   ],
+   "spans_hit": [
+    "總論"
+   ],
+   "answer": "## 答案\n\n根據《007_DOC_0001.pdf》，第一篇篇名是：**總論**。\n\n[建議問題]\n1. 《007_DOC_0001.pdf》第一篇的第一章名稱是什麼？\n2. 文件中列出的刑法基本原則有哪些？\n3. 罪刑法定原則的意義與適用範圍為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E029",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第一個基本原則是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "罪刑法定原則"
+   ],
+   "spans_hit": [
+    "罪刑法定原則"
+   ],
+   "answer": "## 第一個基本原則\n\n根據《007_DOC_0001.pdf》第一篇總論、第一章「刑法的基本原則」，第一個基本原則是：\n\n**罪刑法定原則**（刑法 §1、111 憲判 18）。\n\n其意義為：**犯罪行為的構成要件與法律效果，須事先以法律明定之。**\n\n[建議問題]\n1. 罪刑法定原則有哪些派生的子原則？\n2. 罪刑法定原則的適用範圍包括哪些事項？\n3. 法益保護原則的意義是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E030",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第二個基本原則是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "法益保護原則"
+   ],
+   "spans_hit": [
+    "法益保護原則"
+   ],
+   "answer": "## 第二個基本原則\n\n根據《007_DOC_0001.pdf》第一篇第一章「刑法的基本原則」，第二個基本原則是：\n\n**法益保護原則。**\n\n文件說明，法益是指刑法所保護的利益；刑罰的存在目的在於保護法益，因此刑法各罪構成要件的解釋應緊扣其所保護的法益。缺乏保護法益的刑法條文，則不具正當性。\n\n[建議問題]\n1. 《007_DOC_0001.pdf》中刑法的基本原則共有哪幾項？\n2. 法益保護原則中的「法益」如何分類？\n3. 罪刑法定原則有哪些派生子原則？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E031",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，引用的教科書作者是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "王皇玉"
+   ],
+   "spans_hit": [
+    "王皇玉"
+   ],
+   "answer": "根據《007_DOC_0001.pdf》，引用的教科書作者是**王皇玉**，書名為《刑法總則》（第 6 版，2020 年）。\n\n[建議問題]\n1. 《刑法總則》在文件中被引用於哪些論點？\n2. 文件對「法益保護原則」的說明是什麼？\n3. 文件中對刑法地域效力範圍有哪些見解？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E032",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第二章章名是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "刑法的效力範圍"
+   ],
+   "spans_hit": [
+    "刑法的效力範圍"
+   ],
+   "answer": "## 第二章章名\n\n根據《007_DOC_0001.pdf》，第二章章名為：\n\n**第二章　刑法的效力範圍**\n\n[建議問題]\n1. 《007_DOC_0001.pdf》第一章的章名是什麼？\n2. 第二章包含哪些效力範圍？\n3. 刑法第 3 條規定的內容是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E033",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，報告標題是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "AI 機器人全球 7 大勢力關鍵報告"
+   ],
+   "spans_hit": [
+    "AI 機器人全球 7 大勢力關鍵報告"
+   ],
+   "answer": "## 報告標題\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，報告標題是：\n\n**《AI 機器人全球 7 大勢力關鍵報告》**\n\n文件封面另列副標／說明為：**「透視 Global 300+ 企業系統生態、國家級戰略對決、AI 機器人發展競賽前線」**。\n\n[建議問題]\n1. 報告分析的全球 7 大勢力分別是哪七個國家或區域？\n2. 報告如何比較美國與中國的 AI 機器人發展策略？\n3. 報告認為台灣發展 AI 機器人的四大優勢是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E034",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，發布媒體是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "TechOrange 科技報橘"
+   ],
+   "spans_hit": [
+    "TechOrange 科技報橘"
+   ],
+   "answer": "## 發布媒體\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》首頁資訊，發布媒體為 **TechOrange 科技報橘（TO Highlight）**。\n\n[建議問題]\n1. 這份報告分析了哪 7 個國家或地區的 AI 機器人發展？\n2. 報告如何比較台灣與韓國的 AI 機器人產業優勢？\n3. 報告中提到中國對機器人產業有哪些政策支持？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E035",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，美國段的策略主軸是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "企業主導投資與研發"
+   ],
+   "spans_hit": [
+    "企業主導投資與研發"
+   ],
+   "answer": "## 美國段的策略主軸\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，美國的策略主軸是：\n\n> **企業主導投資與研發**\n\n具體而言，美國由 Google、亞馬遜、特斯拉等大型科技公司，以及人形機器人新創公司帶動 AI 與機器人技術發展；私人投資是重要支撐，政府則相對聚焦於**軍用機器人、太空機器人與自主系統**研發。\n\n其應用方向主要著重於物流、醫療保健與製造業，將人形機器人視為提升**生產力與效率**的實用工具，而非社交夥伴。美國的技術強項則在於高階機器人技術，尤其是 **AI 軟體**。\n\n此外，文件指出美國目前**尚無全面性的國家策略及標準化作法**；因此產業界於 2025 年呼籲制定國家戰略，以因應中國競爭。  \n（根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》）\n\n[建議問題]\n1. 美國在 AI 機器人領域的優勢與弱點是什麼？\n2. 美國政府目前對機器人產業提供哪些支持？\n3. 美國與中國的機器人發展策略有何差異？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E036",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，中國段的策略主軸是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "計劃性"
+   ],
+   "spans_hit": [
+    "計劃性"
+   ],
+   "answer": "## 中國段的策略主軸\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，中國的策略主軸是：\n\n> **以國家重點戰略進行計劃性投入，建立可擴展的關鍵零組件供應鏈，推進機器人國產化與高階化。**\n\n具體作法包括：\n\n- 自 2014 年推動「機器人革命」，並以醫療、教育、能源等 **11 個重點領域**加速創新應用。\n- 將**建立可擴展的關鍵零件供應鏈**視為機器人戰略的關鍵要素，降低對美國零件的依賴。\n- 透過《十四五》機器人產業規劃與「中國製造 2025」，布局區域創新中心與研究院。\n- 從國家到地方提供研發及應用補貼，搭配外資稅收優惠、國家風投基金，以及支持收購海外先進機器人企業。\n- 2025 年成立聚焦機器人與 AI 的國家級風投基金，預計 20 年吸引近 **1 兆元人民幣（1,380 億美元）**資金。\n\n因此，中國並非單純扶植個別企業，而是以政府主導的長期資金、政策、供應鏈與應用場景布局，推動機器人產業自主化與升級。  \n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》。\n\n[建議問題]\n1. 中國為何將關鍵零組件供應鏈視為機器人戰略核心？\n2. 中國《十四五》機器人產業規劃提供了哪些支持措施？\n3. 中國與美國在 AI 機器人發展策略上有何不同？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E037",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，機器人密度數據的引用機構是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "國際機器人聯盟"
+   ],
+   "spans_hit": [
+    "國際機器人聯盟"
+   ],
+   "answer": "## 機器人密度數據的引用機構\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，機器人密度數據引用的機構是**國際機器人聯盟**（**International Federation of Robotics, IFR**）。\n\n文件中例如提及：\n- 德國每萬名員工擁有 429 台機器人，引用 IFR《世界機器人》報告。\n- 韓國每萬名員工擁有 1,012 台機器人，根據 IFR 統計。\n\n[建議問題]\n1. 報告中德國、中國與韓國的機器人密度各是多少？\n2. 報告指出哪一個國家的工業機器人密度最高？\n3. IFR 在報告中還提供了哪些關於機器人市場的資訊？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E038",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，德國機器人研究機構名稱是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "德國機器人研究所"
+   ],
+   "spans_hit": [
+    "德國機器人研究所"
+   ],
+   "answer": "## 德國機器人研究機構名稱\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，德國的機器人研究機構名稱為：\n\n**德國機器人研究所**（**Robotics Institute Germany, RIG**）。\n\n該研究所由德國聯邦教育與研究部（BMBF）資助及擴大，目標是串聯德國頂尖智慧機器人研究機構與大學，建立具國際影響力的分散式研究網絡。\n\n[建議問題]\n1. 德國機器人研究所（RIG）的主要任務是什麼？\n2. 德國政府對 RIG 的資助金額是多少？\n3. 德國《高科技戰略 2025》在機器人研究上的目標為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E039",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書"
+   ],
+   "answer": "## 文件標題\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，文件標題為：**營業稅繳款書**。\n\n[建議問題]\n1. 此營業稅繳款書的繳納期限是什麼時候？\n2. 此繳款書的應納稅額合計是多少？\n3. 此繳款書所屬的年月份為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E040",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，表單代號是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "(401)"
+   ],
+   "spans_hit": [
+    "(401)"
+   ],
+   "answer": "## 表單代號\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，表單代號為 **401**，即「一般稅額計算—專營應稅營業人使用」。\n\n[建議問題]\n1. 此繳款書的所屬年月份與繳納期限是什麼？\n2. 本次應納營業稅額是多少？\n3. 繳款書上的營利事業統一編號與稅籍編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E041",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，統一編號是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，營利事業統一編號為：**83028948**。\n\n[建議問題]\n1. 該營業稅繳款書的營業人名稱是什麼？\n2. 該期營業稅的應納稅額是多少？\n3. 該繳款書的繳納期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E042",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，所屬期間是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09-10月"
+   ],
+   "spans_hit": [
+    "114年09-10月"
+   ],
+   "answer": "## 所屬期間\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，所屬期間為：**114 年 09－10 月**。\n\n[建議問題]\n1. 此營業稅繳款書的繳納期限是何時？\n2. 本次應納營業稅額是多少？\n3. 繳款書中的營業人名稱與統一編號為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E043",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，繳納期限是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年11月15日"
+   ],
+   "spans_hit": [
+    "114年11月15日"
+   ],
+   "answer": "## 繳納期限\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，繳納期限為：**114年11月15日**。\n\n[建議問題]\n1. 這張營業稅繳款書的應納稅額是多少？\n2. 若逾期繳納，滯納金如何計算？\n3. 可以透過哪些方式繳納這筆營業稅？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E044",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，營業人名稱是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 營業人名稱\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，營業人名稱為：**八策數位股份有限公司**。\n\n[建議問題]\n1. 該營業人的統一編號是多少？\n2. 這張營業稅繳款書的應納稅額是多少？\n3. 繳納期限是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E045",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，負責人姓名是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，負責人姓名為：**陳宥竹**。\n\n[建議問題]\n1. 該營業稅繳款書的應納稅額是多少？\n2. 該公司名稱與統一編號是什麼？\n3. 此筆營業稅的繳納期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E046",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，應納稅額是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "36,733"
+   ],
+   "spans_hit": [
+    "36,733"
+   ],
+   "answer": "## 應納稅額\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，八策數位股份有限公司所屬 **114 年 09－10 月**的營業稅：\n\n- **本稅：36,733 元**\n- **應納稅額合計：36,733 元**\n\n因此，**應納稅額為新臺幣 36,733 元**。\n\n[建議問題]\n1. 這筆營業稅的繳納期限是何時？\n2. 逾期繳納此筆稅款會如何加徵滯納金？\n3. 此繳款書可使用哪些方式繳納？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E047",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "合作意向書"
+   ],
+   "spans_hit": [
+    "合作意向書"
+   ],
+   "answer": "根據《003_由你人資MOU.pdf》，文件標題是：**合作意向書**。\n\n[建議問題]\n1. 《003_由你人資MOU.pdf》的合作雙方分別是誰？\n2. 該合作意向書的合作專案內容為何？\n3. 該合作意向書的生效與終止條件為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E048",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，甲方公司是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合股份有限公司"
+   ],
+   "spans_hit": [
+    "優利資源整合股份有限公司"
+   ],
+   "answer": "## 甲方公司\n\n根據《003_由你人資MOU.pdf》合作意向書，**甲方為「優利資源整合股份有限公司」**。\n\n[建議問題]\n1. 《003_由你人資MOU.pdf》的乙方公司是什麼？\n2. 該合作意向書的專案合作內容為何？\n3. 甲方與乙方的負責人及統一編號分別是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E049",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，乙方公司是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "spans_hit": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "answer": "## 乙方公司\n\n根據《003_由你人資MOU.pdf》〈合作意向書〉，**乙方公司為「拉法智慧科技股份有限公司」**。\n\n[建議問題]\n1. 《003_由你人資MOU.pdf》中甲方公司是什麼？\n2. 乙方公司的負責人、地址及統一編號為何？\n3. 本合作意向書所涉及的專案為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E050",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，甲方統一編號是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "54359503"
+   ],
+   "spans_hit": [
+    "54359503"
+   ],
+   "answer": "根據《003_由你人資MOU.pdf》，甲方「優利資源整合股份有限公司」的統一編號是 **54359503**。\n\n[建議問題]\n1. 乙方拉法智慧科技股份有限公司的統一編號是什麼？\n2. 本合作意向書的簽訂日期為何？\n3. 甲乙雙方的負責人分別是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E051",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，乙方統一編號是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "90599627"
+   ],
+   "spans_hit": [
+    "90599627"
+   ],
+   "answer": "根據《003_由你人資MOU.pdf》，乙方「拉法智慧科技股份有限公司」的統一編號為：**90599627**。\n\n[建議問題]\n1. 該合作意向書的甲方公司名稱與統一編號是什麼？\n2. 乙方的負責人及地址為何？\n3. 此合作意向書的簽訂日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E052",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，簽署日期是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年11月"
+   ],
+   "spans_hit": [
+    "114年11月"
+   ],
+   "answer": "## 簽署日期\n\n根據《003_由你人資MOU.pdf》，合作意向書的簽署日期為：\n\n**中華民國 114 年 11 月 04 日**（即 **2025 年 11 月 4 日**）。\n\n[建議問題]\n1. 《003_由你人資MOU.pdf》的甲方與乙方分別是誰？\n2. 該合作意向書何時生效、何時失效？\n3. 該合作意向書合作的專案名稱是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E053",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書"
+   ],
+   "answer": "## 文件標題\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，文件標題為：\n\n**財政部臺北國稅局 營業稅繳款書**\n\n[建議問題]\n1. 這份營業稅繳款書的應納稅額是多少？\n2. 這份繳款書的繳納期限為何？\n3. 此繳款書所屬的申報月份是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E054",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，表單代號是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "(401)"
+   ],
+   "spans_hit": [
+    "(401)"
+   ],
+   "answer": "## 表單代號\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，表單代號為 **401**，即「一般稅額計算－專營應稅營業人使用」。\n\n[建議問題]\n1. 這張營業稅繳款書的繳納期限是何時？\n2. 本次應納營業稅額是多少？\n3. 此繳款書所屬的申報月份為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E055",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，統一編號是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## 統一編號\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，八策數位股份有限公司的**營利事業統一編號為：83028948**。\n\n[建議問題]\n1. 該營業稅繳款書的應納稅額是多少？\n2. 該期營業稅的繳納期限為何？\n3. 文件中的營業人名稱及地址是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E056",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，所屬期間是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年07-08月"
+   ],
+   "spans_hit": [],
+   "answer": "## 所屬期間\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，所屬期間為：\n\n**民國 114 年 07 月至 08 月**。\n\n[建議問題]\n1. 該繳款書的繳納期限是何時？\n2. 本期應納營業稅額是多少？\n3. 該繳款書的營業人名稱與統一編號為何？",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "E057",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，繳納期限是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09月15日"
+   ],
+   "spans_hit": [
+    "114年09月15日"
+   ],
+   "answer": "## 繳納期限\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，繳納期限為：**114年09月15日**。\n\n[建議問題]\n1. 這筆營業稅的應納稅額是多少？\n2. 若逾期繳納，滯納金如何計算？\n3. 這張繳款書可以到便利商店繳納嗎？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E058",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，營業人名稱是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 營業人名稱\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，營業人名稱為：**八策數位股份有限公司**。\n\n[建議問題]\n1. 該繳款書的應納稅額是多少？\n2. 該營業人的統一編號與稅籍編號是什麼？\n3. 該筆營業稅的繳納期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E059",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，負責人姓名是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，負責人姓名為：**陳宥竹**。\n\n[建議問題]\n1. 該營業稅繳款書的應納稅額是多少？\n2. 該公司的營業地址為何？\n3. 這份繳款書的繳納期限是哪一天？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E060",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，應納稅額是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "24,919"
+   ],
+   "spans_hit": [
+    "24,919"
+   ],
+   "answer": "## 應納稅額\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，八策數位股份有限公司所屬 **114 年 07－08 月**的營業稅：\n\n- **本稅：24,919 元**\n- **應納稅額合計：24,919 元**\n\n因此，**應納稅額為新臺幣 24,919 元**。\n\n[建議問題]\n1. 這筆營業稅的繳納期限是什麼時候？\n2. 若逾期繳納，滯納金如何計算？\n3. 這張繳款書可透過哪些方式繳納？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E061",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "ETI Base Code"
+   ],
+   "spans_hit": [
+    "ETI Base Code"
+   ],
+   "answer": "根據《006_ETI-Base-Code-Burmese.pdf》的內容及其條款主題判斷，文件標題為：\n\n**ETI 基本守則（ETI Base Code）**  \n（緬甸語版本）\n\n[建議問題]\n1. 《ETI 基本守則》涵蓋哪些核心勞動權益？\n2. 文件對每週最高工作時數有何規定？\n3. 文件如何規範童工與青年勞工保護？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E062",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，發布組織是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Ethical Trading Initiative"
+   ],
+   "spans_hit": [
+    "Ethical Trading Initiative"
+   ],
+   "answer": "## 發布組織\n\n根據《006_ETI-Base-Code-Burmese.pdf》文件首頁，發布組織為 **Ethical Trading Initiative（ETI，公平／道德貿易倡議組織）**。\n\n文件中的緬文名稱為「သမာသမတ်ကျသော ကုန်သွယ်မှုရှေ့ဆောင်အဖွဲ့」，且標題明示為該組織的《基本行為準則》。\n\n[建議問題]\n1. 《006_ETI-Base-Code-Burmese.pdf》的文件修訂日期是什麼？\n2. ETI 基本行為準則對每週工時上限有何規定？\n3. ETI 基本行為準則如何規範童工？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E063",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，第一條的英譯標題是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Employment is freely chosen"
+   ],
+   "spans_hit": [
+    "Employment is freely chosen"
+   ],
+   "answer": "## 第一條英譯標題\n\n根據《006_ETI-Base-Code-Burmese.pdf》，第一條的英譯標題是：\n\n**Employment Is Freely Chosen**\n\n[建議問題]\n1. 第一條第 1.1 欅的英譯標題是什麼？\n2. 第一條對勞工自由離職有哪些規定？\n3. 《ETI 基本守則》第二條的英譯標題是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E064",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，第二條的英譯標題是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Freedom of association"
+   ],
+   "spans_hit": [
+    "Freedom of association"
+   ],
+   "answer": "## 第二條的英譯標題\n\n根據《006_ETI-Base-Code-Burmese.pdf》的條款對照，第二條的英譯標題是：\n\n**Freedom of Association and Collective Bargaining**\n\n（結社自由與集體協商權）\n\n[建議問題]\n1. 第二條第 2.1 條的英譯標題是什麼？\n2. 文件中第三條的英譯標題是什麼？\n3. 第二條主要保障勞工哪些權利？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E065",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，第四條的英譯標題是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Child labour"
+   ],
+   "spans_hit": [
+    "Child labour"
+   ],
+   "answer": "## 第四條英譯標題\n\n根據《006_ETI-Base-Code-Burmese.pdf》，第四條的英譯標題是：\n\n**No Child Labour**\n\n[建議問題]  \n1. 第四條關於童工的具體要求有哪些？  \n2. 第4.3條的英譯標題是什麼？  \n3. 第五條的英譯標題是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E066",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival Card"
+   ],
+   "spans_hit": [
+    "e-Arrival Card"
+   ],
+   "answer": "## 文件標題\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，文件標題為：\n\n**Confirmation of e-Arrival card**  \n（中文：**電子入境申報確認書**）\n\n[建議問題]\n1. 此電子入境申報確認書的有效期限至何時？\n2. 文件中的預計入境日期與入境航班為何？\n3. 入境韓國時是否需要攜帶此確認書？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E067",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客姓名是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "WAN TING CHAN"
+   ],
+   "spans_hit": [
+    "WAN TING CHAN"
+   ],
+   "answer": "## 第一位旅客姓名\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客姓名為 **WAN TING CHAN**。\n\n[建議問題]\n1. 第一位旅客的出生日期與護照號碼是什麼？\n2. 此文件共有幾位旅客？\n3. 所有旅客的預計入境日期與航班號碼是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E068",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客出生日期是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "1980.02.16"
+   ],
+   "spans_hit": [
+    "1980.02.16"
+   ],
+   "answer": "## 第一位旅客出生日期\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客 **WAN TING CHAN** 的出生日期為 **1980 年 2 月 16 日**（1980.02.16）。\n\n[建議問題]\n1. 第一位旅客的護照號碼是什麼？\n2. 第一位旅客預計入境韓國的日期與航班為何？\n3. 這份文件共有幾位旅客？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E069",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客護照號碼是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "363545709"
+   ],
+   "spans_hit": [
+    "363545709"
+   ],
+   "answer": "根據《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客 **WAN TING CHAN** 的護照號碼是：**363545709**。\n\n[建議問題]\n1. 第一位旅客的預計入境日期與航班號碼是什麼？\n2. 文件中共有幾位旅客？\n3. 第二位旅客的護照號碼是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E070",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，國家/地區是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "TAIWAN"
+   ],
+   "spans_hit": [
+    "TAIWAN"
+   ],
+   "answer": "## 國家／地區\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，國家／地區為：**TAIWAN（臺灣）**。\n\n[建議問題]\n1. 該電子入境申報確認書的預計入境日期是什麼？\n2. 文件中記載的入境航班號為何？\n3. 該電子入境申報單的到期日是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E071",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，入境航班是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "CI188"
+   ],
+   "spans_hit": [
+    "CI188"
+   ],
+   "answer": "## 入境航班\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，入境航班為：**CI188**。\n\n[建議問題]\n1. 預計入境韓國的日期是什麼時候？\n2. 此電子入境申報單的到期時間為何？\n3. 電子入境申報單提交時間是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E072",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，預計入境日是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "2026.07.19"
+   ],
+   "spans_hit": [
+    "2026.07.19"
+   ],
+   "answer": "## 預計入境日\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，預計入境日為 **2026 年 7 月 19 日**（2026.07.19）。\n\n[建議問題]\n1. 入境航班名稱／班號是什麼？\n2. 電子入境申報單的到期日是什麼時候？\n3. 該申報單的提交時間為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E073",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "顧問服務合約"
+   ],
+   "spans_hit": [],
+   "answer": "## 文件標題\n\n目前知識庫提供的《009_DOC003~3.pdf》片段未包含文件首頁或標題欄位，因此**無法確認其正式文件標題**。\n\n僅能從內容判斷，該文件為八策數位股份有限公司與朱啟良律師簽訂、內容涉及顧問服務、文章撰寫服務、服務費用及契約權利義務的合約，但不能據此推定正式標題。\n\n[建議問題]\n1. 《009_DOC003~3.pdf》的甲乙雙方分別是誰？\n2. 該合約的服務費用與付款期限為何？\n3. 該合約約定的服務內容有哪些？",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "E074",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，甲方是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 甲方\n\n根據《009_DOC003~3.pdf》簽署頁及合約開頭，**甲方為八策數位股份有限公司**。\n\n相關登載資訊如下：\n\n- **甲方名稱：**八策數位股份有限公司  \n- **代表人：**陳宥竹  \n- **統一編號：**83028948  \n- **地址：**臺北市大同區南京西路 62 號 7 樓  \n\n[建議問題]\n1. 《009_DOC003~3.pdf》的乙方是誰？\n2. 本合約的服務期間為何？\n3. 甲方應支付的服務費用是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E075",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，乙方是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "朱啟良律師"
+   ],
+   "spans_hit": [
+    "朱啟良律師"
+   ],
+   "answer": "## 乙方\n\n根據《009_DOC003~3.pdf》〈顧問服務合約〉及簽署頁，**乙方為朱啟良律師**。\n\n其受甲方八策數位股份有限公司委任，提供法律服務人工智慧（AI）專案相關的顧問諮詢及文章撰寫服務。\n\n[建議問題]\n1. 乙方在本合約中的服務內容有哪些？\n2. 本合約的服務期間與服務次數為何？\n3. 甲方應支付乙方多少服務費用？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E076",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，服務費用總額是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "68,000"
+   ],
+   "spans_hit": [
+    "68,000"
+   ],
+   "answer": "## 服務費用總額\n\n根據《009_DOC003~3.pdf》第三條「服務費用與支付」第（一）項，**本合約服務費用總額為新臺幣 68,000 元**，並採預付方式支付。\n\n另如因服務範圍產生並經甲方書面同意的資料製作費、必要專業翻譯費等，則由甲方依實際發生金額另行支付（實報實銷），不包含在上述固定服務費用內。\n\n[建議問題]\n1. 服務費用的付款期限是何時？\n2. 合約包含哪些具體服務內容與次數？\n3. 額外費用須符合哪些條件才由甲方支付？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E077",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，匯款銀行是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "星展銀行"
+   ],
+   "spans_hit": [
+    "星展銀行"
+   ],
+   "answer": "## 匯款銀行\n\n根據《009_DOC003~3.pdf》第三條第（三）項，匯款銀行為：**星展銀行襄陽分行**（銀行代碼：**810**）。\n\n[建議問題]\n1. 匯款帳戶的戶名與帳號是什麼？\n2. 合約服務費用總額及付款期限為何？\n3. 該合約的乙方是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E078",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，合約起始日是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年7月15日"
+   ],
+   "spans_hit": [
+    "114年7月15日"
+   ],
+   "answer": "## 合約起始日\n\n根據《009_DOC003~3.pdf》第一條「合約期間」，本合約有效期間自**民國 114 年 7 月 15 日**起。\n\n換算為西元日期為：**2025 年 7 月 15 日**。\n\n[建議問題]\n1. 合約的到期日是什麼時候？\n2. 合約服務費用總額是多少？\n3. 合約雙方分別是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E079",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，合約結束日是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年11月30日"
+   ],
+   "spans_hit": [
+    "114年11月30日"
+   ],
+   "answer": "## 合約結束日\n\n根據《009_DOC003~3.pdf》第一條「合約期間」，本合約有效期間至**民國 114 年 11 月 30 日**止，亦即**西元 2025 年 11 月 30 日**。\n\n但若乙方在期間屆滿前，已提前完成合約約定的全部服務（4 次顧問服務及 12 次文章撰寫服務），則合約效力將提前消滅。\n\n[建議問題]\n1. 合約的開始日是什麼時候？\n2. 合約約定的服務項目與次數為何？\n3. 若甲方提前終止合約，服務費是否退還？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E080",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "補印發票切結書"
+   ],
+   "spans_hit": [
+    "補印發票切結書"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》，文件標題是：**補印發票切結書**。\n\n[建議問題]\n1. 該切結書的發票號碼及總金額為何？\n2. 切結書的立切結書人是哪一家公司？\n3. 該切結書的日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E081",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，統一編號欄位的標籤文字是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "統一編號"
+   ],
+   "spans_hit": [
+    "統一編號"
+   ],
+   "answer": "## 統一編號欄位標籤\n\n根據《010_補印發票切結書.pdf》，統一編號欄位的標籤文字為：\n\n**「買受人統一編號：」**\n\n[建議問題]\n1. 該統一編號欄位填寫的數值是什麼？\n2. 文件中的買受人名稱是什麼？\n3. 文件載明的發票號碼與總金額分別是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E082",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，發票號碼欄位的標籤文字是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "發票號碼"
+   ],
+   "spans_hit": [
+    "發票號碼"
+   ],
+   "answer": "## 發票號碼欄位標籤\n\n根據《010_補印發票切結書.pdf》，發票號碼欄位的標籤文字是：**「發票號碼：」**\n\n[建議問題]\n1. 該文件記載的發票號碼是多少？\n2. 該文件中的買受人名稱與統一編號為何？\n3. 該發票的總金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E083",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，立切結書人欄位的標籤文字是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "立切結書人"
+   ],
+   "spans_hit": [
+    "立切結書人"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》，立切結書人欄位的標籤文字是：\n\n**「立 切 結 書 人：」**\n\n[建議問題]\n1. 該切結書中的公司名稱是什麼？\n2. 該切結書的負責人是誰？\n3. 該切結書的日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E084",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，立切結書人公司是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》，立切結書人公司為：**八策數位股份有限公司**。\n\n[建議問題]\n1. 立切結書人的負責人是誰？\n2. 該補印發票的發票號碼與金額是多少？\n3. 切結書簽立日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E085",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，負責人是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》，立切結書人「八策數位股份有限公司」的**負責人為陳宥竹**。\n\n[建議問題]\n1. 該補印發票切結書的發票號碼是什麼？\n2. 該發票的總金額是多少？\n3. 切結書的立書日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E086",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，對方公司（開立發票方）是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "豐揚資產管理有限公司"
+   ],
+   "spans_hit": [
+    "豐揚資產管理有限公司"
+   ],
+   "answer": "## 開立發票方\n\n根據《010_補印發票切結書.pdf》，開立該筆三聯式電子發票的對方公司為：\n\n**豐揚資產管理有限公司**\n\n文件載明該公司於 **113 年 3 月 20 日**開立發票予八策數位股份有限公司。\n\n[建議問題]\n1. 該發票的號碼與總金額是多少？\n2. 發票的買受人公司及統一編號為何？\n3. 此份補印發票切結書的立切結書人是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E087",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，發票號碼是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "XX53637175"
+   ],
+   "spans_hit": [
+    "XX53637175"
+   ],
+   "answer": "## 發票號碼\n\n根據《010_補印發票切結書.pdf》，發票號碼為：**XX53637175**。\n\n[建議問題]\n1. 該發票的開立日期與總金額是多少？\n2. 該發票的買受人名稱及統一編號為何？\n3. 切結書的立切結書日期是什麼時候？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E088",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，發票總金額是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "96元"
+   ],
+   "spans_hit": [
+    "96元"
+   ],
+   "answer": "## 發票總金額\n\n根據《010_補印發票切結書.pdf》，發票總金額為 **96 元**。\n\n[建議問題]\n1. 該發票的發票號碼是什麼？\n2. 該發票的買受人及統一編號為何？\n3. 切結書的立書日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ]
+}

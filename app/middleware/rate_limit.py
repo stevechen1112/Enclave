@@ -1,17 +1,21 @@
 """
-單機資源保護 Middleware（P9-8）
+單機／雲端速率限制 Middleware（WS-SECURITY）
 
-地端版本不需要三層租戶速率限制。
-改為簡單的單機保護：
-  - 同一 IP 每分鐘最多 N 次請求（防止本機腳本失控）
-  - Redis 不可用時自動放行（不阻擋正常使用）
+地端（development）：IP 級保護即可。
+雲端（production／staging）：三層 Redis 滑窗 — IP／user／tenant；
+聊天路徑另套用較嚴的 chat_per_user。
+
+Redis 不可用時自動放行，不阻擋正常使用。
 """
+from __future__ import annotations
+
 import logging
 import time
 from typing import Optional, Tuple
 
 import redis
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
+from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -20,22 +24,16 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-# ═══════════════════════════════════════════
-#  Rate Limiter Core
-# ═══════════════════════════════════════════
-
 class RateLimiter:
     """基於 Redis 的滑動視窗限流器"""
 
     def __init__(self, redis_url: Optional[str] = None):
-        # Prefer the dedicated REDIS_HOST/PORT settings; fall back to CELERY_BROKER_URL
-        # so rate-limiting does not share the Celery broker connection implicitly.
         if redis_url:
             self._redis_url = redis_url
         elif getattr(settings, "REDIS_HOST", None):
             host = settings.REDIS_HOST
             port = int(getattr(settings, "REDIS_PORT", 6379))
-            self._redis_url = f"redis://{host}:{port}/2"  # db=2 isolated from Celery (db=0)
+            self._redis_url = f"redis://{host}:{port}/2"
         else:
             self._redis_url = getattr(settings, "CELERY_BROKER_URL", "redis://localhost:6379/2")
         self._redis: Optional[redis.Redis] = None
@@ -43,17 +41,13 @@ class RateLimiter:
     @property
     def r(self) -> redis.Redis:
         if self._redis is None:
-            try:
-                self._redis = redis.Redis.from_url(
-                    self._redis_url,
-                    decode_responses=True,
-                    socket_connect_timeout=2,
-                    socket_timeout=2,
-                )
-                self._redis.ping()
-            except Exception:
-                self._redis = None
-                raise
+            self._redis = redis.Redis.from_url(
+                self._redis_url,
+                decode_responses=True,
+                socket_connect_timeout=2,
+                socket_timeout=2,
+            )
+            self._redis.ping()
         return self._redis
 
     def is_allowed(
@@ -62,10 +56,6 @@ class RateLimiter:
         max_requests: int,
         window_seconds: int,
     ) -> Tuple[bool, int, int]:
-        """
-        滑動視窗限流檢查。
-        回傳 (allowed, remaining, retry_after_seconds)
-        """
         try:
             now = time.time()
             window_start = now - window_seconds
@@ -78,9 +68,7 @@ class RateLimiter:
             current_count = results[1]
 
             if current_count >= max_requests:
-                # 超過限制 — 移除剛加的
                 self.r.zrem(key, str(now))
-                # 計算下次可用時間
                 oldest = self.r.zrange(key, 0, 0, withscores=True)
                 retry_after = int(window_seconds - (now - oldest[0][1])) if oldest else window_seconds
                 return False, 0, max(retry_after, 1)
@@ -88,19 +76,14 @@ class RateLimiter:
             remaining = max_requests - current_count - 1
             return True, max(remaining, 0), 0
 
-        except Exception as e:
-            logger.warning("Rate limiter Redis error: %s, allowing request", e)
-            return True, max_requests, 0  # Redis 不可用時放行
+        except Exception as exc:
+            logger.warning("Rate limiter Redis error: %s, allowing request", exc)
+            return True, max_requests, 0
 
     def record_abuse(self, key: str, threshold: int = 100, window: int = 60) -> bool:
-        """
-        濫用偵測：如果短時間內超過閾值，標記為濫用。
-        回傳 True 表示已被標記為濫用。
-        """
         abuse_key = f"abuse:{key}"
         try:
-            blocked = self.r.get(abuse_key)
-            if blocked:
+            if self.r.get(abuse_key):
                 return True
 
             count_key = f"abuse_count:{key}"
@@ -109,110 +92,169 @@ class RateLimiter:
                 self.r.expire(count_key, window)
 
             if count > threshold:
-                # 封鎖 10 分鐘
                 self.r.setex(abuse_key, 600, "1")
                 logger.warning("Abuse detected for %s, blocking for 10 minutes", key)
                 return True
-
             return False
-        except Exception as e:
-            logger.warning("Abuse detection error: %s", e)
+        except Exception as exc:
+            logger.warning("Abuse detection error: %s", exc)
             return False
 
 
-# ═══════════════════════════════════════════
-#  Rate Limit Configuration
-# ═══════════════════════════════════════════
-
-# 單機保護設定：同一 IP 每分鐘最多 200 次（地端通常只有少數使用者）
-RATE_LIMITS = {
-    "global_per_ip": {
-        "max_requests": int(getattr(settings, "RATE_LIMIT_GLOBAL_PER_IP", 200)),
-        "window_seconds": 60,
-    },
-    "chat_per_user": {
-        "max_requests": int(getattr(settings, "RATE_LIMIT_CHAT_PER_USER", 30)),
-        "window_seconds": 60,
-    },
-}
+def _cloud_layers_enabled() -> bool:
+    return settings.APP_ENV in ("production", "staging", "saas")
 
 
-# ═══════════════════════════════════════════
-#  FastAPI Middleware
-# ═══════════════════════════════════════════
+def _jwt_subject_and_tenant(request: Request) -> tuple[Optional[str], Optional[str]]:
+    auth = request.headers.get("authorization", "")
+    if not auth.lower().startswith("bearer "):
+        return None, None
+    token = auth[7:].strip()
+    if not token:
+        return None, None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        return payload.get("sub"), payload.get("tenant_id")
+    except JWTError:
+        return None, None
+
+
+def _rate_limit_response(retry_after: int, *, error: str, message: str, limit: int) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content={"detail": {"error": error, "message": message}},
+        headers={
+            "Retry-After": str(retry_after),
+            "X-RateLimit-Limit": str(limit),
+            "X-RateLimit-Remaining": "0",
+        },
+    )
+
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """
-    單機資源保護 Middleware（P9-8）。
-    依序檢查：
-    1. IP 是否被濫用封鎖（短時間大量請求）
-    2. IP 級全域限流（每分鐘上限）
-    Redis 不可用時自動放行，不阻礙正常使用。
-    """
-
-    SKIP_PATHS = {"/", "/health", "/api/versions", "/docs", "/openapi.json", "/redoc",
-                   "/api/v1/documents/supported-formats"}
+    SKIP_PATHS = {
+        "/",
+        "/health",
+        "/api/versions",
+        "/docs",
+        "/openapi.json",
+        "/redoc",
+        "/api/v1/documents/supported-formats",
+        "/api/v1/payment/notify",
+        "/api/v1/auth/login/access-token",
+        "/api/v1/sso/",
+    }
 
     def __init__(self, app, redis_url: Optional[str] = None):
         super().__init__(app)
         self.limiter = RateLimiter(redis_url)
 
-    async def dispatch(self, request: Request, call_next):
-        path = request.url.path
+    def _should_skip(self, path: str) -> bool:
+        if path in self.SKIP_PATHS:
+            return True
+        if path.startswith("/docs") or path.startswith("/api/v1/sso/"):
+            return True
+        return False
 
-        # 跳過健康檢查等端點
-        if path in self.SKIP_PATHS or path.startswith("/docs"):
+    async def dispatch(self, request: Request, call_next):
+        if not settings.RATE_LIMIT_ENABLED:
+            return await call_next(request)
+
+        path = request.url.path
+        if self._should_skip(path):
             return await call_next(request)
 
         client_ip = request.client.host if request.client else "unknown"
 
         try:
-            # 1. 濫用檢查
             if self.limiter.record_abuse(f"ip:{client_ip}"):
-                return JSONResponse(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    content={
-                        "detail": {
-                            "error": "abuse_detected",
-                            "message": "偵測到異常行為，暫時封鎖。請稍後再試。",
-                        }
-                    },
-                    headers={"Retry-After": "600"},
+                return _rate_limit_response(
+                    600,
+                    error="abuse_detected",
+                    message="偵測到異常行為，暫時封鎖。請稍後再試。",
+                    limit=0,
                 )
 
-            # 2. IP 級全域限流
-            ip_conf = RATE_LIMITS["global_per_ip"]
-            allowed, remaining, retry_after = self.limiter.is_allowed(
+            ip_conf = {
+                "max_requests": int(settings.RATE_LIMIT_GLOBAL_PER_IP),
+                "window_seconds": 60,
+            }
+            allowed, _, retry_after = self.limiter.is_allowed(
                 f"rl:ip:{client_ip}",
                 ip_conf["max_requests"],
                 ip_conf["window_seconds"],
             )
             if not allowed:
-                return JSONResponse(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    content={
-                        "detail": {
-                            "error": "rate_limited",
-                            "message": "請求過於頻繁，請稍後再試。",
-                        }
-                    },
-                    headers={
-                        "Retry-After": str(retry_after),
-                        "X-RateLimit-Limit": str(ip_conf["max_requests"]),
-                        "X-RateLimit-Remaining": "0",
-                    },
+                return _rate_limit_response(
+                    retry_after,
+                    error="rate_limited",
+                    message="請求過於頻繁，請稍後再試。",
+                    limit=ip_conf["max_requests"],
                 )
 
+            if _cloud_layers_enabled():
+                user_sub, tenant_id = _jwt_subject_and_tenant(request)
+
+                if user_sub:
+                    user_conf = {
+                        "max_requests": int(settings.RATE_LIMIT_PER_USER),
+                        "window_seconds": 60,
+                    }
+                    allowed, _, retry_after = self.limiter.is_allowed(
+                        f"rl:user:{user_sub}",
+                        user_conf["max_requests"],
+                        user_conf["window_seconds"],
+                    )
+                    if not allowed:
+                        return _rate_limit_response(
+                            retry_after,
+                            error="rate_limited_user",
+                            message="使用者請求過於頻繁，請稍後再試。",
+                            limit=user_conf["max_requests"],
+                        )
+
+                    if path.startswith("/api/v1/chat"):
+                        chat_conf = {
+                            "max_requests": int(settings.RATE_LIMIT_CHAT_PER_USER),
+                            "window_seconds": 60,
+                        }
+                        allowed, _, retry_after = self.limiter.is_allowed(
+                            f"rl:chat:{user_sub}",
+                            chat_conf["max_requests"],
+                            chat_conf["window_seconds"],
+                        )
+                        if not allowed:
+                            return _rate_limit_response(
+                                retry_after,
+                                error="rate_limited_chat",
+                                message="聊天請求過於頻繁，請稍後再試。",
+                                limit=chat_conf["max_requests"],
+                            )
+
+                if tenant_id:
+                    tenant_conf = {
+                        "max_requests": int(settings.RATE_LIMIT_PER_TENANT),
+                        "window_seconds": 60,
+                    }
+                    allowed, _, retry_after = self.limiter.is_allowed(
+                        f"rl:tenant:{tenant_id}",
+                        tenant_conf["max_requests"],
+                        tenant_conf["window_seconds"],
+                    )
+                    if not allowed:
+                        return _rate_limit_response(
+                            retry_after,
+                            error="rate_limited_tenant",
+                            message="租戶請求過於頻繁，請稍後再試。",
+                            limit=tenant_conf["max_requests"],
+                        )
+
         except Exception:
-            # Redis 不可用時不阻擋請求
             pass
 
         response = await call_next(request)
-
-        # 添加限流標頭
         try:
-            response.headers["X-RateLimit-Limit"] = str(RATE_LIMITS["global_per_ip"]["max_requests"])
+            response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_GLOBAL_PER_IP)
         except Exception:
             pass
-
         return response

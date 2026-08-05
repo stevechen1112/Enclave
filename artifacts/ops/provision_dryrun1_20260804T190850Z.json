@@ -1,0 +1,17 @@
+{
+  "action": "provision_managed_instance",
+  "timestamp": "2026-08-04T19:08:50.853623+00:00",
+  "customer": "dryrun1",
+  "plan": "pilot",
+  "domain": "dryrun1.example.com",
+  "compose_up": "docker compose --env-file .env.production --env-file compose/image-pins.env --env-file compose/pack-enabled.env -f docker-compose.prod.yml -f compose/sidecars.yml -f compose/clamav.yml --profile production up -d",
+  "human_gate": "confirm-delivery",
+  "destructive_ops_require_approval": true,
+  "status": "DRY_RUN",
+  "steps": [
+    {
+      "name": "preview",
+      "passed": true
+    }
+  ]
+}

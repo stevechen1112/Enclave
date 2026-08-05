@@ -15,6 +15,7 @@ class Document(Base):
     file_path = Column(String, nullable=True) # S3 or local path
     file_size = Column(Integer, nullable=True)
     source_type = Column(String, default="file") # file, web, connector
+    genre = Column(String, nullable=True, index=True)  # ADR-008 catalog 粒度：contract|voucher|manual|travel|policy|form|report|other
     source_system = Column(String, nullable=True)  # google_drive | sharepoint | nas_smb | ...
     source_record_id = Column(String, nullable=True)  # external system record ID
     external_version = Column(String, nullable=True)  # version string from source system

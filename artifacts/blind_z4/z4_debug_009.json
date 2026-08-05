@@ -1,0 +1,31 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T11:54:24",
+ "base_url": "http://localhost:8011",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 138.7,
+ "summary": {
+  "total": 1,
+  "pass": 0,
+  "fail": 1,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z4-i-009",
+   "category": "blind_z4_A",
+   "query": "杏壺報價.pdf 的報價金額或品項？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "45,000"
+   ],
+   "spans_hit": [],
+   "answer": "## 杏壺報價.pdf 的品項與金額\n\n### 可辨識的服務品項\n根據《杏壺報價.pdf》，可辨識的品項包括：\n\n1. **網站關鍵字搜尋設定**\n2. **品牌形象影片**\n   - 影片長度：3–5 分鐘／支\n   - **影像素材報價另計**\n3. **網路流量與消費行為數據分析**\n   - 每月一式\n4. **商品平面攝影**\n   - 10 檔主推商品\n5. **網購平台推薦／行銷活動建立**\n6. **行銷活動成效分析**\n   - 文件列有第三個月成效：**ROAS 6.09**\n\n### 報價金額\n目前文件片段中**沒有清楚列出上述服務的正式報價金額**。文件內可見的「NTS」數字主要是行銷活動成效資料，例如：\n\n- 行銷活動支出：\n  - NTS893\n  - NTS1,609\n  - NTS1,687\n  - 3 個行銷活動總支出：**NTS4,189**\n- 購買轉換值總計：**NTS25,521**\n- 購買 ROAS：**6.09**\n\n上述數字屬於廣告／行銷成效數據，**不能直接視為服務報價**。因此，目前知識庫中沒有足夠資料確認《杏壺報價.pdf》的正式報價金額。\n\n[建議問題]\n1. 杏壺報價.pdf 中的 NTS4,189 是哪一類費用？\n2. 杏壺報價.pdf 是否有完整報價表或未擷取出的頁面？\n3. 如何解讀文件中的 ROAS 6.09 與各項行銷成效？",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  }
+ ],
+ "partial": false
+}

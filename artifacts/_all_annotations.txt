@@ -1,0 +1,339 @@
+======== testdata/golden/z1_scan_annotations\scan_01.yaml
+id: scan_01
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\000_nueip 合約(1).pdf
+filename: 000_nueip 合約(1).pdf
+size_bytes: 294717
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: 勞動契約
+  page: 1
+- name: party_a
+  expected: 優利國際資源整合有限公司
+  page: 1
+- name: representative
+  expected: 負責人：陳建宏
+  page: 1
+- name: address
+  expected: 台北市中正區忠孝東路一段140號10樓
+  page: 1
+- name: phone
+  expected: 02-77557985
+  page: 1
+- name: section
+  expected: 一、契約期間
+  page: 1
+- name: date
+  expected: 中華民國114年3月3日
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_02.yaml
+id: scan_02
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\001_四屆新生入團申請家長同意書.pdf
+filename: 001_四屆新生入團申請家長同意書.pdf
+size_bytes: 508512
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: 新生入團申請表暨家長同意書
+  page: 1
+- name: org
+  expected: 中國青年救國團
+  page: 1
+- name: org_branch
+  expected: 救國團花蓮縣團委會
+  page: 1
+- name: doc_no
+  expected: 花總訓字第3-2號
+  page: 1
+- name: field_student
+  expected: 學生姓名
+  page: 1
+- name: field_school
+  expected: 就讀學校
+  page: 1
+- name: field_signature
+  expected: 家長簽章
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_03.yaml
+id: scan_03
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\023_KiGo使用手冊.pdf
+filename: 023_KiGo使用手冊.pdf
+size_bytes: 3126769
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: brand
+  expected: KiGO
+  page: 1
+- name: title
+  expected: 使用手冊
+  page: 1
+- name: subtitle
+  expected: Watch GPS 使用手冊
+  page: 1
+- name: model
+  expected: 型號：KWG01
+  page: 1
+- name: section_1
+  expected: 包裝清單
+  page: 1
+- name: section_2
+  expected: 產品概覽
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_04.yaml
+id: scan_04
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\007_DOC_0001.pdf
+filename: 007_DOC_0001.pdf
+size_bytes: 273306
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: company
+  expected: 台灣電力公司
+  page: 1
+- name: title
+  expected: 用電設備檢驗維護登記單
+  page: 1
+- name: field_site
+  expected: 用電場所名稱
+  page: 1
+- name: field_vendor
+  expected: 檢驗維護業者
+  page: 1
+- name: field_status
+  expected: 用電設備狀況
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_05.yaml
+id: scan_05
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\014_AI 機器人全球 7 大勢力關鍵報告.pdf
+filename: 014_AI 機器人全球 7 大勢力關鍵報告.pdf
+size_bytes: 8548408
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: AI 機器人全球 7 大勢力關鍵報告
+  page: 1
+- name: publisher
+  expected: 工商時報
+  page: 1
+- name: category
+  expected: 產業．科技
+  page: 1
+- name: author
+  expected: 李淑惠
+  page: 1
+- name: date
+  expected: 2025.09.01
+  page: 1
+- name: headline
+  expected: 黃仁勳：機器人時代已來臨
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_06.yaml
+id: scan_06
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\002_11410_83028948_營業稅繳款書(401)_.pdf
+filename: 002_11410_83028948_營業稅繳款書(401)_.pdf
+size_bytes: 605790
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: 營業稅繳款書
+  page: 1
+- name: form_no
+  expected: (401)
+  page: 1
+- name: tax_id
+  expected: '83028948'
+  page: 1
+- name: period
+  expected: 114年09-10月
+  page: 1
+- name: deadline
+  expected: 114年11月17日
+  page: 1
+- name: company
+  expected: 優利國際資源整合有限公司
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_07.yaml
+id: scan_07
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\003_由你人資MOU.pdf
+filename: 003_由你人資MOU.pdf
+size_bytes: 325942
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: 合作意向書
+  page: 1
+- name: party_a
+  expected: 優利資源整合股份有限公司
+  page: 1
+- name: party_b
+  expected: 拉法智慧科技股份有限公司
+  page: 1
+- name: party_a_tax_id
+  expected: "54359503"
+  page: 1
+- name: party_b_tax_id
+  expected: "90599627"
+  page: 1
+- name: signed_date
+  expected: 中華民國114年11月04日
+  page: 1
+notes: >
+  2026-08-03 以原檔 page-1 重核對：檔名含「由你人資」但正文簽約方為
+  優利資源整合股份有限公司／拉法智慧科技股份有限公司（非先前誤標的
+  優利國際／由你人資管理顧問）。標題為合作意向書。
+
+======== testdata/golden/z1_scan_annotations\scan_08.yaml
+id: scan_08
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\005_11408_83028948_營業稅繳款書(401)_.pdf
+filename: 005_11408_83028948_營業稅繳款書(401)_.pdf
+size_bytes: 609485
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: 營業稅繳款書
+  page: 1
+- name: form_no
+  expected: (401)
+  page: 1
+- name: tax_id
+  expected: '83028948'
+  page: 1
+- name: period
+  expected: 114年07-08月
+  page: 1
+- name: deadline
+  expected: 114年09月15日
+  page: 1
+- name: company
+  expected: 優利國際資源整合有限公司
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_09.yaml
+id: scan_09
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\006_ETI-Base-Code-Burmese.pdf
+filename: 006_ETI-Base-Code-Burmese.pdf
+size_bytes: 1688204
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: ETI Base Code
+  page: 1
+- name: org
+  expected: Ethical Trading Initiative
+  page: 1
+- name: section_1_en_gloss
+  expected: Employment is freely chosen
+  page: 1
+- name: section_2_en_gloss
+  expected: Freedom of association
+  page: 1
+- name: section_4_en_gloss
+  expected: Child labour
+  page: 1
+notes: >
+  2026-08-03 以原檔 page-1 重核對：頁面幾乎全為緬甸文，英文僅見 header
+  「Ethical Trading Initiative」。section_*_en_gloss 為人工英譯對照，
+  非頁面字面；緬甸文 OCR 目前仍易失敗，答案正確性勿以英譯字串當硬 span。
+
+======== testdata/golden/z1_scan_annotations\scan_10.yaml
+id: scan_10
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\008_Korea e-Arrivalcard_363545709.pdf
+filename: 008_Korea e-Arrivalcard_363545709.pdf
+size_bytes: 11479785
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: e-Arrival Card
+  page: 1
+- name: field_surname
+  expected: Surname
+  page: 1
+- name: field_given_names
+  expected: Given names
+  page: 1
+- name: field_dob
+  expected: Date of birth
+  page: 1
+- name: field_nationality
+  expected: Nationality
+  page: 1
+- name: field_passport
+  expected: Passport number
+  page: 1
+notes: ''
+
+======== testdata/golden/z1_scan_annotations\scan_11.yaml
+id: scan_11
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\009_DOC003~3.pdf
+filename: 009_DOC003~3.pdf
+size_bytes: 1051479
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: company
+  expected: 台灣電力公司
+  page: 1
+- name: title
+  expected: 通知
+  page: 1
+notes: 截圖中僅台電標頭與「通知」字樣清晰可辨，其餘欄位过小，僅標註 2 欄；如需更多欄位請補清晰截圖。
+
+======== testdata/golden/z1_scan_annotations\scan_12.yaml
+id: scan_12
+source_path: C:\Users\User\Desktop\Enclave\testdata\golden\files\010_補印發票切結書.pdf
+filename: 010_補印發票切結書.pdf
+size_bytes: 3439637
+pdf_kind: scanned
+annotator: agent-from-user-screenshot
+annotated_at: '2026-08-02'
+fields:
+- name: title
+  expected: 補印發票切結書
+  page: 1
+- name: field_tax_id
+  expected: 統一編號
+  page: 1
+- name: field_invoice_no
+  expected: 發票號碼
+  page: 1
+- name: field_applicant
+  expected: 立切結書人
+  page: 1
+- name: company
+  expected: 優利國際資源整合有限公司
+  page: 1
+notes: ''
+

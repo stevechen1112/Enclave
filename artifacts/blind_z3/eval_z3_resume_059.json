@@ -1,0 +1,397 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T08:30:28",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 259.7,
+ "summary": {
+  "total": 27,
+  "pass": 2,
+  "fail": 23,
+  "review": 2,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z3-v3-059",
+   "category": "blind_z3_B",
+   "query": "新元應材網站建置報價的總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "115,500"
+   ],
+   "spans_hit": [
+    "115,500"
+   ],
+   "answer": "## 新元應材網站建置報價總價\n\n根據《新元應材網站建置報價.pdf》：\n\n- 未稅金額：新台幣 110,000 元\n- 稅金（5%）：  \n  110,000 × 5% = 5,500 元\n- **含稅總價：**  \n  110,000 + 5,500 = **新台幣 115,500 元**\n\n參考資料中的稅金欄位顯示為「5,50」，內容疑似截斷；以上依報價金額及 5% 稅率計算。\n\n[建議問題]\n1. 這份網站建置報價包含哪些功能？\n2. 報價的付款方式與付款條件是什麼？\n3. 報價是否包含英文版網站與雲端主機代管？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-060",
+   "category": "blind_z3_B",
+   "query": "1028時尚彩妝網紅體驗專案報價委刊單的報價金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "696,225"
+   ],
+   "spans_hit": [
+    "696,225"
+   ],
+   "answer": "## 報價金額\n\n根據《1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.pdf》：\n\n- **未稅總計：NT$696,225**\n- **含稅總計：NT$731,036**\n\n其中報價包含大型網紅合作體驗、微型網紅合作體驗、Threads 合作體驗貼文曝光及相關專案執行服務費。\n\n[建議問題]  \n1. 這份報價單的付款條件與付款金額如何分期？  \n2. 大型網紅與微型網紅合作項目的費用分別是多少？  \n3. 本專案的執行期間與取消活動的費用規定為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-061",
+   "category": "blind_z3_C",
+   "query": "請比較醫美圈圈已用印行銷報價、巽耘視覺形象更新報價、立壕線板設計報價的總價，由高到低（無法判讀請標註）。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "87,000",
+    "11,550"
+   ],
+   "spans_hit": [
+    "87,000"
+   ],
+   "answer": "## 總價比較（由高至低）\n\n| 排名 | 報價項目 | 總價 | 判讀依據 |\n|---|---|---:|---|\n| 1 | 巽耘視覺形象更新報價 | **87,000 元（未稅）** | 報價單載明「合計：$87,000（未稅）」。根據《巽耘法律事務所視覺形象更新報價單.pdf》 |\n| 2 | 醫美圈圈已用印行銷報價 | **75,000 元** | 報價期間為 2023/08/01–12/31，共 5 個月；計算：15,000 元/月 × 5 個月 = 75,000 元。根據《「已用印」八策行銷報價單_醫美圈圈.pdf》 |\n| 3 | 立壕線板設計報價 | **無法判讀** | 目前提供的參考資料中，沒有「立壕線板設計報價」相關文件或總價資料。 |\n\n### 補充說明\n\n- 巽耘報價明確標示為**未稅**，且若需開發票另加 5% 稅。\n- 醫美圈圈報價資料僅列出每月費用及報價期間，未明確載明稅額或一次性總計；以上依期間推算為 **75,000 元**。\n- 因立壕線板設計報價缺少相關資料，無法確認其是否高於或低於前兩者。\n\n[建議問題]  \n1. 請計算巽耘報價含 5% 稅後的總價。  \n2. 請將三份報價統一換算成含稅價格比較。  \n3. 請整理三份報價的服務項目與付款條件差異。",
+   "verdict": "review",
+   "note": "spans 1/2"
+  },
+  {
+   "id": "z3-v3-062",
+   "category": "blind_z3_C",
+   "query": "安可系統開發報價調整版與味特報價暨合約，哪份總價較高？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "696,500",
+    "350,000"
+   ],
+   "spans_hit": [
+    "696,500"
+   ],
+   "answer": "## 結論\n\n目前知識庫中沒有足夠的相關文件，**無法判定《2024Q1安可系統開發報價調整版_0816.docx》與《味特報價暨合約》哪份總價較高**。\n\n## 目前可確認的資料\n\n- 《2024Q1安可系統開發報價調整版_0816.docx》中出現多個專案總計，包含：\n  - **770,000 元／調整後 696,500 元**\n  - **408,000 元／調整後 371,000 元**\n  - **640,000 元／調整後 480,000 元**\n  - 另有其他片段顯示 **593,000 元／493,000 元**\n- 上述金額均標示為**新臺幣未稅**，但參考資料未清楚說明這些總計是否應合併計算，或分別代表不同階段／專案。\n- 參考資料中**沒有提供《味特報價暨合約》及其總價**，因此無法與安可報價進行公平比較。\n\n[建議問題]\n1. 請提供《味特報價暨合約》的報價與總價內容。\n2. 安可報價應以哪一個專案總計作為比較基準？\n3. 是否要比較未稅總價，或換算含稅總價？",
+   "verdict": "review",
+   "note": "spans 1/2"
+  },
+  {
+   "id": "z3-v3-063",
+   "category": "blind_z3_C",
+   "query": "光昱亞馬遜B2B提案報價與宏寰亞馬遜電商委託營運合約，文件類型差在哪？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "提案",
+    "合約"
+   ],
+   "spans_hit": [
+    "提案",
+    "合約"
+   ],
+   "answer": "[ERROR ReadError] [WinError 10054] 遠端主機已強制關閉一個現存的連線。; partial=## 結論\n\n目前參考資料中**沒有「光昱亞馬遜 B2B 提案報價」文件**，因此無法依其實際條款確認文件類型或與宏寰文件逐條比較。\n\n不過，根據現有資料，**「宏寰亞馬遜電商委託營運合約」屬於已具契約性質的委託服務合約，而不只是單純報價單**。\n\n## 宏寰文件的文件性質\n\n《亞馬遜電商委託營運報價合約》雖然名稱中包含「報價」，但內容已具備正式合約要件，包括：\n\n- **明確契約雙方**：宏寰貿",
+   "verdict": "fail",
+   "note": "[ERROR ReadError] [WinError 10054] 遠端主機已強制關閉一個現存的連線。; partial=## 結論\n\n目前參考資料中**沒有「光昱亞馬遜 B2B 提案報價」文件**，因此無法依其實際條款確認文件類型或與宏寰文件逐條比較。\n\n不過，根據現有資料，**「宏寰亞馬遜電商委託營運合約」屬於已具契約性質的委託服務合約，而不只是單純報價單**。\n\n## 宏寰文件的文件性質\n\n《亞馬遜電商委託營運報價合約》雖然名稱中包含「報價」，但內容已具備正式合約要件"
+  },
+  {
+   "id": "z3-v3-064",
+   "category": "blind_z3_C",
+   "query": "「委託合約-八策品牌」（客戶/安可）與「合約-八策數位股份有限公司」（八策內部）是否同一份文件？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "安可日子",
+    "Regus"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR ConnectError] [WinError 10061] 無法連線，因為目標電腦拒絕連線。; partial=",
+   "verdict": "fail",
+   "note": "[ERROR ConnectError] [WinError 10061] 無法連線，因為目標電腦拒絕連線。; partial="
+  },
+  {
+   "id": "z3-v3-065",
+   "category": "blind_z3_C",
+   "query": "地政醫院行銷網站報價與立壕設計報價，哪份較高？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "60,000",
+    "11,550"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR ConnectError] [WinError 10061] 無法連線，因為目標電腦拒絕連線。; partial=",
+   "verdict": "fail",
+   "note": "[ERROR ConnectError] [WinError 10061] 無法連線，因為目標電腦拒絕連線。; partial="
+  },
+  {
+   "id": "z3-v3-066",
+   "category": "blind_z3_C",
+   "query": "Color髮廊與街道沙龍兩份行銷提案，客戶是否相同？請依文件說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Color",
+    "街道沙龍"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR ConnectError] [WinError 10061] 無法連線，因為目標電腦拒絕連線。; partial=",
+   "verdict": "fail",
+   "note": "[ERROR ConnectError] [WinError 10061] 無法連線，因為目標電腦拒絕連線。; partial="
+  },
+  {
+   "id": "z3-v3-067",
+   "category": "blind_z3_C",
+   "query": "這批資料裡，檔名或標題明顯出現「八策」的客戶／文件有哪些？列客戶或檔名。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "安可",
+    "醫美圈圈"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-068",
+   "category": "blind_z3_C",
+   "query": "捷報行銷提案報價與好優新聞服務報價方案，價位帶是否同一數量級？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-069",
+   "category": "blind_z3_C",
+   "query": "「RFQ報價技巧」與「立壕設計報價」文件性質差在哪（教材 vs 客戶報價）？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "RFQ",
+    "立壕"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-070",
+   "category": "blind_z3_C",
+   "query": "請列出這批中檔名含「行銷提案」的客戶名稱（至少三個）。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Color",
+    "街道沙龍"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-071",
+   "category": "blind_z3_D",
+   "query": "我們跟「不存在科技股份有限公司」簽的合約總價多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-072",
+   "category": "blind_z3_D",
+   "query": "安可委託合約-八策品牌約定的貸款年利率是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-073",
+   "category": "blind_z3_D",
+   "query": "醫美圈圈已用印報價保證哪一天官網上線？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-074",
+   "category": "blind_z3_D",
+   "query": "八策是否在這批文件承諾給安可技術股10%？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-075",
+   "category": "blind_z3_D",
+   "query": "巽耘視覺形象更新報價單指定的電子發票載具號碼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-076",
+   "category": "blind_z3_D",
+   "query": "安可與八策的「金流系統建置合約」總價多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-077",
+   "category": "blind_z3_D",
+   "query": "心恬美學那份報價單總價多少？（若庫中無此客戶文件請明確說查無）",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-078",
+   "category": "blind_z3_D",
+   "query": "補助期中報告保證八策明年營收成長多少％？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-079",
+   "category": "blind_z3_A",
+   "query": "RFQ報價技巧文件列出的兩個以上重點技巧？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "RFQ"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-080",
+   "category": "blind_z3_A",
+   "query": "M&F Select 電商行銷提案報價_0219 的報價金額或方案？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-081",
+   "category": "blind_z3_A",
+   "query": "委託合約-八策品牌若有爭議，管轄或準據法怎麼寫？未載明請說未載明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "台北地方法院"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-082",
+   "category": "blind_z3_A",
+   "query": "安可系統開發報價調整版列出的主要交付或服務項目？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "EncoreWeb"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-083",
+   "category": "blind_z3_E",
+   "query": "根目錄「SEO報價合約_用印版本」與優克美資料夾合約是否同一客戶案？請依可讀資訊說明或說無法判定。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "優克美"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-084",
+   "category": "blind_z3_C",
+   "query": "貝昇生技報價暨合約與味特報價暨合約，哪份總價較高？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "60,000",
+    "350,000"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  },
+  {
+   "id": "z3-v3-085",
+   "category": "blind_z3_C",
+   "query": "八策根目錄的捷報提案報價，與客戶資料夾內的立壕設計報價，分別屬於哪一側文件（內部提案／客戶報價）？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "捷報",
+    "立壕"
+   ],
+   "spans_hit": [],
+   "answer": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}",
+   "verdict": "fail",
+   "note": "[ERROR 404] {\"error\":\"Not Found\",\"status_code\":404}"
+  }
+ ],
+ "partial": false
+}

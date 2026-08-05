@@ -16,8 +16,12 @@ from sqlalchemy.orm import Session
 from app.core.authorization import AuthorizationContext
 from app.gateway.citation import CitationBuilder
 from app.gateway.contracts import ChunkResult, Citation, SearchDomain
+from app.services.catalog_retrieval import CatalogRetriever, RetrievalHit, get_catalog_retriever
+from app.services.query_plan import is_inventory_query  # noqa: F401 — re-export 相容
 
 logger = logging.getLogger(__name__)
+
+# is_inventory_query 事實來源：app.services.query_plan（F4 QueryPlan）。
 
 
 @dataclass
@@ -43,8 +47,33 @@ class RetrievalResult:
 class RetrievalFacade:
     """Canonical retrieval + authorization + citation orchestration."""
 
-    def __init__(self):
+    def __init__(self, catalog: Optional[CatalogRetriever] = None):
         self._citation = CitationBuilder()
+        self._catalog = catalog or get_catalog_retriever()
+
+    def search_catalog(
+        self,
+        *,
+        authz: AuthorizationContext,
+        query: str,
+        top_k: int = 50,
+        filters: Optional[Dict[str, Any]] = None,
+        db: Optional[Session] = None,
+    ) -> List[RetrievalHit]:
+        """文件層（catalog）檢索——ADR-008 契約 1。
+
+        回答「有哪些檔」類問題；只回 completed 且未 tombstone 的文件。
+        """
+        if authz is None:
+            raise ValueError("AuthorizationContext is required for RetrievalFacade.search_catalog")
+        genre_filter = (filters or {}).get("genres")
+        return self._catalog.search(
+            tenant_id=authz.tenant_id,
+            query=query,
+            top_k=top_k,
+            genre_filter=genre_filter,
+            db=db,
+        )
 
     def search(
         self,
@@ -86,6 +115,57 @@ class RetrievalFacade:
             mode=mode,
             total=len(raw),
         )
+
+    def get_document_head(
+        self,
+        *,
+        authz: AuthorizationContext,
+        filename: str,
+        n: int = 2,
+    ) -> List[Dict[str, Any]]:
+        """取指定文件的前 n 個 chunk（文件頭部：標題/表頭/基本資料所在）。
+
+        檔名鎖定查詢常問文件層級欄位（標題、日期、公司名稱），這些資訊
+        固定在文件開頭，語意排名不一定排得進 top-k（2026-08-03 盲測
+        E073 根因）。scoped 檢索應恆常附上文件頭部。
+        """
+        if authz is None:
+            raise ValueError("AuthorizationContext is required")
+        from app.db.session import SessionLocal
+        from app.models.document import Document, DocumentChunk
+
+        db = SessionLocal()
+        try:
+            rows = (
+                db.query(DocumentChunk)
+                .join(Document, DocumentChunk.document_id == Document.id)
+                .filter(
+                    Document.filename == filename,
+                    Document.tombstoned_at.is_(None),
+                    DocumentChunk.tenant_id == authz.tenant_id,
+                )
+                .order_by(DocumentChunk.chunk_index.asc())
+                .limit(n)
+                .all()
+            )
+            return [
+                {
+                    "id": str(c.id),
+                    "score": None,
+                    "content": c.text or "",
+                    "document_id": str(c.document_id),
+                    "filename": filename,
+                    "chunk_index": c.chunk_index,
+                    "metadata": c.metadata_json or {},
+                    "source": "document_head",
+                }
+                for c in rows
+            ]
+        except Exception as exc:
+            logger.warning("get_document_head failed for %s: %s", filename, exc)
+            return []
+        finally:
+            db.close()
 
     async def search_gateway(
         self,

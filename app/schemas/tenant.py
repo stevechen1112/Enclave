@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict
 # Shared properties
 class TenantBase(BaseModel):
     name: Optional[str] = None
-    plan: Optional[str] = None  # free, pro, enterprise
+    plan: Optional[str] = None  # pilot, team, business, enterprise（遺留：free, pro）
     status: Optional[str] = None  # active, suspended
 
 
@@ -94,7 +94,39 @@ class QuotaUpdate(BaseModel):
 
 
 # Plan-based default quotas
+# CG-QUOTA 方案矩陣：pilot/team/business/enterprise 對齊
+# docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md §3.3（數字為起始建議，上線前以
+# Design Partner 真實用量校正）；free/pro 為早期遺留方案名，保留相容。
 PLAN_QUOTAS = {
+    "pilot": {
+        "max_users": 10,
+        "max_documents": 200,
+        "max_storage_mb": 500,
+        "monthly_query_limit": 500,
+        "monthly_token_limit": 2_000_000,
+    },
+    "team": {
+        "max_users": 50,
+        "max_documents": 2000,
+        "max_storage_mb": 5000,
+        "monthly_query_limit": 5000,
+        "monthly_token_limit": 40_000_000,
+    },
+    "business": {
+        "max_users": 200,
+        "max_documents": 20000,
+        "max_storage_mb": 50000,
+        "monthly_query_limit": 50000,
+        "monthly_token_limit": 400_000_000,
+    },
+    "enterprise": {
+        "max_users": None,       # 合約制（無限制）
+        "max_documents": None,
+        "max_storage_mb": None,
+        "monthly_query_limit": None,
+        "monthly_token_limit": None,
+    },
+    # 遺留方案名（既有租戶相容；新租戶請用 pilot/team/business）
     "free": {
         "max_users": 5,
         "max_documents": 20,
@@ -108,13 +140,6 @@ PLAN_QUOTAS = {
         "max_storage_mb": 1000,
         "monthly_query_limit": 5000,
         "monthly_token_limit": 5000000,
-    },
-    "enterprise": {
-        "max_users": None,       # 無限制
-        "max_documents": None,
-        "max_storage_mb": None,
-        "monthly_query_limit": None,
-        "monthly_token_limit": None,
     },
 }
 

@@ -20,6 +20,7 @@ from app.gateway.contracts import (
 from app.gateway.authorization import GatewayAuthorizer, PolicyDecision
 from app.gateway.aggregator import ResultAggregator
 from app.gateway.citation import CitationBuilder
+from app.gateway.fusion_policy import FusionPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,7 @@ class GatewayRouter:
         self._adapters: Dict[str, Any] = {}  # domain → adapter instance
         self._aggregator = ResultAggregator()
         self._citation_builder = CitationBuilder()
+        self._fusion_policy = FusionPolicy()
 
     def register_adapter(self, domain: str, adapter: Any):
         """註冊 Adapter。"""
@@ -88,6 +90,21 @@ class GatewayRouter:
                     decisions=[f"denied:{decision.reason}"],
                 ),
             )
+
+        # 1.5 ADR-013：wiki 臂的 KB 範圍以 tenant_sidecar_binding 為權威注入；
+        # 呼叫方已顯式給 scope.knowledge_base_ids 時尊重呼叫方
+        if db is not None and not (scope or {}).get("knowledge_base_ids"):
+            try:
+                from app.services.sidecar_binding import resolve_weknora_kb_id
+
+                kb_id = resolve_weknora_kb_id(db, authz.tenant_id)
+                if kb_id:
+                    scope = dict(scope or {})
+                    scope["knowledge_base_ids"] = [kb_id]
+            except Exception as exc:
+                # binding 缺失不阻斷檢索（單租戶部署的 adapter 部署級預設仍正確）；
+                # Form C 強化時此路徑應改為 fail-closed（見 ADR-013 後果）
+                logger.error("sidecar binding resolution failed for search: %s", exc)
 
         # 2. 決定要查詢的 Adapter(s)
         adapter_domains = self._resolve_domains(domain)
@@ -170,7 +187,10 @@ class GatewayRouter:
                 ):
                     continue
             filtered.append(r)
-        aggregated = filtered[:top_k]
+
+        # 5.6 ADR-009：融合不變量——可引用性過濾＋權威級配額（版本化政策）
+        fusion = self._fusion_policy.apply(filtered, query=query, top_k=top_k)
+        aggregated = fusion.results
 
         citations = self._citation_builder.build(
             aggregated,
@@ -203,6 +223,9 @@ class GatewayRouter:
                 total_latency_ms=total_latency_ms,
                 provider_latencies=provider_latencies,
                 decisions=decision.matched_rules,
+                fusion_policy_version=fusion.policy_version,
+                query_domain=fusion.query_domain,
+                dropped_non_citable=fusion.dropped_non_citable,
             ),
         )
 

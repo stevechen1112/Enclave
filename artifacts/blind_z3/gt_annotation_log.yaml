@@ -1,0 +1,256 @@
+annotations:
+- id: z3-v3-001
+  notes: D01/D02 檔名差異
+  refuse: false
+- id: z3-v3-002
+  notes: D01 月酬未稅
+  refuse: false
+- id: z3-v3-003
+  notes: D01 雙方
+  refuse: false
+- id: z3-v3-004
+  notes: D03 服務至8/31；金額首頁未列則期間+標的可核
+  refuse: false
+- id: z3-v3-005
+  notes: 兩約標的不同
+  refuse: false
+- id: z3-v3-006
+  notes: D05
+  refuse: false
+- id: z3-v3-007
+  notes: D04 抬頭可核；全文弱
+  refuse: false
+- id: z3-v3-008
+  notes: D06
+  refuse: false
+- id: z3-v3-009
+  notes: D14 第一期調整後總計
+  refuse: false
+- id: z3-v3-010
+  notes: 不同文件
+  refuse: false
+- id: z3-v3-011
+  notes: D14 分期結構
+  refuse: false
+- id: z3-v3-012
+  notes: 應說明缺訂金比例；答「未載明訂金」可含訂金二字
+  refuse: false
+- id: z3-v3-013
+  notes: D07
+  refuse: false
+- id: z3-v3-014
+  notes: 合約 vs 網站報價
+  refuse: false
+- id: z3-v3-015
+  notes: D23 網站建置
+  refuse: false
+- id: z3-v3-016
+  notes: D08
+  refuse: false
+- id: z3-v3-017
+  notes: D10
+  refuse: false
+- id: z3-v3-018
+  notes: D09 手寫甲方
+  refuse: false
+- id: z3-v3-019
+  notes: D11 SEO月費
+  refuse: false
+- id: z3-v3-020
+  notes: D15/D16 無總價
+  refuse: true
+- id: z3-v3-021
+  notes: D12
+  refuse: false
+- id: z3-v3-022
+  notes: 標的不同
+  refuse: false
+- id: z3-v3-023
+  notes: D17
+  refuse: false
+- id: z3-v3-024
+  notes: D18 數據分析月費（代表金額）
+  refuse: false
+- id: z3-v3-025
+  notes: D19 無總價
+  refuse: true
+- id: z3-v3-026
+  notes: 兩檔用途不同
+  refuse: false
+- id: z3-v3-027
+  notes: D21 無總價
+  refuse: true
+- id: z3-v3-028
+  notes: D22 方案A專訪
+  refuse: false
+- id: z3-v3-029
+  notes: D24
+  refuse: false
+- id: z3-v3-030
+  notes: 近複本分檔
+  refuse: false
+- id: z3-v3-031
+  notes: D27
+  refuse: false
+- id: z3-v3-032
+  notes: D28
+  refuse: false
+- id: z3-v3-033
+  notes: D31 掃描未可靠全文
+  refuse: true
+- id: z3-v3-034
+  notes: CYS粉專提案
+  refuse: false
+- id: z3-v3-035
+  notes: D30 掃描未全文視讀
+  refuse: true
+- id: z3-v3-036
+  notes: D33 Regus月租優惠價
+  refuse: false
+- id: z3-v3-037
+  notes: D34 月租金
+  refuse: false
+- id: z3-v3-038
+  notes: 不同出租方
+  refuse: false
+- id: z3-v3-039
+  notes: 兩委託對象
+  refuse: false
+- id: z3-v3-040
+  notes: D35
+  refuse: false
+- id: z3-v3-041
+  notes: 檔名/對象
+  refuse: false
+- id: z3-v3-042
+  notes: 委任書標的
+  refuse: false
+- id: z3-v3-043
+  notes: D37 未可靠視讀
+  refuse: true
+- id: z3-v3-044
+  notes: D39
+  refuse: false
+- id: z3-v3-045
+  notes: D40 掃描
+  refuse: true
+- id: z3-v3-046
+  notes: D41 掃描
+  refuse: true
+- id: z3-v3-047
+  notes: D42
+  refuse: false
+- id: z3-v3-048
+  notes: 兩檔近名；答應分檔
+  refuse: false
+- id: z3-v3-049
+  notes: D43 無總價
+  refuse: true
+- id: z3-v3-050
+  notes: D45
+  refuse: false
+- id: z3-v3-051
+  notes: D46
+  refuse: false
+- id: z3-v3-052
+  notes: D47
+  refuse: false
+- id: z3-v3-053
+  notes: D48
+  refuse: false
+- id: z3-v3-054
+  notes: D49
+  refuse: false
+- id: z3-v3-055
+  notes: D50
+  refuse: false
+- id: z3-v3-056
+  notes: D51
+  refuse: false
+- id: z3-v3-057
+  notes: D52
+  refuse: false
+- id: z3-v3-058
+  notes: D53 無總價
+  refuse: true
+- id: z3-v3-059
+  notes: D54 含稅總金額
+  refuse: false
+- id: z3-v3-060
+  notes: D55
+  refuse: false
+- id: z3-v3-061
+  notes: 巽耘>立壕；醫美口徑另述
+  refuse: false
+- id: z3-v3-062
+  notes: 安可調整後 vs 味特
+  refuse: false
+- id: z3-v3-063
+  notes: 類型差
+  refuse: false
+- id: z3-v3-064
+  notes: 不同文件
+  refuse: false
+- id: z3-v3-065
+  notes: 地政>立壕
+  refuse: false
+- id: z3-v3-066
+  notes: 不同客戶
+  refuse: false
+- id: z3-v3-067
+  notes: 含八策相關
+  refuse: false
+- id: z3-v3-068
+  notes: 捷報缺總價無法比
+  refuse: true
+- id: z3-v3-069
+  notes: 教材vs報價
+  refuse: false
+- id: z3-v3-070
+  notes: 行銷提案客戶
+  refuse: false
+- id: z3-v3-071
+  notes: 幽靈客戶
+  refuse: true
+- id: z3-v3-072
+  notes: 無年利率
+  refuse: true
+- id: z3-v3-073
+  notes: 無上線日保證
+  refuse: true
+- id: z3-v3-074
+  notes: 無技術股
+  refuse: true
+- id: z3-v3-075
+  notes: 無載具
+  refuse: true
+- id: z3-v3-076
+  notes: 無該檔名
+  refuse: true
+- id: z3-v3-077
+  notes: 未選心恬
+  refuse: true
+- id: z3-v3-078
+  notes: 無營收保證％
+  refuse: true
+- id: z3-v3-079
+  notes: D13
+  refuse: false
+- id: z3-v3-080
+  notes: D20 無總價
+  refuse: true
+- id: z3-v3-081
+  notes: D06
+  refuse: false
+- id: z3-v3-082
+  notes: D14
+  refuse: false
+- id: z3-v3-083
+  notes: D11 即優克美SEO
+  refuse: false
+- id: z3-v3-084
+  notes: 貝昇vs味特
+  refuse: false
+- id: z3-v3-085
+  notes: 兩側文件
+  refuse: false

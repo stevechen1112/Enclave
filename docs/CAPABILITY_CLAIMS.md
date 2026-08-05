@@ -2,7 +2,8 @@
 
 > 來源：`CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md` 閘門結果（2026-08-02）。  
 > 決策產物：`artifacts/capability_fanout_decision.json`。  
-> **接線完成 ≠ 價值證明完成。**
+> **接線完成 ≠ 價值證明完成。**  
+> **架構底座（多粒度／融合／入庫交付）**：見 `FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN.md`（ADR-008～010）；未過 FD-* 前不得宣稱盤點題或跨源融合已治本。
 
 ## 已證明（可對外宣稱）
 
@@ -15,12 +16,13 @@
 | WeKnora Auto-Wiki 真實編譯（含 source_refs）；sole-source 撤權後不可見 | CV-WK-03、CV-WK-06；瀏覽 UI＋管理員手動編輯（新增 revision）已上線（`/knowledge/wiki`，2026-08-03） |
 | page/bbox lineage 可從 DeepDOC `positions` 寫入 Citation | B4 / lineage 50/50 |
 | Specialist 路徑延遲 p95 ≈ 432ms（預算 3000ms）；旗標預設關閉 | CV-RF-06 PASS（仍不進預設 fan-out） |
+| 掃描交付閘門＋雲端 OCR 救援後，答案正確性硬 span：**10 pass／0 fail／10 review**（20 題） | `artifacts/answer_correctness_last_run.json`（2026-08-03；review＝尚無轉錄 ground truth） |
 
 ## 已接線、未證明（不得當賣點）
 
 | 能力 | 現況 |
 |------|------|
-| DeepDOC 對**全語料**抽取品質 | CV-RF-01b 整體 MARGINAL／FAIL（手寫／拍照 CER 0.8+）；雲端四臂：luna 24.2%（幻覺風險）、terra 25.8%、**gemini-3-flash-preview 與 mistral-ocr-4 並列最佳 30.3%**（命中欄位完全相同、DeepDOC 嚴格超集、手寫切結書 4/4），仍未達 20pp 門檻（`cloud_vision_{ocr,terra,gemini,mistral}_ablation_last_run.json`）。2026-08-03 起雲端 OCR 已接為**選配增強臂**（`CLOUD_OCR_PROVIDER`，預設關閉；僅在主解析產出過少時觸發，見 `app/services/cloud_ocr.py`） |
+| DeepDOC 對**全語料**抽取品質 | CV-RF-01b 整體 MARGINAL／FAIL（手寫／拍照 CER 0.8+）；雲端四臂：luna 24.2%（幻覺風險）、terra 25.8%、**gemini-3-flash-preview 與 mistral-ocr-4 並列最佳 30.3%**（命中欄位完全相同、DeepDOC 嚴格超集、手寫切結書 4/4），仍未達 20pp 門檻（`cloud_vision_{ocr,terra,gemini,mistral}_ablation_last_run.json`）。2026-08-03：雲端 OCR 增強臂觸發擴及 `text_fallback`／髒 OCR／DeepDOC 未交貨；**`SCAN_PARSE_STRICT=true` 時 `native/text_fallback` 不得 completed**（見 `parse_pipeline.py`） |
 | parent-child 分塊 | 結構已啟動；Hit@5 vs naive = NO_VALUE（天花板） |
 | 切片模板 laws/manual/table | CV-RF-02：與 naive 同 Hit@5（NO_VALUE）；table 臂失敗 |
 | RAPTOR | CV-RF-04 NO_VALUE（OpenAI gpt-5.6-luna 真實跑完索引 465.8s；Hit@5 90% vs 90% Δ=0）；預設關閉 |

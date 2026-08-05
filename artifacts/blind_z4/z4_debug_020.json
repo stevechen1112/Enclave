@@ -1,0 +1,35 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T11:55:53",
+ "base_url": "http://localhost:8011",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 36.9,
+ "summary": {
+  "total": 1,
+  "pass": 1,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z4-i-020",
+   "category": "blind_z4_B",
+   "query": "康宇勞資顧問「名片報價」單價或數量怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "987",
+    "康宇"
+   ],
+   "spans_hit": [
+    "987",
+    "康宇"
+   ],
+   "answer": "## 康宇勞資顧問名片的填寫方式\n\n根據《名片報價.pdf》：\n\n- **品名**：康宇名片\n- **數量**：四款各 2.5 盒\n- **報價單明細**：4 款 1 模雙面，各 2.5 盒\n- **未稅金額**：940 元\n- **含稅金額**：987 元\n\n### 建議填寫\n\n| 欄位 | 填寫內容 |\n|---|---|\n| 數量 | **4 款 × 各 2.5 盒** |\n| 單位 | 盒 |\n| 單價 | 報價單未明確列出單價，建議填「合版報價」或依系統需求換算 |\n\n若系統必須填單價，可依報價金額換算：\n\n- 總數量：4 款 × 2.5 盒 = **10 盒**\n- 未稅單價：940 ÷ 10 = **94 元／盒**\n- 含稅單價：987 ÷ 10 = **98.7 元／盒**\n\n因此，最符合原報價單的寫法是：**數量填「4 款各 2.5 盒」；單價則以合版整批報價為主，不宜直接視為一般單盒單價。**\n\n[建議問題]\n1. 這筆名片報價的未稅與含稅金額要怎麼登錄？\n2. 「四款各 2.5 盒」在採購單上應填幾個品項？\n3. 名片報價單上的「4 款 1 模雙面」代表什麼？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  }
+ ],
+ "partial": false
+}

@@ -1,0 +1,38 @@
+{
+  "gate": "VISION-CEILING",
+  "schema_version": 1,
+  "generated_at": "2026-08-03T18:01:44",
+  "status": "PASS",
+  "method": "config + module + DB inventory for Phase 5 ceiling readiness",
+  "checks": [
+    {
+      "id": "rerank_enabled",
+      "status": "PASS",
+      "detail": "RETRIEVAL_RERANK=True"
+    },
+    {
+      "id": "llm_configured",
+      "status": "PASS",
+      "detail": "openai:gpt-5.6-luna"
+    },
+    {
+      "id": "phase2_modules",
+      "status": "PASS",
+      "detail": "MultiStepOrchestrator/ToolRouter/TraceRecorder/refusal importable"
+    },
+    {
+      "id": "crosslang_projections",
+      "status": "PASS",
+      "detail": "active_clause_projections=1"
+    },
+    {
+      "id": "voyage_rerank_key",
+      "status": "PASS",
+      "detail": "VOYAGE_API_KEY_present=False (local rerank fallback ok if RETRIEVAL_RERANK)"
+    }
+  ],
+  "notes": [
+    "成本不設限：rerank／雲端 OCR／強 LLM 已在主路徑可用",
+    "增量仍須個別消融；本閘門只證明能力上限元件已就位"
+  ]
+}

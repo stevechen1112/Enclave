@@ -1,0 +1,222 @@
+# Blind Z4 intent draft — authoring from catalog metadata ONLY
+# DO NOT open source files or extracts while editing this file.
+meta:
+  version: z4-intent-v1
+  anti_target_drawing: true
+  source: artifacts/blind_z4/authoring_catalog.json
+  intent_frozen: true
+  frozen_at: "2026-08-05"
+  notes: >
+    Spans/must_refuse filled only after upload + ingested-text GT pass.
+    Mix: A12 B16 C10 D6 E6 (50). Catalog hints validated.
+
+questions:
+  # —— A 單檔（明確檔名／客戶）——
+  - id: z4-i-001
+    type: A
+    query: 臺鍍網站架設專案合約（signed）的簽約雙方是誰？
+    catalog_hint: z4-doc-03
+  - id: z4-i-002
+    type: A
+    query: 宏茂五金「宏茂行銷報價合約.pdf」約略標的或服務是什麼？
+    catalog_hint: z4-doc-09
+  - id: z4-i-003
+    type: A
+    query: 奕瑞科技網站建置與行銷合約裡，合約雙方如何記載？
+    catalog_hint: z4-doc-37
+  - id: z4-i-004
+    type: A
+    query: 生酮飲食行銷規劃合約的委託標的是什麼？
+    catalog_hint: z4-doc-36
+  - id: z4-i-005
+    type: A
+    query: 鴻鼎菓子行銷研究企劃案報價暨合約的報價金額或方案怎麼寫？
+    catalog_hint: z4-doc-40
+  - id: z4-i-006
+    type: A
+    query: 樂行家行銷報價單上的金額或方案價？
+    catalog_hint: z4-doc-38
+  - id: z4-i-007
+    type: A
+    query: 街道沙龍網站暨行銷報價單的總價或主要項目價？
+    catalog_hint: z4-doc-15
+  - id: z4-i-008
+    type: A
+    query: 谷德廣告委託報價單_0206 的報價金額？
+    catalog_hint: z4-doc-39
+  - id: z4-i-009
+    type: A
+    query: 杏壺報價.pdf 的報價金額或品項？
+    catalog_hint: z4-doc-27
+  - id: z4-i-010
+    type: A
+    query: 立壕線板 2022-11-02 請款單的請款金額或對象？
+    catalog_hint: z4-doc-35
+  - id: z4-i-011
+    type: A
+    query: 八策「工作委託合約.pdf」的雙方與標的？
+    catalog_hint: z4-doc-25
+  - id: z4-i-012
+    type: A
+    query: 僅B2C電子發票字軌號碼申請書（1090429）申請的是什麼字軌／用途？
+    catalog_hint: z4-doc-26
+
+  # —— B 無完整檔名／模糊 ——
+  - id: z4-i-013
+    type: B
+    query: 優克美那份 Labavo 網路廣告投放合約（0313）的月費或投放相關金額怎麼寫？
+    catalog_hint: z4-doc-01
+  - id: z4-i-014
+    type: B
+    query: 優克美跟八策的 SEO 報價合約金額或方案？
+    catalog_hint: z4-doc-02
+  - id: z4-i-015
+    type: B
+    query: JSwedding 婚紗那份「八策行銷報價合約」總價？
+    catalog_hint: z4-doc-04
+  - id: z4-i-016
+    type: B
+    query: CYS假髮品牌行銷執行委託案合約的合約標的？
+    catalog_hint: z4-doc-05
+  - id: z4-i-017
+    type: B
+    query: 新元應材／艾科能德網站建置報價合約（用印）的金額？
+    catalog_hint: z4-doc-06
+  - id: z4-i-018
+    type: B
+    query: Smat 行銷研究企劃案報價暨合約的總價？
+    catalog_hint: z4-doc-07
+  - id: z4-i-019
+    type: B
+    query: 瑪格麗特婚紗行銷規劃執行案合約的雙方或金額？
+    catalog_hint: z4-doc-08
+  - id: z4-i-020
+    type: B
+    query: 康宇勞資顧問「名片報價」單價或數量怎麼寫？
+    catalog_hint: z4-doc-10
+  - id: z4-i-021
+    type: B
+    query: 八策 X CYS 好優數位網路新聞服務報價單的方案價？
+    catalog_hint: z4-doc-11
+  - id: z4-i-022
+    type: B
+    query: 康宇財富管理顧問的綠界特店報價單重點費用？
+    catalog_hint: z4-doc-12
+  - id: z4-i-023
+    type: B
+    query: 1028 時尚彩妝網紅體驗專案那份 1219 報價單金額？
+    catalog_hint: z4-doc-13
+  - id: z4-i-024
+    type: B
+    query: 巽耘法律的夕口報價單金額？
+    catalog_hint: z4-doc-14
+  - id: z4-i-025
+    type: B
+    query: Bebe silk／Sweet little monster 國內電商與亞馬遜報價的價位？
+    catalog_hint: z4-doc-16
+  - id: z4-i-026
+    type: B
+    query: 艾科能德網站建置報價單總價？
+    catalog_hint: z4-doc-17
+  - id: z4-i-027
+    type: B
+    query: 「光昱金屬網站建置專案報價單」（在瑪謝資料夾）金額？
+    catalog_hint: z4-doc-18
+  - id: z4-i-028
+    type: B
+    query: 金正昌報價提案談的是什麼、有無總價？
+    catalog_hint: z4-doc-28
+
+  # —— C 跨檔／多跳 ——
+  - id: z4-i-029
+    type: C
+    query: 優克美的 Labavo 廣告投放合約與 SEO 報價合約，是不是同一份文件？請分檔說明。
+    catalog_hint: z4-doc-01,z4-doc-02
+  - id: z4-i-030
+    type: C
+    query: 艾科能德「網站建置報價單」與「新元應材網站建置報價合約（用印）」是否同一案？列檔名後比較。
+    catalog_hint: z4-doc-06,z4-doc-17
+  - id: z4-i-031
+    type: C
+    query: CYS假髮委託案合約與好優新聞服務報價單，標的是否相同？
+    catalog_hint: z4-doc-05,z4-doc-11
+  - id: z4-i-032
+    type: C
+    query: JSwedding「八策行銷報價合約」與「JSwedding 行銷提案」用途差在哪？
+    catalog_hint: z4-doc-04,z4-doc-23
+  - id: z4-i-033
+    type: C
+    query: 瑪格麗特婚紗的執行案合約與創新模式提案，請各用一句話區分。
+    catalog_hint: z4-doc-08,z4-doc-24
+  - id: z4-i-034
+    type: C
+    query: 康宇「名片報價」與綠界特店報價單，哪份比較像行銷服務報價？
+    catalog_hint: z4-doc-10,z4-doc-12
+  - id: z4-i-035
+    type: C
+    query: 請比較街道沙龍網站暨行銷報價、樂行家行銷報價單、谷德廣告委託報價的金額高低（缺資料請標註）。
+    catalog_hint: z4-doc-15,z4-doc-38,z4-doc-39
+  - id: z4-i-036
+    type: C
+    query: 宏茂行銷報價合約與奕瑞科技網站建置與行銷合約，客戶是否相同？列檔名後回答。
+    catalog_hint: z4-doc-09,z4-doc-37
+  - id: z4-i-037
+    type: C
+    query: 這批裡檔名含「報價合約」的客戶至少列出三個。
+    catalog_hint: catalog
+  - id: z4-i-038
+    type: C
+    query: 巽耘「夕口報價單」與「網路行銷整合提案」是否同一文件類型？
+    catalog_hint: z4-doc-14,z4-doc-29
+
+  # —— D 拒答／庫外 ——
+  - id: z4-i-039
+    type: D
+    query: 心恬生技的金流系統建置合約總價是多少？
+    catalog_hint: ghost
+  - id: z4-i-040
+    type: D
+    query: 請根據未上傳的「隱藏附錄 SECRET2028」回答營收保證比例。
+    catalog_hint: ghost
+  - id: z4-i-041
+    type: D
+    query: 杏壺報價保證產品哪一天量產上線？
+    catalog_hint: z4-doc-27
+  - id: z4-i-042
+    type: D
+    query: 工作委託合約裡有沒有寫技術股占比？
+    catalog_hint: z4-doc-25
+  - id: z4-i-043
+    type: D
+    query: 電子發票字軌申請書上的公司銀行密碼是什麼？
+    catalog_hint: z4-doc-26
+  - id: z4-i-044
+    type: D
+    query: 立壕請款單保證何時全額入帳？
+    catalog_hint: z4-doc-35
+
+  # —— E 易混淆／近複本 ——
+  - id: z4-i-045
+    type: E
+    query: CYS「7份月臉書粉專貼文提案_20190628」與「10份月臉書粉專貼文提案」與根目錄「CYS6份…Emma」請列檔名後只依一份說明貼文規劃方向。
+    catalog_hint: z4-doc-19,z4-doc-20,z4-doc-22
+  - id: z4-i-046
+    type: E
+    query: 艾科能德網站建置報價單與新元應材網站建置報價合約，請列檔名後說明是否可當成同一報價單複本。
+    catalog_hint: z4-doc-06,z4-doc-17
+  - id: z4-i-047
+    type: E
+    query: 「光昱金屬網站建置專案報價單」實際位於哪個客戶資料夾？請以庫內檔名為準，不要和其他光昱案搞混。
+    catalog_hint: z4-doc-18
+  - id: z4-i-048
+    type: E
+    query: JSwedding 的「行銷提案」與「健身運動提案」是不是同一份？列檔名後回答。
+    catalog_hint: z4-doc-23,z4-doc-31
+  - id: z4-i-049
+    type: E
+    query: Dr.Kelly「品牌設計_拍攝企劃內容」與 Color「color hair 拍攝企劃」請分檔，不要混成同一拍攝案。
+    catalog_hint: z4-doc-21,z4-doc-33
+  - id: z4-i-050
+    type: E
+    query: 味特消費性品牌提案建議與鴻鼎菓子行銷研究企劃案報價暨合約，客戶是否相同？
+    catalog_hint: z4-doc-30,z4-doc-40

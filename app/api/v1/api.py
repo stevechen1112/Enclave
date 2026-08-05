@@ -22,7 +22,9 @@ from app.api.v1.endpoints import (
     kb,
     kb_maintenance,
     mobile,
+    payment,
     reports,
+    sso,
     tenants,
     users,
     internal_service_auth,
@@ -30,6 +32,7 @@ from app.api.v1.endpoints import (
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+api_router.include_router(sso.router, prefix="/sso", tags=["sso"])
 api_router.include_router(experience.router, prefix="/experience", tags=["experience"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
@@ -54,6 +57,7 @@ api_router.include_router(mobile.router, prefix="/mobile", tags=["mobile"])
 api_router.include_router(kb_maintenance.router, prefix="/kb-maintenance", tags=["kb-maintenance"])
 # T3-2 — 公司自助管理（Owner/Admin 使用）
 api_router.include_router(company.router, prefix="/company", tags=["company"])
+api_router.include_router(payment.router, prefix="/payment", tags=["payment"])
 # Phase 1 — Knowledge Gateway（統一知識庫搜尋）
 api_router.include_router(gateway.router, tags=["gateway"])
 api_router.include_router(connectors.router, tags=["connectors"])

@@ -25,9 +25,13 @@ class _FakeQuery:
 class _FakeSession:
     def __init__(self, result):
         self._result = result
+        self.info = {}  # RLS GUC helper 會寫 session.info
 
     def query(self, *args, **kwargs):
         return _FakeQuery(self._result)
+
+    def execute(self, *args, **kwargs):
+        return None
 
 
 class _FakeSSOConfig:
@@ -37,6 +41,7 @@ class _FakeSSOConfig:
         self.enabled = True
         self.client_id = "client-id"
         self.client_secret = "client-secret"
+        self.redirect_uri = "http://localhost/callback"
         self.allowed_domains = []
         self.auto_create_user = True
         self.default_role = "employee"

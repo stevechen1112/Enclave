@@ -286,13 +286,17 @@ class RAGFlowHTTPAdapter(BaseAdapter):
             }
         try:
             async with make_httpx_client(timeout=60.0) as client:
-                chunk_resp = await client.get(
+                # 先取 doc 狀態：RAGFlow 解析期間 chunk 會增量出現，
+                # 必須等 run=DONE 才能收 chunks，否則會拿到截斷的部分結果
+                # （2026-08-03 盲測發現：15 頁報告只同步到 2 個表格 chunk）
+                first = await client.get(
                     f"{self.base_url}/api/v1/datasets/{dataset_id}/documents/{job_id}/chunks",
                     headers=self._headers(),
+                    params={"page": 1, "page_size": 100},
                 )
-                if chunk_resp.status_code != 200:
-                    return {"job_id": job_id, "status": "error", "error": chunk_resp.text[:200]}
-                payload = chunk_resp.json()
+                if first.status_code != 200:
+                    return {"job_id": job_id, "status": "error", "error": first.text[:200]}
+                payload = first.json()
                 data = payload.get("data", {})
                 if isinstance(data, list):
                     chunks_raw = data
@@ -300,9 +304,35 @@ class RAGFlowHTTPAdapter(BaseAdapter):
                 else:
                     doc_data = data.get("doc", {})
                     chunks_raw = data.get("chunks", [])
-                run_status = doc_data.get("run", doc_data.get("status", ""))
+                run_status = str(doc_data.get("run", doc_data.get("status", ""))).upper()
+                done = run_status in ("DONE", "3", "SUCCESS", "COMPLETED", "2")
+                if not done:
+                    return {
+                        "job_id": job_id,
+                        "status": "processing",
+                        "run": run_status,
+                        "chunks": [],
+                        "confidence": 0.5,
+                    }
                 if chunks_raw:
-                    chunks = [self._chunk_payload(c) for c in chunks_raw]
+                    # run=DONE 後分頁收齊全部 chunk（RAGFlow page_size 上限 100）
+                    all_chunks = list(chunks_raw)
+                    page = 2
+                    while len(chunks_raw) == 100:
+                        nxt = await client.get(
+                            f"{self.base_url}/api/v1/datasets/{dataset_id}/documents/{job_id}/chunks",
+                            headers=self._headers(),
+                            params={"page": page, "page_size": 100},
+                        )
+                        if nxt.status_code != 200:
+                            break
+                        nd = nxt.json().get("data") or {}
+                        chunks_raw = nd.get("chunks", []) if isinstance(nd, dict) else nd
+                        if not chunks_raw:
+                            break
+                        all_chunks.extend(chunks_raw)
+                        page += 1
+                    chunks = [self._chunk_payload(c) for c in all_chunks]
                     return {
                         "job_id": job_id,
                         "status": "completed",
@@ -310,17 +340,9 @@ class RAGFlowHTTPAdapter(BaseAdapter):
                         "warnings": [],
                         "confidence": 0.9,
                     }
-                if str(run_status).upper() in ("DONE", "3", "SUCCESS", "COMPLETED", "2"):
-                    return {
-                        "job_id": job_id,
-                        "status": "completed",
-                        "run": run_status,
-                        "chunks": [],
-                        "confidence": 0.5,
-                    }
                 return {
                     "job_id": job_id,
-                    "status": "processing",
+                    "status": "completed",
                     "run": run_status,
                     "chunks": [],
                     "confidence": 0.5,

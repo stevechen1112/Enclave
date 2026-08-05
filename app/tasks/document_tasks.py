@@ -72,8 +72,12 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
     4. 寫入 pgvector（PostgreSQL）
     """
     db = SessionLocal()
-    
+
     try:
+        # ADR-012：task session 立即設定租戶 context（enforce 階段的最後防線）
+        from app.services.rls import apply_rls_context
+        apply_rls_context(db, UUID(tenant_id))
+
         # 1. 獲取文件記錄
         doc = crud_document.get(db, document_id=UUID(document_id))
         if not doc:
@@ -87,12 +91,30 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         )
         
         # 3. 解析文件（capability router: native / RAGFlow）
+        # ADR-011：s3:// content_uri 先經後端下載到暫存再解析；本機路徑直接使用
+        parse_path = file_path
+        _tmp_download = None
+        if str(file_path).startswith("s3://"):
+            import tempfile
+            from app.services.storage import get_storage_backend, parse_s3_uri
+
+            _, storage_key = parse_s3_uri(file_path)
+            # 防禦性檢查：key 的租戶前綴必須與 task 租戶一致——
+            # RLS 只約束 DB，擋不住物件儲存層的跨租戶 key 讀取
+            from app.services.storage import assert_key_matches_tenant
+            assert_key_matches_tenant(storage_key, tenant_id)
+            suffix = os.path.splitext(storage_key)[1] or ".bin"
+            fd, _tmp_download = tempfile.mkstemp(prefix="enclave-dl-", suffix=suffix)
+            os.close(fd)
+            get_storage_backend().get_to_file(storage_key, _tmp_download)
+            parse_path = _tmp_download
         try:
             from app.services.parse_pipeline import parse_document
             text_content, metadata, artifact = parse_document(
-                file_path, doc.file_type or "txt",
+                parse_path, doc.file_type or "txt",
                 document_id=UUID(document_id),
                 revision=doc.version or 1,
+                tenant_id=UUID(tenant_id),
             )
             # 儲存 ParseArtifact 到 document_artifacts
             from app.models.knowledge_base import DocumentArtifact
@@ -121,6 +143,12 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             if self.request.retries < self.max_retries:
                 raise self.retry(exc=e, countdown=60)
             return {"status": "failed", "error": str(e)}
+        finally:
+            if _tmp_download and os.path.exists(_tmp_download):
+                try:
+                    os.remove(_tmp_download)
+                except OSError:
+                    pass
         
         # 3.5 儲存品質報告
         crud_document.update(
@@ -221,6 +249,56 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         doc.status = "completed"
         doc.chunk_count = inserted
         doc.quality_report = metadata
+        # ADR-008：catalog 粒度 genre 標註；標註失敗不得擋住入庫
+        try:
+            from app.services.genre_tagger import tag_document
+            tag_document(doc, content_sample=text_content[:2000])
+        except Exception as genre_exc:
+            logger.warning("genre tagging failed (non-blocking): %s", genre_exc)
+        # F4：跨語條款投影（非阻塞；失敗不影響 completed）
+        try:
+            from app.services.clause_projection import needs_clause_projection
+            if needs_clause_projection(doc.filename or "", text_content[:2000]):
+                import asyncio
+                import openai as _openai
+                from app.services.clause_projection import (
+                    extract_clauses_with_llm,
+                    upsert_clause_projection,
+                )
+                provider = str(getattr(settings, "LLM_PROVIDER", "openai")).lower()
+                client = None
+                model = ""
+                if provider == "gemini" and getattr(settings, "GEMINI_API_KEY", ""):
+                    client = _openai.AsyncOpenAI(
+                        api_key=settings.GEMINI_API_KEY,
+                        base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                    )
+                    model = getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
+                elif provider == "openai" and getattr(settings, "OPENAI_API_KEY", ""):
+                    client = _openai.AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+                    model = getattr(settings, "OPENAI_MODEL", "gpt-4o")
+                if client and model:
+                    clauses = asyncio.run(
+                        extract_clauses_with_llm(
+                            text_content,
+                            llm_client=client,
+                            model=model,
+                        )
+                    )
+                    upsert_clause_projection(
+                        db=db,
+                        document_id=doc.id,
+                        revision=doc.version or 1,
+                        clauses=clauses,
+                        source_chars=len(text_content or ""),
+                    )
+                    logger.info(
+                        "clause_projection built for %s: %s clauses",
+                        doc.filename,
+                        len(clauses),
+                    )
+        except Exception as proj_exc:
+            logger.warning("clause projection failed (non-blocking): %s", proj_exc)
         db.add(doc)
         payload = {
             "filename": doc.filename,
@@ -235,10 +313,15 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             "ragflow_already_ingested": bool(metadata.get("ragflow_already_ingested")),
             "ragflow_doc_ids": list(metadata.get("ragflow_doc_ids") or []),
         }
-        dataset_id = os.getenv("RAGFLOW_DATASET_ID", "").strip()
+        # ADR-013：sidecar 歸屬以 tenant_sidecar_binding 為唯一權威
+        from app.services.sidecar_binding import (
+            resolve_ragflow_dataset_id,
+            resolve_weknora_kb_id,
+        )
+        dataset_id = resolve_ragflow_dataset_id(db, UUID(tenant_id))
         if dataset_id:
             payload["dataset_id"] = dataset_id
-        kb_id = os.getenv("WEKNORA_DEFAULT_KB_ID", "").strip()
+        kb_id = resolve_weknora_kb_id(db, UUID(tenant_id))
         if kb_id:
             payload["kb_id"] = kb_id
         # DD-H09：parse 已寫入 RAGFlow 時先登記 mapping，outbox 只 reconcile
@@ -700,3 +783,4 @@ def watcher_delete_file_task(self, file_path: str, tenant_id: str):
 
     finally:
         db.close()
+

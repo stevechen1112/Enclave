@@ -1,0 +1,297 @@
+【JSwedding 行銷提案.pdf】
+JSwedding
+精品婚紗
+新媒體廣告
+策略
+KDBC
+八策數位品牌顧問
+廣告新風向
+數位廣告超越電視廣告
+成為第一大媒體通路
+2016年
+成長率33.69%
+數位廣告
+電視廣告
+-6%
+戶外廣告
+-8.8%
+報紙
+-21%
+廣播
+-23.8%
+雜誌
+-24.5%
+數位媒體改變人的行為
+重塑市場規則
+• 98% 用戶常使用兩種以上數位裝置
+• 手機與平板成為主要接收資訊與雙向溝通媒介
+E 12:56 PM
+Aa
+Chat
+Music
+Store
+News
+Organizer
+Internet
+%
+Business
+i
+Help
+Securi
+Search
+Certificates
+Downloads
+Settings
+Messages
+Camera
+i
+Aa
+%
+Go Digital
+然而！
+數位行銷工具層出不窮
+運用上容易見樹不見林
+如何影響
+消費者行為
+一直以來都是
+行銷的關鍵要題
+消費者的決策行為流程
+發現
+• 消費者透過各種廣告媒體的曝光獲知產品 (銷售) 訊息。
+關注
+• 當廣告訊息符合需求，消費者將想要更深入、詳細的特定資訊。
+思考
+• 消費者開始思考該項產品 (服務) 與其他選擇的比較，搜尋相關評價、口碑狀況。
+購買
+• 最後購買決定。
+因此，不同目標階段，採取不同行銷戰術(工具)
+發現 關注 思考 購買
+建立品牌形象 臉書社群行銷 塑造網路口碑 客戶消費追蹤
+網路廣告投放 精準再行銷廣告 01 0110 0001 0110 1 媒體論壇操作 預算效益分析
+《數位廣告提案》
+KDBC
+八策數位品牌顧問
+<html <?php language_attributes(); ?>>
+<head>
+18 <meta charset="<?php bloginfo( 'charset' ); ?>">
+19 <meta name="viewport" content="width=device-width">
+20 <title><?php wp_title( '|', true, 'right' ); ?></title>
+21 <link rel="profile" href="http://gmpg.org/xfn/11">
+22 <link rel="pingback" href="<?php bloginfo( 'pingback_url' ); ?>">
+23 <?php fruitful_get_favicon(); ?>
+24 <!--[if lt IE 9]><script src="<?php echo get_template_
+25 <?php wp_head(); ?>
+26 </head>
+27 <body <?php body_class();?>>
+28 <div id="page-header" class="hfeed site">
+29 <?php
+30 $theme_options = fruitful_get_theme_options();
+31 $logo_pos = $menu_pos = '';
+32 if (isset($theme_options['logo_position'])) {
+33 $logo_pos = esc_attr($theme_options['logo_position']);
+34 }
+35 if (isset($theme_options['menu_position'])) {
+$menu_pos = esc_attr($theme_options['menu_position']);
+}
+$logo_pos_class = fruitful_get_logo_position_class($logo_pos);
+
+---
+
+【JSwedding 行銷提案.pdf】
+<?php fruitful_get_favicon(); ?>
+24 <!--[if lt IE 9]><script src="<?php echo get_template_
+25 <?php wp_head(); ?>
+26 </head>
+27 <body <?php body_class();?>>
+28 <div id="page-header" class="hfeed site">
+29 <?php
+30 $theme_options = fruitful_get_theme_options();
+31 $logo_pos = $menu_pos = '';
+32 if (isset($theme_options['logo_position'])) {
+33 $logo_pos = esc_attr($theme_options['logo_position']);
+34 }
+35 if (isset($theme_options['menu_position'])) {
+$menu_pos = esc_attr($theme_options['menu_position']);
+}
+$logo_pos_class = fruitful_get_logo_position_class($logo_pos);
+$menu_pos_class = fruitful_get_menu_position_class($menu_pos);
+$responsive_menu_type = esc_attr($theme_options['responsive_menu_type']);
+
+---
+
+【JSwedding 行銷提案.pdf】
+《提案一》
+PageRank
+是指網頁被看到
+的可能性
+
+JSwedding
+快速提升能見度
+
+Google
+PageRank
+《提案二》
+
+YouTube廣告
+YouTube 搜尋 登入
+陶喆 - 因為愛 Just Love《富邦慈善基金會年度代言主題曲》
+GreatGreatTV 訂閱 5 部影片
+「爸爸在打工 媽媽也很辛苦 我們要用力讀書 長大後做有用的人」
+unicef 聯合國兒童基金會
+unicef (聯合國兒童基金會) 支持 UNICEF 「兒童之友」, 給安哥拉的兒童送上一個希望! 按此支持
+0:17 / 4:00 34,914
+307 人喜歡, 3 人不喜歡
+UNICEF 《重‧一天空下》非洲安哥拉親善探訪特輯
+購買支持 UNICEF 「兒童之友」, 給安哥拉的兒童送上一個希望 按此支持
+Google 提供的贊助商廣告
+林俊傑 Patrick@鑽石夜總會表演第二篇肉品！ 上傳者: BettyBettyBetty 觀看次數為 9,241 21:07
+五月天-DNA創造演唱會全紀錄 Part1 上傳者: dennis20000000 觀看次數為 34,816 4:43:37
+商品 My Everything 小小的我.wmv 上傳者: sannie19861222 觀看次數為 10,340 3:30
+
+網路廣告投放不是
+その日は、消えない。
+WATABE WEDDING
+AMOR
+愛情來了婚紗攝影
+WHITE HOUSE
+白宮精品婚紗
+1987
+七彩玫瑰
+7Rose
+全球蜜月婚拍
+Queena wedding
+JOJO 婚紗 攝影
+Professional Wedding Photography
+綿谷 結婚式
+WATAYA WEDDING
+Andy Chen
+PHOTOGRAPHY
+
+---
+
+�� 10,340 3:30
+
+網路廣告投放不是
+その日は、消えない。
+WATABE WEDDING
+AMOR
+愛情來了婚紗攝影
+WHITE HOUSE
+白宮精品婚紗
+1987
+七彩玫瑰
+7Rose
+全球蜜月婚拍
+Queena wedding
+JOJO 婚紗 攝影
+Professional Wedding Photography
+綿谷 結婚式
+WATAYA WEDDING
+Andy Chen
+PHOTOGRAPHY
+
+《80後半裸婚風潮》福利攝工作室 | 婚紗攝影台中二萬有找
+廣告 www.mashup.com.tw/婚攝包套/C...
+自助婚紗包套19,800元，電子檔全贈，另有訂婚、宴客禮服單租借服務，免費諮詢！LINE預約成功再贈訂製西裝。包套送彩妝...
+新人精省DIY專案$9,800 包套婚紗B方案2
+撥打 0932 584 000
+台中市太原北路104號
+AMOR愛情來了莫兒禮服春夏新款 | 單租禮服優惠中,免費預約體驗
+廣告 www.amorwed.tw/
+莫兒禮服高級質感設計師款婚紗禮服出租,您穿得高雅美麗的出嫁,是父母最引以為傲的一刻。孕寫真拍攝。墾丁旅拍。單租莫兒禮...
+台中孕婦寫真天賜的禮物 婚禮紀錄之酷爆
+
+早鳥優惠婚紗包套26組28,800元 | 公證結婚隱藏版方案9,900元
+廣告 www.gvctw.com/高雄婚紗嚴選/高...
+早鳥優惠墾丁或台南自助婚紗19800元檔案全贈，讓高雄紀梵希精品婚紗圓你一生的夢。高雄平價自助婚紗檔案全贈。服務:...
+最新婚紗攝影作品 影片分享 創意攝
+婚紗包套可優惠 $20,000
+有效期間：7月1日 - 7月31日
+撥打 07 285 3232
+AMOR愛情來了莫兒禮服春夏新款 | 單租禮服優惠中,免費預約體驗
+廣告 www.amorwed.tw/
+莫兒禮服高級質感設計師款婚紗禮服出租,您穿得高雅美麗的出嫁,是父母最引以為傲的一刻。罩妝新娘秘書。墾丁旅拍。婚禮現場...
+時尚中國服龍鳳掛 婚禮紀錄之酷爆伴郎
+
+---
+
+【JSwedding 行銷提案.pdf】
+想在日本拍櫻花，還來得及 | 日本老字號婚紗攝影公司
+廣告 www.la-viephotography-hk.com/
+婚紗、和服、化妝、翻譯都在有方案內，只有La-vie的北海道櫻花婚紗。
+北海道婚照及婚禮 沖繩婚照及婚禮 新娘婚紗 香港婚展會
+7Rose旅拍婚紗 紀錄幸福的美好 | 線上海外婚紗展 全球6大熱點優惠
+廣告 www.7rose.tw/7Rose全球旅拍/線上海外婚紗展
+全球蜜月拍婚紗！峇里島43800/京都88800/倫敦82800/台北41800/三亞36800等，立即啟程。隨時出發免湊團。專業海外拍攝團隊。在地直營團隊遍布全球。價錢透明公開。專屬造型師全程跟拍。服務:婚紗攝影, 海外婚紗攝影, 蜜月婚紗攝影, 國外拍婚紗。
+唯美海外婚紗攝影作品集 倫敦拍婚紗 獨家價$79800 今年最夯蜜月婚拍精選
+《80後半裸婚風潮》福利攝工作室 | 台中婚紗拍攝二萬有找
+廣告 www.mashup.com.tw/婚攝包套/C方案
+自助婚紗包套19,800元，電子檔全贈，另有訂婚、宴客禮服單租借服務，免費諮詢！
+什麼，沖繩禮婚婚攝只要5萬多？ | 「華德培」沖繩包套限時特惠中
+廣告 www.watabe-wedding.com.tw/華德培婚禮/沖繩婚攝+婚禮
+我們保證：婚禮教堂中拍攝、無須負擔攝影造型師旅費、禮服當地挑！心動了就要馬上行動。40多座直營教堂，選擇豐富。涵蓋全世界120多個據點。日本40多年婚禮服務經驗。
+【自助婚紗心得】拍婚紗從頭到腳自己來！從買婚紗開始省起 (禮) @ Hi~I...
+joping929.pixnet.net/blog/.../180435444- 【自助婚紗心得】拍婚紗從頭到腳自己來...
+
+---
+
+【JSwedding 行銷提案.pdf】
+選擇豐富。涵蓋全世界120多個據點。日本40多年婚禮服務經驗。
+【自助婚紗心得】拍婚紗從頭到腳自己來！從買婚紗開始省起 (禮) @ Hi~I...
+joping929.pixnet.net/blog/.../180435444- 【自助婚紗心得】拍婚紗從頭到腳自己來...
+首先 怕浪費大家的祝福,我先澄清一下" 我還沒要結婚 " 只是這陣子看著身邊好友們都在籌備結婚, 心裡就默默的思考著...... 如果是我自己,我會怎麼規劃我的婚禮.
+搭配精準的再行銷廣告
+讓廣告跟著有需求的潛客
+
+---
+
+【JSwedding 行銷提案.pdf】
+1.客戶造訪你的網站
+你的網站
+
+2.Google在客戶瀏覽器埋cookie
+cookie
+
+3.客戶瀏覽其他網站
+其他網站
+
+4.第一時間再次向他們投遞廣告
+AD
+AD
+AD
+AD
+
+• 吸引任何曾瀏覽過
+JSwedding官方網站、廣告
+等潛在客戶，在離開後，待
+該客戶產生需求時，在第一
+時間精準傳遞廣告給他(她)。
+• 投放的廣告受眾不是隨
+便的路人甲乙丙，而是那些
+對品牌有初步認識或對產品
+感興趣的大眾。
+《每月報表》廣告效益分析
+行銷名言「我知道我的廣告預算有一半浪費了，只是不知道是哪一半。」
+Month 5-6 《行銷綜效》
+Google廣告 + 網頁自然搜尋
+Month 3-4 《PageRank》網頁排名開始發酵
+Month 2 《強化能見度》 輔以GDN多媒體聯播網
+Month 1 《啟動能見度》
+搜尋廣告強勢首頁曝光
+每月經費參考表：
+項目	內容	費用預估
+競爭同業與消費者分析	
+• 同業數位媒體策略與廣告投放分析
+• 潛在消費者採購行為分析
+• 核心搜尋關鍵字規劃	
+網路廣告投放	
+• Google 廣告：關鍵字廣告、多媒體網頁廣告、Youtube廣告、Google店家等
+• 廣告文案撰寫與廣告banner設計
+• 廣告投放策略與後台設定
+30,000元／月
+PageRank網頁排名	
+• JSwedding網站檢視診斷
+• 流量來源渠道規劃
+• 後端程式操作與實際引流	
+行銷效益追蹤優化	
+• 每月廣告投放與網頁排名效益報表

@@ -88,6 +88,31 @@ def create_usage_record(
     return db_obj
 
 
+def update_usage_record(
+    db: Session,
+    record_id: UUID,
+    *,
+    input_tokens: int = 0,
+    output_tokens: int = 0,
+    pinecone_queries: int = 0,
+    embedding_calls: int = 0,
+    estimated_cost: float = 0.0,
+) -> Optional[UsageRecord]:
+    """更新已預留的用量記錄（finalize chat quota reservation）。"""
+    db_obj = db.query(UsageRecord).filter(UsageRecord.id == record_id).first()
+    if not db_obj:
+        return None
+    db_obj.input_tokens = input_tokens
+    db_obj.output_tokens = output_tokens
+    db_obj.pinecone_queries = pinecone_queries
+    db_obj.embedding_calls = embedding_calls
+    db_obj.estimated_cost_usd = estimated_cost
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj
+
+
 def get_usage_summary(
     db: Session,
     *,

@@ -1,0 +1,476 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-03T22:46:30",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 105.3,
+ "summary": {
+  "total": 27,
+  "pass": 27,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "B01",
+   "category": "blind_scan",
+   "query": "根據文件《113年營所稅申報書_E42八策.pdf》，這是哪一年度的營利事業所得稅結算申報書？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "113"
+   ],
+   "spans_hit": [
+    "113"
+   ],
+   "answer": "## 答案\n\n這是 **民國113年度**的營利事業所得稅結算申報書，即 **西元2024年度**。\n\n根據《113年營所稅申報書_E42八策.pdf》所載：\n\n- 「113年度營利事業所得稅結算」\n- 所得期間為「自民國113年1月1日起至113年12月31日止」\n\n另同份文件中的「112年度未分配盈餘」是另一項申報內容，不是本次營利事業所得稅結算申報的年度。\n\n[建議問題]\n1. 這份申報書的實際申報日期是哪一天？\n2. 這份申報書的所得期間為何？\n3. 申報的營利事業名稱及統一編號為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B02",
+   "category": "blind_scan",
+   "query": "根據文件《113年營所稅申報書_E42八策.pdf》，納稅的公司名稱是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 公司名稱\n\n納稅公司為 **八策數位股份有限公司**，統一編號 **83028948**。\n\n依據《113年營所稅申報書_E42八策.pdf》的網路申報書附件資料封面及損益及稅額計算表所載。\n\n> 注意：文件部分「營利事業所得基本稅額申報表」片段記載為「八聚數位股份有限公司」，但同一統一編號仍為 83028948；依申報封面及多處資料判斷，「八聚」應為文字辨識或登載差異，公司名稱以 **八策數位股份有限公司** 為準。\n\n[建議問題]\n1. 該公司的營利事業統一編號是多少？\n2. 該公司113年度自行繳納的稅額是多少？\n3. 該公司的申報日期與主管稽徵機關為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B03",
+   "category": "blind_scan",
+   "query": "根據文件《113年營所稅申報書_E42八策.pdf》，統一編號是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "根據《113年營所稅申報書_E42八策.pdf》，八策數位股份有限公司的**營利事業統一編號為 83028948**。\n\n[建議問題]\n1. 該公司的營利事業名稱是什麼？\n2. 該公司的稅籍編號是什麼？\n3. 該公司的營業地址是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B04",
+   "category": "blind_docx",
+   "query": "根據文件《1140213-拉法(存奕官網)_報價單.docx》，本次報價的未稅金額是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "9,600"
+   ],
+   "spans_hit": [
+    "9,600"
+   ],
+   "answer": "## 本次報價未稅金額\n\n根據《1140213-拉法(存奕官網)_報價單.docx》，「存奕官網 Redesign」費用為 **新台幣 9,600 元（未稅）**。\n\n[建議問題]\n1. 本次報價包含哪些設計項目？\n2. 報價單載明的付款方式有哪些？\n3. 頁面設計最多可修改幾次？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B05",
+   "category": "blind_docx",
+   "query": "根據文件《1140213-拉法(存奕官網)_報價單.docx》，匯款銀行是哪一家？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "玉山銀行"
+   ],
+   "spans_hit": [
+    "玉山銀行"
+   ],
+   "answer": "## 匯款銀行\n\n根據《1140213-拉法(存奕官網)_報價單.docx》的匯款資訊，匯款銀行為 **玉山銀行中山分行**。\n\n[建議問題]\n1. 匯款戶名是什麼？\n2. 匯款帳號是多少？\n3. 報價單提供哪些付款方式？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B06",
+   "category": "blind_docx",
+   "query": "根據文件《1140213-拉法(存奕官網)_報價單.docx》，存奕官網 Redesign 包含哪些頁面的重新設計？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "首頁",
+    "療程頁",
+    "新知頁"
+   ],
+   "spans_hit": [
+    "首頁",
+    "療程頁",
+    "新知頁"
+   ],
+   "answer": "## Redesign 頁面範圍\n\n根據《1140213-拉法(存奕官網)_報價單.docx》，存奕官網 Redesign 包含以下頁面的重新設計：\n\n1. **首頁**\n2. **療程頁**\n3. **新知頁**\n\n補充說明：上述頁面將提供初版，**至多修改 3 次**；超過 3 次將另行計價。若受網站後台編輯器限制，設計會依原有編輯器的功能進行調整。\n\n[建議問題]\n1. 此次存奕官網 Redesign 的報價是多少？\n2. 頁面設計可以修改幾次？\n3. 本報價單的付款方式有哪些？",
+   "verdict": "pass",
+   "note": "spans 3/3"
+  },
+  {
+   "id": "B07",
+   "category": "blind_resume",
+   "query": "根據文件《吳文曄-履歷.pdf》，應徵者的最高學歷是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "靜宜",
+    "碩士"
+   ],
+   "spans_hit": [
+    "靜宜",
+    "碩士"
+   ],
+   "answer": "## 最高學歷\n\n應徵者的最高學歷為 **私立靜宜大學食品營養學系營養與保健組理學碩士**，於 **2019 年 1 月畢業**。\n\n根據《吳文曄-履歷.pdf》的學歷資料及碩士畢業證書內容，其獲授予 **理學碩士學位**。\n\n[建議問題]\n1. 應徵者具備哪些專業證照？\n2. 應徵者有多少年工作經驗？\n3. 應徵者有哪些營養或食品研發相關經歷？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "B08",
+   "category": "blind_resume",
+   "query": "根據文件《吳文曄-履歷.pdf》，應徵者希望的職稱是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "營養師"
+   ],
+   "spans_hit": [
+    "營養師"
+   ],
+   "answer": "根據《吳文曄-履歷.pdf》的「求職條件」，應徵者希望的職稱是：**營養師**。\n\n[建議問題]\n1. 應徵者希望從事哪些職類？\n2. 應徵者具備哪些營養師相關證照？\n3. 應徵者希望的工作地點是哪裡？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B09",
+   "category": "blind_resume",
+   "query": "根據文件《吳文曄-履歷.pdf》，應徵者在生寶國際生技擔任什麼職務？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "研發營養師"
+   ],
+   "spans_hit": [
+    "研發營養師"
+   ],
+   "answer": "## 回答\n\n應徵者吳文曄於**生寶國際生技股份有限公司擔任「研發營養師」**，任職期間為 **2024 年 4 月至 2025 年 9 月**。\n\n根據《吳文曄-履歷.pdf》，其工作內容包括保健食品配方設計、新產品與原料開發、成本分析、營養教育訓練、消費者營養諮詢，以及產品文案與衛教內容審核等。\n\n[建議問題]\n1. 她在生寶國際生技的主要工作成果有哪些？\n2. 她具備哪些營養師相關證照？\n3. 她過去還曾在哪些機構擔任營養師？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B10",
+   "category": "blind_report",
+   "query": "根據文件《巨大機械9921深度研究報告.pdf》，巨大機械旗下有哪些品牌？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Giant",
+    "Liv",
+    "Momentum",
+    "CADEX"
+   ],
+   "spans_hit": [
+    "Giant",
+    "Liv",
+    "Momentum",
+    "CADEX"
+   ],
+   "answer": "## 巨大機械旗下品牌\n\n根據《巨大機械9921深度研究報告.pdf》第 3 頁，公司旗下共有以下 **4 個品牌**：\n\n1. **Giant**：高性能自行車  \n2. **Liv**：女性專屬自行車  \n3. **Momentum**：都會通勤自行車  \n4. **CADEX**：高端自行車零組件  \n\n[建議問題]\n1. 巨大機械各品牌的市場定位有何差異？\n2. 巨大機械的主要營收市場分布為何？\n3. 巨大機械的 E-Bike 發展目標是什麼？",
+   "verdict": "pass",
+   "note": "spans 4/4"
+  },
+  {
+   "id": "B11",
+   "category": "blind_report",
+   "query": "根據文件《巨大機械9921深度研究報告.pdf》，投資評等與12個月目標股價區間分別是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "審慎觀察",
+    "95",
+    "120"
+   ],
+   "spans_hit": [
+    "審慎觀察",
+    "95",
+    "120"
+   ],
+   "answer": "## 投資評等與目標價\n\n根據《巨大機械9921深度研究報告.pdf》第 14 頁「結論與投資評等」：\n\n- **投資評等：**審慎觀察（Neutral / Watch）\n- **12 個月目標股價區間：** **NT$95～NT$120**\n\n另需注意，報告第 5 頁的估值情境分析曾列出「基準（中性）情境」目標價 **NT$126～NT$176**，但該數字屬情境模擬；報告執行摘要及最終結論明確採用的正式 **12 個月目標價為 NT$95～NT$120**。\n\n[建議問題]\n1. 報告對巨大機械的主要多頭與空頭論點是什麼？\n2. 12 個月目標價 NT$95～NT$120 的主要估值依據為何？\n3. 報告建議投資人關注哪些營運指標？",
+   "verdict": "pass",
+   "note": "spans 3/3"
+  },
+  {
+   "id": "B12",
+   "category": "blind_report",
+   "query": "根據文件《巨大機械9921深度研究報告.pdf》，2024年中國大陸約佔巨大營收多少比重？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "36%"
+   ],
+   "spans_hit": [
+    "36%"
+   ],
+   "answer": "## 答案\n\n根據《巨大機械9921深度研究報告.pdf》第 3～4 頁，**2024 年中國大陸約占巨大機械總營收的 36%**，估計營收約為 **新台幣 200 億元**，並為其最大單一市場。\n\n[建議問題]\n1. 2024 年巨大機械各地區的營收占比分別是多少？\n2. 中國市場需求下滑對巨大機械有哪些風險？\n3. 歐洲市場約占巨大機械多少營收？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B13",
+   "category": "blind_report",
+   "query": "根據文件《巨大機械9921深度研究報告.pdf》，E-Bike 目前佔集團營收比重約多少？2030 年目標是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "50%"
+   ],
+   "spans_hit": [
+    "50%"
+   ],
+   "answer": "## E-Bike 營收占比\n\n根據《巨大機械9921深度研究報告.pdf》第 3 頁：\n\n- **目前占集團營收比重：約 20%～30%**\n- **2030 年目標：提升至 50%**\n\n換言之，巨大機械計畫讓 E-Bike 的營收占比在 2030 年達到集團營收的一半。\n\n[建議問題]\n1. E-Bike 營收占比提升，預期會如何影響巨大機械的毛利率？\n2. 報告如何評估 E-Bike 市場的長期成長趨勢？\n3. 巨大機械達成 2030 年占比目標的主要風險有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B14",
+   "category": "blind_deck",
+   "query": "根據文件《亞馬遜行銷報價.pdf》，行銷規劃分為哪四個階段？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Awareness",
+    "Acquisition",
+    "Purchase",
+    "Retention"
+   ],
+   "spans_hit": [
+    "Awareness",
+    "Acquisition",
+    "Purchase",
+    "Retention"
+   ],
+   "answer": "## 行銷規劃的四個階段\n\n根據《亞馬遜行銷報價.pdf》的「各行銷階段規劃」，行銷規劃分為以下四個階段：\n\n1. **Awareness Gap（建立品牌／產品網路能見度）**\n2. **Acquisition Gap（提升好感度／產品興趣）**\n3. **Purchase Gap（轉換購買）**\n4. **Retention Gap（強化顧客關係）**\n\n[建議問題]\n1. 各行銷階段分別包含哪些執行項目？\n2. Amazon 產品上架作業包含哪些準備事項？\n3. Amazon 站內行銷活動如何規劃？",
+   "verdict": "pass",
+   "note": "spans 4/4"
+  },
+  {
+   "id": "B15",
+   "category": "blind_deck",
+   "query": "根據文件《亞馬遜行銷報價.pdf》，產品上架頁面準備中，產品要點（Bulletin Points）有幾項？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "5"
+   ],
+   "spans_hit": [
+    "5"
+   ],
+   "answer": "## 答案\n\n產品要點（Bulletin Points）共有 **5 項**。\n\n根據《亞馬遜行銷報價.pdf》「Amazon 產品上架頁面準備」，準備項目包含「**產品 5 項要點（5 Bulletin Points）**」，用以重點強調產品特點。\n\n[建議問題]\n1. Amazon 產品上架頁面還需準備哪些項目？\n2. 產品 5 項要點的主要用途是什麼？\n3. 文件中產品上架作業包含哪些服務？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B16",
+   "category": "blind_gov",
+   "query": "根據文件《臺北市產業發展獎勵補助計畫申請簡介.pdf》，產品技術研發每計畫補助上限是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "500萬"
+   ],
+   "spans_hit": [
+    "500萬"
+   ],
+   "answer": "## 產品技術研發補助上限\n\n根據《臺北市產業發展獎勵補助計畫申請簡介.pdf》，產品技術研發每計畫補助：\n\n- **最高為計畫總經費的 50%**\n- **金額上限為新臺幣 500 萬元**\n\n[建議問題]\n1. 產品技術研發補助的申請資格是什麼？\n2. 研發計畫的執行期限有何規定？\n3. 研發補助款可編列哪些費用？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B17",
+   "category": "blind_gov",
+   "query": "根據文件《臺北市產業發展獎勵補助計畫申請簡介.pdf》，青年創業融資貸款最高額度多少？利息如何補貼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "200萬",
+    "全額"
+   ],
+   "spans_hit": [
+    "200萬",
+    "全額"
+   ],
+   "answer": "## 青年創業融資貸款\n\n根據《臺北市產業發展獎勵補助計畫申請簡介.pdf》：\n\n- **最高貸款額度：新臺幣 200 萬元**\n- **利息補貼方式：由臺北市政府全額補貼利息**\n\n文件另載「創業融資利息」為年利率 2.5%、最高補貼 2 年，但該內容屬一般創業融資利息補貼；青年創業融資貸款則明確標示為「利息市府全額補貼」。\n\n[建議問題]\n1. 青年創業融資貸款的申請資格為何？\n2. 青創融資貸款可以和臺北市獎勵補助同時申請嗎？\n3. 中小企業融資貸款的最高額度及利率為何？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "B18",
+   "category": "blind_gov",
+   "query": "根據文件《臺北市產業發展獎勵補助計畫申請簡介.pdf》，房地稅補貼的最高金額是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "5000萬"
+   ],
+   "spans_hit": [
+    "5000萬"
+   ],
+   "answer": "## 房地稅補貼最高金額\n\n房屋稅／地價稅補貼的**總金額最高為新臺幣 5,000 萬元**。\n\n補貼方式為：\n\n- 前 2 年：最高全額補貼\n- 後 3 年：最高補貼 50%\n- 5 年合計：最高新臺幣 5,000 萬元\n\n根據《臺北市產業發展獎勵補助計畫申請簡介.pdf》「房屋稅／地價稅補貼」說明。\n\n[建議問題]\n1. 房屋稅／地價稅補貼的申請資格是什麼？\n2. 房地租金補貼的最高金額及補貼期間為何？\n3. 房地稅補貼與租金補貼可以同時申請嗎？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B19",
+   "category": "blind_manual",
+   "query": "根據文件《基礎操作教學手冊.pdf》，NUEIP 系統的登入網址是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "portal.nueip.com/login"
+   ],
+   "spans_hit": [
+    "portal.nueip.com/login"
+   ],
+   "answer": "## NUEIP 系統登入網址\n\n根據《基礎操作教學手冊.pdf》的「登入方式」，NUEIP 系統登入網址為：\n\n**https://portal.nueip.com/login**\n\n另外，亦可使用快速登入網址，格式為：\n\n**https://portal.nueip.com/login/公司代碼/員工編號**\n\n例如：`https://portal.nueip.com/login/NUEIPTC/1001`\n\n[建議問題]\n1. 登入 NUEIP 系統需要輸入哪些資料？\n2. 如何取得公司的快速登入網址？\n3. NUEIP 建議使用哪一款瀏覽器？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B20",
+   "category": "blind_manual",
+   "query": "根據文件《基礎操作教學手冊.pdf》，系統支援哪些第三方登入方式？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Google",
+    "Microsoft",
+    "LINE",
+    "Facebook"
+   ],
+   "spans_hit": [
+    "Google",
+    "Microsoft",
+    "LINE",
+    "Facebook"
+   ],
+   "answer": "## 支援的第三方登入方式\n\n根據《基礎操作教學手冊.pdf》「第三方登入」章節，系統目前支援以下 4 種方式：\n\n- Google\n- Microsoft\n- LINE\n- Facebook\n\n使用者可至首頁左側選單的「個人設定」→「第三方帳號登入授權綁定」，綁定帳號後即可快速登入系統。\n\n[建議問題]\n1. 如何綁定第三方帳號？\n2. 系統的一般帳號密碼登入方式是什麼？\n3. 如何解除或變更第三方帳號綁定？",
+   "verdict": "pass",
+   "note": "spans 4/4"
+  },
+  {
+   "id": "B21",
+   "category": "blind_manual",
+   "query": "根據文件《基礎操作教學手冊.pdf》，主管簽核作業的說明在第幾頁？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "61"
+   ],
+   "spans_hit": [
+    "61"
+   ],
+   "answer": "根據《基礎操作教學手冊.pdf》目錄，**主管簽核作業的說明位於第 61 頁（P61）**。\n\n[建議問題]\n1. 主管如何進行簽核或退回申請？\n2. 被指定為簽核主管卻無法進入功能時，該如何處理？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B22",
+   "category": "blind_audit",
+   "query": "根據文件《【將能數位行銷】-巽耘法律事務所-健診報告.pdf》，該網站目前被搜尋引擎收錄的頁數是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "69"
+   ],
+   "spans_hit": [
+    "69"
+   ],
+   "answer": "## 網站收錄頁數\n\n根據《【將能數位行銷】-巽耘法律事務所-健診報告.pdf》的「網頁索引數（Page Index）」內容，網站 **https://sylaw.tw/** 當時被搜尋引擎收錄的頁數為 **69 頁**。\n\n[建議問題]\n1. 該網站是否已正常設定 Robots.txt？\n2. 該網站是否已提交 Sitemap.xml？\n3. 報告對提升網站收錄量有哪些建議？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B23",
+   "category": "blind_audit",
+   "query": "根據文件《【將能數位行銷】-巽耘法律事務所-健診報告.pdf》，報告對該網站 sitemap.xml 的診斷結果是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "尚未",
+    "提交"
+   ],
+   "spans_hit": [
+    "尚未",
+    "提交"
+   ],
+   "answer": "## Sitemap.xml 診斷結果\n\n根據《【將能數位行銷】-巽耘法律事務所-健診報告.pdf》第 8～9 頁：\n\n- Google Search Console 顯示**已提交 0 個 Sitemap**，並提示「找不到這個網站的 Sitemap」。\n- 報告判定 `https://sylaw.tw/` **尚未提交 sitemap.xml 檔案**。\n- 建議：**向 Google Search Console 提交 sitemap.xml**，以利搜尋引擎快速了解網站內容架構。\n- 在技術面小結中，此項標記為「△」，且列為**高優先程度**改善項目。\n\n[建議問題]\n1. 報告對 Robots.txt 的診斷結果是什麼？\n2. 報告列出的高優先程度技術改善項目有哪些？\n3. Sitemap.xml 對網站 SEO 有什麼作用？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "B24",
+   "category": "blind_multihop",
+   "query": "《113年營所稅申報書_E42八策.pdf》與《1140213-拉法(存奕官網)_報價單.docx》這兩份文件中的統一編號是否相同？各是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## 比對結果\n\n兩份文件中的統一編號**相同**，皆為 **83028948**。\n\n- 《113年營所稅申報書_E42八策.pdf》：**83028948**\n- 《1140213-拉法(存奕官網)_報價單.docx》：**83028948**\n\n兩份文件所載公司名稱亦均為「八策數位股份有限公司」。\n\n[建議問題]\n1. 兩份文件中的公司地址是否相同？\n2. 報價單中的報價金額與付款條件為何？\n3. 營所稅申報書中的申報日期與自繳稅額為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B25",
+   "category": "blind_unscoped",
+   "query": "庫內新上傳的履歷中，希望職稱是營養師的應徵者是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "吳文曄"
+   ],
+   "spans_hit": [
+    "吳文曄"
+   ],
+   "answer": "## 符合條件的應徵者\n\n**吳文曄**\n\n根據《吳文曄－履歷》，其求職條件明確記載「**希望職稱：營養師**」，並持有高考營養師證書。\n\n[建議問題]\n1. 吳文曄的學歷與工作經歷為何？\n2. 吳文曄是否具有營養師相關工作經驗？\n3. 吳文曄的聯絡方式與可上班時間為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B26",
+   "category": "blind_unscoped",
+   "query": "台北市政府對參與國際育成活動的補助上限是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "300萬"
+   ],
+   "spans_hit": [
+    "300萬"
+   ],
+   "answer": "## 補助上限\n\n臺北市政府對「參與國際育成活動」提供的**國際育成補助，上限為新臺幣 300 萬元**，其中**至少 60% 須用於國際新創團隊**。\n\n依據：《臺北市產業發展獎勵補助計畫申請簡介.pdf》「補助經費」規定。\n\n[建議問題]\n1. 國際育成補助的申請資格有哪些？\n2. 國際育成補助可以編列哪些費用？\n3. 國際育成計畫的執行期間有何限制？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B27",
+   "category": "blind_unanswerable",
+   "query": "根據庫內文件，巨大機械 2026 年實際全年 EPS 是多少元？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "## 結論\n\n目前知識庫中沒有足夠的相關文件，可確認巨大機械 **2026 年實際全年 EPS**。\n\n原因如下：\n\n- 《巨大機械9921深度研究報告》的分析日期為 **2026 年 2 月**，當時 2026 年尚未結束，因此不可能載有 2026 年實際全年 EPS。\n- 報告僅揭露：\n  - **2024 年前三季 EPS：5.54 元**\n  - **2025 年全年 EPS：約 3～4 元**，但這是報告中的低迷情境描述，並非 2026 年實際值。\n- 報告雖提及 2026～2027 年具備復甦動能，但未提供 2026 年全年 EPS 的確定數字或實際財報結果。\n\n因此，**無法根據現有文件得出巨大機械 2026 年實際全年 EPS**。\n\n[建議問題]\n1. 文件中巨大機械歷年 EPS 分別是多少？\n2. 報告如何評估巨大機械 2026～2027 年的復甦動能？\n3. 巨大機械 2026 年應關注哪些營運指標？",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  }
+ ]
+}

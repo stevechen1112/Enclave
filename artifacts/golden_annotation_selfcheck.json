@@ -1,0 +1,26 @@
+{
+ "violations": [],
+ "allowed_absent": [
+  {
+   "scan": "scan_09",
+   "filename": "006_ETI-Base-Code-Burmese.pdf",
+   "field": "section_1_en_gloss",
+   "expected": "Employment is freely chosen",
+   "verify_value": "Employment is freely chosen"
+  },
+  {
+   "scan": "scan_09",
+   "filename": "006_ETI-Base-Code-Burmese.pdf",
+   "field": "section_2_en_gloss",
+   "expected": "Freedom of association",
+   "verify_value": "Freedom of association"
+  },
+  {
+   "scan": "scan_09",
+   "filename": "006_ETI-Base-Code-Burmese.pdf",
+   "field": "section_4_en_gloss",
+   "expected": "Child labour",
+   "verify_value": "Child labour"
+  }
+ ]
+}

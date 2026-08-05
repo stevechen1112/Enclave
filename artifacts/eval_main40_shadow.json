@@ -1,0 +1,720 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-04T03:43:01",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 1913.4,
+ "summary": {
+  "total": 40,
+  "pass": 40,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "R01",
+   "category": "factual",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## 統一編號\n\n營業稅繳款書上的**營利事業統一編號為 83028948**。\n\n依據：《005_11408_83028948_營業稅繳款書(401)》及《002_11410_83028948_營業稅繳款書(401)》，營業人為八策數位股份有限公司。\n\n[建議問題]\n1. 營業稅繳款書的繳納期限是何時？\n2. 營業稅應納稅額是多少？\n3. 營業人的稅籍編號是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R02",
+   "category": "factual",
+   "query": "由你人資 MOU 的簽約雙方是誰？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合股份有限公司",
+    "拉法智慧科技股份有限公司"
+   ],
+   "spans_hit": [
+    "優利資源整合股份有限公司",
+    "拉法智慧科技股份有限公司"
+   ],
+   "answer": "## 簽約雙方\n\n根據《003_由你人資MOU.pdf》合作意向書，簽約雙方為：\n\n- **甲方：優利資源整合股份有限公司**\n- **乙方：拉法智慧科技股份有限公司**\n\n[建議問題]\n1. 雙方簽約負責人是誰？\n2. 這份 MOU 的合作目的為何？\n3. 這份 MOU 的生效與終止條件是什麼？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R03",
+   "category": "factual",
+   "query": "KiGo 使用手冊說明的主要功能有哪些？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGo"
+   ],
+   "spans_hit": [
+    "KiGo"
+   ],
+   "answer": "## KiGo 的主要功能\n\n根據《023_KiGo使用手冊.pdf》第 4.3 節，KiGo 分為三大功能：\n\n1. **上網下棋**\n   - 登入 **LGS 傳奇圍棋網**，與其他棋友進行網路對弈。\n   - 可從棋友列表自行挑選對手、邀局或使用自動找對手功能。\n   - 找對手頻道可用來徵求棋友。\n\n2. **電腦對局**\n   - 與電腦進行圍棋對局。\n   - 不需要登入 LGS 傳奇圍棋網即可使用。\n   - 根據手冊第 5 章目錄，此功能需要安裝 **GNU Go**。\n\n3. **練功房**\n   - 提供圍棋練習功能。\n   - 不需要登入 LGS 傳奇圍棋網即可使用。\n\n整體而言，KiGo 是專為國中以下兒童設計的圍棋軟體，著重於親切介面與簡單的對弈流程，讓兒童能進行網路對弈、電腦對局及圍棋練習。以上依據《023_KiGo使用手冊.pdf》第 1 章、第 4.3 節及第 5 章目錄。\n\n[建議問題]\n1. KiGo 的上網下棋功能如何操作？\n2. 使用電腦對局前，如何安裝 GNU Go？\n3. KiGo 的棋局計地與勝負判定方式為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R04",
+   "category": "factual",
+   "query": "補印發票切結書需要填哪些欄位？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "統一編號",
+    "發票號碼",
+    "切結書人"
+   ],
+   "spans_hit": [
+    "統一編號",
+    "發票號碼",
+    "切結書人"
+   ],
+   "answer": "## 補印發票切結書應填欄位\n\n根據《010_補印發票切結書.pdf》，需要填寫以下資料：\n\n### 一、原發票資料\n- 原開立發票日期\n- 發票類型（例如：三聯式電子發票）\n- 發票號碼\n- 買受人公司名稱\n- 買受人統一編號\n- 發票總金額\n\n### 二、發票開立公司資料\n- 原發票開立公司名稱\n- 申請補印的原因（例如：因作業疏忽不慎遺失）\n- 確認原發票尚未申報扣抵\n\n### 三、立切結書人資料\n- 公司名稱\n- 負責人姓名\n- 公司地址\n- 聯絡電話\n\n### 四、日期\n- 切結書簽立日期（中華民國年、月、日）\n\n文件範例中的「立切結書人」欄位未顯示個人姓名或簽章內容，實際是否需要簽名或蓋章，目前知識庫中沒有足夠的相關文件可確認。\n\n[建議問題]\n1. 補印發票切結書的內容應如何撰寫？\n2. 補印發票切結書是否需要公司大小章？\n3. 切結書中的發票資料要如何核對？",
+   "verdict": "pass",
+   "note": "spans 3/3"
+  },
+  {
+   "id": "R05",
+   "category": "factual",
+   "query": "ETI Base Code 對工時有什麼規定？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "60",
+    "工時"
+   ],
+   "spans_hit": [
+    "60",
+    "工時"
+   ],
+   "answer": "## ETI Base Code 的工時規定\n\n根據《006_ETI-Base-Code-Burmese.pdf》，主要規定如下：\n\n1. **每週總工時上限**\n   - 除符合例外條件外，每週總工作時間不得超過 **60 小時**。（第 6.4 條）\n\n2. **超過每週 60 小時的例外條件**\n   - 只有在下列條件成立時，才可超過 60 小時：\n     - 當地法律允許；\n     - 已與具代表性的工人組織達成自由集體協議；\n     - 已有適當的健康與安全保障；或\n     - 存在可證明的突發生產需求或緊急情況。（第 6.5 條）\n\n3. **每週休息日**\n   - 勞工每週至少應有 **1 天休息日**。\n   - 若法律允許，可改為在連續 **14 天內提供至少 2 天休息日**。（第 6.6 條）\n\n4. **加班及加班工資**\n   - 加班不應被視為正常工時。\n   - 加班工資應高於正常工資，並建議至少為正常工資的 **125%**。（第 5.2 條）\n\n5. **未滿 18 歲者**\n   - 兒童及未滿 18 歲的青年勞工不得在夜間或危險環境工作。（第 4.3 條）\n\n> 注意：目前提供的 ETI 文件片段未包含第 6.1 至 6.3 條，因此無法僅憑現有資料確認其對「正常每週工時」、「加班是否須自願」或「一般加班時數」的完整規定。\n\n[建議問題]\n1. ETI Base Code 對加班費的計算標準是什麼？\n2. 什麼情況下可以合法超過每週 60 小時？\n3. 公司現行工時制度與 ETI Base Code 是否一致？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R06",
+   "category": "unanswerable",
+   "query": "這批文件裡有沒有提到火星殖民計畫的預算？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 臺北市產業發展獎勵補助計畫申請簡介.pdf\n- SayCheez_作戰計畫.xlsx\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R07",
+   "category": "unanswerable",
+   "query": "CEO 的私人手機號碼是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 基礎操作教學手冊.pdf\n- 01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R08",
+   "category": "unanswerable",
+   "query": "2028 年的營收預測數字？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "## 2028 年營收預測\n\n目前知識庫中沒有足夠的相關文件，可確認巨大機械（9921）**2028 年的營收預測數字**。\n\n《巨大機械9921深度研究報告》僅提供以下營收資料：\n\n- 2021 年估計：**838 億元**\n- 2022 年估計：**870 億元**\n- 2023 年估計：**780 億元**\n- 2024 年前三季：**約 577 億元**\n\n報告另有 2026 年景氣復甦、庫存改善及 E-Bike 成長等情境假設，但未提供足以推算 2028 年營收的成長率或明確財務預測，因此無法據此嚴謹計算。\n\n[建議問題]\n1. 報告中歷年營收與獲利趨勢如何？\n2. 報告對 2026 年營運復甦有哪些假設？\n3. 巨大機械的基準、樂觀與保守估值情境為何？",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R09",
+   "category": "unanswerable",
+   "query": "哪一份文件授權刪除所有稽核日誌？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 基礎操作教學手冊.pdf\n- 【公告】優利－費用申請流程（請購暨請款、暫借暨回沖）（11103A版）（1110407-1修）.pdf\n- 臺北市產業發展獎勵補助計畫申請簡介.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R10",
+   "category": "unanswerable",
+   "query": "未收錄產品的隱藏折扣碼是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 基礎操作教學手冊.pdf\n- 臺北市產業發展獎勵補助計畫申請簡介.pdf\n- 023_KiGo使用手冊.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R11",
+   "category": "multi_hop",
+   "query": "比較兩份營業稅繳款書的期間與稅額差異",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "spans_hit": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "answer": "## 兩份營業稅繳款書比較\n\n兩份繳款書皆屬於八策數位股份有限公司（統一編號：83028948），比較如下：\n\n| 比較項目 | 114年07－08月 | 114年09－10月 | 差異 |\n|---|---:|---:|---:|\n| 所屬期間 | 114年07－08月 | 114年09－10月 | 後者接續前者，均為兩個月一期 |\n| 繳納期限 | 114年09月15日 | 114年11月15日 | 相差2個月 |\n| 本稅 | 24,919元 | 36,733元 | 增加11,814元 |\n| 應納稅額合計 | 24,919元 | 36,733元 | 增加11,814元 |\n\n### 稅額差異計算\n\n- **增加金額**  \n  36,733－24,919＝**11,814元**\n\n- **增加幅度**  \n  11,814 ÷ 24,919 × 100% ≈ **47.41%**\n\n### 結論\n\n114年09－10月的應納營業稅額為 **36,733元**，較114年07－08月的 **24,919元**增加 **11,814元**，增幅約為 **47.41%**。\n\n資料來源：  \n- 《005_11408_83028948_營業稅繳款書(401)_.pdf》  \n- 《002_11410_83028948_營業稅繳款書(401)_.pdf》\n\n[建議問題]\n1. 兩期營業稅平均每月各為多少？\n2. 兩份繳款書的繳納方式有何差異？\n3. 哪一期可至便利商店繳納？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R12",
+   "category": "multi_hop",
+   "query": "合約類文件與手冊類文件分別涵蓋哪些主題？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf",
+    "003_由你人資MOU.pdf",
+    "010_補印發票切結書.pdf",
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "nueip",
+    "KiGo"
+   ],
+   "spans_hit": [
+    "nueip",
+    "KiGo"
+   ],
+   "answer": "## 合約類文件\n\n依《庫內文件清單》的檔名，可辨識的合約／契約類文件主要涵蓋：\n\n- **勞動關係與聘僱約定**：員工勞動契約。  \n  依據：《01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx》\n\n- **工作規則及差勤管理**：公司工作規範與出勤管理要點。  \n  依據：《05-1、契約：優利國際－工作規則與差勤管理要點（11501版）（教育部）.pdf》\n\n- **人力資源合作備忘錄**：人資相關合作安排。  \n  依據：《003_由你人資MOU.pdf》\n\n- **NUEIP 系統合約**：與 NUEIP 相關的契約事項；現有資料未提供條款內容，因此無法進一步確認涵蓋的服務、費用或權利義務。  \n  依據：《000_nueip 合約(1).pdf》\n\n## 手冊類文件\n\n- **KiGo 操作與使用指引**：提供 KiGo 的使用說明；目前僅能從檔名確認主題，沒有足夠內容判斷其具體功能與操作章節。  \n  依據：《023_KiGo使用手冊.pdf》\n\n## 無法判定類別與主題的文件\n\n- 《009_DOC003~3.pdf》檔名未標明文件性質，參考資料也沒有提供內文，因此目前無法確認它屬於合約、手冊或其他類型，也無法判斷其主題。\n\n整體而言，**合約類文件集中於勞動聘僱、工作與差勤規範、人資合作及 NUEIP 相關契約；手冊類文件則以 KiGo 使用操作為主**。\n\n[建議問題]\n1. 這些文件可再依人資管理、系統服務及操作指南如何分類？\n2. 哪些文件與員工差勤及勞動權益直接相關？\n3. 目前有哪些文件因缺少內文而無法確認具體內容？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R13",
+   "category": "multi_hop",
+   "query": "MOU 與家長同意書在簽署主體上有何不同？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf",
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合股份有限公司",
+    "家長"
+   ],
+   "spans_hit": [
+    "優利資源整合股份有限公司",
+    "家長"
+   ],
+   "answer": "## 簽署主體的差異\n\n- **MOU（合作意向書）**：由兩家公司作為合作雙方簽署，即：\n  - 甲方：**優利資源整合股份有限公司**，負責人李芃葳\n  - 乙方：**拉法智慧科技股份有限公司**，負責人陳瑞斌  \n  根據《003_由你人資MOU.pdf》，其簽署主體屬於**法人對法人**。\n\n- **家長同意書**：由學生家長針對其子女加入團體表示同意，文件要求填寫：\n  - 學生姓名\n  - 家長姓名\n  - 家長聯絡電話  \n  根據《001_四屆新生入團申請家長同意書.pdf》，主要同意主體是**家長**，同意其子女加入「心電心急救教育推廣團」。\n\n## 總結\n\nMOU 是由**兩個公司法人（甲、乙方）**共同簽署；家長同意書則由**家長以個人身分**為子女參與團體表示同意，並非兩家公司之間的簽署。\n\n[建議問題]\n1. MOU 的有效期間如何規定？\n2. 家長同意書所載的參與期間是多久？\n3. MOU 是否已訂明具體合作條件？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R14",
+   "category": "multi_hop",
+   "query": "哪些掃描件屬於財務憑證？列出文件名",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf",
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書",
+    "補印發票切結書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書",
+    "補印發票切結書"
+   ],
+   "answer": "## 屬於財務憑證的掃描件\n\n依《庫內文件清單》及《優利－費用申請流程》中對發票、收據、領據等消費憑證的說明，以下營業稅繳款書可歸類為財務憑證：\n\n1. `002_11410_83028948_營業稅繳款書(401)_.pdf`\n2. `005_11408_83028948_營業稅繳款書(401)_.pdf`\n\n`010_補印發票切結書.pdf`屬於補印發票的切結／說明文件，並非發票或繳款書本身，因此未列入財務憑證。\n\n[建議問題]\n1. 哪些掃描件屬於稅務文件？\n2. 請依文件類型整理全部掃描件。\n3. 補印發票切結書應歸類為哪種文件？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R15",
+   "category": "multi_hop",
+   "query": "入出境相關文件與人資相關文件各有哪些？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf",
+    "000_nueip 合約(1).pdf",
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival",
+    "nueip"
+   ],
+   "spans_hit": [
+    "e-Arrival",
+    "nueip"
+   ],
+   "answer": "## 入出境相關文件\n\n1. 《008_Korea e-Arrivalcard_363545709.pdf》\n   - 由檔名判斷，為韓國電子入境卡相關文件。\n2. 《009_DOC003~3.pdf》\n   - 檔名未呈現文件主題，目前參考資料未提供內文，無法確認其具體用途及是否確屬入出境文件。\n\n## 人資相關文件\n\n1. 《01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx》\n2. 《05-1、契約：優利國際－工作規則與差勤管理要點（11501版）（教育部）.pdf》\n3. 《部門工作職責.xlsx》\n4. 《003_由你人資MOU.pdf》\n5. 《優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf》\n6. 《000_nueip 合約(1).pdf》\n   - NUEIP 為人資系統；參考資料中的《基礎操作教學手冊》顯示其功能涵蓋薪資、考勤、請假、到離職及留職停薪等人資作業，因此列為人資相關文件。\n\n## 其他內部行政文件\n\n以下文件與公司內部管理有關，但僅憑目前檔名，較適合歸為行政或作業流程文件，而非直接歸入上述兩類：\n\n- 《【公告】優利－業務聯繫會辦要點（11206A）（1120620）.pdf》\n- 《【公告】優利－費用申請流程（請購暨請款、暫借暨回沖）（11103A版）（1110407-1修）.pdf》\n\n[建議問題]\n1. 可以再依勞動契約、差勤、組織職掌及人資系統細分人資文件嗎？\n2. 哪些文件與員工請假、出勤及薪資作業有關？\n3. 《009_DOC003~3.pdf》的內容與用途是什麼？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R16",
+   "category": "table_lookup",
+   "query": "營業稅繳款書上的所屬期間有哪些？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "spans_hit": [
+    "114年09-10月",
+    "114年07-08月"
+   ],
+   "answer": "## 營業稅繳款書的所屬期間\n\n參考資料中的營業稅繳款書共有以下兩個所屬期間：\n\n1. **民國 114 年 07－08 月**  \n   根據《005_11408_83028948_營業稅繳款書(401)_.pdf》。\n\n2. **民國 114 年 09－10 月**  \n   根據《002_11410_83028948_營業稅繳款書(401)_.pdf》。\n\n兩份皆為 **401 一般稅額計算—專營應稅營業人使用**的營業稅繳款書。\n\n[建議問題]\n1. 各所屬期間的應納稅額分別是多少？\n2. 各期營業稅的繳納期限是何時？\n3. 逾期繳納營業稅會如何計算滯納金？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R17",
+   "category": "table_lookup",
+   "query": "KiGo 手冊或畫面提到的軟體版本有哪些？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Beta"
+   ],
+   "spans_hit": [
+    "Beta"
+   ],
+   "answer": "## KiGo 手冊或畫面提到的版本\n\n根據《023_KiGo使用手冊.pdf》，共出現以下 **3 組 KiGo 版本號**：\n\n1. **KiGo 0.6.1 Beta**\n   - 出現在安裝光碟與安裝精靈歡迎畫面。\n\n2. **KiGo 0.0.1 Beta／版本 0.0.1**\n   - 出現在授權協議、安裝位置、安裝進度及完成畫面。\n   - 登入畫面則顯示「版本 0.0.1」，未標示 Beta。\n\n3. **版本 1.1.1**\n   - 出現在第三章「開始使用 KiGo」的登入畫面。\n\n## 文件內容差異\n\n同一份《023_KiGo使用手冊.pdf》的不同畫面分別顯示 **0.6.1 Beta、0.0.1 Beta（或 0.0.1）及 1.1.1**，版本資訊並不一致。現有資料未說明這些版本的先後關係，也無法確認 **0.6.1 Beta** 是否為畫面誤植。\n\n此外，手冊還提到系統環境版本 **Windows 2000、Windows XP、Internet Explorer 5.5 以上**；GNU Go 雖有安裝章節，但未提供版本號。\n\n[建議問題]\n1. KiGo 手冊中的版本資訊有哪些不一致之處？\n2. KiGo 的硬體與系統需求是什麼？\n3. 手冊如何說明 KiGo 的安裝步驟？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R18",
+   "category": "table_lookup",
+   "query": "AI 機器人報告的檔名關鍵字？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "AI",
+    "機器人"
+   ],
+   "spans_hit": [
+    "AI",
+    "機器人"
+   ],
+   "answer": "## 檔名關鍵字\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，檔名可使用以下關鍵字搜尋：\n\n- **014**\n- **AI 機器人**\n- **全球 7 大勢力**\n- **關鍵報告**\n\n其中最具代表性的核心關鍵字是：**AI 機器人**、**全球 7 大勢力**。\n\n[建議問題]\n1. 這份報告涵蓋哪七大國家或地區？\n2. 報告中的台灣 AI 機器人產業優勢是什麼？\n3. 全球 AI 機器人產業生態有哪些代表企業？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R19",
+   "category": "table_lookup",
+   "query": "ETI Base Code 條款編號與標題對照",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Employment Is Freely Chosen",
+    "就業"
+   ],
+   "spans_hit": [
+    "Employment Is Freely Chosen",
+    "就業"
+   ],
+   "answer": "# ETI Base Code 條款編號與標題對照\n\n根據《006_ETI-Base-Code-Burmese.pdf》的「條款對照投影」，對照如下：\n\n| 條款編號 | 中文標題 | 英文標題 |\n|---|---|---|\n| 1 | 自由選擇就業 | Employment Is Freely Chosen |\n| 1.1 | 不得強迫或抵債勞動 | No Forced or Bonded Labour |\n| 1.2 | 自由離職 | Freedom to Leave Employment |\n| 2 | 結社自由與集體協商權 | Freedom of Association and Collective Bargaining |\n| 2.1 | 組織與集體協商權 | Right to Organise and Bargain Collectively |\n| 2.2 | 雇主與工人組織合作 | Employer Cooperation with Worker Organisations |\n| 2.3 | 保障勞工代表 | Protection of Worker Representatives |\n| 2.4 | 法律限制下的結社與協商權 | Freedom of Association Where Legally Restricted |\n| 3 | 安全與健康的工作條件 | Safe and Healthy Working Conditions |\n| 3.1 | 預防工作場所危害 | Prevention of Workplace Hazards |\n| 3.2 | 健康與安全培訓 | Health and Safety Training |\n| 3.3 | 衛生設施、飲用水與餐飲設施 | Sanitation, Drinking Water and Food Facilities |\n| 3.4 | 安全且適足的住宿 | Safe and Adequate Accommodation |\n| 3.5 | 管理層的健康安全責任 | Management Responsibility for Health and Safety |\n| 4 | 不得使用童工 | No Child Labour |\n| 4.1 | 不得招募童工 | No Recruitment of Child Labour |\n| 4.2 | 童工教育與補救措施 | Education and Remediation for Child Workers |\n| 4.3 | 兒童與青年勞工保護 | Protection of Children and Young Workers |\n| 4.4 | 遵守國際勞工組織標準 | Compliance with ILO Standards |\n| 5 | 支付足以維持生活的工資 | Payment of a Living Wage |\n| 5.1 | 工資與福利滿足基本需求 | Wages and Benefits Meet Basic Needs |\n| 5.2 | 透明薪酬與加班加給 | Transparent Pay and Overtime Premium |\n| 6.4 | 每週最高工作時數 | Maximum Weekly Working Hours |\n| 6.5 | 每週工時限制的例外 | Exceptions to Weekly Working-Hour Limits |\n| 6.6 | 每週休息日 | Weekly Rest Day |\n| 7 | 不得歧視 | No Discrimination |\n| 7.1 | 就業中的平等待遇 | Equal Treatment in Employment |\n| 8 | 正規且穩定的合法僱傭 | Regular Employment |\n| 8.1 | 依法認可的僱傭條件 | Legally Recognised Employment Conditions |\n| 8.2 | 不得規避勞動與社會保障義務 | No Evasion of Labour and Social Security Obligations |\n| 9 | 不得嚴苛或不人道對待 | No Harsh or Inhumane Treatment |\n| 9.1 | 禁止虐待與騷擾 | Prohibition of Abuse and Harassment |\n\n## 資料完整性說明\n\n本次提供的《006_ETI-Base-Code-Burmese.pdf》參考資料未列出 **5.3、條款6主標題及6.1至6.3** 的標題，因此目前知識庫中沒有足夠的相關文件可補全這些項目。文件片段另可確認：\n\n- 第6.6條規定每週至少一天休息日；法律允許時，14天內應有兩天休息日。\n- 文件註記提及國際勞工標準建議在適當情況下，於不減薪前提下，將正常工時逐步降至每週40小時。\n\n[建議問題]\n1. 請整理 ETI Base Code 各條款的中文內容摘要。\n2. 哪些條款涉及工時、加班與休息日？\n3. 請列出目前參考資料中缺少的條款編號。",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "R20",
+   "category": "table_lookup",
+   "query": "韓國 e-Arrival card 上有哪些護照相關欄位名稱？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Passport"
+   ],
+   "spans_hit": [
+    "Passport"
+   ],
+   "answer": "## 韓國 e-Arrival Card 的護照／身分資料欄位\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》的電子入境申報確認書，相關欄位名稱包括：\n\n- **Country/Region（國家／地區）**\n- **Full Name（姓名）**\n- **Date of Birth（出生日期）**\n- **Sex（性別）**\n- **Passport No（護照號）**\n\n其中，**明確以「Passport」命名的欄位只有「Passport No（護照號）」**。參考資料中未顯示護照簽發日、有效期限或簽發國等欄位。\n\n[建議問題]\n1. 韓國 e-Arrival Card 上還有哪些入境行程欄位？\n2. e-Arrival Card 的有效期限到何時？\n3. 提交後若航班資訊變更，是否需要更新？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R21",
+   "category": "factual",
+   "query": "營業稅繳款書的繳納期限是哪一天？（114年09-10月那份）",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "11月15"
+   ],
+   "spans_hit": [
+    "11月15"
+   ],
+   "answer": "## 繳納期限\n\n114 年 09–10 月營業稅繳款書的**繳納期限為 114 年 11 月 15 日**。\n\n依據：《002_11410_83028948_營業稅繳款書(401)_.pdf》。\n\n[建議問題]\n1. 這份營業稅的應納稅額是多少？\n2. 可以使用哪些方式繳納？\n3. 逾期繳納會如何計算滯納金？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R22",
+   "category": "factual",
+   "query": "營業稅繳款書的統一編號是多少？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## 統一編號\n\n營業稅繳款書上的**營利事業統一編號為 83028948**。\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》及《002_11410_83028948_營業稅繳款書(401)_.pdf》，營業人為**八策數位股份有限公司**。\n\n[建議問題]\n1. 營業稅繳款書的繳納期限是何時？\n2. 本期應納稅額是多少？\n3. 營業人的稅籍編號是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R23",
+   "category": "factual",
+   "query": "補印發票切結書的標題是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "切結書"
+   ],
+   "spans_hit": [
+    "切結書"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》，文件標題是：**補印發票切結書**。\n\n[建議問題]\n1. 補印發票切結書的發票號碼是什麼？\n2. 立切結書人是哪家公司？\n3. 切結書的日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R24",
+   "category": "factual",
+   "query": "KiGo 使用手冊的品牌名稱？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGO"
+   ],
+   "spans_hit": [
+    "KiGO"
+   ],
+   "answer": "## 品牌名稱\n\nKiGo 使用手冊所標示的品牌名稱為 **LGS 傳奇圍棋網**。\n\n根據《023_KiGo使用手冊.pdf》封面，品牌標示為「LGS 傳奇圍棋網」，網址為 `http://LGS.Taiwango.net`。\n\n[建議問題]\n1. KiGo 是什麼軟體？\n2. KiGo 如何安裝？\n3. 如何註冊 LGS 傳奇圍棋網帳號？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R25",
+   "category": "factual",
+   "query": "ETI Base Code 是哪個組織發布的？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Ethical Trading Initiative"
+   ],
+   "spans_hit": [
+    "Ethical Trading Initiative"
+   ],
+   "answer": "## 答案\n\nETI Base Code 是由 **Ethical Trading Initiative（ETI，倫理貿易倡議組織）**發布的。\n\n依據《006_ETI-Base-Code-Burmese.pdf》文件首頁所列的組織名稱「Ethical Trading Initiative」及其「Base Code（基本守則）」內容可確認。\n\n[建議問題]\n1. ETI Base Code 包含哪些核心勞工標準？\n2. ETI Base Code 對每週工時有何規定？\n3. ETI Base Code 對童工與強迫勞動有何要求？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R26",
+   "category": "factual",
+   "query": "e-Arrival Card 文件標題？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival"
+   ],
+   "spans_hit": [
+    "e-Arrival"
+   ],
+   "answer": "## 文件標題\n\ne-Arrival Card 的文件標題為：\n\n- **英文：Confirmation of e-Arrival Card**\n- **中文：電子入境申報確認書**\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》。\n\n[建議問題]\n1. 這份 e-Arrival Card 的有效期限到何時？\n2. 入境韓國時是否需要攜帶此確認書？\n3. 文件中的旅客與航班資訊是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R27",
+   "category": "unanswerable",
+   "query": "庫內有沒有 SpaceX 星艦發射時程表？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 023_KiGo使用手冊.pdf\n- 基礎操作教學手冊.pdf\n- 臺北市產業發展獎勵補助計畫申請簡介.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R28",
+   "category": "unanswerable",
+   "query": "員工的私人銀行密碼是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 基礎操作教學手冊.pdf\n- 000_nueip 合約(1).pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R29",
+   "category": "unanswerable",
+   "query": "2030 年全球 GDP 預測？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "## 回答\n\n目前知識庫中沒有足夠的相關文件，可據以回答 **2030 年全球 GDP 預測**。\n\n現有資料雖提及 2030 年，但內容分別是：\n\n- 韓國計畫在 2030 年前投入超過 **22.4 億美元**發展機器人產業，並部署 **100 萬台機器人**，並非全球 GDP 預測（根據《AI 機器人全球 7 大勢力關鍵報告》）。\n- 巨大機械設定於 2030 年將 E-Bike 營收占比提升至 **50%**，亦與全球 GDP 無關（根據《巨大機械9921深度研究報告》第 3 頁）。\n\n因此，無法從所提供文件取得 2030 年全球 GDP 的預測金額、成長率或計算依據。\n\n[建議問題]\n1. 韓國在 2030 年前的機器人產業發展目標是什麼？\n2. 巨大機械對 2030 年 E-Bike 業務的目標為何？\n3. 巨大機械的主要市場營收占比如何分布？",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R30",
+   "category": "inventory",
+   "query": "列出庫內與營業稅相關的掃描文件名",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf",
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書"
+   ],
+   "answer": "## 與營業稅相關的掃描文件\n\n根據《庫內文件清單》，共有 **2 份**：\n\n1. `002_11410_83028948_營業稅繳款書(401)_.pdf`\n2. `005_11408_83028948_營業稅繳款書(401)_.pdf`\n\n[建議問題]\n1. 這兩份營業稅繳款書分別是哪一期？\n2. 庫內有哪些與營所稅相關的文件？\n3. 列出庫內所有稅務申報或繳款文件。",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R31",
+   "category": "inventory",
+   "query": "有哪些入出境相關檔案？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival"
+   ],
+   "spans_hit": [
+    "e-Arrival"
+   ],
+   "answer": "## 入出境相關檔案\n\n根據《庫內文件清單》，目前共有 **1 份**入出境相關檔案：\n\n1. `008_Korea e-Arrivalcard_363545709.pdf`  \n   - 依檔名判斷，內容與**韓國電子入境卡（e-Arrival Card）**相關。\n\n[建議問題]\n1. 這份韓國電子入境卡檔案包含哪些內容？\n2. 韓國電子入境卡應如何填寫？\n3. 知識庫中還有哪些韓國旅遊相關檔案？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R32",
+   "category": "inventory",
+   "query": "手冊類文件有哪些？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGo"
+   ],
+   "spans_hit": [
+    "KiGo"
+   ],
+   "answer": "## 手冊類文件清單\n\n根據《庫內文件清單》，目前共有 **1 份**手冊類文件：\n\n1. 《023_KiGo使用手冊.pdf》\n\n[建議問題]\n1. 《023_KiGo使用手冊》的主要內容是什麼？\n2. KiGo 有哪些操作流程？\n3. 如何使用 KiGo 的特定功能？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R33",
+   "category": "multi_hop",
+   "query": "比較 MOU 雙方與營業稅繳款書納稅義務人是否同一公司體系",
+   "expected_docs": [
+    "003_由你人資MOU.pdf",
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利"
+   ],
+   "spans_hit": [
+    "優利"
+   ],
+   "answer": "## 比較結論\n\n**MOU 雙方與營業稅繳款書的納稅義務人並非同一家公司。**  \n至於是否隸屬於同一公司體系，現有文件未提供股權、控制關係或關係企業資料，故**目前知識庫中沒有足夠的相關文件可證明其屬於同一公司體系**。\n\n## 公司資料比對\n\n| 文件身分 | 公司名稱 | 統一編號 | 比對結果 |\n|---|---|---:|---|\n| MOU 甲方 | 優利資源整合股份有限公司 | 54359503 | 與納稅義務人不同 |\n| MOU 乙方 | 拉法智慧科技股份有限公司 | 90599627 | 與納稅義務人不同 |\n| 營業稅納稅義務人 | 八策數位股份有限公司 | 83028948 | — |\n\n- 根據《003_由你人資MOU.pdf》，合作意向書雙方為**優利資源整合股份有限公司**及**拉法智慧科技股份有限公司**。\n- 根據《002_11410_83028948_營業稅繳款書(401)_.pdf》及《005_11408_83028948_營業稅繳款書(401)_.pdf》，兩期繳款書的營業人均為**八策數位股份有限公司**，統一編號均為 **83028948**。\n- 三家公司的名稱及統一編號均不相同，因此可確認為**不同法律主體**。\n\n## 公司體系判斷\n\n單憑公司名稱、統一編號及繳款書，無法判斷是否為母子公司、關係企業或受同一主體控制。現有資料未載明：\n\n- 股東及持股結構\n- 董事或實際控制人關係\n- 母子公司關係\n- 關係企業聲明或組織架構\n\n因此，**只能確認不是同一家公司，不能進一步確認或排除是否屬於同一公司體系**。\n\n[建議問題]\n1. MOU 雙方的公司名稱、負責人、地址及統編各為何？\n2. 兩份營業稅繳款書的期間與應納稅額有何差異？\n3. 知識庫中是否有可證明三家公司股權或關係企業關係的文件？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R34",
+   "category": "factual",
+   "query": "合作意向書的乙方是哪家公司？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "spans_hit": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "answer": "## 乙方公司\n\n根據《003_由你人資MOU.pdf》合作意向書，**乙方為「拉法智慧科技股份有限公司」**。\n\n[建議問題]\n1. 合作意向書的甲方是哪家公司？\n2. 甲乙雙方合作的專案內容為何？\n3. 這份合作意向書何時生效？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R35",
+   "category": "factual",
+   "query": "ETI 第二條與結社自由有關的英文標題？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Freedom of Association"
+   ],
+   "spans_hit": [
+    "Freedom of Association"
+   ],
+   "answer": "## ETI 第二條英文標題\n\n**Freedom of Association and Collective Bargaining**\n\n中文為「結社自由與集體協商權」。  \n根據《006_ETI-Base-Code-Burmese.pdf》第 2 條。\n\n[建議問題]\n1. ETI 第 2.1 條的英文標題是什麼？\n2. ETI 第二條包含哪些子條款？\n3. ETI 第三條的中英文標題是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R36",
+   "category": "table_lookup",
+   "query": "營業稅繳款書表單代號？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "401"
+   ],
+   "spans_hit": [
+    "401"
+   ],
+   "answer": "## 營業稅繳款書表單代號\n\n**表單代號為：401**\n\n依據：\n- 文件載明「**401 一般稅額計算－專營應稅營業人使用**」。\n- 收款機構留存聯的「稅目」亦標示為 **401**。\n- 繳款書代號應與申報書代號相同。\n\n資料來源：《005_11408_83028948_營業稅繳款書(401)_.pdf》\n\n[建議問題]\n1. 401 表單適用於哪類營業人？\n2. 這份營業稅繳款書的繳納期限為何？\n3. 營業稅可透過哪些方式繳納？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R37",
+   "category": "factual",
+   "query": "KiGo 手冊第一章名稱？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "軟體"
+   ],
+   "spans_hit": [
+    "軟體"
+   ],
+   "answer": "根據《KiGo 玩家使用手冊》目錄，第一章名稱是：**「軟體及網站介紹」**。\n\n[建議問題]\n1. KiGo 手冊第二章名稱是什麼？\n2. 第一章主要介紹哪些內容？\n3. KiGo 的硬體需求有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R38",
+   "category": "factual",
+   "query": "e-Arrival 上的國家／地區欄位英文名？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Country"
+   ],
+   "spans_hit": [
+    "Country"
+   ],
+   "answer": "## e-Arrival 國家／地區欄位英文名\n\n應填寫：**TAIWAN**\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，「Country/Region（國家／地區）」欄位顯示為 **TAIWAN**。\n\n[建議問題]\n1. e-Arrival 上的入境航班號碼是什麼？\n2. e-Arrival 的有效期限到何時？\n3. 提交後若旅遊行程變更，應如何處理？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "R39",
+   "category": "unanswerable",
+   "query": "請給我未上傳合約的隱藏附錄全文",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "抱歉，目前知識庫中的資料不足以回答此問題。\n此問題指向知識庫未收錄的主題，系統拒絕臆測。\n可能缺少的文件／主題：\n- （題目指向知識庫未收錄主題，無對應文件）\n已檢索到但不足以回答的文件：\n- 【將能數位行銷】-巽耘法律事務所-健診報告.pdf\n- 亞馬遜行銷報價.pdf\n- 023_KiGo使用手冊.pdf\n請補充相關文件後再問，或改問庫內已有文件可直接摘錄的事實。",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "R40",
+   "category": "translate",
+   "query": "ETI Base Code 禁止童工相關條款標題對照",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Child"
+   ],
+   "spans_hit": [
+    "Child"
+   ],
+   "answer": "## ETI Base Code「禁止童工」相關條款標題對照\n\n根據《006_ETI-Base-Code-Burmese.pdf》，相關條款如下：\n\n| 條款 | 中文標題 | 英文標題 |\n|---|---|---|\n| 4 | 不得使用童工 | No Child Labour |\n| 4.1 | 不得招募童工 | No Recruitment of Child Labour |\n| 4.2 | 童工教育與補救措施 | Education and Remediation for Child Workers |\n| 4.3 | 兒童與青年勞工保護 | Protection of Children and Young Workers |\n| 4.4 | 遵守國際勞工組織標準 | Compliance with ILO Standards |\n\n其中，第 4.3 條明定不得讓兒童及未滿 18 歲的青年在夜間或危險環境工作；第 4.4 條則要求童工相關政策及程序符合適用的國際勞工組織（ILO）標準。\n\n[建議問題]\n1. ETI Base Code 第 4.1 至 4.4 條的完整內容摘要是什麼？\n2. 第 4.3 條對未滿 18 歲青年勞工有哪些限制？\n3. ETI Base Code 全部九大類條款的中英文標題對照為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ]
+}

@@ -1,0 +1,83 @@
+將能數位行銷
+網站基礎健診
+巽耘律師事務所
+https://sylaw.tw/
+2
+一、技術面
+01 | 網頁索引數(Page Index) 06 | 搜尋引擎友善網址(SEO Friendly
+URL)
+02 | Robots.txt檔 07 | 網站麵包屑(Breadcrumb Trail)
+03 | 網站地圖 (Sitemap.xml) 08 | 結構化資料(Structured Data)
+04 | 重複性內容(Duplicate Content) 09 | 網站加密(SSL)
+05 | 轉址(Redirect) 10 | 網站管理工具 Search Console－檢
+索錯誤
+• 網頁索引數 (Page Index)
+搜尋引擎優化(SEO)，首要的第一步就是要搜尋引擎能夠找到我們的網站，其
+次是搜尋引擎是否能順利分析及索引網站內的資料。
+因此一個網站若想要在搜尋引擎上取得好的曝光位置，網站被搜尋引擎索引
+的網頁數量就必須越多，代表網站有更多機會在使用者搜尋時被找到。
+3
+• 網頁索引數 (Page Index)
+「https://sylaw.tw/」目前網站收錄頁數為69頁。
+4
+• Robots.txt檔
+搜尋引擎就是利用搜尋機器人(Robot)來抓取網路上的資料，而每一個搜尋引擎
+的機器人都有其自己的名稱，利如Google的機器人是Googlebot、Bing的機器人
+是Bingbot…...。
+robots.txt檔案位於網站根目錄，robots.txt檔有助於網站與搜尋引擎機器人
+(Robot)間的溝通，透過robots.txt檔可以明確的告訴搜尋引擎那些內容不要被
+搜尋引擎收錄，或者指定收錄的內容。
+5
+• Robots.txt檔
+Robots.txt檔案範例：
+6
+檔•Robots.txt
+Google Search Console Robots.txt：
+「 」網站已正常設置Robots.txt檔案。
+https://sylaw.tw/
+• 網站地圖 (Sitemap.xml)
+「XML Sitemap」是一種檔案資料格式。您可以在其中列出網站上想被
+搜尋引擎索引的網頁，讓 Google 和其他搜尋引擎快速瞭解您的網站內
+容架構。
+8
+• 網站地圖 (Sitemap.xml)
+Google Search Console Sitemap提交：
+「 」尚未提交sitemap.xml檔案，建議進行提交。
+https://sylaw.tw/
+9
+• 重複性內容 (Duplicate Content)
+網站在不同的網址有重複的 內容，稱為「重複性內容問題」。重複性內容會造成網站以下問：
+• 網站被索引網頁數減少。
+• 網站整體權重降低。
+• 搜尋引擎造訪頻率變低。
+• 網站搜尋排名後退。
+• 網站流量下滑。
+搜索引擎爬蟲遵循連結抓取 內容，並嘗試在您的網站上索引所有已知的 URL。若有多個網址提供
+相同的頁面，將使搜索引擎收集和處理資源時發生浪費，繼而發生上述一連串負面的連鎖效應。
+對於SEO，重複性內容屬於非常重要，必須處理的問題。
+10
+• 重複性內容 (Duplicate Content)
+從Search Console中得知，目前網站有中繼說明重複、過短，以及重複標題標記
+的問題，點擊後可了解頁面相關資訊、建議改善。
+11
+• 重複性內容 (Duplicate Content) - 中繼說明重複
+範例頁面
+範例頁面 (空白)
+此兩個頁面被視為重複性內容，/other-criminal為空白頁，若不需此頁，可使用noindex
+標記或進行301轉址至/criminal，避免被Google判斷為重複性內容。
+12
+• 重複性內容 (Duplicate Content) - 中繼說明過短
+建議可以增加中繼說明內容，讓使用者更了解網站資訊，中繼說明長度建議為155
+個字元以內(約75個中文字)。
+13
+• 重複性內容 (Duplicate Content) - 標題標記重複
+以「home page」為例，此2頁因meta title相同，被Google認定為重複性內容，但標準首頁為
+https://sylaw.tw/，建議將此2頁進行關閉，或無法關閉則301轉址至https://sylaw.tw/，解決重複首頁問
+題。
+14
+● 轉址 (Redirect)
+轉址 (Redirect)，指使用者瀏覽某個網址時，直接導向另一個網址的技術。
+1. 避免不必要的轉址
+2. 盡可能使用301永久轉址
+不當的轉址方式，有可能造成新舊網站併存、新網站不易被搜尋引擎抓取。
+15

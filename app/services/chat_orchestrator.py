@@ -48,7 +48,8 @@ class ChatOrchestrator:
 5. 引用文件時，請標注文件名稱（例如：根據《XXX 合約》第 X 條）
 6. 使用結構化格式（標題、條列）讓回答清楚易讀
 7. 需要數值計算時，列出公式與代入值，嚴格依公式計算
-8. 使用繁體中文回答"""
+8. 使用繁體中文回答
+9. 參考資料以【檔名】開頭的片段，其後第一行通常是該文件的標題或表頭；使用者指定特定文件時，應根據該文件片段的實際內容推論作答，不要僅因文件中沒有與問題完全同名的欄位就拒答"""
 
     FOLLOWUP_PROMPT = """
 
@@ -135,13 +136,8 @@ class ChatOrchestrator:
         authz = None,  # Phase 0: AuthorizationContext
         use_gateway: bool = True,
     ) -> Dict[str, Any]:
-        """
-        純檢索：查詢企業內部知識庫，回傳結構化上下文。
-
-        優先經 Gateway/UnifiedRetriever 聚合；失敗時回退 kb_retrieval。
-        """
+        """純檢索：經 MultiStepOrchestrator（計劃→多臂→合成）組裝上下文。"""
         request_id = str(uuid.uuid4())
-        company_policy_result: Dict[str, Any] = {"status": "error", "results": []}
 
         if authz is None:
             return self._build_context(
@@ -150,109 +146,45 @@ class ChatOrchestrator:
                 request_id=request_id,
             )
 
-        from app.services.retrieval_facade import get_retrieval_facade
-        facade = get_retrieval_facade()
+        from app.services.multi_step_orchestrator import MultiStepOrchestrator
 
-        if use_gateway:
-            try:
-                retrieved = await facade.search_gateway(
-                    authz=authz,
-                    query=question,
-                    top_k=top_k,
-                    domain=SearchDomain.HYBRID,
-                )
-                # CitationBuilder emits citations in the same order as the results
-                # it was built from; match each hit to its own citation by index so
-                # a hit never inherits another hit's lineage.
-                all_citations = list(retrieved.citations or [])
-                results = []
-                for i, r in enumerate(retrieved.results):
-                    c = all_citations[i] if i < len(all_citations) else None
-                    results.append(
-                        {
-                            "id": r.get("id"),
-                            "content": r.get("content") or r.get("text") or "",
-                            "score": r.get("score"),
-                            "document_id": r.get("document_id"),
-                            "filename": (r.get("metadata") or {}).get("filename", ""),
-                            "chunk_index": (r.get("metadata") or {}).get("chunk_index"),
-                            "source": r.get("provider"),
-                            "citations": (
-                                [
-                                    {
-                                        "citation_id": c.citation_id,
-                                        "document_id": str(c.canonical_document_id),
-                                        "document_revision": c.document_revision,
-                                        "provider": c.provider,
-                                    }
-                                ]
-                                if c is not None
-                                else []
-                            ),
-                        }
-                    )
-                gw_status = getattr(retrieved, "gateway_status", None) or "success"
-                company_policy_result = {
-                    "status": "success",
-                    "results": results,
-                    "retrieval_mode": "gateway",
-                    # partial adapter failures are degraded — do not claim full search.
-                    "degraded": gw_status == "partial",
-                    # A6: surface which providers actually answered for the audit trace.
-                    "providers_called": list(
-                        getattr(getattr(retrieved, "audit_trail", None), "providers_called", None)
-                        or []
-                    ),
-                }
-            except Exception as exc:
-                logger.warning("Gateway retrieval failed, fallback to canonical facade: %s", exc)
+        try:
+            orch_result = await MultiStepOrchestrator().run(
+                authz=authz,
+                question=question,
+                top_k=top_k,
+                use_gateway=use_gateway,
+            )
+        except Exception as exc:
+            logger.warning("multi-step orchestration failed: %s", exc)
+            orch_result = {
+                "status": "error",
+                "error": str(exc),
+                "results": [],
+                "catalog_hits": [],
+                "clause_projections": [],
+                "query_plan": {},
+                "providers_called": [],
+                "degraded": True,
+                "retrieval_mode": "error",
+                "has_evidence": False,
+            }
 
-        if company_policy_result.get("status") != "success":
-            try:
-                loop = asyncio.get_event_loop()
-                retrieved = await loop.run_in_executor(
-                    None,
-                    lambda: facade.search(
-                        authz=authz,
-                        query=question,
-                        top_k=top_k,
-                    ),
-                )
-                # Preserve citation lineage on fallback the same way as gateway path.
-                all_citations = list(retrieved.citations or [])
-                fallback_results = []
-                for i, r in enumerate(retrieved.results):
-                    c = all_citations[i] if i < len(all_citations) else None
-                    row = dict(r) if isinstance(r, dict) else {
-                        "id": getattr(r, "id", None),
-                        "content": getattr(r, "content", None) or getattr(r, "text", None) or "",
-                        "score": getattr(r, "score", None),
-                        "document_id": getattr(r, "document_id", None),
-                    }
-                    if c is not None:
-                        row["citations"] = [{
-                            "citation_id": c.citation_id,
-                            "document_id": str(c.canonical_document_id),
-                            "document_revision": c.document_revision,
-                            "provider": c.provider,
-                        }]
-                    fallback_results.append(row)
-                # Honest degraded signal: gateway unavailable → canonical-only
-                company_policy_result = {
-                    "status": "success",
-                    "results": fallback_results,
-                    "retrieval_mode": "canonical_fallback",
-                    "degraded": True,
-                    "providers_called": ["document"],
-                }
-            except Exception as e:
-                company_policy_result = {
-                    "status": "error",
-                    "error": str(e),
-                    "results": [],
-                    "retrieval_mode": "error",
-                    "degraded": True,
-                }
+        company_policy_result: Dict[str, Any] = {
+            "status": "success" if orch_result.get("has_evidence") else "empty",
+            "results": list(orch_result.get("results") or []),
+            "catalog_hits": list(orch_result.get("catalog_hits") or []),
+            "clause_projections": list(orch_result.get("clause_projections") or []),
+            "query_plan": orch_result.get("query_plan") or {},
+            "providers_called": list(orch_result.get("providers_called") or []),
+            "fusion_policy_version": orch_result.get("fusion_policy_version") or "",
+            "query_domain": orch_result.get("query_domain") or "",
+            "dropped_non_citable": orch_result.get("dropped_non_citable") or 0,
+            "degraded": bool(orch_result.get("degraded")),
+            "retrieval_mode": orch_result.get("retrieval_mode") or "multi_step",
+            "trace": orch_result.get("trace") or {},
+            "refusal": orch_result.get("refusal"),
+        }
 
         return self._build_context(
             question=question,
@@ -289,6 +221,10 @@ class ChatOrchestrator:
             company_policy.get("status") == "success"
             and len(company_policy.get("results", [])) > 0
         )
+        catalog_hits = company_policy.get("catalog_hits") or []
+        # 盤點題即使 chunk 臂無命中，catalog 命中也算有證據可答
+        if catalog_hits and not has_policy:
+            has_policy = True
 
         retrieval_mode = company_policy.get("retrieval_mode") or "canonical"
         degraded = bool(company_policy.get("degraded"))
@@ -304,6 +240,10 @@ class ChatOrchestrator:
                 "degraded": degraded,
                 "request_id": request_id,
                 "providers_called": list(company_policy.get("providers_called") or []),
+                # ADR-009 融合觀測（FD-FUSION 閘門斷言欄位）
+                "fusion_policy_version": company_policy.get("fusion_policy_version") or "",
+                "query_domain": company_policy.get("query_domain") or "",
+                "dropped_non_citable": company_policy.get("dropped_non_citable") or 0,
                 "label": (
                     "僅使用本機主索引（外部來源／Gateway 暫時不可用）"
                     if degraded and retrieval_mode == "canonical_fallback"
@@ -315,8 +255,12 @@ class ChatOrchestrator:
             "disclaimer": "本回答由 AI 根據知識庫文件生成，僅供參考。如有重要決策，請以正式文件為準。",
         }
 
-        if has_policy:
-            top_results = company_policy["results"][:5]
+        # 檔名鎖定（《檔名》）查詢：證據集中在單一文件，放寬上下文段數上限，
+        # 避免長文件的目標章節被固定 5 段截掉（2026-08-03 盲測 B02/B07/B13 根因）
+        _qp = company_policy.get("query_plan") or {}
+        _max_ctx = 12 if _qp.get("mentioned_documents") else 5
+        top_results = (company_policy.get("results") or [])[:_max_ctx]
+        if top_results:
             context["company_policy_raw"] = {
                 "content": top_results[0].get("content") or "",
                 "source": top_results[0].get("filename") or "",
@@ -368,6 +312,73 @@ class ChatOrchestrator:
                     f"【文件 #{i}】（來源：{filename}，相關度：{score:.2f}）\n{content}"
                 )
 
+        # ADR-008：catalog 臂命中進 context（檔名清單）與 sources（可引用）
+        if catalog_hits:
+            filenames = [h["filename"] for h in catalog_hits if h.get("filename")]
+            listing = "\n".join(f"{i}. {fn}" for i, fn in enumerate(filenames, 1))
+            context["context_parts"].insert(
+                0,
+                f"【庫內文件清單】（文件層檢索，共 {len(filenames)} 份符合；"
+                "回答盤點問題時以此清單為準，不得虛構未列出的檔名）\n" + listing,
+            )
+            for h in catalog_hits[:10]:
+                context["sources"].insert(0, {
+                    "type": "catalog",
+                    "title": h["filename"],
+                    "snippet": (h.get("content") or "")[:200],
+                    "score": h.get("score") or 0,
+                    "document_id": h.get("document_id"),
+                    "provider": "enclave",
+                    "granularity": "catalog",
+                    "accessible": True,
+                })
+        qp = company_policy.get("query_plan") or {}
+        context["retrieval"]["arms"] = list(
+            qp.get("arms") or (["catalog", "chunk"] if catalog_hits else ["chunk"])
+        )
+        if qp:
+            context["retrieval"]["query_plan"] = {
+                "plan_version": qp.get("plan_version") or "",
+                "intent": qp.get("intent") or "",
+                "arms": list(qp.get("arms") or []),
+                "sub_queries": list(qp.get("sub_queries") or []),
+                "domain": qp.get("domain") or "",
+            }
+
+        projections = company_policy.get("clause_projections") or []
+        if projections:
+            from app.services.clause_projection import format_projection_context
+            context["context_parts"].insert(0, format_projection_context(projections))
+            context["retrieval"]["clause_projections"] = len(projections)
+            if not context["has_policy"]:
+                context["has_policy"] = True
+                context["retrieval"]["label"] = "已搜尋可存取知識"
+            for p in projections:
+                context["sources"].insert(0, {
+                    "type": "clause_projection",
+                    "title": p.get("filename") or "條款對照投影",
+                    "snippet": f"{len(p.get('clauses') or [])} 條條款對照",
+                    "score": 1.0,
+                    "document_id": p.get("document_id"),
+                    "provider": "enclave",
+                    "granularity": "compiled",
+                    "accessible": True,
+                })
+
+        # VISION Phase 2：逐步 trace + 解釋式拒答
+        if company_policy.get("trace"):
+            context["retrieval"]["trace"] = company_policy["trace"]
+        refusal = company_policy.get("refusal")
+        intent = (qp or {}).get("intent") or ""
+        if intent == "unanswerable":
+            context["has_policy"] = False
+            context["retrieval"]["label"] = "題目超出知識庫範圍，拒絕臆測"
+        if refusal:
+            context["retrieval"]["refusal"] = refusal
+            context["refusal"] = refusal
+            if not context["has_policy"]:
+                context["retrieval"]["label"] = "知識不足，已準備解釋式拒答"
+
         return context
 
     async def stream_answer(
@@ -378,18 +389,71 @@ class ChatOrchestrator:
         include_followup: bool = True,
     ) -> AsyncGenerator[str, None]:
         """
-        串流生成 LLM 回答（SSE 用）。
+        串流生成 LLM 回答（SSE 用），含逐字溯源稽核層（SOURCE_VERIFY_MODE）。
 
-        yield 每個 token chunk，前端可逐字渲染。
-        若 LLM 不可用，則 yield 整段 fallback。
+        - off：現行行為，逐 token 輸出。
+        - shadow：照常逐 token 輸出；串流結束後稽核，結果記 log 並存入
+          ``context["source_verification"]``，不影響使用者。
+        - enforce：先緩衝完整回答再稽核，通過才輸出；失敗則以約束式 prompt
+          重新生成一次，再失敗則輸出「僅含已驗證重點」的誠實回答。
         """
         if not self._openai_async or not context["has_policy"]:
             yield self._fallback_answer(context)
             return
+        # 有結構化拒答且意圖為不可答 → 強制拒答，不讓 LLM 胡謅
+        refusal = context.get("refusal") or (context.get("retrieval") or {}).get("refusal")
+        if refusal and (context.get("retrieval") or {}).get("query_plan", {}).get("intent") == "unanswerable":
+            yield refusal.get("message") or self._fallback_answer(context)
+            return
 
+        mode = str(getattr(settings, "SOURCE_VERIFY_MODE", "off") or "off").lower()
+
+        if mode == "enforce":
+            async for chunk in self._stream_answer_enforce(
+                question, context, history, include_followup
+            ):
+                yield chunk
+            return
+
+        if mode == "shadow":
+            buffered: List[str] = []
+            async for chunk in self._stream_answer_raw(
+                question, context, history, include_followup
+            ):
+                buffered.append(chunk)
+                yield chunk
+            result = await self._run_source_verification(
+                question, "".join(buffered), context, mode="shadow"
+            )
+            if result is not None:
+                context["source_verification"] = result.to_dict()
+                logger.info(
+                    "source_verify[shadow] verified=%s claims=%d unsupported=%d reason=%s detail=%s",
+                    result.verified, result.total_claims,
+                    len(result.unsupported_claims), result.reason,
+                    result.unsupported_claims[:5] if result.unsupported_claims else "",
+                )
+            return
+
+        async for chunk in self._stream_answer_raw(
+            question, context, history, include_followup
+        ):
+            yield chunk
+
+    async def _stream_answer_raw(
+        self,
+        question: str,
+        context: Dict[str, Any],
+        history: Optional[List[Dict[str, str]]] = None,
+        include_followup: bool = True,
+        extra_system_note: str = "",
+    ) -> AsyncGenerator[str, None]:
+        """逐 token 串流生成（不含稽核）。``extra_system_note`` 供約束式重生成注入。"""
         messages = self._build_llm_messages(
             question, context, history=history, include_followup=include_followup
         )
+        if extra_system_note:
+            messages[0]["content"] += "\n\n" + extra_system_note
 
         try:
             from app.services.openai_compat import chat_completion_kwargs
@@ -420,6 +484,123 @@ class ChatOrchestrator:
         except Exception as e:
             logger.warning("LLM 串流生成失敗，回退到模板: %s", e)
             yield self._fallback_answer(context)
+
+    async def _run_source_verification(
+        self,
+        question: str,
+        answer: str,
+        context: Dict[str, Any],
+        *,
+        mode: str,
+    ):
+        """呼叫逐字溯源稽核；任何失敗都回傳 None 或未通過結果，絕不拋例外。"""
+        try:
+            from app.services.source_verifier import verify_answer
+
+            client = self._openai_async
+            model = self._llm_model
+            use_internal = False
+            if getattr(settings, "SOURCE_VERIFY_USE_INTERNAL_LLM", True) and self._internal_async:
+                client = self._internal_async
+                model = self._internal_model
+                use_internal = True
+            override = str(getattr(settings, "SOURCE_VERIFY_MODEL", "") or "").strip()
+            if override:
+                model = override
+            return await verify_answer(
+                question,
+                answer,
+                context.get("context_parts") or [],
+                client,
+                model,
+                mode=mode,
+                disable_thinking=use_internal,
+            )
+        except Exception as e:
+            logger.warning("source_verify: verification crashed, treating as unverified: %s", e)
+            return None
+
+    async def _stream_answer_enforce(
+        self,
+        question: str,
+        context: Dict[str, Any],
+        history: Optional[List[Dict[str, str]]],
+        include_followup: bool,
+    ) -> AsyncGenerator[str, None]:
+        """enforce 模式：緩衝 → 稽核 → 通過才輸出；失敗則約束式重生成一次。"""
+        buffered: List[str] = []
+        async for chunk in self._stream_answer_raw(
+            question, context, history, include_followup
+        ):
+            buffered.append(chunk)
+        answer = "".join(buffered)
+
+        result = await self._run_source_verification(question, answer, context, mode="enforce")
+        if result is not None:
+            context["source_verification"] = result.to_dict()
+            logger.info(
+                "source_verify[enforce] first_pass verified=%s claims=%d unsupported=%d reason=%s",
+                result.verified, result.total_claims,
+                len(result.unsupported_claims), result.reason,
+            )
+        if result is not None and result.verified:
+            yield answer
+            return
+
+        # 第一次未通過（或稽核不可用）→ 約束式重生成一次
+        unsupported_note = ""
+        if result is not None and result.unsupported_claims:
+            unsupported_note = "、".join(result.unsupported_claims[:5])
+        strict_note = (
+            "【稽核要求】前一版回答含有無法從參考資料逐字驗證的內容"
+            + (f"（{unsupported_note}）。" if unsupported_note else "。")
+            + "請重新回答，只使用參考資料中逐字存在的資訊；"
+            "若參考資料不足以回答，直接說明無法回答，不要推測。"
+        )
+        regenerated: List[str] = []
+        async for chunk in self._stream_answer_raw(
+            question, context, history, include_followup, extra_system_note=strict_note
+        ):
+            regenerated.append(chunk)
+        regen_answer = "".join(regenerated)
+
+        regen_result = await self._run_source_verification(
+            question, regen_answer, context, mode="enforce"
+        )
+        if regen_result is not None:
+            context["source_verification"] = regen_result.to_dict()
+            logger.info(
+                "source_verify[enforce] regen verified=%s claims=%d unsupported=%d reason=%s",
+                regen_result.verified, regen_result.total_claims,
+                len(regen_result.unsupported_claims), regen_result.reason,
+            )
+        if regen_result is not None and regen_result.verified:
+            yield regen_answer
+            return
+
+        # 兩次都無法完全溯源 → 誠實輸出：僅給已驗證重點，其餘明說無法確認
+        verified_points = (regen_result or result)
+        if verified_points is not None and verified_points.verified_claims:
+            lines = [
+                "目前無法產生每一句都能對回文件原文的完整回答。為避免誤導，"
+                "以下僅列出已在文件中逐字確認的重點：",
+                "",
+            ]
+            for c in verified_points.verified_claims[:5]:
+                lines.append(f"- {c['claim']}")
+            lines.append("")
+            lines.append("其餘細節未能在文件中找到逐字依據，建議查閱原文或補充文件後再問。")
+            yield "\n".join(lines)
+        else:
+            yield (
+                "目前知識庫的檢索內容不足以產生可逐字溯源的回答，"
+                "為避免提供無法驗證的資訊，此題暫不作答。"
+                "建議縮小問題範圍，或確認相關文件已完整上傳。"
+            )
+        logger.warning(
+            "source_verify[enforce] refused: reason=%s",
+            (regen_result or result).reason if (regen_result or result) else "verifier_unavailable",
+        )
 
     # ──────────── T7-2: 多輪對話支援 ────────────
 
@@ -714,18 +895,24 @@ class ChatOrchestrator:
 
     @staticmethod
     def _fallback_answer(context: Dict[str, Any]) -> str:
-        """LLM 不可用時的模板 fallback。"""
-        has_policy = context.get("has_policy", False)
+        """LLM 不可用或無證據時的模板；優先使用解釋式拒答。"""
+        refusal = context.get("refusal") or (context.get("retrieval") or {}).get("refusal")
+        if refusal and refusal.get("message"):
+            return refusal["message"]
 
+        has_policy = context.get("has_policy", False)
         if has_policy:
-            policy_content = context["company_policy_raw"]["content"][:500]
+            raw = context.get("company_policy_raw") or {}
+            policy_content = (raw.get("content") or "")[:500]
             return f"""📋 **知識庫相關內容**：
 {policy_content}
 
 💡 **提醒**：以上為知識庫中最相關的段落，AI 生成回答目前暫時無法使用。"""
 
-        else:
-            return "抱歉，目前知識庫中的資料不足以回答此問題。請嘗試換個方式提問，或向管理員確認是否需要補充相關文件。"
+        return (
+            "抱歉，目前知識庫中的資料不足以回答此問題。"
+            "請嘗試換個方式提問，或向管理員確認是否需要補充相關文件。"
+        )
 
     def format_summary(self, result: Dict[str, Any]) -> str:
         """格式化摘要（用於顯示）"""

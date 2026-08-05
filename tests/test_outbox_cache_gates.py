@@ -140,3 +140,53 @@ def test_cache_epoch_bump_changes_key(monkeypatch):
     assert k1 != k2 or fake.store[f"kb:acl_epoch:{tenant}"] == "2"
     # epoch bumped → raw hash input differs → key differs
     assert k1 != k2
+
+
+def test_cache_key_includes_filter_dict():
+    """契約：scoped（filter_dict）與非 scoped 搜尋不得共用快取條目。"""
+    from app.services.kb_retrieval import KnowledgeBaseRetriever
+
+    r = KnowledgeBaseRetriever()
+    r._redis = None  # epoch 走 "0" 分支即可，不需 Redis
+    tenant = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+    k_unscoped = r._cache_key(tenant, "q", "hybrid", 5, 0.0)
+    k_scoped = r._cache_key(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "a.pdf"})
+    k_scoped_other = r._cache_key(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "b.pdf"})
+    # 鍵序無關：相同條件不同順序應產生相同鍵
+    k_scoped_reordered = r._cache_key(
+        tenant, "q", "hybrid", 5, 0.0,
+        filter_dict={"filename": "a.pdf"},
+    )
+
+    assert k_unscoped != k_scoped
+    assert k_scoped != k_scoped_other
+    assert k_scoped == k_scoped_reordered
+
+
+def test_cache_scoped_unscoped_no_collision():
+    """契約：scoped 寫入的快取不得被非 scoped 讀取命中（反之亦然）。"""
+    from app.services.kb_retrieval import KnowledgeBaseRetriever
+
+    class FakeRedis:
+        def __init__(self):
+            self.store = {}
+
+        def get(self, key):
+            return self.store.get(key)
+
+        def setex(self, key, ttl, value):
+            self.store[key] = value
+            return True
+
+    r = KnowledgeBaseRetriever()
+    r._redis = FakeRedis()
+    tenant = uuid.UUID("00000000-0000-0000-0000-000000000001")
+
+    r._cache_set(tenant, "q", "hybrid", 5, 0.0, [{"content": "scoped"}], filter_dict={"filename": "a.pdf"})
+    # 非 scoped 讀取不得命中 scoped 條目
+    assert r._cache_get(tenant, "q", "hybrid", 5, 0.0) is None
+    # scoped 讀取命中自己的條目
+    assert r._cache_get(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "a.pdf"}) == [{"content": "scoped"}]
+    # 不同檔名的 scoped 讀取不得命中
+    assert r._cache_get(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "b.pdf"}) is None

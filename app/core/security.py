@@ -61,3 +61,44 @@ def create_access_token(
         to_encode["tenant_id"] = str(tenant_id)
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
+
+
+# CG-AUTH-SSO：MFA 局部 token 的 scope 值
+SCOPE_MFA_PENDING = "mfa_pending"  # 已過密碼、待 TOTP 挑戰
+SCOPE_MFA_ENROLL = "mfa_enroll"    # 強制開通流程中、僅可呼叫 MFA setup
+
+
+def create_partial_token(
+    subject: Union[str, Any],
+    *,
+    scope: str,
+    tenant_id: Optional[Union[UUID, str]] = None,
+    expires_delta: Optional[timedelta] = None,
+) -> str:
+    """MFA 局部 token：帶 scope claim，get_current_user 一律拒絕（不可繞過挑戰）。
+
+    只有 /auth/mfa/* 端點透過 decode_partial_token 接受此類 token。
+    """
+    if scope not in (SCOPE_MFA_PENDING, SCOPE_MFA_ENROLL):
+        raise ValueError(f"invalid partial token scope: {scope}")
+    expire = datetime.now(UTC) + (
+        expires_delta or timedelta(minutes=settings.MFA_PARTIAL_TOKEN_MINUTES)
+    )
+    to_encode: dict[str, Any] = {"exp": expire, "sub": str(subject), "scope": scope}
+    if tenant_id is not None:
+        to_encode["tenant_id"] = str(tenant_id)
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
+def decode_partial_token(token: str, *, expected_scope: Optional[str] = None) -> Optional[dict]:
+    """解碼並驗證局部 token；scope 不符或驗證失敗回傳 None。"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except jwt.JWTError:
+        return None
+    scope = payload.get("scope")
+    if scope not in (SCOPE_MFA_PENDING, SCOPE_MFA_ENROLL):
+        return None
+    if expected_scope is not None and scope != expected_scope:
+        return None
+    return payload

@@ -29,7 +29,7 @@ from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.db.session import SessionLocal
 from app.models.document import DocumentChunk, Document
 from app.core.authorization import AuthorizationContext, SearchScope
-from sqlalchemy import or_, and_, exists
+from sqlalchemy import or_, and_, exists, func
 from app.models.connector import SourceAclEntry, ExternalPrincipal
 
 logger = logging.getLogger(__name__)
@@ -214,9 +214,9 @@ class KnowledgeBaseRetriever:
         # 使用 authz 的 tenant_id（若提供）
         effective_tenant_id = authz.tenant_id if authz else tenant_id
 
-        # 1. 快取檢查（ACL-aware：包含 policy_fingerprint）
+        # 1. 快取檢查（ACL-aware：包含 policy_fingerprint 與 filter_dict）
         if use_cache and self._redis:
-            cached = self._cache_get(effective_tenant_id, query, mode, top_k, min_score, authz)
+            cached = self._cache_get(effective_tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict)
             if cached is not None:
                 return cached
 
@@ -260,7 +260,7 @@ class KnowledgeBaseRetriever:
 
         # 6. 寫入快取（ACL-aware）
         if use_cache and self._redis:
-            self._cache_set(effective_tenant_id, query, mode, top_k, min_score, results, authz)
+            self._cache_set(effective_tenant_id, query, mode, top_k, min_score, results, authz, filter_dict=filter_dict)
 
         return results
 
@@ -358,17 +358,22 @@ class KnowledgeBaseRetriever:
                 query_obj = self._apply_source_acl_filter(query_obj, tenant_id, authz, db)
 
             # ── filter_dict：metadata 過濾 ──
+            # metadata_json 是 JSON（非 JSONB），.astext 會 AttributeError 且被
+            # 外層 except 吞掉回傳 []，導致 scoped 檢索永遠落空（2026-08-03 盲測
+            # B02 根因）。json_extract_path_text 對 json/jsonb 都適用。
             if filter_dict:
                 for key, value in filter_dict.items():
                     if isinstance(value, list):
                         query_obj = query_obj.filter(
-                            DocumentChunk.metadata_json[key].astext.in_(
-                                [str(v) for v in value]
-                            )
+                            func.json_extract_path_text(
+                                DocumentChunk.metadata_json, key
+                            ).in_([str(v) for v in value])
                         )
                     else:
                         query_obj = query_obj.filter(
-                            DocumentChunk.metadata_json[key].astext == str(value)
+                            func.json_extract_path_text(
+                                DocumentChunk.metadata_json, key
+                            ) == str(value)
                         )
 
             query_obj = (
@@ -693,6 +698,13 @@ class KnowledgeBaseRetriever:
 
     _CACHE_TTL = 300  # 5 分鐘
 
+    @staticmethod
+    def _filter_fragment(filter_dict: Optional[Dict]) -> str:
+        """filter_dict 的規範化序列化（排序鍵），確保不同過濾條件產生不同快取鍵。"""
+        if not filter_dict:
+            return "nofilter"
+        return json.dumps(filter_dict, sort_keys=True, ensure_ascii=False, default=str)
+
     def _cache_key(
         self,
         tenant_id: UUID,
@@ -701,17 +713,20 @@ class KnowledgeBaseRetriever:
         top_k: int,
         min_score: float,
         authz: Optional[AuthorizationContext] = None,
+        filter_dict: Optional[Dict] = None,
     ) -> str:
         """
         ACL-aware 快取鍵。
 
-        包含 policy_fingerprint，確保：
+        包含 policy_fingerprint 與 filter_dict，確保：
           - 不同使用者的快取不會互相洩漏
           - 權限變更後舊快取自動失效
+          - scoped（檔名過濾）與非 scoped 搜尋不共用快取條目
         """
         auth_fragment = authz.to_cache_fragment() if authz else "auth:anon"
         epoch = self._acl_epoch(tenant_id)
-        raw = f"{tenant_id}:{auth_fragment}:epoch:{epoch}:{query}:{mode}:{top_k}:{min_score}"
+        filt = self._filter_fragment(filter_dict)
+        raw = f"{tenant_id}:{auth_fragment}:epoch:{epoch}:{query}:{mode}:{top_k}:{min_score}:filter:{filt}"
         h = hashlib.sha256(raw.encode()).hexdigest()[:16]
         return f"kb:search:{tenant_id}:{auth_fragment}:{h}"
 
@@ -723,11 +738,12 @@ class KnowledgeBaseRetriever:
         top_k: int,
         min_score: float,
         authz: Optional[AuthorizationContext] = None,
+        filter_dict: Optional[Dict] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         if not self._redis:
             return None
         try:
-            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz)
+            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict)
             cached = self._redis.get(key)
             if cached:
                 logger.debug(f"快取命中: {key}")
@@ -745,11 +761,12 @@ class KnowledgeBaseRetriever:
         min_score: float,
         results: List[Dict[str, Any]],
         authz: Optional[AuthorizationContext] = None,
+        filter_dict: Optional[Dict] = None,
     ):
         if not self._redis:
             return
         try:
-            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz)
+            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict)
             self._redis.setex(key, self._CACHE_TTL, json.dumps(results, default=str))
         except Exception:
             pass

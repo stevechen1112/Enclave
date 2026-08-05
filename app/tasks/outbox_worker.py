@@ -172,14 +172,23 @@ async def _dispatch_to_provider(
         content_hash = payload.get("content_hash", "")
         file_type = payload.get("file_type", "pdf")
         meta = dict(payload)
-        if not meta.get("dataset_id"):
-            env_ds = os.getenv("RAGFLOW_DATASET_ID", "").strip()
-            if env_ds:
-                meta["dataset_id"] = env_ds
-        if not meta.get("kb_id"):
-            env_kb = os.getenv("WEKNORA_DEFAULT_KB_ID", "").strip()
-            if env_kb:
-                meta["kb_id"] = env_kb
+        # ADR-013：payload 未帶 sidecar ID 時（舊事件），以 binding 解析；
+        # 不再讀全域環境變數決定租戶歸屬
+        if (not meta.get("dataset_id") or not meta.get("kb_id")) and db is not None:
+            from app.services.sidecar_binding import (
+                resolve_ragflow_dataset_id,
+                resolve_weknora_kb_id,
+            )
+            event_tenant = payload.get("tenant_id")
+            if event_tenant:
+                if not meta.get("dataset_id"):
+                    ds = resolve_ragflow_dataset_id(db, UUID(event_tenant))
+                    if ds:
+                        meta["dataset_id"] = ds
+                if not meta.get("kb_id"):
+                    kb = resolve_weknora_kb_id(db, UUID(event_tenant))
+                    if kb:
+                        meta["kb_id"] = kb
         return await adapter.ingest(
             document_id=UUID(aggregate_id),
             revision=revision,

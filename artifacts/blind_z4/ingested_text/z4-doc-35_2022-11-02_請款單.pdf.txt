@@ -1,0 +1,10 @@
+【2022-11-02_請款單.pdf】
+<table>
+<tr><td  >申</td><td  >請 請 方：八策品牌行销有限公司</td><td  >款</td><td  >NO. :</td><td></td><td  >單</td><td></td></tr>
+<tr><td  >付</td><td  >款 方：立壕有限公司 摘要： 10月行銷费用：25,000元（SEO20,000元+兩篇文章：5,000元）</td><td></td><td  >日期：111年11月2日</td><td></td><td></td><td></td></tr>
+<tr><td></td><td  >NT $ : 25,000 元</td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td  >請</td><td  >新台： 贰</td><td  >萬</td><td  >伍</td><td  >仟</td><td  >元</td><td></td></tr>
+<tr><td></td><td  >款</td><td  >人</td><td></td><td></td><td></td><td  >整</td></tr>
+<tr><td></td><td  >八策品牌行銷有限公司</td><td></td><td></td><td  >有牌八 限行策</td><td></td><td  >重</td></tr>
+<tr><td></td><td></td><td></td><td></td><td  >筒销品</td><td></td><td></td></tr>
+</table>

@@ -7,6 +7,7 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.document import Document
 from app.models.audit import UsageRecord
+from app.config import settings
 from app.schemas.tenant import TenantCreate, TenantUpdate, PLAN_QUOTAS
 
 
@@ -40,6 +41,17 @@ def create(db: Session, *, obj_in: TenantCreate) -> Tenant:
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    # ADR-013：租戶建立即配發空 sidecar binding（各 pack NULL＝未啟用），
+    # 讓 binding 解析永遠 fail-closed 有據可依；pack 啟用時再寫入歸屬 ID
+    try:
+        from app.services.sidecar_binding import ensure_binding
+
+        ensure_binding(db, db_obj.id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     return db_obj
 
 
@@ -76,6 +88,14 @@ def get_current_usage(db: Session, tenant_id: UUID) -> Dict[str, Any]:
         Document.tombstoned_at.is_(None),
     ).scalar() or 0
 
+    # CG-QUOTA 儲存軸：以文件 file_size 累計（bytes → MB）
+    storage_bytes = db.query(
+        func.coalesce(func.sum(Document.file_size), 0)
+    ).filter(
+        Document.tenant_id == tenant_id,
+        Document.tombstoned_at.is_(None),
+    ).scalar() or 0
+
     # 月度查詢次數和 token 數
     monthly = db.query(
         func.count(UsageRecord.id).label("queries"),
@@ -90,7 +110,7 @@ def get_current_usage(db: Session, tenant_id: UUID) -> Dict[str, Any]:
     return {
         "current_users": user_count,
         "current_documents": doc_count,
-        "current_storage_mb": 0.0,  # TODO: 從文件大小累計
+        "current_storage_mb": round(storage_bytes / (1024 * 1024), 2),
         "current_monthly_queries": monthly.queries or 0,
         "current_monthly_tokens": int(monthly.tokens or 0),
     }
@@ -158,10 +178,49 @@ def get_quota_status(db: Session, tenant_id: UUID) -> Dict[str, Any]:
     }
 
 
+def check_storage_quota(
+    db: Session, tenant_id: UUID, additional_bytes: int = 0
+) -> Dict[str, Any]:
+    """檢查儲存配額（含即將上傳的 additional_bytes）。"""
+    tenant = get(db, tenant_id)
+    if not tenant:
+        return {"allowed": False, "message": "租戶不存在"}
+
+    usage = get_current_usage(db, tenant_id)
+    current_mb = usage["current_storage_mb"]
+    add_mb = additional_bytes / (1024 * 1024)
+    limit = tenant.max_storage_mb
+    projected = current_mb + add_mb
+
+    if limit is None:
+        return {
+            "allowed": True,
+            "message": "儲存空間無上限",
+            "current": current_mb,
+            "limit": None,
+            "projected_mb": round(projected, 2),
+        }
+    if projected > limit:
+        return {
+            "allowed": False,
+            "message": f"儲存空間已達上限 {limit} MB，目前 {current_mb:.2f} MB，本次需 {add_mb:.2f} MB",
+            "current": current_mb,
+            "limit": limit,
+            "projected_mb": round(projected, 2),
+        }
+    return {
+        "allowed": True,
+        "message": "OK",
+        "current": current_mb,
+        "limit": limit,
+        "projected_mb": round(projected, 2),
+    }
+
+
 def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
     """
     檢查特定資源是否超額。
-    resource: "user", "document", "query", "token"
+    resource: "user", "document", "storage", "query", "token"
     回傳 {"allowed": bool, "message": str, "current": int, "limit": int|None}
     """
     tenant = get(db, tenant_id)
@@ -173,6 +232,7 @@ def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
     checks = {
         "user": (usage["current_users"], tenant.max_users, "使用者數量"),
         "document": (usage["current_documents"], tenant.max_documents, "文件數量"),
+        "storage": (usage["current_storage_mb"], tenant.max_storage_mb, "儲存空間"),
         "query": (usage["current_monthly_queries"], tenant.monthly_query_limit, "月查詢次數"),
         "token": (usage["current_monthly_tokens"], tenant.monthly_token_limit, "月 Token 量"),
     }
@@ -191,6 +251,105 @@ def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
             "limit": limit,
         }
     return {"allowed": True, "message": "OK", "current": current, "limit": limit}
+
+
+def _apply_plan_fields(tenant: Tenant, plan: str) -> None:
+    if plan not in PLAN_QUOTAS:
+        raise ValueError(f"unknown plan: {plan}")
+    defaults = PLAN_QUOTAS[plan]
+    tenant.plan = plan
+    tenant.max_users = defaults.get("max_users")
+    tenant.max_documents = defaults.get("max_documents")
+    tenant.max_storage_mb = defaults.get("max_storage_mb")
+    tenant.monthly_query_limit = defaults.get("monthly_query_limit")
+    tenant.monthly_token_limit = defaults.get("monthly_token_limit")
+
+
+def lock_and_check_storage_quota(
+    db: Session, tenant_id: UUID, additional_bytes: int
+) -> Dict[str, Any]:
+    """FOR UPDATE 鎖租戶後檢查儲存配額（與後續 create 同一 transaction，防 TOCTOU）。"""
+    locked = (
+        db.query(Tenant)
+        .filter(Tenant.id == tenant_id)
+        .with_for_update()
+        .first()
+    )
+    if not locked:
+        db.rollback()
+        return {"allowed": False, "message": "租戶不存在"}
+    result = check_storage_quota(db, tenant_id, additional_bytes)
+    if not result.get("allowed", True):
+        db.rollback()
+    return result
+
+
+def reserve_chat_quota(
+    db: Session,
+    tenant_id: UUID,
+    user_id: UUID,
+) -> Dict[str, Any]:
+    """原子性預留一次聊天查詢配額（FOR UPDATE 鎖租戶列，插入 UsageRecord 後 commit）。
+
+    解決 check→process→log 之間的 TOCTOU：並發請求無法全部通過前置檢查後集體超額。
+    Token 軸：預留時寫入 CHAT_TOKEN_RESERVE_ESTIMATE，finalize 改為實際 token。
+    """
+    reserve_tokens = int(getattr(settings, "CHAT_TOKEN_RESERVE_ESTIMATE", 4000) or 4000)
+
+    locked = (
+        db.query(Tenant)
+        .filter(Tenant.id == tenant_id)
+        .with_for_update()
+        .first()
+    )
+    if not locked:
+        return {"allowed": False, "message": "租戶不存在", "usage_record_id": None}
+
+    usage = get_current_usage(db, tenant_id)
+    token_limit = locked.monthly_token_limit
+    if token_limit is not None:
+        projected_tokens = usage["current_monthly_tokens"] + reserve_tokens
+        if projected_tokens > token_limit:
+            db.rollback()
+            return {
+                "allowed": False,
+                "message": f"月 Token 量已達上限 {token_limit}，目前 {usage['current_monthly_tokens']}",
+                "current": usage["current_monthly_tokens"],
+                "limit": token_limit,
+                "usage_record_id": None,
+                "axis": "token",
+            }
+
+    query_check = check_quota(db, tenant_id, "query")
+    if not query_check.get("allowed", True):
+        db.rollback()
+        return {**query_check, "usage_record_id": None, "axis": "query"}
+
+    record = UsageRecord(
+        tenant_id=tenant_id,
+        user_id=user_id,
+        action_type="chat_query",
+        input_tokens=reserve_tokens,
+        output_tokens=0,
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
+    return {
+        "allowed": True,
+        "message": "OK",
+        "usage_record_id": record.id,
+        "current": (query_check.get("current") or 0) + 1,
+        "limit": query_check.get("limit"),
+    }
+
+
+def cancel_chat_quota_reservation(db: Session, usage_record_id: UUID) -> None:
+    """釋放未完成的聊天配額預留（例如對話驗證失敗）。"""
+    record = db.query(UsageRecord).filter(UsageRecord.id == usage_record_id).first()
+    if record:
+        db.delete(record)
+        db.commit()
 
 
 def update_quota(db: Session, tenant_id: UUID, quota_data: Dict[str, Any]) -> Optional[Tenant]:
@@ -218,13 +377,7 @@ def apply_plan_quota(db: Session, tenant_id: UUID, plan: str) -> Optional[Tenant
         return None
     if plan not in PLAN_QUOTAS:
         return None
-    defaults = PLAN_QUOTAS[plan]
-    tenant.plan = plan
-    tenant.max_users = defaults.get("max_users")
-    tenant.max_documents = defaults.get("max_documents")
-    tenant.max_storage_mb = defaults.get("max_storage_mb")
-    tenant.monthly_query_limit = defaults.get("monthly_query_limit")
-    tenant.monthly_token_limit = defaults.get("monthly_token_limit")
+    _apply_plan_fields(tenant, plan)
     db.add(tenant)
     db.commit()
     db.refresh(tenant)

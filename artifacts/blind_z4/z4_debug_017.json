@@ -1,0 +1,35 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T11:55:16",
+ "base_url": "http://localhost:8011",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 51.3,
+ "summary": {
+  "total": 1,
+  "pass": 1,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z4-i-017",
+   "category": "blind_z4_B",
+   "query": "新元應材／艾科能德網站建置報價合約（用印）的金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "115,500",
+    "110,000"
+   ],
+   "spans_hit": [
+    "115,500",
+    "110,000"
+   ],
+   "answer": "## 新元應材／艾科能德網站建置報價合約金額\n\n根據《HRC2022000036-(NM)八策品牌行銷有限公司新元應材網站建置報價合約（新元用印）》：\n\n- **報價金額：新臺幣 110,000 元（未稅）**\n- **營業稅 5%：新臺幣 5,500 元**\n- **含稅總金額：新臺幣 115,500 元**\n\n### 付款方式（未稅）\n\n1. **訂金 30%**：新臺幣 33,000 元  \n2. **中文版網站完成並驗收後 50%**：新臺幣 55,000 元  \n3. **英文版網站完成並驗收後 20%**：新臺幣 22,000 元  \n\n以上金額依《HRC2022000036-(NM)八策品牌行銷有限公司新元應材網站建置報價合約（新元用印）》之報價及付款條款。\n\n[建議問題]  \n1. 這份網站建置合約的付款期限與付款方式是什麼？  \n2. 合約包含哪些網站功能與服務？  \n3. 合約的甲乙雙方及用印日期為何？",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  }
+ ],
+ "partial": false
+}

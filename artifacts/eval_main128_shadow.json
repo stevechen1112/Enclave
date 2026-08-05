@@ -1,0 +1,1598 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-04T03:09:43",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 1738.2,
+ "summary": {
+  "total": 88,
+  "pass": 87,
+  "fail": 1,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "E001",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "服務租用訂單"
+   ],
+   "spans_hit": [
+    "服務租用訂單"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，文件標題是 **「系統服務租用訂單」**。\n\n[建議問題]\n1. 這份訂單的合約期間為何？\n2. 這份訂單的總金額是多少？\n3. 租用項目包含哪些服務？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E002",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，客戶公司名稱是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 客戶公司名稱\n\n根據《000_nueip 合約(1).pdf》「系統服務租用訂單」的公司名稱欄位，客戶公司名稱為：**八策數位股份有限公司**。\n\n[建議問題]\n1. 此合約的期間為何？\n2. 此合約的總金額是多少？\n3. 客戶的統一編號與聯絡人是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E003",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，聯絡人姓名是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》的「系統服務租用訂單」，**聯絡人姓名為陳宥竹**。\n\n[建議問題]\n1. 聯絡人的電話與電子郵件是什麼？\n2. 此合約的起訖日期為何？\n3. 此合約的總金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E004",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，聯絡電話是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "0930168033"
+   ],
+   "spans_hit": [
+    "0930168033"
+   ],
+   "answer": "## 聯絡電話\n\n根據《000_nueip 合約(1).pdf》的「聯絡人」欄位：\n\n- **聯絡人：**陳宥竹\n- **電話：**0930-168-033\n\n[建議問題]\n1. 這份合約的聯絡人電子郵件是什麼？\n2. NUEiP 業務人員的電話與信箱是什麼？\n3. 這份合約的期間與總金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E005",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，電子郵件是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "steve_chen@premierbiz.com.tw"
+   ],
+   "spans_hit": [
+    "steve_chen@premierbiz.com.tw"
+   ],
+   "answer": "## 電子郵件\n\n根據《000_nueip 合約(1).pdf》系統服務租用訂單，聯絡人的電子郵件為：\n\n**steve_chen@premierbiz.com.tw**\n\n另文件亦記載業務 Ernie Shi 的信箱為：**ernie.shi@staff.nueip.com**。\n\n[建議問題]\n1. 合約的聯絡人與電話是什麼？\n2. 合約期間到什麼時候？\n3. 合約總金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E006",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，訂單日期是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "2026-02-02"
+   ],
+   "spans_hit": [
+    "2026-02-02"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，**訂單日期為 2026 年 2 月 2 日**。\n\n[建議問題]\n1. 這份合約的合約期間為何？\n2. 訂單總金額是多少？\n3. 付款期限是什麼時候？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E007",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，訂單編號是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "20260202e-01"
+   ],
+   "spans_hit": [
+    "20260202e-01"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，**訂單編號（訂單單號）為：20260202e-01**。\n\n[建議問題]\n1. 這份合約的合約期間為何？\n2. 訂單總金額及付款期限為何？\n3. 這份訂單包含哪些租用項目？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E008",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，統一編號是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》，八策數位股份有限公司的**統一編號是 83028948**。\n\n[建議問題]\n1. 這份合約的合約期間為何？\n2. 這份合約的總金額是多少？\n3. 付款期限與匯款資訊為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E009",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，總計金額是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "32,130"
+   ],
+   "spans_hit": [
+    "32,130"
+   ],
+   "answer": "## 總計金額\n\n根據《000_nueip 合約(1).pdf》，金額如下：\n\n- **小計：NT$30,600**\n- **營業稅：NT$1,530**\n- **總計：NT$32,130**\n\n計算公式：  \n**NT$30,600 ＋ NT$1,530 ＝ NT$32,130**\n\n[建議問題]\n1. 這份合約的付款期限是何時？\n2. 這份合約包含哪些租用項目？\n3. 這份合約的服務期間是多久？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E010",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，出租系統的廠商名稱是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "人易科技股份有限公司"
+   ],
+   "spans_hit": [
+    "人易科技股份有限公司"
+   ],
+   "answer": "## 出租系統廠商名稱\n\n出租系統的廠商為 **人易科技股份有限公司（NUEiP Technology Co., Ltd.）**。\n\n依據：《000_nueip 合約(1).pdf》的系統服務租用訂單抬頭及收款戶名。\n\n[建議問題]\n1. 此系統的合約期間為何？\n2. 合約租用的系統項目與費用是多少？\n3. 合約總金額與付款期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E011",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "入團申請家長同意書"
+   ],
+   "spans_hit": [
+    "入團申請家長同意書"
+   ],
+   "answer": "## 「title」欄位值\n\n根據《001_四屆新生入團申請家長同意書.pdf》文件開頭的標題內容，**title 的值為：**\n\n**心電心急救教育推廣團 入團申請家長同意書**\n\n[建議問題]\n1. 這份同意書所列的基本活動有哪些？\n2. 參與期間與指導單位分別是什麼？\n3. 文件中提供了哪些聯絡方式？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E012",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「org」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "心電心急救教育推廣團"
+   ],
+   "spans_hit": [
+    "心電心急救教育推廣團"
+   ],
+   "answer": "## 「org」欄位值\n\n根據《001_四屆新生入團申請家長同意書.pdf》的文件抬頭與內文，「org」所指的組織名稱應為：\n\n**心電心急救教育推廣團**\n\n[建議問題]\n1. 該團體的指導單位是什麼？\n2. 參與期間為多久？\n3. 該團體有哪些基本活動？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E013",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「supervisor」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "群蕊整合服務股份有限公司"
+   ],
+   "spans_hit": [
+    "群蕊整合服務股份有限公司"
+   ],
+   "answer": "## 欄位值\n\n「supervisor」對應文件中的「指導單位」，其值為：\n\n**群蕊整合服務股份有限公司**\n\n依據：《001_四屆新生入團申請家長同意書.pdf》第三項「指導單位」。\n\n[建議問題]\n1. 文件中的參與期間是多久？\n2. 文件列出了哪些基本活動？\n3. 文件中的聯絡方式有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E014",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「period」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "2年"
+   ],
+   "spans_hit": [
+    "2年"
+   ],
+   "answer": "## period 欄位值\n\n根據《001_四屆新生入團申請家長同意書.pdf》第四點「參與期間」，**period 的值為：2年**。\n\n[建議問題]\n1. 該團體有哪些基本活動？\n2. 參與期間內是否可以退出？\n3. 該團體的聯絡方式是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E015",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「instagram」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "heartbeat.connection"
+   ],
+   "spans_hit": [
+    "heartbeat.connection"
+   ],
+   "answer": "## Instagram 欄位值\n\n根據《001_四屆新生入團申請家長同意書.pdf》第五項「聯絡方式」，Instagram 帳號為：\n\n**heartbeat.connection**\n\n[建議問題]\n1. 文件中的 Facebook 帳號是什麼？\n2. 該團體的參與期間是多久？\n3. 該團體有哪些基本活動？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E016",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「field_student」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "學生名"
+   ],
+   "spans_hit": [
+    "學生名"
+   ],
+   "answer": "## 答案\n\n欄位 **「field_student」** 對應文件中的「學生名」，其值為 **空白／未填寫**。\n\n依據：《001_四屆新生入團申請家長同意書.pdf》中顯示「學生名：」，後方沒有姓名內容。\n\n[建議問題]\n1. 欄位「家長名」的值是什麼？\n2. 欄位「家長聯絡電話」是否有填寫？\n3. 這份同意書的參與期間是多久？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E017",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「field_parent」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "家長名"
+   ],
+   "spans_hit": [
+    "家長名"
+   ],
+   "answer": "## 答案\n\n根據《001_四屆新生入團申請家長同意書.pdf》，「field_parent」對應「家長名」欄位；該欄位**未填寫，值為空白**。\n\n[建議問題]\n1. 「field_student」欄位的值是什麼？\n2. 家長聯絡電話欄位是否有填寫？\n3. 文件中的參與期間是多久？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E018",
+   "category": "annotation_field",
+   "query": "根據文件《001_四屆新生入團申請家長同意書.pdf》，欄位「field_parent_phone」的值是什麼？",
+   "expected_docs": [
+    "001_四屆新生入團申請家長同意書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "家長聯絡電話"
+   ],
+   "spans_hit": [
+    "家長聯絡電話"
+   ],
+   "answer": "## 欄位值\n\n根據《001_四屆新生入團申請家長同意書.pdf》，「家長聯絡電話」欄位未填寫，因此 **`field_parent_phone` 的值為空白（無資料）**。\n\n[建議問題]\n1. `field_parent_name` 的值是什麼？\n2. `field_student_name` 的值是什麼？\n3. 這份同意書的參與期間是多久？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E019",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，品牌名稱是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "KiGO"
+   ],
+   "spans_hit": [
+    "KiGO"
+   ],
+   "answer": "## 品牌名稱\n\n根據《023_KiGo使用手冊.pdf》封面及第一章內容，品牌名稱是 **KiGo**。\n\n[建議問題]\n1. KiGo 是什麼類型的軟體？\n2. KiGo 與 LGS 傳奇圍棋網有什麼關係？\n3. KiGo 的適用對象是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E020",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，文件類型是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "使用手冊"
+   ],
+   "spans_hit": [
+    "使用手冊"
+   ],
+   "answer": "## 文件類型\n\n《023_KiGo使用手冊.pdf》的文件類型是**玩家使用手冊（Guidebook）**，主要說明 KiGo 網路圍棋軟體的安裝與操作方式。\n\n依據：文件封面標示「Guidebook／玩家使用手冊」，目錄包含軟體介紹、安裝 KiGo、帳號註冊、上網下棋及安裝 GNU Go 等操作章節。\n\n[建議問題]\n1. 這份手冊主要包含哪些章節？\n2. KiGo 的安裝步驟是什麼？\n3. 如何註冊 KiGo 新帳號？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E021",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，副標題是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "玩家使用手冊"
+   ],
+   "spans_hit": [
+    "玩家使用手冊"
+   ],
+   "answer": "## 副標題\n\n根據《023_KiGo使用手冊.pdf》封面，主標題為 **「KiGo Guidebook」**，副標題是 **「玩家使用手冊」**。\n\n[建議問題]\n1. 這份手冊包含哪些章節？\n2. KiGo 的主要功能有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E022",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，所屬網站是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "LGS傳奇圍棋網"
+   ],
+   "spans_hit": [
+    "LGS傳奇圍棋網"
+   ],
+   "answer": "## 所屬網站\n\n根據《023_KiGo使用手冊.pdf》第一章「軟體及網站介紹」，KiGo 所屬網站為 **LGS 傳奇圍棋網**：\n\n- **網站名稱：**LGS 傳奇圍棋網\n- **網址：**http://LGS.Taiwango.net\n- **KiGo 專屬網站：**http://KiGo.Taiwango.net\n\n[建議問題]\n1. KiGo 軟體的硬體需求是什麼？\n2. 如何註冊 KiGo 帳號？\n3. 如何安裝 GNU Go？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E023",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，軟體版本是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "0.6.1 Beta"
+   ],
+   "spans_hit": [
+    "0.6.1 Beta"
+   ],
+   "answer": "## 軟體版本\n\n《023_KiGo使用手冊.pdf》的安裝歡迎畫面標示 **KiGo 0.6.1 Beta**。\n\n不過，文件內版本資訊並不一致，其他畫面亦出現：\n\n- **0.0.1 Beta／版本 0.0.1**：安裝及主畫面\n- **版本 1.1.1**：登入畫面\n- **版本 3.3.0**：儲值操作畫面\n\n因此，若以安裝歡迎畫面為準，答案是 **KiGo 0.6.1 Beta**；但該手冊可能混用了不同版本的操作截圖。\n\n[建議問題]\n1. KiGo 0.6.1 Beta 的硬體需求是什麼？\n2. 如何安裝 KiGo？\n3. 手冊中的版本資訊有哪些不一致？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E024",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，第一章章名是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "軟體及網站介紹"
+   ],
+   "spans_hit": [
+    "軟體及網站介紹"
+   ],
+   "answer": "## 答案\n\n根據《023_KiGo使用手冊.pdf》，第一章章名是 **「軟體及網站介紹」**。\n\n[建議問題]\n1. 第二章章名是什麼？\n2. 第一章主要介紹哪些內容？\n3. 《KiGo使用手冊》的完整目錄有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E025",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，第二章章名是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "安裝KiGo"
+   ],
+   "spans_hit": [
+    "安裝KiGo"
+   ],
+   "answer": "根據《023_KiGo使用手冊.pdf》的目錄與章節標題，第二章章名是 **「安裝 KiGo」**。\n\n[建議問題]\n1. 第二章包含哪些小節？\n2. 安裝 KiGo 的硬體需求是什麼？\n3. 第三章的章名是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E026",
+   "category": "annotation_field",
+   "query": "根據文件《023_KiGo使用手冊.pdf》，第五章章名是什麼？",
+   "expected_docs": [
+    "023_KiGo使用手冊.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "安裝GNU Go"
+   ],
+   "spans_hit": [
+    "安裝GNU Go"
+   ],
+   "answer": "根據《023_KiGo使用手冊.pdf》，第五章章名是 **「安裝 GNU Go」**。\n\n[建議問題]\n1. 第五章包含哪些小節？\n2. 如何安裝 GNU Go？\n3. 安裝 GNU Go 後可使用哪些功能？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E027",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第一章章名是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "刑法的基本原則"
+   ],
+   "spans_hit": [
+    "刑法的基本原則"
+   ],
+   "answer": "根據《007_DOC_0001.pdf》，第一章章名是 **「刑法的基本原則」**。\n\n[建議問題]\n1. 第一章包含哪些基本原則？\n2. 第二章章名是什麼？\n3. 罪刑法定原則有哪些派生原則？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E028",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第一篇篇名是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "總論"
+   ],
+   "spans_hit": [
+    "總論"
+   ],
+   "answer": "根據《007_DOC_0001.pdf》，第一篇篇名是 **「總論」**。\n\n[建議問題]\n1. 第一篇第一章的章名是什麼？\n2. 第一章包含哪些刑法基本原則？\n3. 第二章的章名是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E029",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第一個基本原則是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "罪刑法定原則"
+   ],
+   "spans_hit": [
+    "罪刑法定原則"
+   ],
+   "answer": "## 第一個基本原則\n\n根據《007_DOC_0001.pdf》第一篇第一章「刑法的基本原則」，第一個基本原則是**罪刑法定原則**。\n\n其意義為：**犯罪行為的構成要件與法律效果，須事先以法律明定之。**\n\n[建議問題]\n1. 罪刑法定原則有哪些派生子原則？\n2. 罪刑法定原則的適用範圍是什麼？\n3. 刑法的其他基本原則有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E030",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第二個基本原則是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "法益保護原則"
+   ],
+   "spans_hit": [
+    "法益保護原則"
+   ],
+   "answer": "## 第二個基本原則\n\n根據《007_DOC_0001.pdf》第一篇第一章「刑法的基本原則」，第二個基本原則是 **法益保護原則**。\n\n文件所列順序如下：\n\n1. 罪刑法定原則  \n2. **法益保護原則**  \n3. 最後手段性原則（刑法謙抑原則）  \n4. 罪責原則（罪刑相當原則）\n\n[建議問題]\n1. 法益保護原則的意義是什麼？\n2. 法益可分為哪些類型？\n3. 法益保護原則有哪些功能？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E031",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，引用的教科書作者是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "王皇玉"
+   ],
+   "spans_hit": [
+    "王皇玉"
+   ],
+   "answer": "## 引用的教科書作者\n\n根據《007_DOC_0001.pdf》註腳 1，引用的教科書為《刑法總則》，作者是 **王皇玉**（第 6 版，2020 年）。\n\n[建議問題]\n1. 文件中還引用了哪些作者或著作？\n2. 王皇玉《刑法總則》被引用於哪些內容？\n3. 文件所述的法益有哪些分類？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E032",
+   "category": "annotation_field",
+   "query": "根據文件《007_DOC_0001.pdf》，第二章章名是什麼？",
+   "expected_docs": [
+    "007_DOC_0001.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "刑法的效力範圍"
+   ],
+   "spans_hit": [
+    "刑法的效力範圍"
+   ],
+   "answer": "根據《007_DOC_0001.pdf》，第二章章名是 **「刑法的效力範圍」**。\n\n[建議問題]\n1. 第一章章名是什麼？\n2. 第二章包含哪些效力範圍？\n3. 什麼是刑法「地的效力範圍」？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E033",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，報告標題是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "AI 機器人全球 7 大勢力關鍵報告"
+   ],
+   "spans_hit": [
+    "AI 機器人全球 7 大勢力關鍵報告"
+   ],
+   "answer": "## 報告標題\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，報告標題是：\n\n**《AI 機器人全球 7 大勢力關鍵報告》**\n\n副標題為：**「透視 Global 300+ 企業系統生態」**。\n\n[建議問題]\n1. 報告分析了哪七大國家或地區？\n2. 報告如何比較七大勢力的機器人發展策略？\n3. 台灣發展 AI 機器人產業有哪些優勢與挑戰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E034",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，發布媒體是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "TechOrange 科技報橘"
+   ],
+   "spans_hit": [
+    "TechOrange 科技報橘"
+   ],
+   "answer": "## 發布媒體\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》封面資訊，發布媒體是 **TechOrange 科技報橘（TO）**，文件上標示為「TechOrange 科技報橘｜TO Highlight」。\n\n[建議問題]\n1. 這份報告涵蓋哪全球七大勢力？\n2. 報告如何分析台灣 AI 機器人產業的優勢？\n3. 各國的 AI 機器人發展策略有何差異？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E035",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，美國段的策略主軸是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "企業主導投資與研發"
+   ],
+   "spans_hit": [],
+   "answer": "## 美國段的策略主軸\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，美國的策略主軸是：\n\n> **由企業主導 AI 與機器人的投資、研發及應用，政府則聚焦軍事、太空機器人與自主系統。**\n\n具體特徵包括：\n\n- **大型科技企業領軍**：Google、亞馬遜、特斯拉等企業大力投入先進 AI 與機器人技術。\n- **私人資本驅動**：大量私人投資催生人形機器人新創公司。\n- **強調實際產業應用**：主要鎖定物流、醫療保健與製造業，將人形機器人視為提升生產力及效率的工具，而非社交夥伴。\n- **強項集中於高階技術與 AI 軟體**。\n- **政府角色較有限**：目前欠缺全面性的國家策略與標準化作法，但產業界已在 2025 年呼籲制定國家戰略，以因應中國競爭。\n- **政策開始提供誘因**：國會透過設備投資首年全額折舊政策，降低企業採用機器人的稅後成本。\n\n因此，可將美國模式概括為：**「企業與私人資本主導、實際應用導向，政府聚焦特定戰略領域並逐步提供政策支持。」**\n\n[建議問題]\n1. 美國與中國的 AI 機器人發展策略有何差異？\n2. 美國在人形機器人發展上的優勢與弱點是什麼？\n3. 報告中的全球七大勢力各自策略主軸為何？",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "E036",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，中國段的策略主軸是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "計劃性"
+   ],
+   "spans_hit": [
+    "計劃性"
+   ],
+   "answer": "## 中國段的策略主軸\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，中國的策略主軸是：\n\n> **以國家重點戰略進行計畫性投入，建立可擴展且自主可控的關鍵零組件供應鏈。**\n\n具體作法包括：\n\n- 透過《十四五機器人產業規劃》與「中國製造 2025」推動產業發展。\n- 布局區域創新中心與研究院，鎖定醫療、教育、能源等 11 個重點領域。\n- 由中央至地方提供研發及應用補貼，並搭配外資稅收優惠與國家級創投基金。\n- 支持收購海外先進機器人企業，加速技術取得與產業升級。\n- 推動關鍵零組件國產化，降低對美國及其他海外技術的依賴。\n- 憑藉成熟製造供應鏈，從低階市場向高階機器人市場發展。\n\n簡言之，中國採取的是**「國家政策與資金主導、供應鏈自主化、重點場域規模化應用」**的發展路線。\n\n[建議問題]\n1. 中國為推動 AI 機器人產業提供了哪些政策與資金工具？\n2. 中國與美國的 AI 機器人發展策略有何差異？\n3. 中國機器人產業目前有哪些代表性企業與發展成果？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E037",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，機器人密度數據的引用機構是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "國際機器人聯盟"
+   ],
+   "spans_hit": [
+    "國際機器人聯盟"
+   ],
+   "answer": "## 引用機構\n\n機器人密度數據引用自 **國際機器人聯盟（International Federation of Robotics，IFR）**。\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，德國及韓國的機器人密度資料皆標示來自 IFR 的《世界機器人》報告或統計。\n\n[建議問題]\n1. 報告中各國的機器人密度排名為何？\n2. 韓國與德國每萬名員工分別擁有多少台機器人？\n3. 中國的機器人密度預計何時超越韓國？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E038",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，德國機器人研究機構名稱是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "德國機器人研究所"
+   ],
+   "spans_hit": [
+    "德國機器人研究所"
+   ],
+   "answer": "德國的機器人研究機構名稱是 **「德國機器人研究所」**（**Robotics Institute Germany，RIG**）。\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，該研究所由德國聯邦教育與研究部（BMBF）資助及擴大，旨在串聯德國頂尖的智慧機器人研究機構與大學。\n\n[建議問題]\n1. 德國機器人研究所（RIG）的主要任務是什麼？\n2. 德國政府投入多少資金支持 RIG？\n3. 德國的機器人政策核心目標有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E039",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書"
+   ],
+   "answer": "## 欄位值\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》的文件標題，欄位 **「title」** 的值是：\n\n**營業稅繳款書**\n\n[建議問題]\n1. 這份繳款書的應納稅額是多少？\n2. 這份繳款書的繳納期限是何時？\n3. 這份文件的營業人名稱與統一編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E040",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「form_no」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "(401)"
+   ],
+   "spans_hit": [
+    "(401)"
+   ],
+   "answer": "## form_no 欄位值\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，**form_no 的值為：`1141113153817`**。\n\n[建議問題]\n1. 此文件的營利事業統一編號是什麼？\n2. 此文件的應納稅額合計是多少？\n3. 此文件的繳納期限是哪一天？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E041",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「tax_id」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## tax_id 欄位值\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，「tax_id」對應「營利事業統一編號」，其值為：\n\n**83028948**\n\n[建議問題]\n1. 此文件的稅籍編號是什麼？\n2. 此文件的應納稅額合計是多少？\n3. 此文件的繳納期限是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E042",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「period」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09-10月"
+   ],
+   "spans_hit": [
+    "114年09-10月"
+   ],
+   "answer": "## period 欄位值\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》的「所屬年月份」，**period 的值為：114年09-10月**。\n\n[建議問題]\n1. 這份繳款書的繳納期限是什麼時候？\n2. 這份繳款書的應納稅額是多少？\n3. 這份文件的營利事業統一編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E043",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「deadline」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年11月15日"
+   ],
+   "spans_hit": [
+    "114年11月15日"
+   ],
+   "answer": "## deadline 欄位值\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》的「繳納期限」欄位，**deadline 為：114年11月15日**。\n\n[建議問題]\n1. 這份繳款書的應納稅額是多少？\n2. 這份繳款書的所屬年月份為何？\n3. 逾期繳納的滯納金如何計算？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E044",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「company」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## 欄位值\n\n文件中的「company」對應「營業人名稱」，其值為：**八策數位股份有限公司**。\n\n依據：《002_11410_83028948_營業稅繳款書(401)_.pdf》記載「營業人名稱：八策數位股份有限公司」。\n\n[建議問題]\n1. 此公司的營利事業統一編號是什麼？\n2. 此營業稅繳款書的應納稅額是多少？\n3. 此營業稅的繳納期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E045",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「responsible」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位 **「responsible」** 對應文件中的「負責人姓名」，其值為：\n\n**陳宥竹**\n\n[建議問題]\n1. 該文件中的營業人名稱是什麼？\n2. 該文件中的營利事業統一編號是多少？\n3. 該文件的應納稅額合計是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E046",
+   "category": "annotation_field",
+   "query": "根據文件《002_11410_83028948_營業稅繳款書(401)_.pdf》，欄位「amount」的值是什麼？",
+   "expected_docs": [
+    "002_11410_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "36,733"
+   ],
+   "spans_hit": [
+    "36,733"
+   ],
+   "answer": "## amount 欄位值\n\n根據《002_11410_83028948_營業稅繳款書(401)_.pdf》，「應納稅額合計」為 **36,733 元**，因此欄位 **amount = 36,733**。\n\n[建議問題]\n1. 這份繳款書的繳納期限是什麼時候？\n2. 這份繳款書的統一編號為何？\n3. 這筆營業稅可透過哪些方式繳納？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E047",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "合作意向書"
+   ],
+   "spans_hit": [
+    "合作意向書"
+   ],
+   "answer": "## 答案\n\n欄位 **「title」** 的值為：**合作意向書**。\n\n依據：《003_由你人資MOU.pdf》文件開頭的標題。\n\n[建議問題]\n1. 這份合作意向書的甲乙雙方分別是誰？\n2. 這份合作意向書的簽訂日期為何？\n3. 雙方合作的專案內容是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E048",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，欄位「party_a」的值是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合股份有限公司"
+   ],
+   "spans_hit": [
+    "優利資源整合股份有限公司"
+   ],
+   "answer": "## party_a\n\n根據《003_由你人資MOU.pdf》，文件中的「甲方」為：\n\n**優利資源整合股份有限公司**\n\n因此，欄位 **party_a** 的值是：**優利資源整合股份有限公司**。\n\n[建議問題]\n1. 欄位「party_b」的值是什麼？\n2. 甲乙雙方的負責人分別是誰？\n3. 本合作意向書的簽署日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E049",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，欄位「party_b」的值是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "spans_hit": [
+    "拉法智慧科技股份有限公司"
+   ],
+   "answer": "根據《003_由你人資MOU.pdf》，乙方（`party_b`）為：**拉法智慧科技股份有限公司**。\n\n[建議問題]\n1. `party_a` 的值是什麼？\n2. 乙方的負責人與統一編號是什麼？\n3. 合作意向書的簽署日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E050",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，欄位「party_a_tax_id」的值是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "54359503"
+   ],
+   "spans_hit": [
+    "54359503"
+   ],
+   "answer": "根據《003_由你人資MOU.pdf》，甲方為「優利資源整合股份有限公司」，其統一編號（`party_a_tax_id`）是 **54359503**。\n\n[建議問題]\n1. `party_b_tax_id` 的值是什麼？\n2. 甲方與乙方的負責人分別是誰？\n3. 此合作意向書的簽訂日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E051",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，欄位「party_b_tax_id」的值是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "90599627"
+   ],
+   "spans_hit": [
+    "90599627"
+   ],
+   "answer": "## party_b_tax_id\n\n乙方為「拉法智慧科技股份有限公司」，其統一編號為 **90599627**。\n\n根據《003_由你人資MOU.pdf》：「乙方：拉法智慧科技股份有限公司」、「統一編號：90599627」。\n\n[建議問題]\n1. party_a_tax_id 的值是什麼？\n2. 甲方與乙方的公司名稱分別是什麼？\n3. 本合作意向書的簽署日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E052",
+   "category": "annotation_field",
+   "query": "根據文件《003_由你人資MOU.pdf》，欄位「signed_date」的值是什麼？",
+   "expected_docs": [
+    "003_由你人資MOU.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年11月"
+   ],
+   "spans_hit": [
+    "114年11月"
+   ],
+   "answer": "## signed_date\n\n欄位 **「signed_date」** 的值為：**2025-11-04**\n\n依據：《003_由你人資MOU.pdf》末尾載明「中華民國 114 年 11 月 04 日」，民國 114 年換算為西元 2025 年。\n\n[建議問題]\n1. 這份合作意向書的甲乙雙方分別是誰？\n2. 這份合作意向書何時生效？\n3. 本專案的合作目的為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E053",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "營業稅繳款書"
+   ],
+   "spans_hit": [
+    "營業稅繳款書"
+   ],
+   "answer": "## 欄位值\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》的文件標題，欄位 **「title」** 的值為：\n\n**營業稅繳款書**\n\n[建議問題]\n1. 這份繳款書的應納稅額是多少？\n2. 這份繳款書的繳納期限為何？\n3. 這份文件的營業人名稱與統一編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E054",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「form_no」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "(401)"
+   ],
+   "spans_hit": [
+    "(401)"
+   ],
+   "answer": "## 欄位值\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位 **「form_no」** 的值為：\n\n**1140905164932**\n\n此號碼顯示於營業稅繳款書頁首，並在各聯重複出現。\n\n[建議問題]\n1. 這份繳款書的應納稅額是多少？\n2. 這份繳款書的繳納期限為何？\n3. 這份文件的稅目代號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E055",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「tax_id」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "## tax_id 欄位值\n\n文件雖未直接標示「tax_id」，但依其對應的「營利事業統一編號」欄位判斷，值為：\n\n**83028948**\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，營業人八策數位股份有限公司的營利事業統一編號為 **83028948**。\n\n[建議問題]\n1. 此文件的稅籍編號是什麼？\n2. 此文件的應納稅額合計是多少？\n3. 此文件的繳納期限是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E056",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「period」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年07-08月"
+   ],
+   "spans_hit": [
+    "114年07-08月"
+   ],
+   "answer": "## period 欄位值\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》的「所屬月份」，**period** 的值為：\n\n**114年07－08月**\n\n[建議問題]\n1. 此文件的繳納期限是什麼時候？\n2. 此文件的應納稅額合計是多少？\n3. 此文件的營利事業統一編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E057",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「deadline」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年09月15日"
+   ],
+   "spans_hit": [
+    "114年09月15日"
+   ],
+   "answer": "## deadline 欄位值\n\n**114年09月15日**（民國紀年），即 **2025年9月15日**。\n\n依據：《005_11408_83028948_營業稅繳款書(401)_.pdf》中的「繳納期限」。\n\n[建議問題]\n1. 這份繳款書的應納稅額是多少？\n2. 這份繳款書的所屬月份為何？\n3. 逾期繳納會如何計算滯納金？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E058",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「company」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## company 欄位值\n\n**八策數位股份有限公司**\n\n依據：《005_11408_83028948_營業稅繳款書(401)_.pdf》中的「營業人名稱」。\n\n[建議問題]\n1. 該公司的營利事業統一編號是什麼？\n2. 該公司的營業地址是什麼？\n3. 本期應納稅額合計是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E059",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「responsible」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "## 欄位值\n\n「responsible」對應文件中的「負責人姓名」，其值為：**陳宥竹**。\n\n來源：根據《005_11408_83028948_營業稅繳款書(401)_.pdf》所載「負責人姓名：陳宥竹」。\n\n[建議問題]\n1. 該文件中的營業人名稱是什麼？\n2. 該文件中的營利事業統一編號是什麼？\n3. 該筆營業稅的應納稅額與繳納期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E060",
+   "category": "annotation_field",
+   "query": "根據文件《005_11408_83028948_營業稅繳款書(401)_.pdf》，欄位「amount」的值是什麼？",
+   "expected_docs": [
+    "005_11408_83028948_營業稅繳款書(401)_.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "24,919"
+   ],
+   "spans_hit": [
+    "24,919"
+   ],
+   "answer": "## amount 欄位值\n\n根據《005_11408_83028948_營業稅繳款書(401)_.pdf》，「應納稅額合計」為 **24,919 元**，因此欄位 **amount** 的值是：\n\n**24,919**\n\n[建議問題]\n1. 這份營業稅繳款書的繳納期限是何時？\n2. 這份文件的營利事業統一編號是什麼？\n3. 這筆稅款有哪些繳納方式？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E061",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "ETI Base Code"
+   ],
+   "spans_hit": [
+    "ETI Base Code"
+   ],
+   "answer": "## 「title」欄位值\n\n根據《006_ETI-Base-Code-Burmese.pdf》文件首頁內容，「title」的值為：\n\n**သမာသမတ်ကျသော ကုန်သွယ်မှုရှေ့ဆောင်အဖွဲ့၏ အခြေခံကျင့်ဝတ်စည်းကမ်း**\n\n中文意為：**道德貿易倡議基本守則（Ethical Trading Initiative Base Code）**。\n\n[建議問題]\n1. 這份文件的主要條款有哪些？\n2. 文件中關於每週最高工時的規定是什麼？\n3. 文件的修訂日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E062",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，欄位「org」的值是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Ethical Trading Initiative"
+   ],
+   "spans_hit": [
+    "Ethical Trading Initiative"
+   ],
+   "answer": "## 欄位值\n\n欄位 **「org」** 的值是：**Ethical Trading Initiative（ETI，公平貿易倡議）**。\n\n依據：《006_ETI-Base-Code-Burmese.pdf》封面顯示「Ethical Trading Initiative」，並標示其基本守則。\n\n[建議問題]\n1. 此文件的完整標題是什麼？\n2. 此文件最近一次修訂日期為何？\n3. ETI 基本守則包含哪些主要條款？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E063",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，欄位「section_1_en_gloss」的值是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Employment is freely chosen"
+   ],
+   "spans_hit": [
+    "Employment is freely chosen"
+   ],
+   "answer": "## 欄位值\n\n根據《006_ETI-Base-Code-Burmese.pdf》的「條款對照投影」，欄位 **`section_1_en_gloss`** 的值是：\n\n**Employment Is Freely Chosen**\n\n[建議問題]\n1. `section_1` 的緬甸文原文是什麼？\n2. `section_1.1_en_gloss` 的值是什麼？\n3. 第 1 條包含哪些子條款？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E064",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，欄位「section_2_en_gloss」的值是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Freedom of association"
+   ],
+   "spans_hit": [
+    "Freedom of association"
+   ],
+   "answer": "## 欄位值\n\n根據《006_ETI-Base-Code-Burmese.pdf》的「條款對照投影」，欄位 **`section_2_en_gloss`** 的值是：\n\n**Freedom of Association and Collective Bargaining**\n\n中文對應為：**結社自由與集體協商權**。\n\n[建議問題]\n1. `section_2` 的緬甸文原文是什麼？\n2. `section_2.1_en_gloss` 的值是什麼？\n3. 第 2 節包含哪些子條款？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E065",
+   "category": "annotation_field",
+   "query": "根據文件《006_ETI-Base-Code-Burmese.pdf》，欄位「section_4_en_gloss」的值是什麼？",
+   "expected_docs": [
+    "006_ETI-Base-Code-Burmese.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "Child labour"
+   ],
+   "spans_hit": [
+    "Child labour"
+   ],
+   "answer": "## 欄位值\n\n根據《006_ETI-Base-Code-Burmese.pdf》的第 4 節，「section_4_en_gloss」的值是：\n\n**No Child Labour**\n\n中文對應為：**不得使用童工**。\n\n[建議問題]\n1. 「section_4」的緬甸文原文是什麼？\n2. 第 4.1 至 4.4 條分別規定了什麼？\n3. 「section_5_en_gloss」的值是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E066",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "e-Arrival Card"
+   ],
+   "spans_hit": [
+    "e-Arrival Card"
+   ],
+   "answer": "## 答案\n\n欄位 **「title」** 的值是：**Confirmation of e-Arrival card**（電子入境申報確認書）。\n\n依據：《008_Korea e-Arrivalcard_363545709.pdf》的文件標題顯示為「Confirmationofe-Arrivalcard／电子入境申报确认书」。\n\n[建議問題]\n1. 此文件的簽發編號是什麼？\n2. 此文件的入境日期與航班號是什麼？\n3. 此電子入境申報確認書的有效期限到何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E067",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「traveler_1_name」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "WAN TING CHAN"
+   ],
+   "spans_hit": [
+    "WAN TING CHAN"
+   ],
+   "answer": "## 欄位值\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客（traveler_1）的姓名為 **WAN TING CHAN**。\n\n因此，`traveler_1_name` 的值是：**WAN TING CHAN**\n\n[建議問題]\n1. `traveler_1_passport_no` 的值是什麼？\n2. `traveler_1_date_of_birth` 的值是什麼？\n3. 文件中共有幾位旅客？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E068",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「traveler_1_dob」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "1980.02.16"
+   ],
+   "spans_hit": [
+    "1980.02.16"
+   ],
+   "answer": "## 欄位值\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，第一位旅客 **WAN TING CHAN** 的出生日期（Date of Birth），即欄位 **`traveler_1_dob`**，為：\n\n**1980.02.16**\n\n[建議問題]\n1. `traveler_1_name` 的值是什麼？\n2. `traveler_1_passport_no` 的值是什麼？\n3. 文件中其他旅客的出生日期分別是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E069",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「traveler_1_passport」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "363545709"
+   ],
+   "spans_hit": [
+    "363545709"
+   ],
+   "answer": "## 答案\n\n欄位 **「traveler_1_passport」** 的值是：**363545709**。\n\n依據：《008_Korea e-Arrivalcard_363545709.pdf》中第一位旅客 **WAN TING CHAN** 的「Passport No／護照號」為 **363545709**。\n\n[建議問題]\n1. traveler_1 的姓名是什麼？\n2. traveler_1 的出生日期是什麼？\n3. 文件中其他旅客的護照號碼有哪些？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E070",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「country」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "TAIWAN"
+   ],
+   "spans_hit": [
+    "TAIWAN"
+   ],
+   "answer": "## 答案\n\n欄位 **「country」**（文件中標示為 **Country/Region**）的值是：**TAIWAN**。\n\n來源：根據《008_Korea e-Arrivalcard_363545709.pdf》的「Country/Region 國家/地區」欄位。\n\n[建議問題]\n1. 文件中的入境日期是什麼？\n2. 文件中的入境航班編號是什麼？\n3. 文件中的申報到期時間是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E071",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「flight」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "CI188"
+   ],
+   "spans_hit": [
+    "CI188"
+   ],
+   "answer": "根據《008_Korea e-Arrivalcard_363545709.pdf》，欄位 **「flight」**（Entry Flight No.／入境航班）之值為：**CI188**。\n\n[建議問題]\n1. 這份文件的預計入境日期是什麼？\n2. 這份文件的簽發編號是什麼？\n3. 電子入境申報確認書的有效期限到何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E072",
+   "category": "annotation_field",
+   "query": "根據文件《008_Korea e-Arrivalcard_363545709.pdf》，欄位「arrival_date」的值是什麼？",
+   "expected_docs": [
+    "008_Korea e-Arrivalcard_363545709.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "2026.07.19"
+   ],
+   "spans_hit": [
+    "2026.07.19"
+   ],
+   "answer": "## 欄位值\n\n根據《008_Korea e-Arrivalcard_363545709.pdf》，欄位 **「arrival_date」**（文件中的 **Date of Arrival／預計入境日**）值為：\n\n**2026.07.19**\n\n[建議問題]\n1. 此文件中的入境航班號是什麼？\n2. 此文件中的護照號碼是什麼？\n3. 電子入境申報的有效期限到何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E073",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "顧問服務合約"
+   ],
+   "spans_hit": [
+    "顧問服務合約"
+   ],
+   "answer": "## title 欄位值\n\n根據《009_DOC003~3.pdf》首頁最上方的文件標題判斷，欄位 **「title」** 的值是：\n\n**顧問服務合約**\n\n[建議問題]\n1. 這份合約的甲乙雙方分別是誰？\n2. 這份合約的有效期間為何？\n3. 合約約定的服務內容與費用是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E074",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「party_a」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## party_a 欄位值\n\n**八策數位股份有限公司**\n\n依據《009_DOC003~3.pdf》合約首頁及簽署頁，甲方為「八策數位股份有限公司」。\n\n[建議問題]\n1. 「party_b」欄位的值是什麼？\n2. 甲方的代表人與統一編號為何？\n3. 本合約的有效期間為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E075",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「party_b」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "朱啟良律師"
+   ],
+   "spans_hit": [
+    "朱啟良律師"
+   ],
+   "answer": "## party_b 欄位值\n\n**朱啟良律師**\n\n依據《009_DOC003~3.pdf》合約首頁，八策數位股份有限公司為甲方，**朱啟良律師為乙方（party_b）**；簽署頁亦有相同記載。\n\n[建議問題]\n1. 此合約的 party_a 是誰？\n2. 此合約的有效期間為何？\n3. 此合約的服務費用是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E076",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「fee」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "68,000"
+   ],
+   "spans_hit": [
+    "68,000"
+   ],
+   "answer": "## fee 欄位值\n\n根據《009_DOC003~3.pdf》第三條「服務費用與支付」第（一）項，本合約服務費用共計 **新臺幣 68,000 元**。\n\n因此，**fee = 68,000 元（TWD）**。\n\n[建議問題]\n1. fee 的付款期限是何時？\n2. 本合約包含哪些服務項目？\n3. 額外費用如何計算與支付？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E077",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「bank」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "星展銀行"
+   ],
+   "spans_hit": [
+    "星展銀行"
+   ],
+   "answer": "## bank 欄位值\n\n根據《009_DOC003~3.pdf》第三條第（三）項「乙方匯款帳號資訊」，**bank** 的值為：\n\n**星展銀行 襄陽分行**\n\n另載銀行代碼為：**810**。\n\n[建議問題]\n1. 該文件中的銀行帳號是什麼？\n2. 該文件中的戶名是什麼？\n3. 合約服務費用與付款期限為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E078",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「period_start」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年7月15日"
+   ],
+   "spans_hit": [
+    "114年7月15日"
+   ],
+   "answer": "## period_start\n\n根據《009_DOC003~3.pdf》第一條「合約期間」，本合約自**民國 114 年 7 月 15 日**起生效，因此：\n\n**period_start：2025-07-15**\n\n[建議問題]\n1. 「period_end」的值是什麼？\n2. 本合約的服務費用是多少？\n3. 本合約包含哪些服務內容？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E079",
+   "category": "annotation_field",
+   "query": "根據文件《009_DOC003~3.pdf》，欄位「period_end」的值是什麼？",
+   "expected_docs": [
+    "009_DOC003~3.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "114年11月30日"
+   ],
+   "spans_hit": [
+    "114年11月30日"
+   ],
+   "answer": "## period_end\n\n根據《009_DOC003~3.pdf》第一條「合約期間」，本合約有效期間至**民國 114 年 11 月 30 日**止。\n\n因此，欄位 **period_end** 的值為：**2025-11-30**。\n\n[建議問題]\n1. 欄位「period_start」的值是什麼？\n2. 本合約的服務費用是多少？\n3. 本合約包含哪些服務內容？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E080",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「title」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "補印發票切結書"
+   ],
+   "spans_hit": [
+    "補印發票切結書"
+   ],
+   "answer": "欄位「title」的值是：**補印發票切結書**。\n\n依據：《010_補印發票切結書.pdf》文件首行標題。\n\n[建議問題]\n1. 這份切結書的發票號碼是什麼？\n2. 立切結書人的公司名稱與負責人是誰？\n3. 這份切結書的日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E081",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「field_tax_id」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "統一編號"
+   ],
+   "spans_hit": [
+    "統一編號"
+   ],
+   "answer": "## 欄位值\n\n根據《010_補印發票切結書.pdf》中「買受人統一編號」欄位，**field_tax_id 的值為：83028948**。\n\n[建議問題]\n1. 此文件中的買受人名稱是什麼？\n2. 此文件的發票號碼與總金額是多少？\n3. 此切結書的立書日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E082",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「field_invoice_no」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "發票號碼"
+   ],
+   "spans_hit": [
+    "發票號碼"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》中「發票號碼」欄位：\n\n**field_invoice_no：XX53637175**\n\n[建議問題]\n1. 「field_invoice_date」的值是什麼？\n2. 買受人統一編號是多少？\n3. 發票總金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E083",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「field_applicant」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "立切結書人"
+   ],
+   "spans_hit": [
+    "立切結書人"
+   ],
+   "answer": "## 欄位值\n\n`field_applicant` 的值是：**八策數位股份有限公司**\n\n依據《010_補印發票切結書.pdf》「立切結書人」欄位所列公司名稱判定。\n\n[建議問題]\n1. `field_applicant_representative` 的值是什麼？\n2. 此切結書的發票號碼與總金額為何？\n3. 此切結書的簽立日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E084",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「company」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "## company 欄位值\n\n根據《010_補印發票切結書.pdf》中「立切結書人」的「公司」欄位，**company 的值為：八策數位股份有限公司**。\n\n[建議問題]\n1. 此文件中的負責人是誰？\n2. 此文件中的公司統一編號是多少？\n3. 此切結書的日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E085",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「responsible」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "## responsible 欄位值\n\n根據《010_補印發票切結書.pdf》中「負責人」欄位，**responsible 的值是：陳宥竹**。\n\n[建議問題]\n1. 該文件的立切結書公司名稱是什麼？\n2. 該文件的發票號碼與總金額是多少？\n3. 該切結書的簽立日期為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E086",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「counterparty」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "豐揚資產管理有限公司"
+   ],
+   "spans_hit": [
+    "豐揚資產管理有限公司"
+   ],
+   "answer": "## counterparty 欄位值\n\n**豐揚資產管理有限公司**\n\n依據《010_補印發票切結書.pdf》，立切結書人為八策數位股份有限公司，文件中請求補印發票的相對方為「豐揚資產管理有限公司」，因此 `counterparty` 應為該公司。\n\n[建議問題]\n1. 這份文件的買受人是誰？\n2. 發票號碼與總金額為何？\n3. 立切結書人及負責人分別是誰？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E087",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「invoice_no」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "XX53637175"
+   ],
+   "spans_hit": [
+    "XX53637175"
+   ],
+   "answer": "根據《010_補印發票切結書.pdf》中「發票號碼」欄位，**invoice_no 的值為：XX53637175**。\n\n[建議問題]\n1. 該發票的開立日期是什麼時候？\n2. 該發票的總金額是多少？\n3. 買受人的統一編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E088",
+   "category": "annotation_field",
+   "query": "根據文件《010_補印發票切結書.pdf》，欄位「amount」的值是什麼？",
+   "expected_docs": [
+    "010_補印發票切結書.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "96元"
+   ],
+   "spans_hit": [
+    "96元"
+   ],
+   "answer": "## amount 欄位值\n\n根據《010_補印發票切結書.pdf》記載的「發票總金額」，**amount 的值為 96 元**。\n\n[建議問題]\n1. 此發票的發票號碼是什麼？\n2. 此發票的買受人及統一編號為何？\n3. 切結書的立書日期是何時？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ]
+}

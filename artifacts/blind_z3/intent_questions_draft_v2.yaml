@@ -1,0 +1,628 @@
+# Blind Z3 — 意圖題草稿 v2（無 GT）
+# 複審後重置：只對齊 corpus_manifest.json 的 40 檔；禁止幽靈客戶／捏造檔名。
+# 出題依據：client + filename + 副檔名（文件類型推測）。禁止讀 extracts/。
+# 見 REVIEW.md：v1 已標 contaminated。
+
+meta:
+  version: "2"
+  design: artifacts/blind_z3/DESIGN.md
+  review: artifacts/blind_z3/REVIEW.md
+  anti_target_drawing: true
+  contaminated_predecessor: intent_questions_draft.yaml v1
+  frozen: false
+  intent_frozen: false
+  corpus: artifacts/blind_z3/corpus_manifest.json
+  note: >
+    題幹只許引用 hold-out 內真實檔名／客戶資料夾名。
+    不得寫「金流系統建置合約」等清單上不存在的檔。
+    expected_spans 標註前必須空；不得打開 extracts/ 來出題。
+
+questions:
+
+  # ========== 安可（報價調整版 ×2 + 委託合約）==========
+  - id: z3-v2-001
+    type: B
+    role: owner
+    intent: 查安可系統開發報價總價
+    question: 安可 2024Q1 系統開發報價調整版，總價或計價怎麼寫？
+    evidence_hint: 安可/2024Q1安可系統開發報價調整版.docx（或 _0816 版）
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-002
+    type: E
+    role: finance
+    intent: 兩份安可報價調整版是否同價
+    question: 安可有兩份「系統開發報價調整版」（一份檔名帶 0816），金額與條件是否相同？請分檔說明。
+    evidence_hint: 安可/2024Q1安可系統開發報價調整版.docx + _0816.docx
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-003
+    type: A
+    role: finance
+    intent: 報價付款方式
+    question: 安可系統開發報價調整版的付款方式（比例或期數）怎麼約定？
+    evidence_hint: 同上報價 docx
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-004
+    type: A
+    role: pm
+    intent: 報價有效期限
+    question: 安可系統開發報價調整版有沒有寫有效期限？寫到哪一天？
+    evidence_hint: 同上
+    answer_shape: date
+    expected_spans: []
+
+  - id: z3-v2-005
+    type: B
+    role: legal
+    intent: 安可與八策委託合約雙方
+    question: 安可資料夾裡「委託合約-八策品牌」的甲方、乙方是誰？
+    evidence_hint: 安可/委託合約-八策品牌.pdf
+    answer_shape: party
+    expected_spans: []
+
+  - id: z3-v2-006
+    type: E
+    role: cross
+    intent: 報價與委託合約不要混為同一份
+    question: 安可的「系統開發報價調整版」和「委託合約-八策品牌」是不是同一份文件？金額或標的是否能直接劃等號？
+    evidence_hint: 報價 docx + 委託合約 pdf
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-007
+    type: A
+    role: legal
+    intent: 委託合約爭議處理
+    question: 「委託合約-八策品牌」若有爭議，管轄或準據法怎麼寫？若沒寫請明確說文件未載明。
+    evidence_hint: 委託合約-八策品牌.pdf
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-008
+    type: A
+    role: pm
+    intent: 報價交付項目
+    question: 安可系統開發報價調整版列出的主要服務或交付項目有哪些？
+    evidence_hint: 報價 docx
+    answer_shape: list
+    expected_spans: []
+
+  # ========== 昇展 Smat ==========
+  - id: z3-v2-009
+    type: B
+    role: owner
+    intent: Smat 報價暨合約總價
+    question: Smat 行銷研究企劃案「報價暨合約」的合約或報價總金額是多少？
+    evidence_hint: 昇展Smat/Smat行銷研究企劃案報價暨合約.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-010
+    type: E
+    role: pm
+    intent: 提案 vs 報價暨合約勿混
+    question: 「Smat 市場研究暨行銷企劃報價提案」和「報價暨合約」差別在哪？請依檔名與內容分說，不要合成一份。
+    evidence_hint: 昇展Smat/ 兩份
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-011
+    type: A
+    role: finance
+    intent: 付款分期
+    question: Smat 報價暨合約的款項如何分期或對應驗收條件？
+    evidence_hint: 報價暨合約.pdf
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-012
+    type: A
+    role: legal
+    intent: 智財或保密
+    question: Smat 報價暨合約對智慧財產或保密義務怎麼寫？若無請說未載明。
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-013
+    type: B
+    role: pm
+    intent: 行銷傳播企劃在談什麼
+    question: 昇展 Smat 資料夾裡的「行銷傳播企劃」主軸在談什麼服務或產出？
+    evidence_hint: 昇展Smat/行銷傳播企劃.pdf
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-014
+    type: C
+    role: cross
+    intent: 安可報價 vs Smat 報價金額對照
+    question: 安可系統開發報價調整版與 Smat 報價暨合約，哪一份總價較高？各是多少？
+    evidence_hint: 安可報價 + Smat報價暨合約
+    answer_shape: compare
+    expected_spans: []
+
+  # ========== 醫美圈圈 ==========
+  - id: z3-v2-015
+    type: B
+    role: owner
+    intent: 已用印行銷報價總價
+    question: 醫美圈圈「已用印」八策行銷報價單，總價怎麼寫？
+    evidence_hint: 醫美圈圈/「已用印」八策行銷報價單_醫美圈圈.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-016
+    type: E
+    role: finance
+    intent: 用印報價 vs 第二階段需求報價
+    question: 醫美圈圈的已用印行銷報價，和「第二階段新需求報價 202401」是不是同一份金額？請分開說明。
+    evidence_hint: 已用印報價 pdf + 第二階段新需求報價.docx
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-017
+    type: A
+    role: finance
+    intent: 第二階段報價金額
+    question: 醫美圈圈第二階段新需求報價的金額或計價方式？
+    evidence_hint: 第二階段新需求報價 - 202401.docx
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-018
+    type: B
+    role: pm
+    intent: AI 研發計畫在做什麼
+    question: 「醫美圈圈2.0 資料判讀AI系統升級 研發計畫」這份文件在規劃什麼？
+    evidence_hint: 醫美圈圈2.0…研發計畫.pdf
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-019
+    type: D
+    role: owner
+    intent: 文件未寫的營收保證 → 拒答
+    question: 醫美圈圈改版後保證每月營收成長多少％？
+    evidence_hint: 報價／計畫應無此承諾
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  # ========== 巽耘（多報價易混）==========
+  - id: z3-v2-020
+    type: B
+    role: owner
+    intent: 巽耘 20240820 報價總價
+    question: 巽耘報價單_20240820 的總價是多少？
+    evidence_hint: 巽耘/巽耘報價單_20240820.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-021
+    type: E
+    role: finance
+    intent: 三份巽耘報價勿混
+    question: 巽耘資料夾有「視覺形象更新報價」「夕口報價單-巽耘法律」「巽耘報價單_20240820」，請先列三份檔名，再只根據你指定的一份回答總價。
+    evidence_hint: 巽耘/ 三檔
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-022
+    type: A
+    role: pm
+    intent: 視覺形象更新報價標的
+    question: 「巽耘法律事務所視覺形象更新報價單」更新的標的是什麼？金額怎麼寫？
+    evidence_hint: 巽耘法律事務所視覺形象更新報價單.pdf
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-023
+    type: A
+    role: finance
+    intent: 付款或有效條件
+    question: 巽耘報價單_20240820 的付款方式或報價條件有什麼限制？
+    evidence_hint: 巽耘報價單_20240820.pdf
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-024
+    type: C
+    role: cross
+    intent: 巽耘 vs 立壕價格帶
+    question: 巽耘報價單_20240820 與立壕線板「20230510 設計報價」，哪一份總價較高？
+    evidence_hint: 巽耘報價 + 立壕線板設計報價
+    answer_shape: compare
+    expected_spans: []
+
+  # ========== 立壕線板 ==========
+  - id: z3-v2-025
+    type: B
+    role: owner
+    intent: 立壕設計報價金額
+    question: 立壕線板 20230510 設計報價的金額是多少？
+    evidence_hint: 立壕線板/20230510 設計報價.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-026
+    type: A
+    role: legal
+    intent: 報價與合約效力文字
+    question: 立壕線板設計報價對簽回或合約效力有什麼文字？若無請說未載明。
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  # ========== 光昱金屬（近複本）==========
+  - id: z3-v2-027
+    type: E
+    role: pm
+    intent: 三份亞馬遜提案列檔名
+    question: 光昱金屬資料夾裡有多份亞馬遜／B2B 提案報價，請列出檔名差異，並說明你接下來要依據哪一份作答。
+    evidence_hint: 光昱金屬/ 三份 amazon 相關
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-v2-028
+    type: B
+    role: owner
+    intent: 提案服務主軸
+    question: 光昱金屬的亞馬遜暨 B2B 行銷提案，文件主軸提供什麼服務？
+    evidence_hint: 光昱亞馬遜暨B2B行銷提案報價.pdf 等
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-029
+    type: A
+    role: finance
+    intent: 其中一份報價金額
+    question: 請指定光昱金屬其中一份亞馬遜相關提案報價檔名後，回答該份的報價金額或方案價位。
+    evidence_hint: 三選一
+    answer_shape: amount
+    expected_spans: []
+
+  # ========== 宏寰貿易 ==========
+  - id: z3-v2-030
+    type: B
+    role: owner
+    intent: 亞馬遜電商委託營運合約金額／期間
+    question: 宏寰貿易「亞馬遜電商委託營運報價合約」的金額或合約期間怎麼寫？
+    evidence_hint: 宏寰貿易/亞馬遜電商委託營運報價合約_signed_20230607-20230831.pdf
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-031
+    type: E
+    role: finance
+    intent: 宏寰多份行銷報價合約勿混
+    question: 宏寰貿易有多份「行銷報價合約」（含 signed 與 202303-06），請分檔說明金額或期間，不要混成一筆。
+    evidence_hint: 宏寰貿易/ 三檔
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-032
+    type: A
+    role: legal
+    intent: 合約雙方
+    question: 宏寰貿易亞馬遜電商委託營運報價合約的甲乙方是誰？
+    evidence_hint: 亞馬遜電商委託營運…pdf
+    answer_shape: party
+    expected_spans: []
+
+  # ========== 優克美 ==========
+  - id: z3-v2-033
+    type: B
+    role: owner
+    intent: Labavo 廣告投放合約
+    question: Labavo 與八策的「網路廣告投放合約」重點義務或金額怎麼寫？
+    evidence_hint: 優克美/2024_LabavoＸ八策_數位行銷之網路廣告投放合約0313.pdf
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-034
+    type: B
+    role: finance
+    intent: SEO 報價合約
+    question: 「八策數位股份有限公司SEO報價合約」的報價或合約金額？
+    evidence_hint: 優克美/八策數位股份有限公司SEO報價合約.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-035
+    type: E
+    role: legal
+    intent: igreen vs Labavo vs SEO 三約勿混
+    question: 優克美資料夾的 igreen 合約、Labavo 廣告投放合約、SEO 報價合約，請用檔名區分各自主題，不要串成同一約。
+    evidence_hint: 優克美/ 三檔
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-v2-036
+    type: A
+    role: legal
+    intent: igreen 合約雙方
+    question: igreen 合約（用印）的簽約雙方是誰？
+    evidence_hint: 優克美/igreen合約（用印）.pdf
+    answer_shape: party
+    expected_spans: []
+
+  # ========== MF Select ==========
+  - id: z3-v2-037
+    type: B
+    role: owner
+    intent: MF 電商行銷提案報價
+    question: M&F Select 電商行銷提案報價（0219）的報價金額或方案怎麼寫？
+    evidence_hint: MF Select/M&F Select 電商行銷提案報價_0219.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-038
+    type: E
+    role: pm
+    intent: MF 三份提案勿混
+    question: MF Select 有 0219 電商提案、行銷提案報價、MF提案報價0525，請先列檔名再只答一份的價位。
+    evidence_hint: MF Select/ 三檔
+    answer_shape: amount
+    expected_spans: []
+
+  # ========== 瑪格麗特婚紗 ==========
+  - id: z3-v2-039
+    type: B
+    role: owner
+    intent: 行銷規劃執行案合約
+    question: 瑪格麗特婚紗「行銷規劃執行案合約」的金額或期間？
+    evidence_hint: 瑪格麗特婚紗行銷規劃執行案合約.pdf
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-v2-040
+    type: E
+    role: finance
+    intent: 20181224 vs 20190103 提案
+    question: 瑪格麗特兩份工作室行銷提案報價（20181224 與 20190103）金額是否相同？請分檔說明。
+    evidence_hint: 兩份提案報價 pdf
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-041
+    type: A
+    role: legal
+    intent: 合約雙方
+    question: 瑪格麗特婚紗行銷規劃執行案合約的甲乙方？
+    evidence_hint: 合約 pdf
+    answer_shape: party
+    expected_spans: []
+
+  # ========== CYS / Dr.Kelly / bravomix（企劃規格）==========
+  - id: z3-v2-042
+    type: B
+    role: pm
+    intent: CYS 攝影企劃內容
+    question: CYS 平面攝影企劃提案的拍攝或企劃重點是什麼？
+    evidence_hint: CYS假髮/CYS平面攝影企劃提案.pdf
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-043
+    type: E
+    role: pm
+    intent: CYS 多份企劃勿混
+    question: CYS 有平面攝影、新季度、2020Q1 主題企劃等檔，請用檔名區分後，只摘要你指定的一份。
+    evidence_hint: CYS假髮/ 三檔
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-v2-044
+    type: B
+    role: pm
+    intent: Dr.Kelly 拍攝企劃
+    question: Dr. Kelly 品牌設計拍攝企劃內容文件，拍攝或設計重點是什麼？
+    evidence_hint: Dr.Kelly/Dr. Kelly品牌設計_拍攝企劃內容_231120 (1).pdf
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-045
+    type: B
+    role: pm
+    intent: bravomix 規格書
+    question: bravomix 規格書裡對產品或服務規格的關鍵要求是什麼？
+    evidence_hint: bravomix/規格書.docx
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-046
+    type: E
+    role: pm
+    intent: 規格書 vs 規格簡報
+    question: bravomix 的「規格書」與兩份「規格簡報」是否同一內容載體？請依檔名說明差異，不要混讀。
+    evidence_hint: bravomix/ 三檔
+    answer_shape: compare
+    expected_spans: []
+
+  # ========== 優利財簽（掃描壓測）==========
+  - id: z3-v2-047
+    type: A
+    role: finance
+    intent: 財簽年度與主體（OCR／視讀）
+    question: 「110年優利資源財簽」文件的年度與相關公司或主體名稱是什麼？若無法判讀請明確說無法從文件判讀。
+    evidence_hint: 優利/110年優利資源財簽-3.pdf（及 -4）
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-048
+    type: E
+    role: finance
+    intent: 財簽 -3 vs -4
+    question: 優利財簽有 -3 與 -4 兩種檔名，它們是否同一份內容？請分檔說明你能讀到的差異或無法判讀之處。
+    evidence_hint: 優利/ 財簽檔
+    answer_shape: compare
+    expected_spans: []
+
+  # ========== 阿里巴巴教材／雜項 ==========
+  - id: z3-v2-049
+    type: B
+    role: pm
+    intent: RFQ 報價技巧文件主題
+    question: 「RFQ報價技巧20231214」這份文件在教什麼？列出兩個以上重點即可。
+    evidence_hint: 阿里巴巴/RFQ報價技巧20231214.pdf
+    answer_shape: list
+    expected_spans: []
+
+  # ========== 跨檔／乙方模板 ==========
+  - id: z3-v2-050
+    type: C
+    role: legal
+    intent: hold-out 內哪些檔名出現八策
+    question: 目前這批資料裡，檔名或標題明顯與「八策」相關的合約／報價有哪些客戶？請列客戶名。
+    evidence_hint: 安可委託、醫美用印、優克美 Labavo/SEO 等
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-v2-051
+    type: C
+    role: finance
+    intent: 三案報價排序
+    question: 請比較醫美圈圈已用印行銷報價、巽耘報價單_20240820、立壕線板設計報價的總價，由高到低排序（若某份無法判讀請標註無法判讀）。
+    evidence_hint: 三份報價
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-052
+    type: C
+    role: cross
+    intent: 光昱 vs 宏寰都碰亞馬遜
+    question: 光昱金屬與宏寰貿易都有亞馬遜相關文件，兩者文件類型（提案報價 vs 委託營運合約）有何不同？
+    evidence_hint: 光昱提案 + 宏寰委託營運合約
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-053
+    type: C
+    role: finance
+    intent: 多跳：比例換算（僅當文件有總價+比例）
+    question: 若安可系統開發報價調整版同時寫了總價與訂金比例，請算出訂金金額；缺任一條件則說明缺什麼。
+    evidence_hint: 安可報價 docx
+    answer_shape: amount
+    expected_spans: []
+
+  # ========== 拒答（意圖先定）==========
+  - id: z3-v2-054
+    type: D
+    role: owner
+    intent: 庫內無此客戶
+    question: 我們跟「不存在科技股份有限公司」簽的合約總價多少？
+    evidence_hint: hold-out 無此客戶
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-v2-055
+    type: D
+    role: finance
+    intent: 未記載年利率
+    question: 安可委託合約-八策品牌約定的貸款年利率是多少？
+    evidence_hint: 承攬／委託通常無；無則拒答
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-v2-056
+    type: D
+    role: pm
+    intent: 未記載保證上線日
+    question: 醫美圈圈已用印報價保證哪一天官網上線？
+    evidence_hint: 通常無；無則拒答
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-v2-057
+    type: D
+    role: owner
+    intent: 未記載股權承諾
+    question: 八策是否在這批文件裡承諾給安可技術股 10%？
+    evidence_hint: 應無；拒答或依文件否定
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-v2-058
+    type: D
+    role: finance
+    intent: 未記載發票載具
+    question: 巽耘報價單_20240820 指定的電子發票載具號碼是多少？
+    evidence_hint: 通常無；無則拒答
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-v2-059
+    type: D
+    role: legal
+    intent: 幽靈合約名（對齊複審：不可腦補金流檔）
+    question: 安可與八策的「金流系統建置合約」總價多少？
+    evidence_hint: hold-out 無此檔名；應拒答或說明查無此文件
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  # ========== 掃描／難讀邊界（仍用真實檔）==========
+  - id: z3-v2-060
+    type: A
+    role: finance
+    intent: 掃描合約金額可否判讀
+    question: 宏寰貿易 signed 行銷報價合約的金額是多少？若掃描無法辨識請明確說無法判讀。
+    evidence_hint: 宏寰貿易行銷報價合約_signed.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-v2-061
+    type: A
+    role: legal
+    intent: 掃描 SEO 合約雙方
+    question: SEO 報價合約上的簽約雙方名稱？看不清請說看不清。
+    evidence_hint: 八策數位股份有限公司SEO報價合約.pdf
+    answer_shape: party
+    expected_spans: []
+
+  - id: z3-v2-062
+    type: C
+    role: cross
+    intent: 瑪格麗特合約 vs 提案哪個有執行約束力表述
+    question: 瑪格麗特的「執行案合約」與「提案報價」在效力表述上有何不同？請分檔引用。
+    evidence_hint: 合約 + 提案
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-063
+    type: C
+    role: finance
+    intent: 優克美 SEO vs Labavo 計價型態
+    question: 優克美的 SEO 報價合約與 Labavo 廣告投放合約，計價或付費方式是否同一類型？
+    evidence_hint: 兩約
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-v2-064
+    type: B
+    role: legal
+    intent: 夕口報價單與巽耘關係
+    question: 「夕口報價單-巽耘法律」的報價方／客戶關係怎麼寫？金額多少？
+    evidence_hint: 巽耘/夕口報價單-巽耘法律.pdf
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-v2-065
+    type: A
+    role: finance
+    intent: 第二階段報價付款
+    question: 醫美圈圈第二階段新需求報價的付款條件？
+    evidence_hint: 第二階段新需求報價 - 202401.docx
+    answer_shape: clause
+    expected_spans: []

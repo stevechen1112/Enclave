@@ -7,12 +7,30 @@ services:
     volumes:
       - .:/code
     ports:
-      - "8001:8000"
+      - "8011:8000"
     environment:
       - POSTGRES_SERVER=db
       - POSTGRES_PORT=5432
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - RAGFLOW_BASE_URL=http://host.docker.internal:9380
+      - RAGFLOW_ENABLED=${RAGFLOW_ENABLED:-true}
+      - RAGFLOW_API_KEY=${RAGFLOW_API_KEY:-}
+      - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
+      - RAGFLOW_FORCE_PARSE=${RAGFLOW_FORCE_PARSE:-false}
+      - CLOUD_OCR_PROVIDER=${CLOUD_OCR_PROVIDER:-}
+      - CLOUD_OCR_MODEL=${CLOUD_OCR_MODEL:-}
+      - CLOUD_OCR_TRIGGER_MIN_CHARS=${CLOUD_OCR_TRIGGER_MIN_CHARS:-200}
+      - SCAN_PARSE_STRICT=${SCAN_PARSE_STRICT:-true}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - WEKNORA_BASE_URL=http://host.docker.internal:8081
+      - PIPESHUB_BASE_URL=http://host.docker.internal:8012
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_EMBED_URL=http://host.docker.internal:11434
     depends_on:
       db:
         condition: service_healthy
@@ -51,7 +69,7 @@ services:
   
   worker:
     build: .
-    command: celery -A app.celery_app worker --loglevel=info
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
     volumes:
       - .:/code
     healthcheck:
@@ -66,6 +84,22 @@ services:
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - RAGFLOW_BASE_URL=http://host.docker.internal:9380
+      - RAGFLOW_ENABLED=${RAGFLOW_ENABLED:-true}
+      - RAGFLOW_API_KEY=${RAGFLOW_API_KEY:-}
+      - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
+      - RAGFLOW_FORCE_PARSE=${RAGFLOW_FORCE_PARSE:-false}
+      - CLOUD_OCR_PROVIDER=${CLOUD_OCR_PROVIDER:-}
+      - CLOUD_OCR_MODEL=${CLOUD_OCR_MODEL:-}
+      - CLOUD_OCR_TRIGGER_MIN_CHARS=${CLOUD_OCR_TRIGGER_MIN_CHARS:-200}
+      - SCAN_PARSE_STRICT=${SCAN_PARSE_STRICT:-true}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - WEKNORA_BASE_URL=http://host.docker.internal:8081
+      - PIPESHUB_BASE_URL=http://host.docker.internal:8012
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_EMBED_URL=http://host.docker.internal:11434
     depends_on:
       db:
         condition: service_healthy

@@ -1,0 +1,138 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-04T02:31:01",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 249.8,
+ "summary": {
+  "total": 7,
+  "pass": 7,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "B01",
+   "category": "blind_scan",
+   "query": "根據文件《113年營所稅申報書_E42八策.pdf》，這是哪一年度的營利事業所得稅結算申報書？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "113"
+   ],
+   "spans_hit": [
+    "113"
+   ],
+   "answer": "## 答案\n\n這是 **民國 113 年度**的營利事業所得稅結算申報書（即 **西元 2024 年度**）。\n\n根據《113年營所稅申報書_E42八策.pdf》，文件載明「**113年度營利事業所得稅結算**」，所得期間為「**民國113年1月1日至113年12月31日**」。\n\n[建議問題]\n1. 這份申報書的實際申報日期是何時？\n2. 113年度的營利事業所得稅自繳稅額是多少？\n3. 這份申報書的申報公司名稱為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B03",
+   "category": "blind_scan",
+   "query": "根據文件《113年營所稅申報書_E42八策.pdf》，統一編號是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "83028948"
+   ],
+   "spans_hit": [
+    "83028948"
+   ],
+   "answer": "根據《113年營所稅申報書_E42八策.pdf》，八策數位股份有限公司的**營利事業統一編號為 83028948**。\n\n[建議問題]\n1. 該公司的營業地址是什麼？\n2. 該公司的負責人是誰？\n3. 113年度的課稅所得額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B11",
+   "category": "blind_report",
+   "query": "根據文件《巨大機械9921深度研究報告.pdf》，投資評等與12個月目標股價區間分別是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "審慎觀察",
+    "95",
+    "120"
+   ],
+   "spans_hit": [
+    "審慎觀察",
+    "95",
+    "120"
+   ],
+   "answer": "## 投資評等與目標價\n\n根據《巨大機械9921深度研究報告.pdf》第 14 頁「結論與投資評等」：\n\n- **投資評等：**審慎觀察（Neutral / Watch）\n- **12 個月目標股價區間：** **NT$95～NT$120**\n\n上述內容也與該報告第 1 頁「執行摘要」一致。\n\n### 文件內的差異說明\n\n報告第 5 頁「目標股價情境分析」另列出基準情境目標價 **NT$126～NT$176**，與執行摘要及最終結論的 **NT$95～NT$120** 不一致。若以報告明確標示的「12 個月目標股價」及最終投資結論為準，答案應為 **NT$95～NT$120**。\n\n[建議問題]\n1. 報告給予「審慎觀察」評等的主要原因是什麼？\n2. 巨大機械的多頭與空頭投資論點有哪些？\n3. 報告建議關注哪些營運轉折指標？",
+   "verdict": "pass",
+   "note": "spans 3/3"
+  },
+  {
+   "id": "B14",
+   "category": "blind_deck",
+   "query": "根據文件《亞馬遜行銷報價.pdf》，行銷規劃分為哪四個階段？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Awareness",
+    "Acquisition",
+    "Purchase",
+    "Retention"
+   ],
+   "spans_hit": [
+    "Awareness",
+    "Acquisition",
+    "Purchase",
+    "Retention"
+   ],
+   "answer": "## 行銷規劃的四個階段\n\n根據《亞馬遜行銷報價.pdf》的「各行銷階段規劃」，行銷規劃分為以下四個階段：\n\n1. **Awareness Gap（建立品牌／產品網路能見度）**\n2. **Acquisition Gap（提升好感度／產品興趣）**\n3. **Purchase Gap（轉換購買）**\n4. **Retention Gap（強化顧客關係）**\n\n[建議問題]\n1. 每個行銷階段分別有哪些具體執行項目？\n2. Purchase Gap 階段有哪些促購方式？\n3. Amazon 站內行銷活動包含哪些內容？",
+   "verdict": "pass",
+   "note": "spans 4/4"
+  },
+  {
+   "id": "B18",
+   "category": "blind_gov",
+   "query": "根據文件《臺北市產業發展獎勵補助計畫申請簡介.pdf》，房地稅補貼的最高金額是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "5000萬"
+   ],
+   "spans_hit": [
+    "5000萬"
+   ],
+   "answer": "## 房地稅補貼最高金額\n\n房屋稅／地價稅補貼的**總金額最高為新臺幣 5,000 萬元**。\n\n補貼方式為：\n- 前 2 年：最高全額補貼\n- 後 3 年：最高補貼 50%\n\n根據《臺北市產業發展獎勵補助計畫申請簡介.pdf》「房屋稅／地價稅補貼」說明。\n\n[建議問題]\n1. 房地稅補貼的申請資格有哪些？\n2. 房地稅補貼最長可補貼幾年？\n3. 房地租金補貼的最高金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B25",
+   "category": "blind_unscoped",
+   "query": "庫內新上傳的履歷中，希望職稱是營養師的應徵者是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "吳文曄"
+   ],
+   "spans_hit": [
+    "吳文曄"
+   ],
+   "answer": "## 符合條件的應徵者\n\n庫內新上傳的履歷中，希望職稱為 **「營養師」** 的應徵者是 **吳文曄**。\n\n根據《吳文曄－履歷》「求職條件」，其希望職稱明確填寫為「營養師」，並持有高考營養師證書。\n\n[建議問題]\n1. 吳文曄有哪些營養師相關工作經驗？\n2. 吳文曄的學歷與專業證照為何？\n3. 吳文曄期望的工作地點與到職時間為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "B26",
+   "category": "blind_unscoped",
+   "query": "台北市政府對參與國際育成活動的補助上限是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "300萬"
+   ],
+   "spans_hit": [
+    "300萬"
+   ],
+   "answer": "## 補助上限\n\n臺北市政府針對**參與國際育成活動／國際育成補助計畫**，補助上限為 **新臺幣 300 萬元**。\n\n此外，補助經費中**至少 60% 須用於國際新創團隊**。  \n依最高補助額計算：\n\n- 300 萬元 × 60% ＝ **至少 180 萬元**\n\n根據《臺北市產業發展獎勵補助計畫申請簡介》「補助經費」說明。\n\n[建議問題]\n1. 國際育成補助的申請資格有哪些？\n2. 國際育成補助可編列哪些費用？\n3. 國際育成計畫的執行期限是多久？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ]
+}

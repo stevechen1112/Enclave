@@ -3,17 +3,19 @@
 > 客戶只面對**一套**身分、權限、知識庫生命週期、問答與維運。  
 > 高品質解析、企業來源同步、知識編譯以**可開關的 sidecar 能力包**接入；資料權威與最終授權留在 Enclave。
 
-| 項目 | 狀態（2026-08-03） |
+| 項目 | 狀態（2026-08-04） |
 |------|-------------------------|
 | 產品線名稱 | **Enclave 2.0**（Triple Injection：RAGFlow + PipesHub + WeKnora） |
 | 本機核心／計畫可自動化出口 | **已完成**（code 閘門 32/32、檢查點 67/73、false_green=0） |
 | 能力啟用與價值證明 | **已閉環**（見 `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md`／`docs/CAPABILITY_CLAIMS.md`） |
+| AI 問答品質（Point A→B） | **~90%**（主集 128/128、盲測 27/27、對抗 8/8；逐字溯源稽核層 shadow 上線；見 `docs/VISION_POINT_A_TO_B.md`） |
 | UI／UX 2.0 IA | **已落地**（總覽｜問答｜知識｜治理｜系統；知識含 Wiki 瀏覽＋管理員編輯） |
 | 本機 Pilot DB | **單一租戶乾淨庫**（`Demo Tenant`；見下方 §6.3） |
 | DD P0 Correctness Freeze | **已完成**（見 `docs/ENCLAVE_2_0_TECHNICAL_DD.md` §10.1） |
 | DD P1 Architecture Convergence | **主幹完成**（見同 DD §10.2） |
 | DD P2 Productization | **主幹完成**（compose overlays、Wiki 唯讀 UI、Graph API-only、Mobile experimental…） |
 | 商業 GA 宣稱 | **未達**（缺外部滲透；法律／現場簽核屬人工） |
+| 雲端化（Accepted 2026-08-04） | **Phase 1 動工**：StorageBackend 抽象＋S3 相容後端落地（23 測試）；租戶 RLS shadow 上線（27 表 policy、live 繞過攻擊測試全綠；ADR-011/012/013） |
 | 雲端來源 OAuth（SharePoint／Drive） | **本機階段 SKIP**（首發連接器為本機 NAS + BookStack） |
 | 舊 README「Phase 13+ 生產就緒」 | **已作廢**；以下為現況真相 |
 
@@ -26,9 +28,15 @@
 
 **是**
 
-- 地端（on-prem / 本機 Docker）部署的企業 AI 知識平台
-- **Control Plane**：租戶、部門、RBAC、稽核、文件生命週期、主知識索引（pgvector）
+- 企業 AI 知識 **Control Plane**：租戶、部門、RBAC、稽核、文件生命週期、主知識索引（pgvector）
 - 可選整合三個開源引擎為 sidecar，而不是把三套 UI 拼給客戶
+- **三種販售形態**（同一套程式碼，見 `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md`）：
+
+| 形態 | 說明 | 現況 |
+|------|------|------|
+| **A 地端自管** | 客戶 Compose／air-gap | 本機 Pilot 主路徑 |
+| **B 託管私有雲** | 每客獨立實例（Phase 1 主推） | Runbook＋開通腳本已備；實機待雲端帳號 |
+| **C 多租戶 SaaS** | 共享控制面＋RLS | Phase 2（shadow RLS 已落地） |
 
 **不是**
 
@@ -85,6 +93,7 @@
 | `app/services/` | 解析、檢索、connector、wiki、outbox… |
 | `app/services/resource_policy.py` | 統一 Resource PEP |
 | `app/services/retrieval_facade.py` | 統一 RetrievalFacade |
+| `app/services/source_verifier.py` | Source-grounded 逐字溯源稽核（見 §5.5） |
 | `app/services/document_revocation.py` | 統一撤銷（tombstone + 資源級 deny） |
 | `app/services/credential_vault.py` | Connector 憑證（`var/credentials/`，Fernet） |
 | `app/tasks/` | Celery：文件處理、outbox、reconcile、connector poll |
@@ -134,7 +143,7 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 
 ---
 
-## 5. 完成度稽核結論（2026-08-03）
+## 5. 完成度稽核結論（2026-08-04）
 
 ### 5.1 已真正具備
 
@@ -199,6 +208,41 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 | mistral-ocr-latest（OCR 4） | **30.3%** | 並列最佳；最快（586s）、最便宜（$4/千頁）、含 typed blocks＋bbox |
 
 結論：OCR 專精模型 > 通用模型；雲端臂仍未達 +20pp 全語料門檻（剩餘未命中屬真困難樣本）。**預設維持地端 DeepDOC**；雲端 OCR 已接為**選配增強臂**（`.env` 設 `CLOUD_OCR_PROVIDER=gemini|mistral|openai` + 對應 API key，僅在主解析產出過少時觸發，見 `app/services/cloud_ocr.py`）。
+
+### 5.5 AI 問答品質架構（2026-08-04，Point A→B 路線）
+
+目標：問答的正確性、穩定性、可解釋性由**架構**撐住，不靠 prompt 或運氣。總綱見 `docs/VISION_POINT_A_TO_B.md`。
+
+**驗收數字**
+
+| 題庫 | 結果 |
+|------|------|
+| 主黃金集（40＋展開 88＝128 題） | **128/128 = 100%** |
+| 盲測集（8 份未見文件 × 27 題，ground truth 獨立抽取） | **27/27 = 100%** |
+| 對抗集（誘騙／庫外／未來事實） | **8/8 PASS** |
+| 模型消融（Luna／Terra／Sol 同條件＋盲測對決） | 三模型盲測皆 27/27 平手；主模型定案 **gpt-5.6-luna**，備用 Terra，Sol 退場 |
+
+**問答管線架構層**（`app/services/`）
+
+| 層 | 模組 | 作用 |
+|----|------|------|
+| 意圖規劃 | `query_planner` / `tool_router` / `multi_step_orchestrator` | QueryPlan 六類意圖驅動多臂檢索；檔名導向 scoped 檢索＋document head 不變式 |
+| 檢索融合 | `retrieval_facade` / gateway fusion | 文件／Wiki／Graph／Connector 統一入口；Voyage rerank-2.5 |
+| 拒答紀律 | 結構化 refusal（`refusal` in retrieval ctx） | 不可答題強制拒答，不讓 LLM 胡謅 |
+| **逐字溯源稽核** | `source_verifier.py` | 生成後稽核：每條論點須附逐字 `source_quote`，程式化子字串比對檢索片段；`derived` 型別涵蓋換算／欄位對應／摘要（basis_quotes 具結） |
+
+**Source-grounded 稽核層開關**（`.env`）
+
+| 變數 | 值 | 行為 |
+|------|-----|------|
+| `SOURCE_VERIFY_MODE` | `off`（預設） | 不稽核 |
+| | `shadow`（**目前常駐**） | 照常輸出，事後稽核記 log＋`context["source_verification"]`，收集數據 |
+| | `enforce` | 緩衝→稽核通過才輸出；失敗約束式重生成一次；再失敗只給已驗證重點 |
+| `SOURCE_VERIFY_MODEL` | 預設空＝內部模型 | 稽核專用模型覆寫（現設 `qwen3.6:35b`，本地 Ollama 零邊際成本） |
+
+Shadow 實測：131 次稽核 0 故障；strict 逐字通過率 74.8%，未通過抽樣 **0 條真幻覺**（皆為正確但非逐字表述，已由 derived 型別收斂）。enforce 全域上線待更多 shadow 數據排除 OCR 雜訊假陽性（~1-2%）後決定。
+
+**誠信邊界**：稽核層保證「回答忠實於檢索到的證據」；「檢索到對的證據」由意圖規劃／scoped 檢索／交付閘門負責——兩道牆互補，不互相替代。
 
 ---
 
@@ -363,6 +407,8 @@ Expo 子集；**非 2.0 GA 路徑**——見 `mobile/README.md`、`mobile/EXPERI
 | `docs/UIUX_2_0_PLAN.md` | UI/UX 規劃書 |
 | `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md` | 能力啟用與價值證明計畫（消融閘門結果） |
 | `docs/CAPABILITY_CLAIMS.md` | 能力宣稱誠信邊界（可宣稱／不可宣稱） |
+| `docs/VISION_POINT_A_TO_B.md` | AI 問答品質願景路線（Point A→B；盲測／消融／逐字溯源稽核） |
+| `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md` | 雲端化與商業產品化中長期計畫（託管私有雲→多租戶 SaaS；參照 UniHR） |
 | `docs/ENCLAVE_2_0_TECHNICAL_DD.md` | 技術 Due Diligence |
 | `docs/DEVELOPMENT_PLAN_TRIPLE_INJECTION.md` | 主計畫與出口條件 |
 | `docs/OPEN_GATES.md` | 開放／SKIP 閘門 |
@@ -381,8 +427,9 @@ Expo 子集；**非 2.0 GA 路徑**——見 `mobile/README.md`、`mobile/EXPERI
 | 稱呼 | 含義 |
 |------|------|
 | Enclave 1.x（歷史） | 單一知識庫／聊天／生成／Agent 監控 |
-| **Enclave 2.0（現況）** | Control Plane + Triple Injection；UI 2.0 IA（含 Wiki 唯讀瀏覽）；本機核心與能力價值證明已閉環 |
+| **Enclave 2.0（現況）** | Control Plane + Triple Injection；UI 2.0 IA（含 Wiki 唯讀瀏覽）；本機核心與能力價值證明已閉環；AI 問答品質架構（意圖規劃＋逐字溯源稽核）上線，盲測 27/27 |
 | Enclave GA（未來） | 2.0 + 外部滲透關閉 + 法律／現場簽核 +（可選）雲端 connector |
+| Enclave Cloud（路線） | 託管私有雲 → 多租戶 SaaS；見 `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md`（Proposed） |
 
 ---
 

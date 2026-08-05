@@ -1,0 +1,365 @@
+{
+  "rule": "Write intents from client+name+stratum only. Do NOT open file contents or extracts/. GT must be validated against ingested DB text.",
+  "files": [
+    {
+      "id": "z4-doc-01",
+      "root": "客戶",
+      "client": "優克美",
+      "name": "2024_LabavoＸ八策_數位行銷之網路廣告投放合約0313.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "優克美/2024_LabavoＸ八策_數位行銷之網路廣告投放合約0313.pdf"
+    },
+    {
+      "id": "z4-doc-02",
+      "root": "客戶",
+      "client": "優克美",
+      "name": "八策數位股份有限公司SEO報價合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "優克美/八策數位股份有限公司SEO報價合約.pdf"
+    },
+    {
+      "id": "z4-doc-03",
+      "root": "客戶",
+      "client": "臺鍍",
+      "name": "臺鍍網站架設專案合約_signed.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "臺鍍/臺鍍網站架設專案合約_signed.pdf"
+    },
+    {
+      "id": "z4-doc-04",
+      "root": "客戶",
+      "client": "JSwedding 婚紗",
+      "name": "八策行銷報價合約.PDF",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "JSwedding 婚紗/八策行銷報價合約.PDF"
+    },
+    {
+      "id": "z4-doc-05",
+      "root": "客戶",
+      "client": "CYS假髮",
+      "name": "CYS假髮品牌行銷執行委託案合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "CYS假髮/CYS假髮品牌行銷執行委託案合約.pdf"
+    },
+    {
+      "id": "z4-doc-06",
+      "root": "客戶",
+      "client": "艾科能德",
+      "name": "HRC2022000036-(NM)八策品牌行銷有限公司新元應材網站建置報價合約(新元用印).pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "艾科能德/HRC2022000036-(NM)八策品牌行銷有限公司新元應材網站建置報價合約(新元用印).pdf"
+    },
+    {
+      "id": "z4-doc-07",
+      "root": "客戶",
+      "client": "昇展Smat",
+      "name": "Smat行銷研究企劃案報價暨合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "昇展Smat/Smat行銷研究企劃案報價暨合約.pdf"
+    },
+    {
+      "id": "z4-doc-08",
+      "root": "客戶",
+      "client": "瑪格麗特婚紗",
+      "name": "瑪格麗特婚紗行銷規劃執行案合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "瑪格麗特婚紗/瑪格麗特婚紗行銷規劃執行案合約.pdf"
+    },
+    {
+      "id": "z4-doc-09",
+      "root": "客戶",
+      "client": "宏茂五金",
+      "name": "宏茂行銷報價合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "宏茂五金/宏茂行銷報價合約.pdf"
+    },
+    {
+      "id": "z4-doc-10",
+      "root": "客戶",
+      "client": "康宇勞資顧問",
+      "name": "名片報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "康宇勞資顧問/名片報價.pdf"
+    },
+    {
+      "id": "z4-doc-11",
+      "root": "客戶",
+      "client": "CYS假髮",
+      "name": "1005_八策 X CYS_好優數位網路新聞服務報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "CYS假髮/1005_八策 X CYS_好優數位網路新聞服務報價單.pdf"
+    },
+    {
+      "id": "z4-doc-12",
+      "root": "客戶",
+      "client": "康宇勞資顧問",
+      "name": "綠界特店-報價單2021_ 康宇財富管理顧問有限公司.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "康宇勞資顧問/綠界特店-報價單2021_ 康宇財富管理顧問有限公司.pdf"
+    },
+    {
+      "id": "z4-doc-13",
+      "root": "客戶",
+      "client": "1028",
+      "name": "1028時尚彩妝2501檔期網紅體驗專案報價委刊單1219報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "1028/1028時尚彩妝2501檔期網紅體驗專案報價委刊單1219報價單.pdf"
+    },
+    {
+      "id": "z4-doc-14",
+      "root": "客戶",
+      "client": "巽耘",
+      "name": "夕口報價單-巽耘法律.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "巽耘/夕口報價單-巽耘法律.pdf"
+    },
+    {
+      "id": "z4-doc-15",
+      "root": "客戶",
+      "client": "街道沙龍",
+      "name": "街道沙龍網站暨行銷報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "街道沙龍/街道沙龍網站暨行銷報價單.pdf"
+    },
+    {
+      "id": "z4-doc-16",
+      "root": "客戶",
+      "client": "怪獸寶貝",
+      "name": "Bebe silk & Sweet little monster國內電商與亞馬遜報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "怪獸寶貝/Bebe silk & Sweet little monster國內電商與亞馬遜報價.pdf"
+    },
+    {
+      "id": "z4-doc-17",
+      "root": "客戶",
+      "client": "艾科能德",
+      "name": "艾科能德-網站建置報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "艾科能德/艾科能德-網站建置報價單.pdf"
+    },
+    {
+      "id": "z4-doc-18",
+      "root": "客戶",
+      "client": "瑪謝",
+      "name": "光昱金屬網站建置專案報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "瑪謝/光昱金屬網站建置專案報價單.pdf"
+    },
+    {
+      "id": "z4-doc-19",
+      "root": "客戶",
+      "client": "CYS假髮",
+      "name": "CYS7份月臉書粉專貼文提案_20190628.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "CYS假髮/CYS7份月臉書粉專貼文提案_20190628.pdf"
+    },
+    {
+      "id": "z4-doc-20",
+      "root": "客戶",
+      "client": "CYS假髮",
+      "name": "10份月臉書粉專貼文提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "CYS假髮/10份月臉書粉專貼文提案.pdf"
+    },
+    {
+      "id": "z4-doc-21",
+      "root": "客戶",
+      "client": "Dr.Kelly",
+      "name": "Dr. Kelly品牌設計_拍攝企劃內容_231120 (1).pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "Dr.Kelly/Dr. Kelly品牌設計_拍攝企劃內容_231120 (1).pdf"
+    },
+    {
+      "id": "z4-doc-22",
+      "root": "客戶",
+      "client": "(root)",
+      "name": "CYS6份月臉書粉專貼文提案_20190531_Emma.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "CYS6份月臉書粉專貼文提案_20190531_Emma.pdf"
+    },
+    {
+      "id": "z4-doc-23",
+      "root": "客戶",
+      "client": "JSwedding 婚紗",
+      "name": "JSwedding 行銷提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "JSwedding 婚紗/JSwedding 行銷提案.pdf"
+    },
+    {
+      "id": "z4-doc-24",
+      "root": "客戶",
+      "client": "瑪格麗特婚紗",
+      "name": "瑪格麗特婚紗創新模式提案_20181210.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "瑪格麗特婚紗/瑪格麗特婚紗創新模式提案_20181210.pdf"
+    },
+    {
+      "id": "z4-doc-25",
+      "root": "八策",
+      "client": "(root)",
+      "name": "工作委託合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "工作委託合約.pdf"
+    },
+    {
+      "id": "z4-doc-26",
+      "root": "八策",
+      "client": "(root)",
+      "name": "僅B2C電子發票字軌號碼申請書1090429(B2C+B2B).pdf",
+      "stratum": "gov",
+      "ext": ".pdf",
+      "rel": "僅B2C電子發票字軌號碼申請書1090429(B2C+B2B).pdf"
+    },
+    {
+      "id": "z4-doc-27",
+      "root": "八策",
+      "client": "(root)",
+      "name": "杏壺報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "杏壺報價.pdf"
+    },
+    {
+      "id": "z4-doc-28",
+      "root": "八策",
+      "client": "(root)",
+      "name": "金正昌報價提案.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "金正昌報價提案.pdf"
+    },
+    {
+      "id": "z4-doc-29",
+      "root": "客戶",
+      "client": "巽耘",
+      "name": "巽耘法律事務所-網路行銷整合提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "巽耘/巽耘法律事務所-網路行銷整合提案.pdf"
+    },
+    {
+      "id": "z4-doc-30",
+      "root": "客戶",
+      "client": "味特",
+      "name": "味特消費性品牌提案建議_20170522.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "味特/味特消費性品牌提案建議_20170522.pdf"
+    },
+    {
+      "id": "z4-doc-31",
+      "root": "客戶",
+      "client": "JSwedding 婚紗",
+      "name": "健身運動提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "JSwedding 婚紗/健身運動提案.pdf"
+    },
+    {
+      "id": "z4-doc-32",
+      "root": "客戶",
+      "client": "康宇勞資顧問",
+      "name": "12月FB粉絲貼文提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "康宇勞資顧問/12月FB粉絲貼文提案.pdf"
+    },
+    {
+      "id": "z4-doc-33",
+      "root": "客戶",
+      "client": "Color髮廊",
+      "name": "color hair 拍攝企劃.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "Color髮廊/color hair 拍攝企劃.pdf"
+    },
+    {
+      "id": "z4-doc-34",
+      "root": "客戶",
+      "client": "貝昇",
+      "name": "貝昇生技新品牌命名提案20170207.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "貝昇/貝昇生技新品牌命名提案20170207.pdf"
+    },
+    {
+      "id": "z4-doc-35",
+      "root": "客戶",
+      "client": "立壕線板",
+      "name": "2022-11-02_請款單.pdf",
+      "stratum": "gov",
+      "ext": ".pdf",
+      "rel": "立壕線板/2022-11-02_請款單.pdf"
+    },
+    {
+      "id": "z4-doc-36",
+      "root": "客戶",
+      "client": "生酮飲食",
+      "name": "生酮飲食行銷規劃合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "生酮飲食/生酮飲食行銷規劃合約.pdf"
+    },
+    {
+      "id": "z4-doc-37",
+      "root": "客戶",
+      "client": "奕瑞科技",
+      "name": "奕瑞科技網站建置與行銷合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "奕瑞科技/奕瑞科技網站建置與行銷合約.pdf"
+    },
+    {
+      "id": "z4-doc-38",
+      "root": "客戶",
+      "client": "樂行家",
+      "name": "樂行家行銷報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "樂行家/樂行家行銷報價單.pdf"
+    },
+    {
+      "id": "z4-doc-39",
+      "root": "客戶",
+      "client": "谷德",
+      "name": "谷德廣告委託報價單_0206.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "谷德/谷德廣告委託報價單_0206.pdf"
+    },
+    {
+      "id": "z4-doc-40",
+      "root": "客戶",
+      "client": "鴻鼎菓子",
+      "name": "鴻鼎菓子行銷研究企劃案報價暨合約.docx",
+      "stratum": "contract",
+      "ext": ".docx",
+      "rel": "鴻鼎菓子/鴻鼎菓子行銷研究企劃案報價暨合約.docx"
+    }
+  ]
+}

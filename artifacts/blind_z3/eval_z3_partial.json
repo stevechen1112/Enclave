@@ -1,0 +1,640 @@
+{
+ "partial": true,
+ "summary": {
+  "pass": 38,
+  "fail": 2,
+  "review": 5
+ },
+ "results": [
+  {
+   "id": "z3-v3-001",
+   "category": "blind_z3_E",
+   "query": "優利有「線上客服委任契約-初期合約-至0531」與「正-已填」兩份，請分檔說明期間或填寫狀態差異，不要合成一份。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "0531",
+    "已填"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-002",
+   "category": "blind_z3_B",
+   "query": "優利線上客服委任契約的費用或報酬怎麼約定？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "20,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-003",
+   "category": "blind_z3_A",
+   "query": "優利線上客服委任契約（初期至0531）的甲乙方是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合",
+    "八策數位"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-004",
+   "category": "blind_z3_B",
+   "query": "宏寰貿易亞馬遜電商委託營運報價合約的合約期間與金額怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "亞馬遜",
+    "8月31"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-005",
+   "category": "blind_z3_E",
+   "query": "宏寰的「亞馬遜電商委託營運報價合約」和「行銷報價合約」是不是同一份？請分檔說明標的。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "亞馬遜",
+    "SEO"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-006",
+   "category": "blind_z3_A",
+   "query": "宏寰貿易行銷報價合約_signed 的簽約雙方？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "宏寰貿易",
+    "八策品牌"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-007",
+   "category": "blind_z3_B",
+   "query": "igreen 用印合約的簽約雙方與合約標的是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "優克美"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "z3-v3-008",
+   "category": "blind_z3_B",
+   "query": "安可「委託合約-八策品牌」的甲方乙方是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "安可日子",
+    "八策品牌"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-009",
+   "category": "blind_z3_B",
+   "query": "安可 2024Q1 系統開發報價調整版（0816）的總價怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "696,500"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-010",
+   "category": "blind_z3_E",
+   "query": "安可系統開發報價調整版與委託合約-八策品牌，能否直接把金額劃等號？請分檔說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "委託合約",
+    "報價"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-011",
+   "category": "blind_z3_A",
+   "query": "安可系統開發報價調整版的付款方式或比例？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "第一期",
+    "第二期"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-012",
+   "category": "blind_z3_C",
+   "query": "若安可報價調整版同時有總價與訂金比例，訂金金額是多少？缺條件請說明缺什麼。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "訂金"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-013",
+   "category": "blind_z3_B",
+   "query": "地政e院 2021.10.28 合約書的合約金額或服務範圍怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "18,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-014",
+   "category": "blind_z3_E",
+   "query": "地政e院的「合約書」和「地政醫院行銷網站報價」是否同一案同一金額？請分檔說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "18,000",
+    "60,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-015",
+   "category": "blind_z3_B",
+   "query": "地政醫院行銷網站報價的總價是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "60,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-016",
+   "category": "blind_z3_B",
+   "query": "味特品牌研究企劃案報價暨合約的總價或計價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "350,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-017",
+   "category": "blind_z3_B",
+   "query": "貝昇生技品牌企劃案報價單暨合約書的金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "60,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-018",
+   "category": "blind_z3_B",
+   "query": "樂行家資料夾那份「合約.pdf」的簽約雙方與標的？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "樂行象",
+    "八策品牌"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "spans 1/2"
+  },
+  {
+   "id": "z3-v3-019",
+   "category": "blind_z3_B",
+   "query": "「SEO報價合約_用印版本」的報價或合約金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "20,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-020",
+   "category": "blind_z3_E",
+   "query": "光昱金屬「亞馬遜暨B2B行銷提案報價」與「光昱亞馬遜暨B2B行銷提案報價」請列檔名後只依一份答價位。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-021",
+   "category": "blind_z3_B",
+   "query": "徐嘉鴻3D設計專案合約書（光昱金屬）的合約金額或範圍？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "21,500"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-022",
+   "category": "blind_z3_C",
+   "query": "光昱的3D設計專案合約與亞馬遜B2B提案報價，標的是否相同？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "3D",
+    "亞馬遜"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-023",
+   "category": "blind_z3_B",
+   "query": "巽耘法律事務所視覺形象更新報價單的總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "87,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-024",
+   "category": "blind_z3_B",
+   "query": "醫美圈圈已用印八策行銷報價單總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "15,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-025",
+   "category": "blind_z3_B",
+   "query": "瑪格麗特婚紗工作室行銷提案報價（20181224）的金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-026",
+   "category": "blind_z3_E",
+   "query": "M&F Select 的電商行銷提案報價_0219 與 MF建議及調整提案，請分檔說明用途，不要混讀金額。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "0219",
+    "建議"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-027",
+   "category": "blind_z3_B",
+   "query": "Smat 市場研究暨行銷企劃報價提案的報價金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-028",
+   "category": "blind_z3_B",
+   "query": "好優數位新聞服務報價方案的價格方案怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "35,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-029",
+   "category": "blind_z3_B",
+   "query": "立壕線板 20230510 設計報價金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "11,550"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-030",
+   "category": "blind_z3_E",
+   "query": "醫美圈圈兩份「微醫美初體驗」徵文活動提案（含 Yumi 版），請列檔名並說明是否可視為同一稿。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Yumi"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-031",
+   "category": "blind_z3_B",
+   "query": "Dr. Kelly 包裝設計提案 Phase 02 的提案重點是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "包裝"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-032",
+   "category": "blind_z3_B",
+   "query": "滷味市場與品牌策略提案（好婆婆生酮）的核心策略建議是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "生酮"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-033",
+   "category": "blind_z3_B",
+   "query": "THINK OFFICE 首頁提案在改什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-034",
+   "category": "blind_z3_B",
+   "query": "CYS「7份月臉書粉專貼文提案」規劃了什麼內容方向？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "貼文"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-035",
+   "category": "blind_z3_B",
+   "query": "根目錄「行銷傳播企劃.pdf」主軸在談什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-036",
+   "category": "blind_z3_B",
+   "query": "「合約-八策數位股份有限公司」的簽約雙方與合約類型？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "2,630"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "z3-v3-037",
+   "category": "blind_z3_B",
+   "query": "八策數位辦公室合約（20240327）的租期或地址怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "19,425"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-038",
+   "category": "blind_z3_E",
+   "query": "「合約-八策數位股份有限公司」與「辦公室合約_20240327」是否同一約？請分檔。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Regus",
+    "巴菲特"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-039",
+   "category": "blind_z3_C",
+   "query": "政府補助資料裡的米克委託合約與創騰委託合約，委託對象分別是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "米克",
+    "創騰"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-040",
+   "category": "blind_z3_A",
+   "query": "米克委託合約的委託範圍或金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "196,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-041",
+   "category": "blind_z3_A",
+   "query": "創騰委託合約的雙方與標的？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "創騰"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-042",
+   "category": "blind_z3_B",
+   "query": "購買發票及領取購票證委任書的委任人／受任人是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "發票"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-043",
+   "category": "blind_z3_B",
+   "query": "「八策合約書1025」的合約雙方與標的？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-044",
+   "category": "blind_z3_B",
+   "query": "八策數位股份有限公司補助期中報告寫到哪些執行進度或成果？列兩點以上。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Joyshot"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-045",
+   "category": "blind_z3_B",
+   "query": "營業登記文件上的公司名稱與統一編號（若有）？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  }
+ ]
+}

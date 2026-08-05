@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float, Enum, Text, func
+from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float, Enum, Text, func, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
@@ -34,3 +34,30 @@ class Tenant(Base):
     usage_records = relationship("UsageRecord", back_populates="tenant")
     departments = relationship("Department", back_populates="tenant")
     feature_permissions = relationship("FeaturePermission", back_populates="tenant")
+    sso_configs = relationship("TenantSSOConfig", back_populates="tenant")
+
+
+class TenantSSOConfig(Base):
+    """租戶級 SSO 設定（CG-AUTH-SSO）。
+
+    注意：auto_create_user 預設 False（fail-closed）——Sales-Led 受控開戶下，
+    SSO 登入只連結既有帳號，不自動開通新用戶，避免陌生人網域撞入。
+    """
+
+    __tablename__ = "tenant_sso_configs"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    provider = Column(String, nullable=False)  # google | microsoft
+    client_id = Column(String, nullable=False)
+    client_secret = Column(String, nullable=False)
+    redirect_uri = Column(String, nullable=True)
+    enabled = Column(Boolean, default=True, nullable=False, server_default="true")
+    allowed_domains = Column(JSON, default=list)
+    auto_create_user = Column(Boolean, default=False, nullable=False, server_default="false")
+    default_role = Column(String, default="employee")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    tenant = relationship("Tenant", back_populates="sso_configs")

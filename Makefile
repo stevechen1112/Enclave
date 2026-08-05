@@ -78,6 +78,22 @@ redis-cli:
 status:
 	docker-compose ps
 
+# ─── Foundation gates (FD-*, 本機 preflight；需 stack 運行中) ───
+foundation-gates:
+	python scripts/inventory_delivery_status.py
+	python scripts/eval_label_integrity.py
+	python scripts/eval_foundation_catalog_gate.py --with-chat
+	python scripts/eval_foundation_fusion_gate.py
+	python scripts/eval_foundation_queryplan_gate.py
+	python scripts/eval_foundation_clause_gate.py
+	@echo "FD gate artifacts written to artifacts/foundation_*_last_run.json"
+
+vision-gates: foundation-gates
+	python scripts/eval_capability_ceiling.py
+	python scripts/eval_adversarial_gate.py
+	python scripts/eval_answer_correctness.py
+	@echo "VISION gate artifacts written (ceiling/adversarial/answer_correctness)"
+
 health:
 	@echo "Backend:"
 	@curl -s http://localhost:8000/api/v1/admin/system/health 2>/dev/null | python3 -m json.tool || echo "  ⚠️  Not accessible"

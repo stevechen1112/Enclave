@@ -1,7 +1,7 @@
 {
  "gate": "CV-INT",
  "status": "PASS",
- "generated_at": "2026-08-02T16:52:59",
+ "generated_at": "2026-08-03T17:22:17",
  "checks": {
   "static_source_scan": {
    "violations": 0
@@ -9,6 +9,10 @@
   "dynamic_db_vs_ragflow": {
    "violations": 0,
    "dataset_layouts": {
+    "619edea28e7f11f1ac81dd2c1fc90d74": "DeepDOC",
+    "7c9161a08e7d11f1ac81dd2c1fc90d74": "DeepDOC",
+    "0c33a98c8e7711f1ac81dd2c1fc90d74": "DeepDOC",
+    "6ee5d1848e6511f1ac81dd2c1fc90d74": "DeepDOC",
     "38b5af5a8e2711f1ac81dd2c1fc90d74": "DeepDOC",
     "21066f0c8e2711f1ac81dd2c1fc90d74": "Plain Text",
     "99a8942a8e1e11f1ac81dd2c1fc90d74": "DeepDOC",
@@ -16,8 +20,8 @@
    },
    "production_dataset_id": "599692668d0511f199eeb37ca37a0366",
    "production_layout_recognize": "DeepDOC",
-   "documents_checked": 10,
-   "documents_claiming_deepdoc": 7,
+   "documents_checked": 43,
+   "documents_claiming_deepdoc": 16,
    "production_is_deepdoc": true
   }
  },

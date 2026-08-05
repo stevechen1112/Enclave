@@ -1,0 +1,33 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-05T12:56:46",
+ "base_url": "http://localhost:8011",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 55.0,
+ "summary": {
+  "total": 1,
+  "pass": 1,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "z4-i-009",
+   "category": "blind_z4_A",
+   "query": "杏壺報價.pdf 的報價金額或品項？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "45,000"
+   ],
+   "spans_hit": [
+    "45,000"
+   ],
+   "answer": "## 杏壺報價內容\n\n根據《杏壺報價.pdf》，報價方案為：\n\n- **電商方案：每月新臺幣 45,000 元**\n- **網路廣告預算：每月包含 5,000 元**\n  - 可投放於 Facebook、Instagram、Google 等平台\n- **影像素材：報價另計**\n  - 品牌形象影片：3–5 分鐘一支\n  - 商品平面攝影：10 檔主推商品\n\n## 方案包含品項\n\n### 1. 品牌訴求與目標客群\n- 現有資源盤點\n- 品牌風格設定，包括品牌視覺、品牌故事及文案標語\n- 消費者調查一式，樣本數至少 100 份\n\n### 2. 商品策略\n- 整體商品策略制定\n- 商品訴求與目標對象設定\n- 商品介紹文案撰寫：每月 5 款商品\n\n### 3. 社群媒體經營\n- Facebook 粉絲專頁經營，每月 6 篇貼文\n- 發文、設計素材製作及回覆訊息\n- Line@／Line 生活圈代經營\n\n### 4. 網路廣告投放\n- Facebook、Instagram、Google 等網路廣告投放\n- 每月廣告預算 5,000 元\n\n### 5. 電商網站\n- 網站建置，包括網站架構、視覺素材及網頁文案\n- 網站營運與上線後日常推廣\n- 金物流串接及測試\n- 上線測試\n\n### 6. 數據分析與洞察\n- 網站關鍵字搜尋設定\n- 網路流量與消費行為數據分析／數據報表，每月一式\n\n以上內容根據《杏壺報價.pdf》的「電商方案」及工作項目整理。文件中**未提供各單項服務的個別價格**，僅明確列出電商方案每月 45,000 元，且影像素材需另行報價。\n\n[建議問題]  \n1. 電商方案每月 45,000 元是否包含網站建置費？  \n2. 影像素材另行報價的費用是多少？  \n3. 這份方案的執行期間與付款方式為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ],
+ "partial": false
+}

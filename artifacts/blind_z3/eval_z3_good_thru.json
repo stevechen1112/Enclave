@@ -1,0 +1,902 @@
+{
+ "partial": true,
+ "summary": {
+  "pass": 51,
+  "fail": 2,
+  "review": 9
+ },
+ "results": [
+  {
+   "id": "z3-v3-001",
+   "category": "blind_z3_E",
+   "query": "優利有「線上客服委任契約-初期合約-至0531」與「正-已填」兩份，請分檔說明期間或填寫狀態差異，不要合成一份。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "0531",
+    "已填"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-002",
+   "category": "blind_z3_B",
+   "query": "優利線上客服委任契約的費用或報酬怎麼約定？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "20,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-003",
+   "category": "blind_z3_A",
+   "query": "優利線上客服委任契約（初期至0531）的甲乙方是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "優利資源整合",
+    "八策數位"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-004",
+   "category": "blind_z3_B",
+   "query": "宏寰貿易亞馬遜電商委託營運報價合約的合約期間與金額怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "亞馬遜",
+    "8月31"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-005",
+   "category": "blind_z3_E",
+   "query": "宏寰的「亞馬遜電商委託營運報價合約」和「行銷報價合約」是不是同一份？請分檔說明標的。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "亞馬遜",
+    "SEO"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-006",
+   "category": "blind_z3_A",
+   "query": "宏寰貿易行銷報價合約_signed 的簽約雙方？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "宏寰貿易",
+    "八策品牌"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-007",
+   "category": "blind_z3_B",
+   "query": "igreen 用印合約的簽約雙方與合約標的是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "優克美"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "z3-v3-008",
+   "category": "blind_z3_B",
+   "query": "安可「委託合約-八策品牌」的甲方乙方是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "安可日子",
+    "八策品牌"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-009",
+   "category": "blind_z3_B",
+   "query": "安可 2024Q1 系統開發報價調整版（0816）的總價怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "696,500"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-010",
+   "category": "blind_z3_E",
+   "query": "安可系統開發報價調整版與委託合約-八策品牌，能否直接把金額劃等號？請分檔說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "委託合約",
+    "報價"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-011",
+   "category": "blind_z3_A",
+   "query": "安可系統開發報價調整版的付款方式或比例？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "第一期",
+    "第二期"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-012",
+   "category": "blind_z3_C",
+   "query": "若安可報價調整版同時有總價與訂金比例，訂金金額是多少？缺條件請說明缺什麼。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "訂金"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-013",
+   "category": "blind_z3_B",
+   "query": "地政e院 2021.10.28 合約書的合約金額或服務範圍怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "18,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-014",
+   "category": "blind_z3_E",
+   "query": "地政e院的「合約書」和「地政醫院行銷網站報價」是否同一案同一金額？請分檔說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "18,000",
+    "60,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-015",
+   "category": "blind_z3_B",
+   "query": "地政醫院行銷網站報價的總價是多少？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "60,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-016",
+   "category": "blind_z3_B",
+   "query": "味特品牌研究企劃案報價暨合約的總價或計價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "350,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-017",
+   "category": "blind_z3_B",
+   "query": "貝昇生技品牌企劃案報價單暨合約書的金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "60,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-018",
+   "category": "blind_z3_B",
+   "query": "樂行家資料夾那份「合約.pdf」的簽約雙方與標的？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "樂行象",
+    "八策品牌"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "spans 1/2"
+  },
+  {
+   "id": "z3-v3-019",
+   "category": "blind_z3_B",
+   "query": "「SEO報價合約_用印版本」的報價或合約金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "20,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-020",
+   "category": "blind_z3_E",
+   "query": "光昱金屬「亞馬遜暨B2B行銷提案報價」與「光昱亞馬遜暨B2B行銷提案報價」請列檔名後只依一份答價位。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-021",
+   "category": "blind_z3_B",
+   "query": "徐嘉鴻3D設計專案合約書（光昱金屬）的合約金額或範圍？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "21,500"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-022",
+   "category": "blind_z3_C",
+   "query": "光昱的3D設計專案合約與亞馬遜B2B提案報價，標的是否相同？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "3D",
+    "亞馬遜"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-023",
+   "category": "blind_z3_B",
+   "query": "巽耘法律事務所視覺形象更新報價單的總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "87,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-024",
+   "category": "blind_z3_B",
+   "query": "醫美圈圈已用印八策行銷報價單總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "15,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-025",
+   "category": "blind_z3_B",
+   "query": "瑪格麗特婚紗工作室行銷提案報價（20181224）的金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-026",
+   "category": "blind_z3_E",
+   "query": "M&F Select 的電商行銷提案報價_0219 與 MF建議及調整提案，請分檔說明用途，不要混讀金額。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "0219",
+    "建議"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-027",
+   "category": "blind_z3_B",
+   "query": "Smat 市場研究暨行銷企劃報價提案的報價金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-028",
+   "category": "blind_z3_B",
+   "query": "好優數位新聞服務報價方案的價格方案怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "35,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-029",
+   "category": "blind_z3_B",
+   "query": "立壕線板 20230510 設計報價金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "11,550"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-030",
+   "category": "blind_z3_E",
+   "query": "醫美圈圈兩份「微醫美初體驗」徵文活動提案（含 Yumi 版），請列檔名並說明是否可視為同一稿。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Yumi"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-031",
+   "category": "blind_z3_B",
+   "query": "Dr. Kelly 包裝設計提案 Phase 02 的提案重點是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "包裝"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-032",
+   "category": "blind_z3_B",
+   "query": "滷味市場與品牌策略提案（好婆婆生酮）的核心策略建議是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "生酮"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-033",
+   "category": "blind_z3_B",
+   "query": "THINK OFFICE 首頁提案在改什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-034",
+   "category": "blind_z3_B",
+   "query": "CYS「7份月臉書粉專貼文提案」規劃了什麼內容方向？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "貼文"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-035",
+   "category": "blind_z3_B",
+   "query": "根目錄「行銷傳播企劃.pdf」主軸在談什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-036",
+   "category": "blind_z3_B",
+   "query": "「合約-八策數位股份有限公司」的簽約雙方與合約類型？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "2,630"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "fail",
+   "note": "spans 0/1"
+  },
+  {
+   "id": "z3-v3-037",
+   "category": "blind_z3_B",
+   "query": "八策數位辦公室合約（20240327）的租期或地址怎麼寫？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "19,425"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-038",
+   "category": "blind_z3_E",
+   "query": "「合約-八策數位股份有限公司」與「辦公室合約_20240327」是否同一約？請分檔。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Regus",
+    "巴菲特"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-039",
+   "category": "blind_z3_C",
+   "query": "政府補助資料裡的米克委託合約與創騰委託合約，委託對象分別是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "米克",
+    "創騰"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 2/2"
+  },
+  {
+   "id": "z3-v3-040",
+   "category": "blind_z3_A",
+   "query": "米克委託合約的委託範圍或金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "196,000"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-041",
+   "category": "blind_z3_A",
+   "query": "創騰委託合約的雙方與標的？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "創騰"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-042",
+   "category": "blind_z3_B",
+   "query": "購買發票及領取購票證委任書的委任人／受任人是誰？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "發票"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-043",
+   "category": "blind_z3_B",
+   "query": "「八策合約書1025」的合約雙方與標的？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-044",
+   "category": "blind_z3_B",
+   "query": "八策數位股份有限公司補助期中報告寫到哪些執行進度或成果？列兩點以上。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Joyshot"
+   ],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-045",
+   "category": "blind_z3_B",
+   "query": "營業登記文件上的公司名稱與統一編號（若有）？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "[prior run; answer text not captured in log]",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-046",
+   "category": "blind_z3_B",
+   "query": "投保紀錄文件顯示的投保單位或人數相關資訊？若無法判讀請說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "## 投保單位資訊\n\n根據《投保紀錄.pdf》：\n\n- **投保單位名稱：**八策數位股份有限公司\n- **保險證號：**15119351K\n- **資料月份：**民國112年5月（2023年5月）\n- **月底生效人數：**3人  \n  - 文件註明該人數**不含月底當日退保者**。\n- **適用就業保險人數：**3人\n- **應繳總金額：**169元\n\n## 投保人員資訊\n\n文件列出本月有異動的3名被保險人：\n\n1. 張盈儀：112年5月25日加保\n2. 洪嘉駿：112年5月25日加保\n3. 劉嘉玲：112年5月25日加保\n\n三人的資料均顯示：\n\n- 就業保險投保薪資：26,400元\n- 職業災害保險投保薪資：26,400元\n- 適用就業保險\n\n## 保費合計\n\n《投保紀錄.pdf》列示：\n\n- **個人合計應繳：**33元\n  - 勞工保險：0元\n  - 職災保險：0元\n  - 就業保險：33元\n- **單位合計應繳：**132元\n  - 勞工保險：0元\n  - 職災保險：21元\n  - 就業保險：111元\n\n## 判讀限制\n\n- 文件可判讀該投保單位在**民國112年5月底有3名生效中的被保險人**，且3人均適用就業保險。\n- 但**無法僅依此文件判定八策數位股份有限公司的全部員工人數**，因為「月底生效人數」是該月份的投保生效人數，未必等同公司總員工數。\n- 「本月身心障礙補助人數」欄位未填列，因此**無法判定身心障礙補助人數**。\n- 《000_nueip 合約(1).pdf》所載的「預設1組投保單位」及「帳號使用數量10」，屬於系統租用設定，**不能直接視為實際投保單位數或投保人數**。\n\n[建議問題]  \n1. 這份投保紀錄的保費明細是否能與應繳總金額169元核對？  \n2. 三名被保險人的個別投保薪資與加保日期為何？  \n3. 合約中的系統帳號數量10人，是否代表公司目前員工人數？",
+   "verdict": "pass",
+   "note": "refusal marker present"
+  },
+  {
+   "id": "z3-v3-047",
+   "category": "blind_z3_B",
+   "query": "發票開立信件通知的重點訊息是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "綠界"
+   ],
+   "spans_hit": [
+    "綠界"
+   ],
+   "answer": "## 發票開立信件通知的重點訊息\n\n1. **通知電子發票已開立**\n   - 綠界 STAGE 測試股份有限公司已開立電子發票給收件人。\n   - B2C 通知信則表示「感謝您購買商品，您的電子發票已開立」。\n   - 根據《發票開立信件通知.pdf》文件 #1、#2、#3。\n\n2. **提供發票基本資訊**\n   - 發票號碼\n   - 開立日期與時間\n   - B2B 發票另提供買方統一編號。\n   - 部分 B2C 通知信會提供隨機碼；有統編者會隨信附上 PDF 發票，可自行下載或列印。\n   - 例如：發票號碼為 `QW12000055`，買方統編為 `87654321`，開立日期為 `2019/05/21 21:45:35`。\n\n3. **提供查詢或下載管道**\n   - 收件人可透過信件中的連結查詢電子發票明細。\n   - B2B 通知信另可透過連結下載 PDF 檔。\n   - B2C 電子發票也可至綠界會員載具或綠界官網查詢發票資訊。\n\n4. **發票內容有問題時的聯絡方式**\n   - 如發票內容有問題，應聯絡開立發票的「綠界 STAGE 測試股份有限公司」。\n   - 信件中提供公司網站連結：`https://www-stage.ecpay.com.tw`。\n\n5. **系統自動寄送，請勿直接回信**\n   - 信件為系統自動發送，收件人不應直接回覆該信件。\n\n6. **通知方式與發票狀態**\n   - 根據《發票開立信件通知.pdf》文件 #1，發票開立、作廢、折讓、折讓作廢、註銷及中獎等狀態，可依設定透過 Email 或簡訊通知。\n   - 簡訊通知每則費用為 1.5 元，國外手機號碼不發送通知。\n   - 發票中獎時，文件指出應通知消費者。\n\n[建議問題]\n1. B2B 與 B2C 電子發票通知信的內容有何不同？\n2. 電子發票通知的各種狀態與通知方式如何設定？\n3. 收到發票通知後，如何查詢或下載電子發票明細？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-048",
+   "category": "blind_z3_E",
+   "query": "「捷報行銷提案報價」與「捷報提案報價」是否同價？請分檔說明。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "捷報"
+   ],
+   "spans_hit": [
+    "捷報"
+   ],
+   "answer": "## 結論\n\n目前無法確認「捷報行銷提案報價」與「捷報提案報價」是否同價，因為參考資料中：\n\n- 有兩份片段均標示為《捷報行銷提案報價.pdf》\n- 沒有一份明確命名為《捷報提案報價.pdf》的獨立文件\n- 兩份《捷報行銷提案報價.pdf》片段的內容屬於不同頁面或段落，無法據此判定存在兩套不同報價\n\n## 分檔說明\n\n### 1.《捷報行銷提案報價.pdf》（文件 #2）\n\n此片段主要介紹服務內容，包含：\n\n- 數位轉型\n- 品牌設計\n- 整合行銷\n\n但本片段**未列出具體價格**，因此無法從文件 #2 單獨確認報價金額。\n\n### 2.《捷報行銷提案報價.pdf》（文件 #3）\n\n此片段列出各項服務定價：\n\n| 服務項目 | 定價 | 單位 |\n|---|---:|---|\n| 網站規劃與諮詢 | 25,000 元 | 次 |\n| 行銷策略規劃 | 30,000 元 | 次 |\n| 搜尋引擎優化 | 15,000 元 | 月 |\n| 亞馬遜建置方案 | 30,000 元 | 次 |\n| LinkedIn 推廣 | 20,000 元 | 次 |\n| 數位廣告投放 | 15,000 元 | 月 |\n| 其他服務 | By case | — |\n\n此外，文件另載明：\n\n> 專案合作報價：30,000 元／月\n\n因此，文件 #3 可確認有一個專案合作月報價為 **30,000 元／月**，但各單項服務另有不同定價，不能直接視為所有服務均為同一價格。\n\n## 判斷\n\n若「捷報提案報價」是指《捷報行銷提案報價.pdf》的另一個簡稱，則目前資料中可辨識的專案合作報價為 **30,000 元／月**；但文件 #2 未提供價格，且資料中沒有另一份獨立的《捷報提案報價.pdf》，所以**無法確認兩個名稱所指的報價是否同價**。\n\n另外，《地政醫院行銷網站報價.pdf》（文件 #1）是另一份報價文件，列出的網站建置價格為 **60,000 元／次**、社群媒體 FB 經營為 **28,000 元／月**，與捷報報價並非同一份文件，不能直接用來判定兩者同價。\n\n[建議問題]  \n1. 「捷報行銷提案報價」的 30,000 元／月包含哪些服務？  \n2. 文件 #3 的單項服務定價與專案合作月報價是否可以同時適用？  \n3. 「地政醫院行銷網站報價」與「捷報行銷提案報價」的總價差異是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-049",
+   "category": "blind_z3_B",
+   "query": "捷報行銷提案報價的金額或方案價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "## 捷報行銷提案報價\n\n根據《捷報行銷提案報價.pdf》，報價分為單項服務定價與專案合作方案：\n\n### 一、專案合作方案\n\n- **專案合作報價：30,000 元／月**\n- **執行期程：18 個月**\n- 若以完整 18 個月計算：\n\n> 30,000 元／月 × 18 個月 ＝ **540,000 元**\n\n提案執行內容包含：\n\n1. 官方網站建置  \n2. 行銷策略規劃  \n3. 搜尋引擎優化（SEO）  \n4. 亞馬遜上架（Amazon）  \n5. LinkedIn 推廣  \n6. 網路廣告投放  \n7. 數據分析  \n\n### 二、單項服務定價\n\n| 服務項目 | 定價 | 計價單位 |\n|---|---:|---|\n| 網站規劃與諮詢 | 25,000 元 | 次 |\n| 行銷策略規劃 | 30,000 元 | 次 |\n| 搜尋引擎優化（SEO） | 15,000 元 | 月 |\n| 亞馬遜建置方案 | 30,000 元 | 次 |\n| LinkedIn 推廣 | 20,000 元 | 次 |\n| 數位廣告投放 | 15,000 元 | 月 |\n| 其他服務 | By case（個案報價） | — |\n\n### 三、補充說明\n\n- 數位廣告投放的 **廣告預算另計**，上述 15,000 元／月應為代操服務費。\n- 其他服務如影片拍攝、平面攝影、美編設計、形象網站或購物網站建置等，採 **個案報價**。\n- 文件未明確說明 30,000 元／月方案是否涵蓋所有單項服務的額外製作費，因此實際方案範圍仍應以正式合約或報價單為準。\n\n[建議問題]  \n1. 30,000 元／月的專案方案是否包含所有列出的服務？  \n2. 18 個月方案是否可以縮短或改成其他合作期間？  \n3. 數位廣告的預估廣告預算及代操內容是多少？",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-050",
+   "category": "blind_z3_A",
+   "query": "bravomix 規格書裡的關鍵規格要求有哪些？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "BravoMix"
+   ],
+   "spans_hit": [
+    "BravoMix"
+   ],
+   "answer": "# BravoMix 規格書的關鍵規格要求\n\n根據《規格書.docx》，BravoMix 主要規格要求可分為「廠商後台管理」、「前台瀏覽與購物」及「訂單處理」三大部分。\n\n## 一、廠商後台管理\n\n1. **廠商帳號管理**\n   - 由 BravoMix 團隊開啟合作廠商的後台帳號。\n   - 廠商取得帳號後，才能開始經營線上商城。\n   - 依據：《規格書.docx》第 1 項。\n\n2. **商品種類管理**\n   - 合作廠商可在後台定義自家商品種類。\n   - 商品種類設定可供後續商品上架與維護使用，減少重複輸入。\n   - 依據：《規格書.docx》第 2 項。\n\n3. **商品規格管理**\n   - 可針對每一種商品種類預先設定適用的商品規格。\n   - 後續進行該商品種類的庫存管理時，不必每次重新設定型號。\n   - 依據：《規格書.docx》第 3 項。\n\n4. **商品增、刪、改、查**\n   - 廠商可建立、修改、刪除及查詢商品。\n   - 商品上架應可沿用已設定的種類與規格。\n   - 重複資訊可透過複製貼上方式處理，以提升上架效率。\n   - 依據：《規格書.docx》第 4 項。\n\n## 二、前台商品與穿搭功能\n\n5. **前台商品展現**\n   - 商品必須能在消費者端的前台頁面呈現。\n   - 依據：《規格書.docx》第 5 項。\n\n6. **瀏覽商品或穿搭**\n   - 消費者可在前台瀏覽商品及穿搭內容。\n   - 首頁提案也呈現「看穿搭、享自拍、買好貨、逛好店、讀好文」等網站內容入口。\n   - 依據：《規格書.docx》第 6 項；《THINK OFFICE 首頁提案.pdf》A、B、C、D 頁面內容。\n\n7. **整套穿搭購物**\n   - 消費者可透過網友推薦，購買一整組穿搭商品。\n   - 這表示穿搭內容與商品購買之間應具備關聯。\n   - 依據：《規格書.docx》第 7 項。\n\n8. **單件單品購物**\n   - 消費者可針對單一商品進行採購。\n   - 依據：《規格書.docx》第 8 項。\n\n## 三、購物車、付款與訂單\n\n9. **購物車商品清單**\n   - 結帳前，消費者可以確認購買明細。\n   - 應可選擇商品尺寸並確認訂單金額。\n   - 依據：《規格書.docx》第 9 項。\n\n10. **購物車商品結帳**\n    - 消費者可進行線上刷卡付款。\n    - 依據：《規格書.docx》第 10 項。\n\n11. **訂單管理**\n    - 訂單成立後，消費者與廠商都能對訂單進行後續處理。\n    - 依據：《規格書.docx》第 11 項。\n\n12. **訂單狀態追蹤**\n    - 系統應根據廠商的出貨紀錄更新或通知消費者訂單狀態。\n    - 依據：《規格書.docx》第 12 項。\n\n## 四、首頁與內容呈現上的補充要求\n\n從《THINK OFFICE 首頁提案.pdf》可進一步看出，前台介面規劃包含：\n\n- BravoMix 品牌與網站入口。\n- 商品及穿搭搜尋功能。\n- 登入功能。\n- 「本週最穿搭」、「精選」等內容區塊。\n- 商品或穿搭內容的圖片、文字說明及推薦資訊。\n- 商品購買入口，例如「SHOP ONLINE」。\n- 社群或內容導覽，如 Facebook、時尚專欄、會員及公告。\n- 穿搭文章可呈現作者、日期、按讚或互動數，以及穿搭所使用的品牌或商品。\n\n上述首頁提案主要是介面與內容呈現方向；實際的核心功能規格仍以《規格書.docx》的 12 項要求為主。\n\n## 總結\n\nBravoMix 規格書的核心要求是建立一個支援**廠商商品管理、商品與穿搭展示、整套或單品購物、購物車結帳、線上刷卡、訂單管理及出貨狀態通知**的線上商城平台，並透過商品種類與規格預設，提升廠商的商品上架及庫存管理效率。\n\n參考資料中未明確說明付款服務商、庫存數量規則、配送方式、退換貨流程、權限細分或系統效能等非功能性規格；目前知識庫中沒有足夠的相關文件可補充這些內容。\n\n[建議問題]  \n1. BravoMix 的廠商後台需要包含哪些操作流程？  \n2. BravoMix 的前台購物與穿搭功能應如何串接？  \n3. 規格書中哪些功能尚未定義詳細驗收條件？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-051",
+   "category": "blind_z3_A",
+   "query": "勞資會議說明手冊對召開勞資會議的重點規定是什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "勞資會議"
+   ],
+   "spans_hit": [
+    "勞資會議"
+   ],
+   "answer": "## 勞資會議召開的重點規定\n\n根據《勞資會議說明手冊》，重點如下：\n\n### 一、應召開勞資會議的事業單位\n\n- 適用《勞動基準法》的事業單位，應舉辦勞資會議。\n- 事業場所的勞工人數達 **30 人以上**者，應召開勞資會議。\n- 事業單位與事業場所的勞工人數均達 30 人以上時，應分別召開，不得合併辦理。\n- 勞工人數包括：\n  - 全時勞工\n  - 部分工時勞工\n  - 外國籍勞工  \n  （根據《勞資會議說明手冊》〈應舉辦勞資會議之事業單位〉）\n\n### 二、會議召開頻率\n\n- **定期勞資會議：至少每 3 個月召開 1 次。**\n- 除定期會議外，必要時得由主席召開臨時勞資會議。  \n  （根據《勞資會議說明手冊》〈勞資會議召開之次數〉）\n\n### 三、會議通知與提案期限\n\n- 應於會議召開 **7 日前**發出開會通知。\n- 提案應於會議召開 **3 日前**送達勞資會議代表。\n- 會議應依開會通知所載的時間及地點召開。  \n  （根據《勞資會議說明手冊》〈勞資會議召開之通知及出席人數〉）\n\n### 四、主席的產生與職責\n\n- 原則上由勞資雙方代表輪流擔任主席。\n- 必要時，也可以由勞資雙方代表各推派 1 人，共同擔任主席。\n- 主席應：\n  - 維持勞資雙方公平的發言機會。\n  - 維持理性討論的氣氛。\n  - 對偏激言詞或情緒，以公正態度加以疏導與克制，避免影響其他代表。  \n  （根據《勞資會議說明手冊》〈勞資會議之主席〉）\n\n### 五、行政及費用\n\n- 事業單位應指派專人辦理會議庶務，包括：\n  - 會議場所安排\n  - 座次安排\n  - 會議紀錄製作等\n- 召開會議所需的庶務、場地、茶水、紀錄、印刷等費用，以及勞方代表選舉事務費用，均由事業單位支出。  \n  （根據《勞資會議說明手冊》〈勞資會議之議事庶務〉及〈勞資會議之費用支出〉）\n\n### 六、會議的基本精神\n\n勞資會議是由勞資雙方同數代表定期開會，透過報告及提案討論，在取得多數代表同意後形成決議。其主要目的在於：\n\n- 協調勞資關係\n- 促進勞資合作\n- 預防勞工問題\n- 以諮商方式尋求問題解決，達成勞資互利雙贏\n\n雇主及勞工代表參與會議時，應秉持面對問題、解決疑惑的態度。  \n（根據《勞資會議說明手冊》〈何謂勞資會議〉及〈如何舉辦勞資會議〉）\n\n### 七、目前資料未完整提供的內容\n\n參考資料僅列出「勞資會議代表的組成與產生」、「出席人數」、「議事範圍」、「決議與處理」及「會議紀錄」等章節標題，但未提供其具體規定。因此，若要進一步確認代表名額、出席及決議成立要件、議事範圍或會議紀錄保存等細節，**目前知識庫中沒有足夠的相關文件**。\n\n[建議問題]  \n1. 勞資會議代表應如何組成及選任？  \n2. 勞資會議的出席人數及決議成立要件是什麼？  \n3. 勞資會議的議事範圍與會議紀錄有哪些規定？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-052",
+   "category": "blind_z3_B",
+   "query": "宏茂五金提案的提案重點？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "宏茂"
+   ],
+   "spans_hit": [
+    "宏茂"
+   ],
+   "answer": "# 宏茂五金提案重點\n\n根據《宏茂五金提案.pdf》，提案主要聚焦於**跨境電商建置、Amazon／eBay營運、數位行銷與數據管理**，重點如下：\n\n## 1. 跨境電商基礎建置\n\n- 提供**跨境金流方案**\n- 協助 **Amazon FBA 物流服務**\n- 協助開設及維運 **Amazon、eBay 帳戶**\n- 提供專業文案撰寫與關鍵字設置  \n  （根據《宏茂五金提案.pdf》「跨境金流方案」、「亞馬遜FBA物流服務」及服務價目表）\n\n## 2. Amazon 商品上架與內容優化\n\n商品上架作業包含：\n\n- 產品標題\n- 產品主圖與附圖\n- 產品五項要點\n- 產品 Q&A\n- 產品圖文描述\n- 產品資訊整理\n\n另包含 Amazon 站內的**品牌專頁建置**與**廣告投放**，以提升商品曝光與轉換機會。  \n（根據《宏茂五金提案.pdf》「產品上架作業」及「行銷推廣」）\n\n## 3. 社群與數位行銷\n\n- 經營三大主流社群媒體：\n  - LinkedIn\n  - Twitter\n  - Facebook\n- 執行搜尋引擎優化（SEO），提升關鍵字排名與自然流量\n- 代操 Facebook、Google、Yahoo 網路廣告\n- 安排外國網紅、專業媒體及新聞媒體曝光\n- 可另提供影片拍攝、平面攝影、美編設計及網站建置等服務  \n  （根據《宏茂五金提案.pdf》服務價目表）\n\n## 4. 數據與營運管理\n\n- 追蹤網站訂單\n- 分析 GA 數據\n- 追蹤各國市場數據\n- 進行各級客戶管理\n- Amazon、eBay 帳戶日常維運  \n  （根據《宏茂五金提案.pdf》服務價目表）\n\n## 5. 既有客群與市場洞察\n\n提案資料顯示，既有使用者共 **6,177 人**，其中：\n\n- 台灣：4,967 人，占 **79.75%**\n- 美國：1,177 人，占 **18.90%**\n- 香港、馬來西亞、日本等其他國家占比較低\n\n因此，提案指出目前客群約為：\n\n- **八成來自台灣**\n- **二成來自美國及其他國家**\n\n這反映出未來可持續經營台灣市場，同時擴大美國及其他海外市場。  \n（根據《宏茂五金提案.pdf》「國家／地區使用者」統計）\n\n## 6. 主要服務費用\n\n| 項目 | 費用 |\n|---|---:|\n| 社群媒體經營 | 28,000 元／月 |\n| Amazon、eBay 帳戶開設及營運 | 25,000 元／月 |\n| 搜尋引擎優化 | 15,000 元／月 |\n| 全站數據管控 | 10,000 元／月 |\n| 網路廣告投放 | 廣告預算另計，另收廣告預算的 15%／月 |\n| 外國媒體曝光 | 依案件計價 |\n| 影片、攝影、設計及網站建置 | 依案件計價 |\n\n（根據《宏茂五金提案.pdf》服務價目表）\n\n## 總結\n\n宏茂五金提案的核心，是協助企業建立完整的**海外電商銷售與行銷體系**，從金流、物流、Amazon／eBay 帳戶、商品上架，到廣告、社群、SEO及數據分析，提供一站式跨境電商營運服務。\n\n[建議問題]\n1. 這份提案的服務費用合計每月是多少？\n2. Amazon 與 eBay 帳戶營運服務具體包含哪些工作？\n3. 目前提案最適合優先開發哪些海外市場？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-053",
+   "category": "blind_z3_B",
+   "query": "Dapro Fitness 行銷提案（在 JSwedding 資料夾）在推什麼？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Dapro"
+   ],
+   "spans_hit": [
+    "Dapro"
+   ],
+   "answer": "## Dapro Fitness 行銷提案在推什麼？\n\n這份提案主要是在推廣 **Dapro Fitness／BEING fit 都會健身品牌**，核心不是單一課程，而是透過「品牌形象＋數位行銷＋官方網站」吸引消費者加入或使用健身服務。\n\n### 主要推廣內容\n\n1. **BEING fit 的品牌概念**\n   - `fun`：樂趣、無壓力\n   - `intelligence`：聰明運動\n   - `training`：智能訓練\n   - 主打貼近生活動線、方便隨時運動的都會運動空間。\n   - 提案以 **7-ELEVEN 將健身房帶進社區**作為品牌聯想，強調便利性與生活化。（根據《Dapro Fitness 行銷提案.pdf》）\n\n2. **免綁約、單次計費的健身服務**\n   - 免綁約。\n   - 第一小時 100 元，之後每半小時 40 元。\n   - 可使用 OPENPOINT 點數兌換運動時數。\n   - 可用 icash 2.0 感應進場消費。（根據《Dapro Fitness 行銷提案.pdf》）\n\n3. **智慧、安心的運動環境**\n   - 以 Clean Zone 空氣品質監控作為特色。\n   - 監控 PM2.5、PM10、二氧化碳、甲醛、溫度與濕度等 6 項指標。\n   - 提供影音運動教學與分階段運動建議，主打「智能運動」。（根據《Dapro Fitness 行銷提案.pdf》）\n\n4. **官方網站與數位行銷**\n   - 建置與品牌形象一致的官方網站。\n   - 完整呈現課程、活動及健身俱樂部特色。\n   - 進行 SEO 關鍵字優化，讓消費者更容易搜尋到。\n   - 採用 RWD 設計，支援桌機、筆電、平板與手機瀏覽。（根據《Dapro Fitness 行銷提案.pdf》）\n\n5. **分階段影響消費者決策**\n   - 從「發現、關注、思考」到「購買」設計行銷策略。\n   - 工具包括 Facebook 社群行銷、網路口碑、網路廣告、精準再行銷、媒體論壇操作及客戶消費追蹤。（根據《Dapro Fitness 行銷提案.pdf》）\n\n**簡單說，這份提案是在推廣一個主打「便利、免綁約、單次付費、智慧訓練與健康環境」的都會健身品牌，並規劃用官方網站及新媒體行銷來提高知名度、帶動消費者加入或使用。**\n\n[建議問題]  \n1. Dapro Fitness 的目標客群是哪些人？  \n2. 這份提案規劃了哪些具體的數位廣告或社群活動？  \n3. BEING fit 與 Dapro Fitness 之間是什麼關係？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-054",
+   "category": "blind_z3_B",
+   "query": "瑪謝 FB 規劃提案 202005 的規劃重點？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "瑪謝"
+   ],
+   "spans_hit": [
+    "瑪謝"
+   ],
+   "answer": "# 瑪謝 FB 規劃提案 202005 的規劃重點\n\n## 一、內容主軸與比例\n\n根據《瑪謝FB規劃提案202005.pdf》的版面內容，5 月 Facebook 貼文規劃主要涵蓋以下方向：\n\n- **生活類**：以回家放鬆、犒賞自己、居家舒壓等情境溝通。\n- **品牌類**：傳達瑪謝的品牌理念與服務／據點資訊。\n- **健康／運動類**：強調在家運動、體感律動、舒展拉伸與身心健康。\n- **行銷類**：包含商品介紹、新品上市、促銷活動、客戶開箱／見證、線上互動、常見問題及媒體／網紅報導等。\n\n資料中可辨識的內容比例為：**生活 40%、品牌 15%、健康／運動 25%、行銷 20%**。不過原始資料的表格排版部分錯位，以上比例係依文件中可見的分類與數字整理。\n\n## 二、以「居家健康與放鬆」作為溝通核心\n\n提案多次強調瑪謝產品能讓消費者在家即可運動與放鬆，例如：\n\n- 「坐運動」、「躺運動」\n- 透過不同頻率及運動模式進行體感律動\n- 運動同時達到紓壓放鬆\n- 運用六大體感律動模式，舒展拉伸、恢復身心狀態\n- 透過「彈力心肌」傳達室內運動與健康生活概念\n\n例如 5 月 7 日的母親節活動貼文，便以「身心舒活」為核心，介紹律動椅及居家運動體驗，並邀請消費者至全台瑪謝專櫃試坐。（根據《瑪謝FB規劃提案202005.pdf》5/7 貼文）\n\n## 三、強化產品功能與使用情境\n\n提案並非只介紹產品規格，而是以具體生活情境呈現產品價值：\n\n### 1. 極致管家按摩椅\n\n5 月 14 日貼文以「肩上責任與辛勞」切入，主打回家後的身心釋放，並介紹：\n\n- 頂級奢華質感與防刮材質\n- 智慧語音聲控，可啟動 23 道按摩指令\n- 晨間、午間、夜間三段智能管家模式\n- 六大按摩／律動模式\n- 模擬真人技法，協助舒展與放鬆\n\n（根據《瑪謝FB規劃提案202005.pdf》5/14 貼文）\n\n### 2. Zero Gravity 零重力概念\n\n5 月 19 日貼文以「Zero Gravity」及「零重力 ZG 黃金 160 度」為主題，溝通：\n\n- 如同被雲層包覆的放鬆感受\n- 對脊椎的舒適呵護\n- 搭配六大體感律動模式\n- 適合炎熱天氣下的室內運動與紓壓\n\n（根據《瑪謝FB規劃提案202005.pdf》5/19 貼文）\n\n## 四、結合節慶活動與情感行銷\n\n提案安排母親節相關內容，透過活動紀錄與感謝文字，營造溫馨、尊寵及照顧家人的品牌形象。5 月 7 日貼文提到精緻茶點、管家服務與紓壓律動，並將產品體驗與「寵愛自己、照顧家人」連結。（根據《瑪謝FB規劃提案202005.pdf》5/7 貼文）\n\n## 五、導流至官網與實體據點\n\n多則貼文附上瑪謝官網連結，並透過「歡迎到全台瑪謝專櫃體驗試坐」等內容，將 Facebook 的品牌與產品溝通導向：\n\n- 瑪謝官網\n- 全台實體專櫃\n- 商品體驗與試坐\n- 進一步了解產品及品牌資訊\n\n## 總結\n\n這份 202005 FB 規劃提案的核心，是以**生活情境、健康運動、產品功能與節慶情感**四者結合，塑造瑪謝「在家也能運動、放鬆與照顧身心」的品牌形象；同時透過按摩椅的具體功能、母親節活動及官網／專櫃導流，兼顧品牌經營、產品介紹與行銷轉換。\n\n[建議問題]  \n1. 瑪謝 202005 年 5 月 FB 的貼文排程有哪些日期與主題？  \n2. 這份提案中「極致管家按摩椅」的主要產品賣點有哪些？  \n3. 瑪謝 FB 規劃中的內容類型與比例如何分配？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-055",
+   "category": "blind_z3_B",
+   "query": "Color髮廊行銷提案的主軸？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "Color"
+   ],
+   "spans_hit": [
+    "Color"
+   ],
+   "answer": "## Color 髮廊行銷提案的主軸\n\nColor 髮廊的行銷主軸是：\n\n> **以「燙髮」為品牌核心，透過「XX風格燙髮」主題，結合潮流議題、網紅示範、素人擴散與社群口碑，帶動消費者從認識、興趣、評估到購買及會員轉換。**\n\n### 具體規劃\n\n1. **品牌主軸：燙髮**\n   - 提案明確將「燙髮」設定為 Color 髮廊的品牌主軸。\n   - 主題規劃以「XX風格燙髮」呈現不同髮型風格。\n\n2. **以最新潮流創造話題**\n   - 透過「最新潮流」拋出行銷議題，吸引目標客群關注。\n   - 品牌企劃以**一季為週期**，主動創造議題，並以多變、活潑的方式帶動參與。\n\n3. **網紅帶頭、素人擴散**\n   - 首波內容以**網紅**作為示範與傳播起點。\n   - 第二波內容則以**素人分享**擴大真實感與討論度。\n   - 最終透過**口碑**促成會員轉換。\n\n4. **以社群與內容行銷支撐**\n   - 主要運用 Instagram 等社群媒體展示髮型成果，並要求照片風格一致、呈現正面、側面、背面及髮絲細節。\n   - 同時搭配原創專業內容，例如燙髮整理、護色洗髮精及安全帽族髮型攻略等，建立專業形象。\n   - 搜尋行銷則以 SEO 自然搜尋曝光為主、付費廣告為輔，整合 Google 曝光效益。\n\n### 一句話總結\n\n**Color 髮廊是以燙髮為核心商品，透過潮流風格議題與「網紅示範→素人分享→口碑擴散」的內容傳播路徑，提升品牌知名度並促成會員轉換。**\n\n根據《Color髮廊行銷提案.pdf》的「品牌主軸」與「主題規劃」內容。\n\n[建議問題]  \n1. Color 髮廊的目標客群是誰？  \n2. 這份提案規劃了哪些行銷渠道與執行方式？  \n3. Color 髮廊的社群內容應如何規劃？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-056",
+   "category": "blind_z3_B",
+   "query": "街道沙龍品牌行銷提案的重點？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "街道沙龍"
+   ],
+   "spans_hit": [
+    "街道沙龍"
+   ],
+   "answer": "## 街道沙龍品牌行銷提案重點\n\n### 1. 品牌定位：聚焦「燙髮專家」\n- 將街道沙龍定位為：\n  - **燙髮技術專家**\n  - **燙髮潮流引領者**\n- 品牌訴求應明確、簡單，集中在「燙髮」主軸。\n- 品牌建立應整合：\n  - 沙龍自身的相對優勢\n  - 消費者的痛點\n  - 各行銷接觸點的一致性  \n  （根據《街道沙龍品牌行銷提案.pdf》「品牌」與「定位明確」段落）\n\n### 2. 依消費者決策階段設計行銷\n提案將消費者行為分為：\n\n**關注 → 興趣 → 考慮 → 購買 → 推薦**\n\n各階段採取不同策略：\n- **關注：** 透過社群、廣告與媒體曝光，建立品牌印象。\n- **興趣：** 以明確的燙髮主題與潮流議題吸引目標客群。\n- **考慮：** 提供專業、充分且具深度的內容，協助消費者評估。\n- **購買：** 透過活動、優惠與清楚的服務訴求促成消費。\n- **推薦：** 運用客戶評論、口碑與會員機制，促進主動推薦。\n\n提案指出，傳統廣告往往只能帶來曝光與關注，投入大量廣告費後，實際購買者仍可能有限，因此應搭配內容、口碑與客戶關係經營。\n\n### 3. 社群媒體：以季度為單位經營主題\n- 每季規劃一個行銷週期，主動創造議題並帶動參與。\n- 內容主軸以「燙髮」為核心，例如：\n  - 不同風格的燙髮\n  - 最新燙髮潮流\n  - 專業技術與實際案例\n- 傳播節奏可分為：\n  1. 首波內容：透過網紅引發注意\n  2. 第二波內容：透過素人與使用者擴大討論\n  3. 口碑擴散：促進分享與會員轉換\n\n### 4. 內容風格與品牌一致性\n社群內容應具備：\n- 一致的文字與照片風格\n- 明確的主題規劃，如同節目單\n- 多元內容形式，例如：\n  - 真實案例\n  - 潮流資訊\n  - 客戶感謝\n  - 專業知識\n\n目標是讓消費者持續接觸街道沙龍，逐步建立「懂燙髮、值得信賴」的品牌印象。\n\n### 5. 不同工具扮演不同角色\n提案不只是增加行銷工具，而是重新定義各工具的任務：\n\n- **Facebook／社群媒體：**\n  - 招攬新客\n  - 傳遞行銷議題\n  - 宣傳活動\n- **LINE@：**\n  - 作為舊客關係管理媒介\n  - 傳遞潮流、優惠與店內消息\n  - 透過舊客帶來新客\n- **搜尋引擎與SEO：**\n  - 讓有明確需求的消費者更容易找到街道沙龍\n  - 將內容行銷與SEO結合，發揮綜效  \n  （根據《街道沙龍品牌行銷提案.pdf》「社群媒體行銷」及「進階內容行銷」段落）\n\n### 6. 強化口碑與第三方信任\n- 運用新聞媒體報導、網紅、素人分享與客戶評論，建立公正的第三方認可。\n- 口碑內容可協助消費者在購買前：\n  - 搜尋他人經驗\n  - 衡量不同選項\n  - 降低對燙髮效果與服務品質的疑慮\n\n## 總結\n\n這份提案的核心是：**以燙髮建立清楚品牌定位，再透過季度主題社群經營、SEO與內容行銷、網紅及素人口碑、LINE@會員關係管理，完整覆蓋消費者從認識品牌到購買與推薦的流程。**\n\n[建議問題]  \n1. 街道沙龍的目標客群與溝通訴求是什麼？  \n2. 提案中的社群媒體與LINE@應如何分工？  \n3. 街道沙龍第一季可以規劃哪些燙髮行銷主題？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-057",
+   "category": "blind_z3_B",
+   "query": "台鍍科技網站提案在規劃什麼網站內容或範圍？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "台鍍"
+   ],
+   "spans_hit": [
+    "台鍍"
+   ],
+   "answer": "## 台鍍科技網站提案規劃的網站內容與範圍\n\n根據《網站提案_台鍍科技股份有限公司.pdf》，新網站目前規劃的主要內容與頁面範圍包括：\n\n1. **首頁**\n   - 展示台鍍科技的品牌與服務形象。\n   - 以「HOT-DIP GALVANIZING／熱浸鍍鋅」作為主要訴求，並提供「了解熱浸鍍鋅」的導引。\n\n2. **關於我們**\n   - 介紹台鍍科技公司相關資訊。\n\n3. **熱浸鍍鋅**\n   - 作為網站核心服務內容，規劃介紹熱浸鍍鋅服務。\n\n4. **產品介紹**\n   - 展示或說明公司相關產品。\n\n5. **最新消息**\n   - 發布公司最新資訊、消息或公告。\n\n6. **聯絡我們**\n   - 提供訪客與公司聯繫的管道。\n\n7. **中英文介面**\n   - 網站頁首列有「中文／EN」，因此規劃包含中文與英文版本。\n\n## 建置與維護範圍\n\n- 提案是針對**新網站建置**，並先檢視現有採用 WIX 製作的網站。\n- 新網站開發成本約為 **6–12 萬元**，實際價格視規劃功能而定。\n- 每年維護費為 **1 萬元**，涵蓋主機租用、主機管理、SSL 憑證更新、網站監控、備份、弱點掃描、異常恢復及網站使用問題支援。\n- 每月另包含一次、限 30 分鐘內可完成的內容或設定調整，例如更換圖片、文字、功能選單或聯絡資訊。  \n  （以上依據《網站提案_台鍍科技股份有限公司.pdf》）\n\n目前參考資料僅列出網站的主要頁面與維護項目，尚未提供各頁面的詳細文案、產品分類、功能規格或後台管理需求；因此，若要進一步確認完整網站功能範圍，**目前知識庫中沒有足夠的相關文件**。\n\n[建議問題]\n1. 台鍍科技網站提案的預計功能有哪些？\n2. 台鍍科技新網站的建置費用與維護費包含哪些項目？\n3. 現有 WIX 網站有哪些優缺點？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-058",
+   "category": "blind_z3_B",
+   "query": "Apigu 瞬熱式飲水機報價提案的價格？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [],
+   "spans_hit": [],
+   "answer": "## Apigu 瞬熱式飲水機報價提案價格\n\n根據《Apigu瞬熱式飲水機 報價提案.pdf》，本案專案費用為：\n\n**NT$130,000（新臺幣 13 萬元）**\n\n該報價涵蓋：\n- 量化問卷調查\n- 質化焦點團體訪談\n- 市場研究報告\n- 新產品行銷規劃提案\n\n規劃時程為 **2 個月**。\n\n[建議問題]\n1. 這份報價包含哪些具體專案產出？\n2. Apigu 瞬熱式飲水機的市場研究規劃時程如何安排？\n3. 報價是否包含稅金或其他額外費用？",
+   "verdict": "review",
+   "note": "no refusal marker — possible fabrication"
+  },
+  {
+   "id": "z3-v3-059",
+   "category": "blind_z3_B",
+   "query": "新元應材網站建置報價的總價？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "115,500"
+   ],
+   "spans_hit": [
+    "115,500"
+   ],
+   "answer": "## 新元應材網站建置報價總價\n\n根據《新元應材網站建置報價.pdf》：\n\n- 未稅金額：新台幣 110,000 元\n- 稅金（5%）：  \n  110,000 × 5% = 5,500 元\n- **含稅總價：**  \n  110,000 + 5,500 = **新台幣 115,500 元**\n\n參考資料中的稅金欄位顯示為「5,50」，內容疑似截斷；以上依報價金額及 5% 稅率計算。\n\n[建議問題]\n1. 這份網站建置報價包含哪些功能？\n2. 報價的付款方式與付款條件是什麼？\n3. 報價是否包含英文版網站與雲端主機代管？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-060",
+   "category": "blind_z3_B",
+   "query": "1028時尚彩妝網紅體驗專案報價委刊單的報價金額？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "696,225"
+   ],
+   "spans_hit": [
+    "696,225"
+   ],
+   "answer": "## 報價金額\n\n根據《1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.pdf》：\n\n- **未稅總計：NT$696,225**\n- **含稅總計：NT$731,036**\n\n其中報價包含大型網紅合作體驗、微型網紅合作體驗、Threads 合作體驗貼文曝光及相關專案執行服務費。\n\n[建議問題]  \n1. 這份報價單的付款條件與付款金額如何分期？  \n2. 大型網紅與微型網紅合作項目的費用分別是多少？  \n3. 本專案的執行期間與取消活動的費用規定為何？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "z3-v3-061",
+   "category": "blind_z3_C",
+   "query": "請比較醫美圈圈已用印行銷報價、巽耘視覺形象更新報價、立壕線板設計報價的總價，由高到低（無法判讀請標註）。",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "87,000",
+    "11,550"
+   ],
+   "spans_hit": [
+    "87,000"
+   ],
+   "answer": "## 總價比較（由高至低）\n\n| 排名 | 報價項目 | 總價 | 判讀依據 |\n|---|---|---:|---|\n| 1 | 巽耘視覺形象更新報價 | **87,000 元（未稅）** | 報價單載明「合計：$87,000（未稅）」。根據《巽耘法律事務所視覺形象更新報價單.pdf》 |\n| 2 | 醫美圈圈已用印行銷報價 | **75,000 元** | 報價期間為 2023/08/01–12/31，共 5 個月；計算：15,000 元/月 × 5 個月 = 75,000 元。根據《「已用印」八策行銷報價單_醫美圈圈.pdf》 |\n| 3 | 立壕線板設計報價 | **無法判讀** | 目前提供的參考資料中，沒有「立壕線板設計報價」相關文件或總價資料。 |\n\n### 補充說明\n\n- 巽耘報價明確標示為**未稅**，且若需開發票另加 5% 稅。\n- 醫美圈圈報價資料僅列出每月費用及報價期間，未明確載明稅額或一次性總計；以上依期間推算為 **75,000 元**。\n- 因立壕線板設計報價缺少相關資料，無法確認其是否高於或低於前兩者。\n\n[建議問題]  \n1. 請計算巽耘報價含 5% 稅後的總價。  \n2. 請將三份報價統一換算成含稅價格比較。  \n3. 請整理三份報價的服務項目與付款條件差異。",
+   "verdict": "review",
+   "note": "spans 1/2"
+  },
+  {
+   "id": "z3-v3-062",
+   "category": "blind_z3_C",
+   "query": "安可系統開發報價調整版與味特報價暨合約，哪份總價較高？",
+   "expected_docs": [],
+   "missing_docs": [],
+   "spans_expected": [
+    "696,500",
+    "350,000"
+   ],
+   "spans_hit": [
+    "696,500"
+   ],
+   "answer": "## 結論\n\n目前知識庫中沒有足夠的相關文件，**無法判定《2024Q1安可系統開發報價調整版_0816.docx》與《味特報價暨合約》哪份總價較高**。\n\n## 目前可確認的資料\n\n- 《2024Q1安可系統開發報價調整版_0816.docx》中出現多個專案總計，包含：\n  - **770,000 元／調整後 696,500 元**\n  - **408,000 元／調整後 371,000 元**\n  - **640,000 元／調整後 480,000 元**\n  - 另有其他片段顯示 **593,000 元／493,000 元**\n- 上述金額均標示為**新臺幣未稅**，但參考資料未清楚說明這些總計是否應合併計算，或分別代表不同階段／專案。\n- 參考資料中**沒有提供《味特報價暨合約》及其總價**，因此無法與安可報價進行公平比較。\n\n[建議問題]\n1. 請提供《味特報價暨合約》的報價與總價內容。\n2. 安可報價應以哪一個專案總計作為比較基準？\n3. 是否要比較未稅總價，或換算含稅總價？",
+   "verdict": "review",
+   "note": "spans 1/2"
+  }
+ ]
+}

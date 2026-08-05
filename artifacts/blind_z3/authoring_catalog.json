@@ -1,0 +1,500 @@
+{
+  "rule": "Write intents from client+name+stratum only. Do NOT open file contents or extracts/.",
+  "files": [
+    {
+      "id": "doc-01",
+      "root": "客戶",
+      "client": "優利",
+      "name": "優利線上客服委任契約-初期合約-至0531.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "優利/優利線上客服委任契約-初期合約-至0531.pdf"
+    },
+    {
+      "id": "doc-02",
+      "root": "客戶",
+      "client": "優利",
+      "name": "優利線上客服委任契約_正-已填.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "優利/優利線上客服委任契約_正-已填.pdf"
+    },
+    {
+      "id": "doc-03",
+      "root": "客戶",
+      "client": "宏寰貿易",
+      "name": "亞馬遜電商委託營運報價合約_signed_20230607-20230831.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "宏寰貿易/亞馬遜電商委託營運報價合約_signed_20230607-20230831.pdf"
+    },
+    {
+      "id": "doc-04",
+      "root": "客戶",
+      "client": "優克美",
+      "name": "igreen合約（用印）.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "優克美/igreen合約（用印）.pdf"
+    },
+    {
+      "id": "doc-05",
+      "root": "客戶",
+      "client": "宏寰貿易",
+      "name": "宏寰貿易行銷報價合約_signed.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "宏寰貿易/宏寰貿易行銷報價合約_signed.pdf"
+    },
+    {
+      "id": "doc-06",
+      "root": "客戶",
+      "client": "安可",
+      "name": "委託合約-八策品牌.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "安可/委託合約-八策品牌.pdf"
+    },
+    {
+      "id": "doc-07",
+      "root": "客戶",
+      "client": "地政e院",
+      "name": "2021.10.28_地政e院-合約書.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "地政e院/2021.10.28_地政e院-合約書.pdf"
+    },
+    {
+      "id": "doc-08",
+      "root": "客戶",
+      "client": "味特",
+      "name": "味特品牌研究企劃案報價暨合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "味特/味特品牌研究企劃案報價暨合約.pdf"
+    },
+    {
+      "id": "doc-09",
+      "root": "客戶",
+      "client": "樂行家",
+      "name": "合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "樂行家/合約.pdf"
+    },
+    {
+      "id": "doc-10",
+      "root": "客戶",
+      "client": "貝昇",
+      "name": "品牌企劃案報價單暨合約書20170207_貝昇生技.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "貝昇/品牌企劃案報價單暨合約書20170207_貝昇生技.pdf"
+    },
+    {
+      "id": "doc-11",
+      "root": "客戶",
+      "client": "(root)",
+      "name": "SEO報價合約_用印版本.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "SEO報價合約_用印版本.pdf"
+    },
+    {
+      "id": "doc-12",
+      "root": "客戶",
+      "client": "光昱金屬",
+      "name": "徐嘉鴻3D設計 專案合約書_光昱金屬200424.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "光昱金屬/徐嘉鴻3D設計 專案合約書_光昱金屬200424.pdf"
+    },
+    {
+      "id": "doc-13",
+      "root": "客戶",
+      "client": "阿里巴巴",
+      "name": "RFQ報價技巧20231214.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "阿里巴巴/SOP手冊/RFQ報價技巧20231214.pdf"
+    },
+    {
+      "id": "doc-14",
+      "root": "客戶",
+      "client": "安可",
+      "name": "2024Q1安可系統開發報價調整版_0816.docx",
+      "stratum": "quote",
+      "ext": ".docx",
+      "rel": "安可/2024Q1安可系統開發報價調整版_0816.docx"
+    },
+    {
+      "id": "doc-15",
+      "root": "客戶",
+      "client": "光昱金屬",
+      "name": "亞馬遜暨B2B行銷提案報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "光昱金屬/亞馬遜暨B2B行銷提案報價.pdf"
+    },
+    {
+      "id": "doc-16",
+      "root": "客戶",
+      "client": "光昱金屬",
+      "name": "光昱亞馬遜暨B2B行銷提案報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "光昱金屬/光昱亞馬遜暨B2B行銷提案報價.pdf"
+    },
+    {
+      "id": "doc-17",
+      "root": "客戶",
+      "client": "巽耘",
+      "name": "巽耘法律事務所視覺形象更新報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "巽耘/巽耘法律事務所視覺形象更新報價單.pdf"
+    },
+    {
+      "id": "doc-18",
+      "root": "客戶",
+      "client": "醫美圈圈",
+      "name": "「已用印」八策行銷報價單_醫美圈圈.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "醫美圈圈/「已用印」八策行銷報價單_醫美圈圈.pdf"
+    },
+    {
+      "id": "doc-19",
+      "root": "客戶",
+      "client": "瑪格麗特婚紗",
+      "name": "瑪格麗特婚紗工作室行銷提案報價_20181224.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "瑪格麗特婚紗/瑪格麗特婚紗工作室行銷提案報價_20181224.pdf"
+    },
+    {
+      "id": "doc-20",
+      "root": "客戶",
+      "client": "MF Select",
+      "name": "M&F Select 電商行銷提案報價_0219.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "MF Select/M&F Select 電商行銷提案報價_0219.pdf"
+    },
+    {
+      "id": "doc-21",
+      "root": "客戶",
+      "client": "昇展Smat",
+      "name": "Smat 市場研究暨行銷企劃報價提案.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "昇展Smat/Smat 市場研究暨行銷企劃報價提案.pdf"
+    },
+    {
+      "id": "doc-22",
+      "root": "客戶",
+      "client": "好優",
+      "name": "2018 好優數位新聞服務報價方案 1101.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "好優/2018 好優數位新聞服務報價方案 1101.pdf"
+    },
+    {
+      "id": "doc-23",
+      "root": "客戶",
+      "client": "地政e院",
+      "name": "地政醫院行銷網站報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "地政e院/地政醫院行銷網站報價.pdf"
+    },
+    {
+      "id": "doc-24",
+      "root": "客戶",
+      "client": "立壕線板",
+      "name": "20230510 設計報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "立壕線板/20230510 設計報價.pdf"
+    },
+    {
+      "id": "doc-25",
+      "root": "客戶",
+      "client": "醫美圈圈",
+      "name": "《除了愛美還要變美！我的微醫美初體驗》徵文活動提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "醫美圈圈/《除了愛美還要變美！我的微醫美初體驗》徵文活動提案.pdf"
+    },
+    {
+      "id": "doc-26",
+      "root": "客戶",
+      "client": "醫美圈圈",
+      "name": "1月_《除了愛美還要變美！我的微醫美初體驗》徵文活動提案_Yumi.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "醫美圈圈/1月_《除了愛美還要變美！我的微醫美初體驗》徵文活動提案_Yumi.pdf"
+    },
+    {
+      "id": "doc-27",
+      "root": "客戶",
+      "client": "Dr.Kelly",
+      "name": "Dr. Kelly品牌設計_包裝設計提案 Phase 02_231124 (1).pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "Dr.Kelly/Dr. Kelly品牌設計_包裝設計提案 Phase 02_231124 (1).pdf"
+    },
+    {
+      "id": "doc-28",
+      "root": "客戶",
+      "client": "生酮飲食",
+      "name": "滷味市場與品牌策略提案_好婆婆生酮.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "生酮飲食/滷味市場與品牌策略提案_好婆婆生酮.pdf"
+    },
+    {
+      "id": "doc-29",
+      "root": "客戶",
+      "client": "MF Select",
+      "name": "MF建議及調整提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "MF Select/MF建議及調整提案.pdf"
+    },
+    {
+      "id": "doc-30",
+      "root": "客戶",
+      "client": "(root)",
+      "name": "行銷傳播企劃.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "行銷傳播企劃.pdf"
+    },
+    {
+      "id": "doc-31",
+      "root": "客戶",
+      "client": "bravomix",
+      "name": "THINK OFFICE 首頁提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "bravomix/016.崇炘科技SBIR phase2/016.崇炘科技SBIR phase2/4 - 執行/第一次期中審查/第一次期中報告附件/美術設計整理/THINK OFFICE 首頁提案.pdf"
+    },
+    {
+      "id": "doc-32",
+      "root": "客戶",
+      "client": "CYS假髮",
+      "name": "7份月臉書粉專貼文提案_20190630.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "CYS假髮/7份月臉書粉專貼文提案_20190630.pdf"
+    },
+    {
+      "id": "doc-33",
+      "root": "八策",
+      "client": "八策數位",
+      "name": "合約-八策數位股份有限公司.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "八策數位/2026營業登記資料/合約-八策數位股份有限公司.pdf"
+    },
+    {
+      "id": "doc-34",
+      "root": "八策",
+      "client": "八策數位",
+      "name": "201八策數位股份有限公司_辦公室合約_20240327.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "八策數位/201八策數位股份有限公司_辦公室合約_20240327.pdf"
+    },
+    {
+      "id": "doc-35",
+      "root": "八策",
+      "client": "政府補助",
+      "name": "米克委託合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "政府補助/新企劃申請政府補助/台北產發局js/米克委託合約.pdf"
+    },
+    {
+      "id": "doc-36",
+      "root": "八策",
+      "client": "八策公司",
+      "name": "購買發票及領取購票證委任書(附件2).pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "八策公司/地址變更文件/購買發票及領取購票證委任書(附件2).pdf"
+    },
+    {
+      "id": "doc-37",
+      "root": "八策",
+      "client": "(root)",
+      "name": "八策合約書1025.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "八策合約書1025.pdf"
+    },
+    {
+      "id": "doc-38",
+      "root": "八策",
+      "client": "政府補助",
+      "name": "創騰委託合約.pdf",
+      "stratum": "contract",
+      "ext": ".pdf",
+      "rel": "政府補助/新企劃申請政府補助/台北產發局js/創騰委託合約.pdf"
+    },
+    {
+      "id": "doc-39",
+      "root": "八策",
+      "client": "政府補助",
+      "name": "八策數位股份有限公司補助期中報告-final.docx",
+      "stratum": "gov",
+      "ext": ".docx",
+      "rel": "政府補助/新企劃申請政府補助/台北產發局js/八策數位股份有限公司補助期中報告-final.docx"
+    },
+    {
+      "id": "doc-40",
+      "root": "八策",
+      "client": "八策公司",
+      "name": "營業登記.pdf",
+      "stratum": "gov",
+      "ext": ".pdf",
+      "rel": "八策公司/營業登記.pdf"
+    },
+    {
+      "id": "doc-41",
+      "root": "八策",
+      "client": "八策數位",
+      "name": "投保紀錄.pdf",
+      "stratum": "gov",
+      "ext": ".pdf",
+      "rel": "八策數位/投保紀錄.pdf"
+    },
+    {
+      "id": "doc-42",
+      "root": "八策",
+      "client": "(root)",
+      "name": "發票開立信件通知.pdf",
+      "stratum": "gov",
+      "ext": ".pdf",
+      "rel": "發票開立信件通知.pdf"
+    },
+    {
+      "id": "doc-43",
+      "root": "八策",
+      "client": "(root)",
+      "name": "捷報行銷提案報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "捷報行銷提案報價.pdf"
+    },
+    {
+      "id": "doc-44",
+      "root": "八策",
+      "client": "(root)",
+      "name": "捷報提案報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "捷報提案報價.pdf"
+    },
+    {
+      "id": "doc-45",
+      "root": "客戶",
+      "client": "bravomix",
+      "name": "規格書.docx",
+      "stratum": "spec",
+      "ext": ".docx",
+      "rel": "bravomix/016.崇炘科技SBIR phase2/016.崇炘科技SBIR phase2/4 - 執行/第一次期中審查/第一次期中報告附件/規格書.docx"
+    },
+    {
+      "id": "doc-46",
+      "root": "客戶",
+      "client": "康宇勞資顧問",
+      "name": "勞資會議說明手冊.docx",
+      "stratum": "spec",
+      "ext": ".docx",
+      "rel": "康宇勞資顧問/109.12.17 -20201221T123729Z-001/109.12.17/勞檢專區/勞資會議說明手冊.docx"
+    },
+    {
+      "id": "doc-47",
+      "root": "八策",
+      "client": "(root)",
+      "name": "宏茂五金提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "宏茂五金提案.pdf"
+    },
+    {
+      "id": "doc-48",
+      "root": "客戶",
+      "client": "JSwedding 婚紗",
+      "name": "Dapro Fitness 行銷提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "JSwedding 婚紗/Dapro Fitness 行銷提案.pdf"
+    },
+    {
+      "id": "doc-49",
+      "root": "客戶",
+      "client": "瑪謝",
+      "name": "瑪謝FB規劃提案202005.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "瑪謝/瑪謝FB規劃提案202005.pdf"
+    },
+    {
+      "id": "doc-50",
+      "root": "客戶",
+      "client": "Color髮廊",
+      "name": "Color髮廊行銷提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "Color髮廊/Color髮廊行銷提案.pdf"
+    },
+    {
+      "id": "doc-51",
+      "root": "客戶",
+      "client": "街道沙龍",
+      "name": "街道沙龍品牌行銷提案.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "街道沙龍/街道沙龍品牌行銷提案.pdf"
+    },
+    {
+      "id": "doc-52",
+      "root": "客戶",
+      "client": "臺鍍",
+      "name": "網站提案_台鍍科技股份有限公司.pdf",
+      "stratum": "proposal",
+      "ext": ".pdf",
+      "rel": "臺鍍/網站提案_台鍍科技股份有限公司.pdf"
+    },
+    {
+      "id": "doc-53",
+      "root": "客戶",
+      "client": "谷德",
+      "name": "Apigu瞬熱式飲水機 報價提案.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "谷德/Apigu瞬熱式飲水機 報價提案.pdf"
+    },
+    {
+      "id": "doc-54",
+      "root": "客戶",
+      "client": "艾科能德",
+      "name": "新元應材網站建置報價.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "艾科能德/新元應材網站建置報價.pdf"
+    },
+    {
+      "id": "doc-55",
+      "root": "客戶",
+      "client": "1028",
+      "name": "1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.pdf",
+      "stratum": "quote",
+      "ext": ".pdf",
+      "rel": "1028/1028時尚彩妝2501檔期網紅體驗專案報價委刊單0220報價單.pdf"
+    }
+  ]
+}

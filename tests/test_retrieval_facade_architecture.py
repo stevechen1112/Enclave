@@ -29,10 +29,14 @@ def test_kb_endpoint_uses_retrieval_facade():
 
 def test_chat_orchestrator_uses_retrieval_facade():
     from app.services import chat_orchestrator as co
+    from app.services import multi_step_orchestrator as mso
 
+    # retrieve_context 委由 MultiStepOrchestrator；facade 呼叫在 orchestrator 層
     src = inspect.getsource(co.ChatOrchestrator.retrieve_context)
-    assert "get_retrieval_facade" in src
+    assert "MultiStepOrchestrator" in src
     assert "authz_required" in src or "authz is None" in src
+    orch_src = inspect.getsource(mso.MultiStepOrchestrator.run)
+    assert "get_retrieval_facade" in orch_src
 
 
 def test_unified_retriever_uses_citation_builder():

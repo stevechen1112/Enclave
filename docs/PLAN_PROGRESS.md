@@ -1,6 +1,6 @@
 # Enclave 計畫進度看板
 
-自動產生於 `2026-08-02T13:35:29.271919+00:00`（嚴格閘門；來源：`DEVELOPMENT_PLAN_TRIPLE_INJECTION.md`）。
+自動產生於 `2026-08-04T17:10:43.762050+00:00`（嚴格閘門；來源：`DEVELOPMENT_PLAN_TRIPLE_INJECTION.md`）。
 
 - 計畫 checkbox：67/73
 - **可驗證程式完成率：100.0%**（32/32，僅 category=code）
@@ -90,10 +90,25 @@
 | General Availability | [x] | OK | code | ok | 三個能力包均可獨立停用，Enclave 核心仍可安全運作（`e2e_module_disable.py` + facto |
 | General Availability | [x] | OK | mixed | ok | 下游升級失敗不破壞 Enclave 公開 API 或客戶資料（stub 禁假收斂 + `chaos_sidecar_do |
 
+## 真治本閘門（FD-*）
+
+來源：`docs/FOUNDATION_RETRIEVAL_AND_DELIVERY_PLAN.md`；PASS 7/7
+
+| Gate | Status | Artifact |
+|---|---|---|
+| FD-DELIVER | PASS | `artifacts/foundation_delivery_last_run.json` |
+| FD-CATALOG | PASS | `artifacts/foundation_catalog_last_run.json` |
+| FD-FUSION | PASS | `artifacts/foundation_fusion_last_run.json` |
+| FD-QUERYPLAN | PASS | `artifacts/foundation_queryplan_last_run.json` |
+| FD-CLAUSE | PASS | `artifacts/foundation_clause_last_run.json` |
+| VISION-ADV | PASS | `artifacts/adversarial_last_run.json` |
+| VISION-CEILING | PASS | `artifacts/capability_ceiling_last_run.json` |
+
 ## 施工指令
 
 ```bash
 python scripts/plan_progress_gate.py --write-md --strict
 python scripts/plan_progress_gate.py --run-pytest --max-age-hours 168 --write-md --strict
 python -m pytest tests/test_p0_production_fixes.py tests/test_plan_phase_gates.py -q
+make foundation-gates
 ```

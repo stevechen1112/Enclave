@@ -77,9 +77,21 @@ class Settings(BaseSettings):
     LLAMAPARSE_LANGUAGE: str = "zh-TW"
     LLAMAPARSE_AUTO_MODE: bool = True
     
-    # File Storage
+    # File Storage（ADR-011：StorageBackend 抽象）
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
+    STORAGE_BACKEND: str = "local"  # local | s3（R2／Linode Objects／MinIO 皆走 s3）
+    S3_ENDPOINT_URL: str = ""  # 空字串 = AWS S3 預設端點
+    S3_BUCKET: str = ""
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
+    S3_REGION: str = "auto"
+    S3_PRESIGN_EXPIRES: int = 3600
+    STORAGE_DELETE_ON_REVOKE: bool = False  # 撤權時是否實體刪除物件（預設保留 tombstone 行為）
+
+    # Tenant RLS（ADR-012）：false=shadow（policy 已建、owner 不受 FORCE 約束）；
+    # true=enforce（migration 需以同名環境變數重跑才會 FORCE ROW LEVEL SECURITY）
+    RLS_ENFORCEMENT_ENABLED: bool = False
     
     # Document Processing
     CHUNK_SIZE: int = 1000  # tokens
@@ -97,6 +109,53 @@ class Settings(BaseSettings):
     RETRIEVAL_RERANK: bool = True          # 是否啟用重排序
     RETRIEVAL_CACHE_TTL: int = 300         # 快取秒數
     RETRIEVAL_TOP_K: int = 5               # 預設返回數量
+
+    # Source-grounded 逐字溯源驗證（生成之後、輸出之前的稽核層）
+    # off    = 不驗證（現行行為）
+    # shadow = 照常輸出，事後稽核並記錄（收集數據用，不影響使用者）
+    # enforce = 先緩衝回答，通過稽核才輸出；失敗則約束式重新生成一次，再失敗則結構化拒答
+    SOURCE_VERIFY_MODE: str = "off"
+    SOURCE_VERIFY_USE_INTERNAL_LLM: bool = True  # 稽核走內部 LLM（本地 Ollama），失敗退回主 LLM
+    SOURCE_VERIFY_MODEL: str = ""  # 稽核專用模型覆寫；空字串 = 沿用內部模型設定
+
+    # ── CG-AUTH-SSO：email 驗證與 MFA ──
+    # 開啟後，email_verified=false 的用戶不可聊天（其餘 API 不受限）
+    EMAIL_VERIFICATION_ENABLED: bool = False
+    # 開啟後，owner 角色登入未完成 MFA 設定前只核發 mfa_enroll 局部 token
+    MFA_ENFORCE_OWNER: bool = False
+    MFA_PARTIAL_TOKEN_MINUTES: int = 10  # mfa_pending / mfa_enroll 局部 token 效期
+    # SMTP（未設定主機時，驗證信退化為寫 log——開發模式；生產必須設定）
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = "no-reply@enclave.local"
+    SMTP_USE_TLS: bool = True
+    FRONTEND_BASE_URL: str = "http://localhost:3000"  # 組驗證連結用
+    BACKEND_BASE_URL: str = "http://localhost:8000"  # 金流 NotifyURL 等 webhook
+
+    # ── CG-PAY：NewebPay 藍新金流 ──
+    NEWEBPAY_MERCHANT_ID: str = ""
+    NEWEBPAY_HASH_KEY: str = ""
+    NEWEBPAY_HASH_IV: str = ""
+    NEWEBPAY_TEST_MODE: bool = True
+
+    # ── CG-OBS：Sentry + Langfuse ──
+    SENTRY_DSN: str = ""
+    SENTRY_ENVIRONMENT: str = ""
+    SENTRY_TRACES_SAMPLE_RATE: float = 0.1
+    SENTRY_PROFILES_SAMPLE_RATE: float = 0.0
+    LANGFUSE_ENABLED: bool = False
+    LANGFUSE_SECRET_KEY: str = ""
+    LANGFUSE_PUBLIC_KEY: str = ""
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
+    # ── CG-CLAMAV：上傳掃毒（SaaS／託管 fail-closed；地端預設關閉）──
+    CLAMAV_ENABLED: bool = False
+    CLAMAV_HOST: str = "clamav"
+    CLAMAV_PORT: int = 3310
+    CLAMAV_TIMEOUT_SECONDS: int = 30
+    CLAMAV_FAIL_CLOSED: bool = True  # 掃毒服務不可用時拒絕上傳
 
     # LLM Provider (llm_provider: openai | gemini | ollama)
     LLM_PROVIDER: str = "openai"           # openai = 呼叫 OpenAI API；gemini = Google Gemini；ollama = 本機 LLM
@@ -118,12 +177,14 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3-flash-preview"
 
-    # Rate Limiting
+    # Rate Limiting（三層：IP／user／tenant；production/staging 啟用 user+tenant）
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_GLOBAL_PER_IP: int = 200
     RATE_LIMIT_PER_USER: int = 60
+    RATE_LIMIT_PER_TENANT: int = 300
     RATE_LIMIT_CHAT_PER_USER: int = 20
-    METRICS_INTERNAL_ONLY: bool = True
+    # 聊天配額預留：每次 reserve 先計入 estimated token，finalize 時改為實際值
+    CHAT_TOKEN_RESERVE_ESTIMATE: int = 4000
 
     # Admin IP Whitelist
     ADMIN_IP_WHITELIST_ENABLED: bool = False
@@ -185,6 +246,11 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "ADMIN_IP_WHITELIST_ENABLED must be true in production/staging. "
                     "Set ADMIN_IP_WHITELIST_ENABLED=true and configure ADMIN_IP_WHITELIST."
+                )
+            # ── CG-CLAMAV：SaaS／託管必須啟用掃毒 ──
+            if self.CLAMAV_FAIL_CLOSED and not self.CLAMAV_ENABLED:
+                raise ValueError(
+                    "CLAMAV_ENABLED must be true when CLAMAV_FAIL_CLOSED=true in production/staging."
                 )
         return self
 

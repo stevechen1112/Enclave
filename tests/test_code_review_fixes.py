@@ -66,12 +66,17 @@ class TestSsoCallbackTenantFilter:
     def test_callback_filters_tenant_and_provider(self):
         from app.api.v1.endpoints import sso as sso_mod
 
-        src = inspect.getsource(sso_mod.sso_callback)
-        assert "tenant_id" in src
-        assert "provider" in src
-        assert ".first()" in src
-        assert "db.query(_SSOModel or object).first()" not in src
-        assert "_SSOModel.tenant_id" in src or "tenant_id ==" in src
+        # CG-AUTH-SSO 重構後：過濾邏輯在 _get_cfg（tenant+provider+enabled），
+        # callback 必須呼叫它並比對 state 的 tenant/provider
+        src = inspect.getsource(sso_mod)
+        assert "_get_cfg" in src
+        assert "TenantSSOConfig.tenant_id ==" in src
+        assert "TenantSSOConfig.provider ==" in src
+        assert "TenantSSOConfig.enabled.is_(True)" in src
+        cb_src = inspect.getsource(sso_mod.sso_callback)
+        assert "State tenant mismatch" in cb_src
+        assert "State provider mismatch" in cb_src
+        assert "does not belong to this tenant" in cb_src
 
 
 class TestDeployStopBeforeMigrate:

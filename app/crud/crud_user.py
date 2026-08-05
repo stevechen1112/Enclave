@@ -1,3 +1,4 @@
+import secrets
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -35,3 +36,26 @@ def authenticate(
     if not verify_password(password, user.hashed_password):
         return None
     return user
+
+
+def create_sso_user(
+    db: Session, *, email: str, tenant_id, role: str = "employee"
+) -> User:
+    """SSO 自動開戶（僅在 tenant SSO config auto_create_user=True 時被呼叫）。
+
+    IdP 已驗證 email，故 email_verified=True；密碼設為不可用雜湊，
+    此帳號只能走 SSO 登入（避免平行密碼登入面）。
+    """
+    db_obj = User(
+        email=email,
+        hashed_password=get_password_hash(secrets.token_urlsafe(32)),
+        full_name=email.split("@")[0],
+        tenant_id=tenant_id,
+        role=role,
+        status="active",
+        email_verified=True,
+    )
+    db.add(db_obj)
+    db.commit()
+    db.refresh(db_obj)
+    return db_obj

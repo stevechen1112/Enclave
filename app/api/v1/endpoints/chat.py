@@ -28,6 +28,64 @@ from app.crud import crud_tenant  # top-level import — avoid repeated in-funct
 
 router = APIRouter()
 
+
+def _raise_quota_exceeded(reservation: dict) -> None:
+    axis = reservation.get("axis", "query")
+    try:
+        from app.observability.business_metrics import record_quota_exceeded
+
+        record_quota_exceeded(str(axis))
+    except Exception:
+        pass
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail={
+            "error": "quota_exceeded",
+            "axis": reservation.get("axis", "query"),
+            "message": reservation.get("message", "配額已超過"),
+            "current": reservation.get("current"),
+            "limit": reservation.get("limit"),
+        },
+    )
+
+
+def _estimate_usage_cost(
+    input_tokens: int,
+    output_tokens: int,
+    pinecone_queries: int = 0,
+    embedding_calls: int = 0,
+) -> float:
+    return (
+        input_tokens * 0.00001
+        + output_tokens * 0.00003
+        + pinecone_queries * 0.0001
+        + embedding_calls * 0.0001
+    )
+
+
+def _finalize_chat_usage(
+    db: Session,
+    usage_record_id: UUID,
+    *,
+    input_tokens: int,
+    output_tokens: int,
+    pinecone_queries: int = 0,
+    embedding_calls: int = 0,
+) -> None:
+    from app.crud import crud_audit
+
+    crud_audit.update_usage_record(
+        db,
+        usage_record_id,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        pinecone_queries=pinecone_queries,
+        embedding_calls=embedding_calls,
+        estimated_cost=_estimate_usage_cost(
+            input_tokens, output_tokens, pinecone_queries, embedding_calls
+        ),
+    )
+
 # Module-level singleton: ChatOrchestrator initialises LLM/embedding clients once
 # at import time rather than on every request (avoids repeated OpenAI client construction).
 _orchestrator: Optional[ChatOrchestrator] = None
@@ -41,6 +99,19 @@ def _get_orchestrator() -> ChatOrchestrator:
     return _orchestrator
 
 
+def _resolve_conversation(db: Session, request: ChatRequest, current_user: User):
+    """驗證或略過 conversation_id；失敗時 raise，不消耗配額。"""
+    conversation_id = request.conversation_id
+    if not conversation_id:
+        return None
+    conversation = crud_chat.get_conversation(db, conversation_id=conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="對話不存在")
+    if conversation.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="無權訪問此對話")
+    return conversation
+
+
 # ──────────── T7-1: SSE 串流端點 ────────────
 
 @router.post("/chat/stream")
@@ -48,7 +119,7 @@ async def chat_stream(
     *,
     db: Session = Depends(deps.get_db),
     request: ChatRequest,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_verified_user),
 ) -> StreamingResponse:
     """
     串流式聊天（SSE）— T7-1
@@ -66,15 +137,18 @@ async def chat_stream(
             detail="問題不能為空",
         )
 
+    conversation = _resolve_conversation(db, request, current_user)
+
+    # 0. 原子性預留查詢配額（對話歸屬已驗證）
+    reservation = crud_tenant.reserve_chat_quota(
+        db, current_user.tenant_id, current_user.id
+    )
+    if not reservation.get("allowed", True):
+        _raise_quota_exceeded(reservation)
+    usage_record_id = reservation["usage_record_id"]
+
     # 1. 獲取或建立對話
-    conversation_id = request.conversation_id
-    if conversation_id:
-        conversation = crud_chat.get_conversation(db, conversation_id=conversation_id)
-        if not conversation:
-            raise HTTPException(status_code=404, detail="對話不存在")
-        if conversation.user_id != current_user.id:
-            raise HTTPException(status_code=403, detail="無權訪問此對話")
-    else:
+    if conversation is None:
         conversation = crud_chat.create_conversation(
             db,
             user_id=current_user.id,
@@ -106,6 +180,21 @@ async def chat_stream(
     async def event_generator():
         start_time = time.time()
         full_answer = ""
+        from app.services.chat_observability import (
+            finalize_chat_trace,
+            record_generation,
+            record_retrieval_span,
+            record_source_verification_span,
+            start_chat_trace,
+        )
+
+        lf_handle = start_chat_trace(
+            user_id=user_id,
+            tenant_id=tenant_id,
+            conversation_id=conversation_id_val,
+            question=request.question,
+            stream=True,
+        )
 
         try:
             # Phase 1: 狀態 — 正在檢索
@@ -137,6 +226,13 @@ async def chat_stream(
             # 立即推送來源（含 document_revision 等欄位）
             yield _sse({"type": "sources", "sources": ctx["sources"]})
 
+            record_retrieval_span(
+                lf_handle,
+                effective_question=effective_question,
+                ctx=ctx,
+                top_k=request.top_k,
+            )
+
             # Phase 3: 串流生成
             yield _sse({"type": "status", "content": "正在整理證據並產生回答…"})
 
@@ -148,6 +244,8 @@ async def chat_stream(
             ):
                 full_answer += chunk
                 yield _sse({"type": "token", "content": chunk})
+
+            record_source_verification_span(lf_handle, ctx)
 
             # T7-6: 解析建議問題
             suggestions = _parse_suggestions(full_answer)
@@ -186,17 +284,24 @@ async def chat_stream(
                 input_tokens = usage.get("input_tokens", input_tokens)
                 output_tokens = usage.get("output_tokens", output_tokens)
 
-            log_usage(
+            _finalize_chat_usage(
                 db,
-                tenant_id=tenant_id,
-                user_id=user_id,
-                action_type="chat_query",
+                usage_record_id,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
                 pinecone_queries=1 if ctx["has_policy"] else 0,
-                embedding_calls=0,
-                metadata={"conversation_id": str(conversation_id_val)},
             )
+
+            record_generation(
+                lf_handle,
+                model=orchestrator._llm_model,
+                question=request.question,
+                answer=clean_answer,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                latency_ms=int((time.time() - start_time) * 1000),
+            )
+            finalize_chat_trace(lf_handle)
 
             yield _sse({
                 "type": "done",
@@ -206,6 +311,7 @@ async def chat_stream(
 
         except Exception as e:
             logger.exception("chat_stream event_generator 錯誤: %s", e)
+            finalize_chat_trace(lf_handle)
             yield _sse({"type": "error", "content": f"處理失敗：{str(e)}"})
 
 
@@ -224,7 +330,7 @@ async def chat(
     *,
     db: Session = Depends(deps.get_db),
     request: ChatRequest,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: User = Depends(deps.get_current_verified_user),
 ) -> Any:
     """
     發送聊天訊息（非串流，向下相容）
@@ -239,35 +345,18 @@ async def chat(
             detail="問題不能為空"
         )
 
-    # 0. 查詢配額檢查
-    quota = crud_tenant.check_quota(db, current_user.tenant_id, "query")
-    if not quota.get("allowed", True):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail={
-                "error": "quota_exceeded",
-                "message": quota.get("message", "查詢配額已超過"),
-                "current": quota.get("current"),
-                "limit": quota.get("limit"),
-            },
-        )
+    conversation = _resolve_conversation(db, request, current_user)
+
+    # 0. 原子性預留查詢配額（對話歸屬已驗證）
+    reservation = crud_tenant.reserve_chat_quota(
+        db, current_user.tenant_id, current_user.id
+    )
+    if not reservation.get("allowed", True):
+        _raise_quota_exceeded(reservation)
+    usage_record_id = reservation["usage_record_id"]
 
     # 1. 獲取或建立對話
-    conversation_id = request.conversation_id
-    if conversation_id:
-        conversation = crud_chat.get_conversation(db, conversation_id=conversation_id)
-        if not conversation:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="對話不存在"
-            )
-        if conversation.user_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="無權訪問此對話"
-            )
-    else:
-        # 建立新對話
+    if conversation is None:
         conversation = crud_chat.create_conversation(
             db,
             user_id=current_user.id,
@@ -289,13 +378,41 @@ async def chat(
     # 4. 使用協調器處理查詢（Phase 0: 傳遞 ACL）
     orchestrator = _get_orchestrator()
     from app.core.authorization import AuthorizationContext
+    from app.services.chat_observability import (
+        finalize_chat_trace,
+        record_generation,
+        record_retrieval_span,
+        start_chat_trace,
+    )
+
     authz = AuthorizationContext.from_user(current_user)
+    lf_handle = start_chat_trace(
+        user_id=current_user.id,
+        tenant_id=current_user.tenant_id,
+        conversation_id=conversation.id,
+        question=request.question,
+        stream=False,
+    )
+    query_start = time.time()
+
     result = await orchestrator.process_query(
         tenant_id=current_user.tenant_id,
         question=request.question,
         top_k=request.top_k,
         history=history,
         authz=authz,
+    )
+
+    record_retrieval_span(
+        lf_handle,
+        effective_question=request.question,
+        ctx={
+            "sources": result.get("sources") or [],
+            "has_policy": result.get("company_policy") is not None,
+            "request_id": result.get("request_id"),
+            "retrieval": result.get("retrieval") or {},
+        },
+        top_k=request.top_k,
     )
     
     # 5. 儲存助手回應
@@ -333,18 +450,25 @@ async def chat(
         input_tokens = usage.get("input_tokens", input_tokens)
         output_tokens = usage.get("output_tokens", output_tokens)
     
-    log_usage(
+    _finalize_chat_usage(
         db,
-        tenant_id=current_user.tenant_id,
-        user_id=current_user.id,
-        action_type="chat_query",
+        usage_record_id,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         pinecone_queries=pinecone_queries,
-        embedding_calls=0,
-        metadata={"conversation_id": str(conversation.id)}
     )
-    
+
+    record_generation(
+        lf_handle,
+        model=orchestrator._llm_model,
+        question=request.question,
+        answer=result["answer"],
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        latency_ms=int((time.time() - query_start) * 1000),
+    )
+    finalize_chat_trace(lf_handle)
+
     # 7. 返回結果
     return ChatResponse(
         request_id=result["request_id"],

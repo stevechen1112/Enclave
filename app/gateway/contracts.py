@@ -167,3 +167,7 @@ class AuditTrail:
     provider_latencies: Dict[str, int] = field(default_factory=dict)
     token_usage: Dict[str, int] = field(default_factory=dict)  # provider → tokens
     decisions: List[str] = field(default_factory=list)          # routing/deny decisions
+    # ADR-009 融合觀測（FusionPolicy v1）
+    fusion_policy_version: str = ""
+    query_domain: str = ""
+    dropped_non_citable: int = 0

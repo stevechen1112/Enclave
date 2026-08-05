@@ -1,0 +1,34 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-04T03:44:04",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 39.3,
+ "summary": {
+  "total": 1,
+  "pass": 1,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "E035",
+   "category": "annotation_field",
+   "query": "根據文件《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，美國段的策略主軸是什麼？",
+   "expected_docs": [
+    "014_AI 機器人全球 7 大勢力關鍵報告.pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "企業主導投資與研發"
+   ],
+   "spans_hit": [
+    "企業主導投資與研發"
+   ],
+   "answer": "## 美國段的策略主軸\n\n根據《014_AI 機器人全球 7 大勢力關鍵報告.pdf》，美國的策略主軸是：\n\n> **企業主導投資與研發，聚焦高階機器人技術及實際產業應用。**\n\n具體包括：\n\n- 由 Google、亞馬遜、特斯拉等大型科技公司及新創企業主導發展，並以大量私人投資支持。\n- 技術強項集中在**高階機器人技術，尤其是 AI 軟體**。\n- 人形機器人主要用於**物流、醫療保健及製造業**，定位為提升生產力與效率的工具，而非社交夥伴。\n- 政府主要投入**軍用機器人、太空機器人與自主系統**，目前缺乏全面性的國家戰略及標準化作法。\n- 產業界正呼籲政府制定國家戰略以因應中國競爭；國會則透過設備投資首年全額折舊政策，降低企業採用機器人的稅後成本。\n\n[建議問題]\n1. 美國與中國的 AI 機器人發展策略有何差異？\n2. 美國 AI 機器人產業目前面臨哪些政策缺口？\n3. 報告中的全球七大勢力各自策略主軸是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ]
+}

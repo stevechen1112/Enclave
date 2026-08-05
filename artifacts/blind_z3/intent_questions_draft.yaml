@@ -1,0 +1,589 @@
+# CONTAMINATED — DO NOT USE. See REVIEW.md and intent_questions_draft_v2.yaml
+# Blind Z3 — 意圖題草稿（無 GT）
+# 規則：本檔只含題幹與意圖；禁止依 extract／系統回答填答案。
+# 標註完成後另存 z3_blind_questions.yaml 並設 frozen: true。
+# 出題依據：客戶資料夾名 + 檔名 + 文件類型 + 角色情境。
+
+meta:
+  design: artifacts/blind_z3/DESIGN.md
+  anti_target_drawing: true
+  frozen: false
+  note: >
+    寫題時不得打開 extracts/。標註階段才打開原檔填 expected_spans。
+    若標註發現「文件無法回答」，改題型為 refuse，不得改成好抽的欄位題。
+
+# ---------------------------------------------------------------------------
+# 格式：
+# - id
+# - type: A|B|C|D|E  （單檔｜無檔名｜多跳｜拒答｜易混淆）
+# - role: owner|finance|legal|pm|cross
+# - intent: 一句話業務意圖
+# - question: 實際問句（給系統）
+# - evidence_hint: 僅供標註員找原檔（評測時不餵給系統）
+# - answer_shape: amount|date|party|clause|compare|refuse|list|other
+# - expected_spans: []   # 標註前必須空
+# - must_refuse: null    # 標註時填
+# ---------------------------------------------------------------------------
+
+questions:
+
+  # ----- 安可 × 八策（金流合約）-----
+  - id: z3-i-001
+    type: B
+    role: owner
+    intent: 查安可與八策金流合約的總金額／計價方式
+    question: 安可跟八策簽的金流系統建置合約，合約金額或計價怎麼寫？
+    evidence_hint: 安可/合約/安可_八策_金流系統建置合約.pdf
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-002
+    type: A
+    role: finance
+    intent: 查付款條件與分期
+    question: 安可與八策那份金流建置合約，付款條件或分期怎麼約定？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-003
+    type: A
+    role: legal
+    intent: 查管轄／準據法
+    question: 安可八策金流合約若有爭議，管轄法院或準據法怎麼寫？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-004
+    type: B
+    role: legal
+    intent: 無檔名查甲乙方
+    question: 跟安可合作金流系統的那份合約，甲方乙方分別是誰？
+    evidence_hint: 同上
+    answer_shape: party
+    expected_spans: []
+
+  # ----- 安可 報價調整版（易與正式合約混淆）-----
+  - id: z3-i-005
+    type: E
+    role: finance
+    intent: 區分「報價調整版」與正式合約的金額是否同一回事
+    question: 「安可報價單調整版」上面的總價，跟正式金流建置合約金額是否相同？請分開說明依據。
+    evidence_hint: 安可/報價單/安可報價單_調整版.pdf + 金流合約
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-i-006
+    type: A
+    role: pm
+    intent: 報價有效期限
+    question: 安可報價單調整版的報價有效期限寫到哪一天？
+    evidence_hint: 安可報價單_調整版.pdf
+    answer_shape: date
+    expected_spans: []
+
+  - id: z3-i-007
+    type: A
+    role: finance
+    intent: 訂金與尾款比例
+    question: 安可報價調整版的付款方式（訂金／驗收款比例）怎麼寫？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  # ----- Smat × 八策 -----
+  - id: z3-i-008
+    type: B
+    role: owner
+    intent: Smat 合約總價
+    question: Smat 跟八策簽的系統建置合約，合約總金額是多少？
+    evidence_hint: Smat/合約/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-009
+    type: A
+    role: finance
+    intent: 分期時點
+    question: Smat 八策合約的款項是怎麼分期、各期對應什麼條件？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-010
+    type: A
+    role: legal
+    intent: 智財歸屬
+    question: Smat 合約裡，系統或程式的智慧財產權歸誰？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-011
+    type: C
+    role: cross
+    intent: 安可案 vs Smat 案金額對照
+    question: 安可金流合約與 Smat 系統建置合約，哪一份合約總價較高？各是多少？
+    evidence_hint: 兩份合約
+    answer_shape: compare
+    expected_spans: []
+
+  # ----- 醫美圈圈 -----
+  - id: z3-i-012
+    type: B
+    role: owner
+    intent: 醫美圈圈報價總額
+    question: 醫美圈圈那份官網改版報價，含稅總價大概多少？
+    evidence_hint: 醫美圈圈/報價單/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-013
+    type: A
+    role: finance
+    intent: 稅額與未稅
+    question: 醫美圈圈報價單的未稅金額、稅額、含稅合計各是多少？
+    evidence_hint: 同上
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-014
+    type: A
+    role: finance
+    intent: 匯款帳戶
+    question: 醫美圈圈報價單上的匯款銀行與帳號怎麼寫？
+    evidence_hint: 同上
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-i-015
+    type: D
+    role: owner
+    intent: 文件未寫的業績承諾 → 拒答
+    question: 醫美圈圈改版後保證每月營收成長多少％？
+    evidence_hint: 報價單應無此承諾
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  # ----- 巽耘 -----
+  - id: z3-i-016
+    type: B
+    role: owner
+    intent: 巽耘官網報價總價
+    question: 巽耘官網建置的報價總價（含稅）是多少？
+    evidence_hint: 巽耘/報價單/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-017
+    type: A
+    role: pm
+    intent: 報價有效期與修改次數
+    question: 巽耘報價對設計修改次數與報價有效期限有什麼限制？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-018
+    type: A
+    role: finance
+    intent: 付款比例
+    question: 巽耘官網案的訂金與尾款比例怎麼約定？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  # ----- 立壕設計 -----
+  - id: z3-i-019
+    type: B
+    role: owner
+    intent: 立壕報價金額
+    question: 立壕設計的官網報價含稅多少？
+    evidence_hint: 立壕設計/報價單/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-020
+    type: C
+    role: cross
+    intent: 立壕 vs 巽耘 價格帶
+    question: 立壕設計與巽耘兩份官網報價，哪一家含稅總價較高？
+    evidence_hint: 兩份報價單
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-i-021
+    type: A
+    role: legal
+    intent: 報價單上的合約提示／簽回
+    question: 立壕那份報價對「簽回／視同合約」有什麼文字？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  # ----- 光昱（多版提案易混淆）-----
+  - id: z3-i-022
+    type: E
+    role: pm
+    intent: 多份亞馬遜提案不要混
+    question: 光昱資料夾裡有多份亞馬遜相關提案／報價，請先列出檔名差異，再說明其中一份的提案重點（不要混成同一份）。
+    evidence_hint: 光昱/ 多檔 amazon
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-i-023
+    type: B
+    role: owner
+    intent: 光昱案在談什麼平台
+    question: 光昱跟我們談的亞馬遜相關案子，文件主軸是什麼服務？
+    evidence_hint: 光昱提案 PDF
+    answer_shape: other
+    expected_spans: []
+
+  # ----- 心恬美學 -----
+  - id: z3-i-024
+    type: B
+    role: owner
+    intent: 心恬美學報價總額
+    question: 心恬美學那份報價單總價多少？
+    evidence_hint: 心恬美學/報價單/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-025
+    type: A
+    role: finance
+    intent: 付款條件
+    question: 心恬美學報價的付款方式怎麼寫？
+    evidence_hint: 同上
+    answer_shape: clause
+    expected_spans: []
+
+  # ----- 富裔 / 大禾 -----
+  - id: z3-i-026
+    type: B
+    role: owner
+    intent: 富裔報價金額
+    question: 富裔建設相關報價單的金額是多少？
+    evidence_hint: 富裔建設/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-027
+    type: B
+    role: owner
+    intent: 大禾報價
+    question: 大禾的報價單總價怎麼寫？
+    evidence_hint: 大禾/
+    answer_shape: amount
+    expected_spans: []
+
+  # ----- 愛玩客 / 愛玩宇宙 -----
+  - id: z3-i-028
+    type: E
+    role: cross
+    intent: 近名客戶不要串錯
+    question: 「愛玩客」與「愛玩宇宙」是不是同一客戶？請依資料夾／文件說明，不要混用兩邊的金額。
+    evidence_hint: 愛玩客/ 愛玩宇宙/
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-i-029
+    type: B
+    role: owner
+    intent: 愛玩客報價
+    question: 愛玩客的報價總價是多少？
+    evidence_hint: 愛玩客/
+    answer_shape: amount
+    expected_spans: []
+
+  # ----- 合約類：多個八策客戶 -----
+  - id: z3-i-030
+    type: C
+    role: legal
+    intent: 同一乙方出現在哪些合約
+    question: 資料裡有哪些合約的乙方是八策數位行銷？請列出客戶名稱。
+    evidence_hint: 多份 *八策* 合約
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-i-031
+    type: B
+    role: legal
+    intent: 禾餘合約重點
+    question: 禾餘與八策的合約，合約期間或服務範圍怎麼寫？
+    evidence_hint: 禾餘/合約/
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-032
+    type: B
+    role: owner
+    intent: 微碧合約金額
+    question: 微碧那份與八策的合約金額是多少？
+    evidence_hint: 微碧/合約/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-033
+    type: B
+    role: owner
+    intent: 森羽合約
+    question: 森羽與八策的合約，總價或計價怎麼約定？
+    evidence_hint: 森羽/合約/
+    answer_shape: amount
+    expected_spans: []
+
+  # ----- 拒答題（意圖先定，不因「抽得到別的」而改題）-----
+  - id: z3-i-034
+    type: D
+    role: owner
+    intent: 庫內無此客戶
+    question: 我們跟「不存在科技股份有限公司」簽的合約總價多少？
+    evidence_hint: 庫內應無此客戶
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-i-035
+    type: D
+    role: finance
+    intent: 文件未載明的銀行利息
+    question: 安可金流合約約定的年利率是多少？
+    evidence_hint: 一般承攬合約通常無年利率；若無則拒答
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-i-036
+    type: D
+    role: pm
+    intent: 未記載的上線日
+    question: 醫美圈圈官網保證哪一天上線？
+    evidence_hint: 報價通常無保證上線日
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  # ----- 掃描件／難抽（意圖保留；標註時用原檔視覺）-----
+  - id: z3-i-037
+    type: A
+    role: finance
+    intent: 掃描報價仍要能答總價（OCR 壓力）
+    question: 「客戶報價單」資料夾裡掃描版報價，總價寫多少？（若無法辨識請明確說無法從文件判讀）
+    evidence_hint: 客戶報價單/*.pdf 掃描件
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-038
+    type: B
+    role: legal
+    intent: 掃描合約甲乙方
+    question: 掃描版合約檔裡甲方、乙方名稱是什麼？若看不清請說看不清。
+    evidence_hint: 掃描合約 PDF
+    answer_shape: party
+    expected_spans: []
+
+  # ----- 跨案財務總覽意圖 -----
+  - id: z3-i-039
+    type: C
+    role: finance
+    intent: 多案含稅總價排序（取三案）
+    question: 請比較醫美圈圈、巽耘、立壕三份官網相關報價的含稅總價，由高到低排序。
+    evidence_hint: 三份報價單
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-i-040
+    type: C
+    role: legal
+    intent: 付款比例是否同一模板
+    question: 安可報價調整版與巽耘報價的訂金比例是否相同？請引用各自文件說明。
+    evidence_hint: 兩份報價
+    answer_shape: compare
+    expected_spans: []
+
+  # ----- 更多單檔業務意圖（擴大覆蓋，仍不預填 span）-----
+  - id: z3-i-041
+    type: B
+    role: owner
+    intent: 樂活報價
+    question: 樂活相關報價單金額多少？
+    evidence_hint: 樂活/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-042
+    type: B
+    role: owner
+    intent: 泉湧報價
+    question: 泉湧的報價總價是多少？
+    evidence_hint: 泉湧/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-043
+    type: B
+    role: owner
+    intent: 無有設計報價
+    question: 無有設計的報價單怎麼計價、總價多少？
+    evidence_hint: 無有設計/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-044
+    type: B
+    role: owner
+    intent: 藝波報價
+    question: 藝波那份報價含稅多少？
+    evidence_hint: 藝波/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-045
+    type: B
+    role: owner
+    intent: 見聞報價
+    question: 見聞的報價總價？
+    evidence_hint: 見聞/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-046
+    type: B
+    role: owner
+    intent: 覺旅報價
+    question: 覺旅相關報價金額是多少？
+    evidence_hint: 覺旅/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-047
+    type: B
+    role: owner
+    intent: 遠距居報價
+    question: 遠距居的報價單總價？
+    evidence_hint: 遠距居/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-048
+    type: B
+    role: owner
+    intent: 青田報價
+    question: 青田那份報價多少錢？
+    evidence_hint: 青田/
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-049
+    type: A
+    role: legal
+    intent: 合約保密條款有無
+    question: Smat 與八策合約有沒有保密條款？重點義務是什麼？
+    evidence_hint: Smat 合約
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-050
+    type: A
+    role: pm
+    intent: 交付項目清單
+    question: 安可報價調整版列出的主要服務／交付項目有哪些？
+    evidence_hint: 安可報價單_調整版
+    answer_shape: list
+    expected_spans: []
+
+  - id: z3-i-051
+    type: D
+    role: finance
+    intent: 未記載的發票載具
+    question: 巽耘報價單指定的電子發票載具號碼是多少？
+    evidence_hint: 通常無；無則拒答
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-i-052
+    type: C
+    role: cross
+    intent: 統編是否同一乙方
+    question: 安可報價與醫美圈圈報價上的「報價方／乙方」是不是同一家公司？用名稱或統編說明。
+    evidence_hint: 兩份報價抬頭
+    answer_shape: compare
+    expected_spans: []
+
+  - id: z3-i-053
+    type: B
+    role: legal
+    intent: 墨力合約
+    question: 墨力與八策的合約，合約名稱與雙方是誰？
+    evidence_hint: 墨力/合約/
+    answer_shape: party
+    expected_spans: []
+
+  - id: z3-i-054
+    type: B
+    role: owner
+    intent: 薪資管理系統合約金額
+    question: 「薪資管理系統」相關合約或文件的金額怎麼寫？
+    evidence_hint: 檔名含薪資管理系統
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-055
+    type: E
+    role: finance
+    intent: 同客戶多版報價取最新意圖
+    question: 若同一客戶有多份報價，請指出你依據的是哪一份檔名，並回答該份總價；不要混版。
+    evidence_hint: 任選有多版之客戶（如光昱／安可）
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-056
+    type: D
+    role: owner
+    intent: 未來股權
+    question: 八策是否承諾給安可技術股 10%？
+    evidence_hint: 合約應無；拒答或否定需依文件
+    answer_shape: refuse
+    expected_spans: []
+    must_refuse: true
+
+  - id: z3-i-057
+    type: A
+    role: finance
+    intent: 報價單公司統編（業務常問，但題幹來自意圖非來自已見 span）
+    question: 請告訴我安可報價調整版上「報價方公司」的統一編號。
+    evidence_hint: 安可報價單_調整版.pdf（標註時才填）
+    answer_shape: other
+    expected_spans: []
+
+  - id: z3-i-058
+    type: B
+    role: pm
+    intent: 維護／保固
+    question: 巽耘官網報價有沒有寫維護期或保固？怎麼寫？
+    evidence_hint: 巽耘報價
+    answer_shape: clause
+    expected_spans: []
+
+  - id: z3-i-059
+    type: C
+    role: finance
+    intent: 訂金 Absolute 金額換算
+    question: 若安可報價調整版總價為含稅額，訂金依文件比例算出的金額是多少？
+    evidence_hint: 需總價+比例（多跳）
+    answer_shape: amount
+    expected_spans: []
+
+  - id: z3-i-060
+    type: B
+    role: legal
+    intent: 終止／解約
+    question: Smat 合約關於提前終止或解約怎麼約定？
+    evidence_hint: Smat 合約
+    answer_shape: clause
+    expected_spans: []

@@ -129,6 +129,9 @@ class MockAdapter(BaseAdapter):
         for i, (doc_id, doc_data) in enumerate(self._ingested.items()):
             if doc_id in self._deleted:
                 continue
+            ingested_meta = dict(doc_data.get("metadata") or {})
+            # ADR-009：mock 命中必須可引用（非空 filename），否則會被 FusionPolicy 丟棄
+            ingested_meta.setdefault("filename", f"mock-{doc_id[:8]}.pdf")
             results.append(ChunkResult(
                 id=f"mock-{self.domain}-{i}",
                 content=f"[Mock {self.domain}] Result for: {query}",
@@ -137,6 +140,7 @@ class MockAdapter(BaseAdapter):
                 document_id=doc_id,
                 provider=self.provider,
                 provider_version=self.version,
+                metadata=ingested_meta,
             ))
         return results[:top_k]
 

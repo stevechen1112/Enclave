@@ -1,0 +1,150 @@
+{
+ "gate": "FD-DELIVER-REINGEST",
+ "generated_at": "2026-08-03T08:52:53",
+ "elapsed_s": 1751.5,
+ "summary": {
+  "total": 12,
+  "completed": 7,
+  "failed": 4,
+  "other": 1
+ },
+ "results": [
+  {
+   "id": "3802cdc9-a404-4518-b052-089857ce92a0",
+   "filename": "000_nueip 合約(1).pdf",
+   "reason": "failed_actionable",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:000_nueip 合約(1).pdf",
+   "deleted_old_chunks": 4,
+   "error": null,
+   "chunk_count": 1,
+   "parse_engine": "ragflow/deepdoc"
+  },
+  {
+   "id": "fdada4da-87a9-416a-94fe-622da0c9dbb6",
+   "filename": "001_四屆新生入團申請家長同意書.pdf",
+   "reason": "false_completed",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:001_四屆新生入團申請家長同意書.pdf",
+   "deleted_old_chunks": 1,
+   "error": null,
+   "chunk_count": 1,
+   "parse_engine": "ragflow/deepdoc"
+  },
+  {
+   "id": "3c9d2389-62ea-4196-97de-e91651fdf456",
+   "filename": "007_DOC_0001.pdf",
+   "reason": "false_completed",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:007_DOC_0001.pdf",
+   "deleted_old_chunks": 3,
+   "error": null,
+   "chunk_count": 4,
+   "parse_engine": "cloud/gemini:gemini-3-flash-preview"
+  },
+  {
+   "id": "5c33ce56-9628-4e2d-b60b-55c40562cb14",
+   "filename": "008_Korea e-Arrivalcard_363545709.pdf",
+   "reason": "false_completed",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:008_Korea e-Arrivalcard_363545709.pdf",
+   "deleted_old_chunks": 3,
+   "error": null,
+   "chunk_count": 4,
+   "parse_engine": "ragflow/deepdoc"
+  },
+  {
+   "id": "bc736cec-2be1-4460-bfcd-82a1a9aac1dc",
+   "filename": "009_DOC003~3.pdf",
+   "reason": "false_completed",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:009_DOC003~3.pdf",
+   "deleted_old_chunks": 11,
+   "error": null,
+   "chunk_count": 8,
+   "parse_engine": "cloud/gemini:gemini-3-flash-preview"
+  },
+  {
+   "id": "6b785b4d-bed0-459a-82f1-c7754893cb1f",
+   "filename": "014_AI 機器人全球 7 大勢力關鍵報告.pdf",
+   "reason": "false_completed",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:014_AI 機器人全球 7 大勢力關鍵報告.pdf",
+   "deleted_old_chunks": 12,
+   "error": null,
+   "chunk_count": 9,
+   "parse_engine": "cloud/gemini:gemini-3-flash-preview"
+  },
+  {
+   "id": "73f34c7c-e0c2-48e5-939a-ce15416e2165",
+   "filename": "a.pdf",
+   "reason": "completed_without_evidence",
+   "action": "marked_failed_source_missing",
+   "final_status": "failed",
+   "previous_status": "failed",
+   "source_provenance": "source_not_found"
+  },
+  {
+   "id": "63b01bc5-68c9-46ad-900f-4cb44be37c7a",
+   "filename": "a.pdf",
+   "reason": "completed_without_evidence",
+   "action": "marked_failed_source_missing",
+   "final_status": "failed",
+   "previous_status": "failed",
+   "source_provenance": "source_not_found"
+  },
+  {
+   "id": "fa93499e-f8f0-43f0-b9f1-0b95fff87911",
+   "filename": "b.pdf",
+   "reason": "completed_without_evidence",
+   "action": "requeued",
+   "final_status": "timeout_waiting",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:047_tw_initial_8249553b-98c6-4a5f-a4fd-41e31de9823b.pdf",
+   "deleted_old_chunks": 0
+  },
+  {
+   "id": "adc0c137-28e8-44bf-aaa1-4074a3478bf7",
+   "filename": "employee_handbook.pdf",
+   "reason": "stuck_uploaded",
+   "action": "marked_failed_source_missing",
+   "final_status": "failed",
+   "previous_status": "failed",
+   "source_provenance": "source_not_found"
+  },
+  {
+   "id": "92d24d1d-f978-491b-b16d-570bf84f5f8b",
+   "filename": "spec.pdf",
+   "reason": "stuck_uploaded",
+   "action": "marked_failed_source_missing",
+   "final_status": "failed",
+   "previous_status": "failed",
+   "source_provenance": "source_not_found"
+  },
+  {
+   "id": "c91aad3e-8a58-4b80-a334-7ff36884c41f",
+   "filename": "優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf",
+   "reason": "failed_actionable",
+   "action": "requeued",
+   "final_status": "completed",
+   "previous_status": "failed",
+   "source_provenance": "golden_files:022_優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf",
+   "deleted_old_chunks": 0,
+   "error": null,
+   "chunk_count": 23,
+   "parse_engine": "cloud/gemini:gemini-3-flash-preview"
+  }
+ ]
+}

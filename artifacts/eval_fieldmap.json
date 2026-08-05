@@ -1,0 +1,88 @@
+{
+ "gate": "answer-correctness-acceptance",
+ "generated_at": "2026-08-04T03:47:23",
+ "base_url": "http://localhost:8001",
+ "method": "live chat stream; answer text judged vs human-annotated ground truth (Z1-1)",
+ "elapsed_s": 75.3,
+ "summary": {
+  "total": 4,
+  "pass": 4,
+  "fail": 0,
+  "review": 0,
+  "blocked": 0
+ },
+ "results": [
+  {
+   "id": "E001",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，文件標題是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "服務租用訂單"
+   ],
+   "spans_hit": [
+    "服務租用訂單"
+   ],
+   "answer": "## 文件標題\n\n根據《000_nueip 合約(1).pdf》，文件標題為：**「系統服務租用訂單」**。\n\n[建議問題]\n1. 這份訂單的合約期間為何？\n2. 這份訂單的總金額是多少？\n3. 這份訂單包含哪些租用項目？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E002",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，客戶公司名稱是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "八策數位股份有限公司"
+   ],
+   "spans_hit": [
+    "八策數位股份有限公司"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》的「系統服務租用訂單」，客戶公司名稱為 **八策數位股份有限公司**。\n\n[建議問題]\n1. 此合約的服務期間是多久？\n2. 此合約的總金額是多少？\n3. 客戶的統一編號是什麼？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E003",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，聯絡人姓名是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "陳宥竹"
+   ],
+   "spans_hit": [
+    "陳宥竹"
+   ],
+   "answer": "根據《000_nueip 合約(1).pdf》的「系統服務租用訂單」，**聯絡人姓名為陳宥竹**。\n\n[建議問題]\n1. 聯絡人的電話與電子郵件是什麼？\n2. 這份合約的起訖日期為何？\n3. 合約總金額是多少？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  },
+  {
+   "id": "E004",
+   "category": "annotation_field",
+   "query": "根據文件《000_nueip 合約(1).pdf》，聯絡電話是什麼？",
+   "expected_docs": [
+    "000_nueip 合約(1).pdf"
+   ],
+   "missing_docs": [],
+   "spans_expected": [
+    "0930168033"
+   ],
+   "spans_hit": [
+    "0930168033"
+   ],
+   "answer": "## 聯絡電話\n\n根據《000_nueip 合約(1).pdf》，聯絡人陳宥竹的電話是：**0930-168-033**。\n\n另文件亦列出：\n- 人易科技公司電話：**02-2790-1088**\n- 業務 Ernie Shi 電話：**02-7709-5277 分機 7138**\n\n[建議問題]\n1. 這份合約的聯絡人與電子郵件是什麼？\n2. 這份合約的總金額與付款期限為何？\n3. 這份合約的服務期間是多久？",
+   "verdict": "pass",
+   "note": "spans 1/1"
+  }
+ ]
+}

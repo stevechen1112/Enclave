@@ -64,6 +64,24 @@ class DocumentRevocationService:
         except Exception as exc:
             logger.warning("graph tombstone after revoke failed: %s", exc)
 
+        # ADR-011：可選的實體物件刪除（預設關閉，維持 tombstone-only 行為）
+        try:
+            from app.config import settings
+            if getattr(settings, "STORAGE_DELETE_ON_REVOKE", False) and doc.file_path:
+                from app.services.storage import get_storage_backend, parse_s3_uri
+
+                uri = str(doc.file_path)
+                if uri.startswith("s3://"):
+                    _, key = parse_s3_uri(uri)
+                    get_storage_backend().delete(key)
+                else:
+                    import os
+                    if os.path.isfile(uri):
+                        os.remove(uri)
+        except Exception as exc:
+            # 實體刪除失敗不影響撤權主流程（tombstone 已生效，物件已不可達）
+            logger.warning("storage object delete after revoke failed: %s", exc)
+
         return {
             "ok": True,
             "document_id": str(document_id),

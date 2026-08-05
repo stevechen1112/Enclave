@@ -8,9 +8,10 @@ from pydantic import BaseModel, Field, ConfigDict
 class SSOConfigBase(BaseModel):
     provider: str  # "google" | "microsoft"
     client_id: str
+    redirect_uri: str = Field(..., description="OAuth callback URL registered with IdP")
     enabled: bool = True
     allowed_domains: List[str] = Field(default_factory=list)
-    auto_create_user: bool = True
+    auto_create_user: bool = False  # fail-closed，對齊 TenantSSOConfig 模型／migration
     default_role: str = "employee"
 
 
@@ -21,6 +22,7 @@ class SSOConfigCreate(SSOConfigBase):
 class SSOConfigUpdate(BaseModel):
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
+    redirect_uri: Optional[str] = None
     enabled: Optional[bool] = None
     allowed_domains: Optional[List[str]] = None
     auto_create_user: Optional[bool] = None
@@ -38,6 +40,7 @@ class SSOConfigPublic(BaseModel):
     """Safe projection — no secrets exposed to frontend."""
     provider: str
     enabled: bool
+    redirect_uri: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

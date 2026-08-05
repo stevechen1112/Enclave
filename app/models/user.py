@@ -20,7 +20,12 @@ class User(Base):
     status = Column(String, default="active")
     role = Column(String, default="employee")
     is_superuser = Column(Boolean, default=False)
-    
+
+    # CG-AUTH-SSO：email 驗證與 TOTP MFA
+    email_verified = Column(Boolean, default=False, nullable=False, server_default="false")
+    mfa_enabled = Column(Boolean, default=False, nullable=False, server_default="false")
+    mfa_secret = Column(String, nullable=True)
+
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
     department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id"), nullable=True, index=True)
     

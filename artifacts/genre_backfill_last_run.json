@@ -1,0 +1,165 @@
+{
+ "gate": "genre-backfill",
+ "generated_at": "2026-08-03T09:00:13",
+ "elapsed_s": 0.0,
+ "total": 26,
+ "updated": 26,
+ "rows": [
+  {
+   "id": "17356b82",
+   "filename": "手工具產業供應鏈全局觀（完整版）.pdf",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "b72bf670",
+   "filename": "SayCheez_作戰計畫.xlsx",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "35b20f2c",
+   "filename": "01、契約：優利國際－勞動契約（11312A版）－內部－OOO.docx",
+   "old": null,
+   "new": "contract"
+  },
+  {
+   "id": "61c7a82d",
+   "filename": "05-1、契約：優利國際－工作規則與差勤管理要點（11501版）（教育部）.pdf",
+   "old": null,
+   "new": "contract"
+  },
+  {
+   "id": "5fadbc52",
+   "filename": "【公告】優利－業務聯繫會辦要點（11206A）（1120620）.pdf",
+   "old": null,
+   "new": "policy"
+  },
+  {
+   "id": "feaff6a0",
+   "filename": "優利資源、優利國際－115年度專案分案表（1150601-1修）.xlsx",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "73f34c7c",
+   "filename": "a.pdf",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "63b01bc5",
+   "filename": "a.pdf",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "7fbcf5fc",
+   "filename": "部門工作職責.xlsx",
+   "old": null,
+   "new": "policy"
+  },
+  {
+   "id": "c26cdf5f",
+   "filename": "【公告】優利－費用申請流程（請購暨請款、暫借暨回沖）（11103A版）（1110407-1修）.pdf",
+   "old": null,
+   "new": "policy"
+  },
+  {
+   "id": "adc0c137",
+   "filename": "employee_handbook.pdf",
+   "old": null,
+   "new": "manual"
+  },
+  {
+   "id": "fdada4da",
+   "filename": "001_四屆新生入團申請家長同意書.pdf",
+   "old": null,
+   "new": "form"
+  },
+  {
+   "id": "92d24d1d",
+   "filename": "spec.pdf",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "5c33ce56",
+   "filename": "008_Korea e-Arrivalcard_363545709.pdf",
+   "old": null,
+   "new": "travel"
+  },
+  {
+   "id": "bc736cec",
+   "filename": "009_DOC003~3.pdf",
+   "old": null,
+   "new": "contract"
+  },
+  {
+   "id": "63133743",
+   "filename": "002_11410_83028948_營業稅繳款書(401)_.pdf",
+   "old": null,
+   "new": "voucher"
+  },
+  {
+   "id": "3802cdc9",
+   "filename": "000_nueip 合約(1).pdf",
+   "old": null,
+   "new": "contract"
+  },
+  {
+   "id": "3f24baba",
+   "filename": "003_由你人資MOU.pdf",
+   "old": null,
+   "new": "contract"
+  },
+  {
+   "id": "94f629ca",
+   "filename": "005_11408_83028948_營業稅繳款書(401)_.pdf",
+   "old": null,
+   "new": "voucher"
+  },
+  {
+   "id": "02bdd561",
+   "filename": "010_補印發票切結書.pdf",
+   "old": null,
+   "new": "voucher"
+  },
+  {
+   "id": "aa4cca04",
+   "filename": "023_KiGo使用手冊.pdf",
+   "old": null,
+   "new": "manual"
+  },
+  {
+   "id": "6c42e745",
+   "filename": "006_ETI-Base-Code-Burmese.pdf",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "3c9d2389",
+   "filename": "007_DOC_0001.pdf",
+   "old": null,
+   "new": "other"
+  },
+  {
+   "id": "6b785b4d",
+   "filename": "014_AI 機器人全球 7 大勢力關鍵報告.pdf",
+   "old": null,
+   "new": "report"
+  },
+  {
+   "id": "c91aad3e",
+   "filename": "優利國際資源整合有限公司－工作規則（114年10月版）（含函報公文）.pdf",
+   "old": null,
+   "new": "policy"
+  },
+  {
+   "id": "fa93499e",
+   "filename": "b.pdf",
+   "old": null,
+   "new": "report"
+  }
+ ]
+}
