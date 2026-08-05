@@ -1,0 +1,39 @@
+# Eval Profile: Z5 Hold-out (NEW — 待建立語料與題庫)
+# 這是 P0-4 要建立的新 hold-out，此 profile 先就位供 ablation 使用
+name: z5_holdout
+version: "1.0"
+description: "Z5 新 hold-out — 用於 Parent Doc / Sibling / Context Fitting ablation，GT 待凍結"
+
+# ── 題庫（待建立）──
+questions_file: z5_blind_questions.yaml
+
+# ── 語料（待建立）──
+corpus_manifest: blind_z5/corpus_manifest.json
+
+# ── 檢索 ──
+retrieval_top_k: 5
+retrieval_mode: hybrid
+rerank: true
+
+# ── 指標與門檻 ──
+metrics:
+  - hit_at_k
+  - mrr
+  - answer_correctness
+thresholds:
+  hit_at_k_min: 0.85
+  mrr_min: 0.70
+  answer_correctness_min: 0.90
+
+# ── Judge ──
+judge_type: deterministic
+llm_judge_model: ""
+
+# ── Artifact ──
+artifact_name: answer_correctness_z5
+
+# ── Hold-out 特徵 ──
+gt_frozen: false  # 待凍結
+gt_frozen_at: ""
+intent_frozen: false
+anti_target_drawing: true

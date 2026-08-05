@@ -1,0 +1,34 @@
+# Eval Profile: Z1 Golden (主集)
+# 對應 testdata/golden/z1_retrieve_questions.yaml
+name: z1_golden
+version: "1.0"
+description: "Z1 主集 — 20 題 G-RETRIEVE Tier-1（factual/unanswerable/table_lookup/multi_hop）"
+
+# ── 題庫 ──
+questions_file: z1_retrieve_questions.yaml
+expanded_file: z1_expanded_from_annotations.yaml
+
+# ── 語料 ──
+annotation_dir: z1_scan_annotations
+
+# ── 檢索 ──
+retrieval_top_k: 5
+retrieval_mode: hybrid
+rerank: true
+
+# ── 指標與門檻 ──
+metrics:
+  - hit_at_k
+  - mrr
+  - answer_correctness
+thresholds:
+  hit_at_k_min: 0.85
+  mrr_min: 0.70
+  answer_correctness_min: 0.90
+
+# ── Judge ──
+judge_type: deterministic
+llm_judge_model: ""
+
+# ── Artifact ──
+artifact_name: answer_correctness

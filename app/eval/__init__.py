@@ -15,6 +15,7 @@ from app.eval.metrics import (
     normalize_field_t2s,
     wilson_interval,
 )
+from app.eval.profile import EvalProfile, load_profile, list_profiles
 
 __all__ = [
     "Judgement",
@@ -27,4 +28,7 @@ __all__ = [
     "normalize_field",
     "normalize_field_t2s",
     "wilson_interval",
+    "EvalProfile",
+    "load_profile",
+    "list_profiles",
 ]

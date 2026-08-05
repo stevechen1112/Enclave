@@ -1,0 +1,39 @@
+# Eval Profile: Z4 Blind (GT Frozen)
+# 對應 testdata/golden/z4_blind_questions.yaml
+name: z4_blind
+version: "1.0"
+description: "Z4 盲測 hold-out — spans validated against ingested_text，GT frozen"
+
+# ── 題庫 ──
+questions_file: z4_blind_questions.yaml
+
+# ── 語料 ──
+corpus_manifest: blind_z4/corpus_manifest.json
+
+# ── 檢索 ──
+retrieval_top_k: 5
+retrieval_mode: hybrid
+rerank: true
+
+# ── 指標與門檻 ──
+metrics:
+  - hit_at_k
+  - mrr
+  - answer_correctness
+thresholds:
+  hit_at_k_min: 0.85
+  mrr_min: 0.70
+  answer_correctness_min: 0.90
+
+# ── Judge ──
+judge_type: deterministic
+llm_judge_model: ""
+
+# ── Artifact ──
+artifact_name: answer_correctness_z4
+
+# ── Hold-out 特徵 ──
+gt_frozen: true
+gt_frozen_at: "2026-08-05"
+intent_frozen: true
+anti_target_drawing: true
