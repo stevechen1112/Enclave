@@ -51,6 +51,10 @@ test-results/*
 test-uploads/*
 !test-uploads/.gitkeep
 
+# ---------- 大型測試資料（不入庫，用 scripts 或 README 說明如何取得）----------
+testdata/
+test-data/
+
 # ---------- 效能基準測試快取 ----------
 .benchmarks/
 
