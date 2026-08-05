@@ -129,6 +129,34 @@ class Settings(BaseSettings):
     SOURCE_VERIFY_USE_INTERNAL_LLM: bool = True  # 稽核走內部 LLM（本地 Ollama），失敗退回主 LLM
     SOURCE_VERIFY_MODEL: str = ""  # 稽核專用模型覆寫；空字串 = 沿用內部模型設定
 
+    # ── P1：製造業產品工作層 ──
+    # Voice / STT / TTS Interaction Gateway（稽核文件 §6.7、§10 P1）
+    # 借鑑 WeKnora ASR 入庫 pipeline，但 Enclave 自建 voice-first Interaction Gateway
+    VOICE_STT_ENABLED: bool = False          # 語音轉文字（STT）入口
+    VOICE_TTS_ENABLED: bool = False          # 文字轉語音（TTS）輸出
+    VOICE_STT_PROVIDER: str = "openai"       # openai | azure | local
+    VOICE_TTS_PROVIDER: str = "openai"       # openai | azure | local
+    VOICE_STT_MODEL: str = "whisper-1"        # OpenAI Whisper model name
+    VOICE_TTS_MODEL: str = "tts-1"           # OpenAI TTS model name
+    VOICE_TTS_VOICE: str = "alloy"            # OpenAI TTS voice
+    VOICE_MAX_AUDIO_SECONDS: int = 120       # 單次語音輸入上限（秒）
+    VOICE_DRAFT_FIRST: bool = True           # 音訊轉寫先進 draft，不可直接回答（§6.8 驗收）
+
+    # Fixed Form Schema（稽核文件 §11.3）
+    # 完成不等於 LLM 生成 Markdown，而是 schema + required fields + deterministic calculations
+    FIXED_FORM_ENABLED: bool = False
+    FIXED_FORM_REQUIRE_APPROVAL: bool = True  # 正式表單需簽核
+    FIXED_FORM_VERSIONED: bool = True        # 表單版本化
+
+    # Agent runtime（稽核文件 §6.3、§6.5）
+    AGENT_MAX_ITERATIONS: int = 10
+    AGENT_APPROVAL_TIMEOUT_HOURS: int = 24
+    AGENT_APPROVAL_ESCALATION_HOURS: int = 48
+    AGENT_APPROVAL_REQUIRE_FOR_MUTATING: bool = True  # mutating tool 預設需 approval（§6.8）
+
+    # 職能模組 Router（稽核文件 §10 P1）
+    MODULE_ROUTER_ENABLED: bool = False
+
     # ── CG-AUTH-SSO：email 驗證與 MFA ──
     # 開啟後，email_verified=false 的用戶不可聊天（其餘 API 不受限）
     EMAIL_VERIFICATION_ENABLED: bool = False
