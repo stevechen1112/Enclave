@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-INT-MCP",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "mcp_server": {
+      "passed": true,
+      "detail": "4 read-only tools"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "mcp_server: 4 read-only tools"
+  ]
+}

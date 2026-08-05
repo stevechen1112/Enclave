@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-KH-DRAFT-ISOLATION",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "draft_isolation": {
+      "passed": true,
+      "detail": "draft not indexable"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "draft_isolation: draft not indexable"
+  ]
+}

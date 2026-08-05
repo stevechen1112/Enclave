@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-KH-CONFLICT",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "sop_conflict": {
+      "passed": true,
+      "detail": "SOP > Approved Know-how"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "sop_conflict: SOP > Approved Know-how"
+  ]
+}

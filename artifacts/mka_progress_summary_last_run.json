@@ -1,0 +1,20 @@
+{
+  "total": 11,
+  "passed": 11,
+  "failed": 0,
+  "gates": {
+    "MKA-P0-MODULE-CONTRACT": "pass",
+    "MKA-P0-ACL": "pass",
+    "MKA-P0-RETRIEVAL": "pass",
+    "MKA-P0-EVAL": "pass",
+    "MKA-P2-FORM-SCHEMA": "pass",
+    "MKA-P2-RULES": "pass",
+    "MKA-APPROVAL-IDEMPOTENT": "pass",
+    "MKA-KH-DRAFT-ISOLATION": "pass",
+    "MKA-KH-CONFLICT": "pass",
+    "MKA-INT-MCP": "pass",
+    "MKA-INT-CONNECTOR": "pass"
+  },
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6"
+}

@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-P0-ACL",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:24Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "module_acl": {
+      "passed": true,
+      "detail": "authz=None correctly returns empty"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "module_acl: authz=None correctly returns empty"
+  ]
+}

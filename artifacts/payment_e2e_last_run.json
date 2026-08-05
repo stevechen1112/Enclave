@@ -1,24 +1,24 @@
 {
   "status": "PASS",
-  "timestamp": "2026-08-04T19:10:46.298530+00:00",
+  "timestamp": "2026-08-05T18:17:59.343025+00:00",
   "mode": "simulated_notify",
   "note": "真實藍新 E2E 仍需 NEWEBPAY_* 商戶憑證",
   "steps": [
     {
       "name": "checkout_form",
       "passed": true,
-      "trade_no": "ENC178587064628218EFD02B"
+      "trade_no": "ENC17859538793171D48422A"
     },
     {
       "name": "verify_webhook",
       "passed": true,
-      "gateway_trade_no": "GW-c6a6123597"
+      "gateway_trade_no": "GW-157bbec4c9"
     },
     {
       "name": "upgrade_and_billing",
       "passed": true,
       "plan": "team",
-      "invoice": "INV-20260804-14A0CB"
+      "invoice": "INV-20260805-F1DAF9"
     },
     {
       "name": "idempotent_notify",

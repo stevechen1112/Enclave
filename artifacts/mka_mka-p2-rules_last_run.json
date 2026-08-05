@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-P2-RULES",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "form_rules": {
+      "passed": true,
+      "detail": "MULTIPLY(10,20)=200"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "form_rules: MULTIPLY(10,20)=200"
+  ]
+}

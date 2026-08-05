@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-INT-CONNECTOR",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "connector_materialize": {
+      "passed": true,
+      "detail": "remote URI detection works"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "connector_materialize: remote URI detection works"
+  ]
+}

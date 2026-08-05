@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-P0-MODULE-CONTRACT",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:24Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "module_contract": {
+      "passed": true,
+      "detail": "7 modules registered"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "module_contract: 7 modules registered"
+  ]
+}

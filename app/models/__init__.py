@@ -36,3 +36,9 @@ from app.models.kb_maintenance import (
 from app.models.generated_report import GeneratedReport
 from app.models.billing import BillingRecord
 from app.models.tenant import TenantSSOConfig
+# MKA: 製造業知識助理領域模型
+from app.models.mka import (
+    JobModule, TenantModuleBinding, InteractionSession,
+    TenantTermDictionary, FormDefinition, FormInstance,
+    RuleSet, ApprovalPolicy, ApprovalRequest, KnowhowCardModel,
+)

@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-P0-RETRIEVAL",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:24Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "retrieval_flags": {
+      "passed": true,
+      "detail": "flags=[False, False, False]"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "retrieval_flags: flags=[False, False, False]"
+  ]
+}

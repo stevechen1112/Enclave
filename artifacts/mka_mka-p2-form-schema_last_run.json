@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-P2-FORM-SCHEMA",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "form_schema": {
+      "passed": true,
+      "detail": "forms=['purchase_order', 'quote']"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "form_schema: forms=['purchase_order', 'quote']"
+  ]
+}

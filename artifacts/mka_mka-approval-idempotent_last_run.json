@@ -1,0 +1,16 @@
+{
+  "gate": "MKA-APPROVAL-IDEMPOTENT",
+  "status": "pass",
+  "generated_at": "2026-08-05T18:22:25Z",
+  "git_sha": "31789a6",
+  "metrics": {
+    "approval_idempotent": {
+      "passed": true,
+      "detail": "idempotent approve works"
+    }
+  },
+  "failures": [],
+  "evidence": [
+    "approval_idempotent: idempotent approve works"
+  ]
+}
