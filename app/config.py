@@ -157,6 +157,23 @@ class Settings(BaseSettings):
     # 職能模組 Router（稽核文件 §10 P1）
     MODULE_ROUTER_ENABLED: bool = False
 
+    # ── P2：Know-how 與長文件 ──
+    # Know-how Card（稽核文件 §7.4 P0、§11.4）
+    # 老師傅 know-how 應在 Enclave 原生建立知識卡與治理
+    KNOWHOW_CARD_ENABLED: bool = False
+    KNOWHOW_DRAFT_ISOLATION: bool = True     # draft 不可被 RetrievalFacade 命中（§7.5 驗收）
+    KNOWHOW_REQUIRE_REVIEW: bool = True      # 需人工審核才索引
+    KNOWHOW_SOP_CONFLICT_CHECK: bool = True  # SOP 與 know-how 衝突時 SOP 優先
+
+    # PageIndex 長文件（稽核文件 §7.4 P2、§11.5）
+    # 只適用長設備手冊、20 頁以上 manual，預設 OFF
+    PAGEINDEX_ENABLED: bool = False
+    PAGEINDEX_THRESHOLD: int = 20            # 頁數門檻
+    PAGEINDEX_ABLATION_REQUIRED: bool = True  # 需 ablation 證明增量才進 fan-out
+
+    # Semantic Lint（稽核文件 §7.4，借鑑 OpenKB linter.py）
+    WIKI_LINT_ENABLED: bool = False          # Wiki 編譯後 semantic lint
+
     # ── CG-AUTH-SSO：email 驗證與 MFA ──
     # 開啟後，email_verified=false 的用戶不可聊天（其餘 API 不受限）
     EMAIL_VERIFICATION_ENABLED: bool = False
