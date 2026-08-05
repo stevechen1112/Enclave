@@ -97,6 +97,11 @@ class MultiStepOrchestrator:
                 await self._run_compiled(
                     authz, question, clause_projections, trace
                 )
+            elif arm == "pageindex":
+                # P2-4：PageIndex 長文件臂（feature-flagged）
+                await self._run_pageindex(
+                    authz, question, chunk_results, trace
+                )
 
         refusal = None
         has_evidence = bool(chunk_results or catalog_hits or clause_projections)
@@ -626,3 +631,54 @@ class MultiStepOrchestrator:
         except Exception as exc:
             logger.warning("compiled step failed: %s", exc)
             trace.add_step(arm="compiled", query=question, hit_count=0, error=str(exc))
+
+    async def _run_pageindex(self, authz, question, out, trace) -> None:
+        """P2-4：PageIndex 長文件臂（feature-flagged）。"""
+        from app.config import settings
+        if not settings.PAGEINDEX_ENABLED:
+            return
+        try:
+            from app.db.session import SessionLocal
+            from app.models.knowledge_base import DocumentArtifact
+            from app.services.pageindex import get_pageindex_retriever
+
+            session = SessionLocal()
+            try:
+                # 查詢所有 pageindex_tree artifacts
+                artifacts = (
+                    session.query(DocumentArtifact)
+                    .filter(
+                        DocumentArtifact.artifact_type == "pageindex_tree",
+                        DocumentArtifact.status == "active",
+                    )
+                    .all()
+                )
+                if not artifacts:
+                    return
+
+                retriever = get_pageindex_retriever()
+                for artifact in artifacts:
+                    tree_data = artifact.metadata_json or {}
+                    if not tree_data.get("pages"):
+                        continue
+                    from app.services.pageindex import PageIndexTree
+                    tree = PageIndexTree(
+                        document_id=tree_data.get("document_id", ""),
+                        total_pages=tree_data.get("total_pages", 0),
+                        pages=[],
+                        section_ranges=tree_data.get("section_ranges", []),
+                    )
+                    pages = retriever.get_pages_for_query(tree, question, max_pages=5)
+                    if pages:
+                        chunk_ids = retriever.get_chunks_for_pages(tree, pages)
+                        trace.add_step(
+                            arm="pageindex",
+                            query=question,
+                            hit_count=len(chunk_ids),
+                            hit_titles=[f"pages {pages[0]}-{pages[-1]}"],
+                        )
+            finally:
+                session.close()
+        except Exception as exc:
+            logger.warning("pageindex step failed: %s", exc)
+            trace.add_step(arm="pageindex", query=question, hit_count=0, error=str(exc))

@@ -120,7 +120,18 @@ class ConnectorSyncService:
         for item in resources:
             src = item.get("file_path")
             if not src or not Path(src).is_file():
-                continue
+                # P3-1：雲端 resource 無本機 file_path，嘗試下載
+                if settings.CONNECTOR_MATERIALIZE_ENABLED:
+                    from app.services.connector_materialize import get_resource_downloader
+                    downloader = get_resource_downloader()
+                    downloaded = downloader.resolve_and_download(item, str(connector.tenant_id))
+                    if downloaded:
+                        src = downloaded
+                        item["file_path"] = downloaded  # 更新 item 供後續使用
+                    else:
+                        continue
+                else:
+                    continue
             src_path = Path(src)
             content_hash = item.get("content_hash") or hashlib.sha256(src_path.read_bytes()).hexdigest()
 

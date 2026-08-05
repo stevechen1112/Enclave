@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     documents,
     experience,
     feature_flags,
+    forms,
     gateway,
     connectors,
     wiki,
@@ -21,12 +22,14 @@ from app.api.v1.endpoints import (
     generate,
     kb,
     kb_maintenance,
+    mcp,
     mobile,
     payment,
     reports,
     sso,
     tenants,
     users,
+    voice,
     internal_service_auth,
 )
 
@@ -66,3 +69,9 @@ api_router.include_router(operations.router, tags=["operations"])
 api_router.include_router(agent_approvals.router, tags=["agent-approvals"])
 api_router.include_router(graph.router, tags=["graph"])
 api_router.include_router(internal_service_auth.router, tags=["internal-service-auth"])
+# P3-2 — Read-only FastMCP Server
+api_router.include_router(mcp.router, tags=["mcp"])
+# P1-1 — Voice STT/TTS
+api_router.include_router(voice.router, tags=["voice"])
+# P1-2 — Fixed Form
+api_router.include_router(forms.router, tags=["forms"])

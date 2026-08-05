@@ -95,6 +95,10 @@ class ReActLoop:
         self.tool_registry = tool_registry
         self.max_iterations = max_iterations
         self.approval_gate = approval_gate
+        # P1-3：新 ApprovalStateMachine（冪等、可 resume、超時 fail-closed）
+        # 與舊 ApprovalGate 並存，逐步遷移
+        from app.config import settings
+        self._use_new_approval = settings.AGENT_APPROVAL_REQUIRE_FOR_MUTATING
 
     async def run(
         self,
@@ -212,6 +216,18 @@ class ReActLoop:
                 return {"document_count": len(docs)}
             finally:
                 db.close()
+
+        # P3-3：MCP Client — 連接外部 MCP server 執行工具
+        if tool.name.startswith("mcp:"):
+            from app.services.mcp_client import get_mcp_client
+            parts = tool.name[4:].split("/", 1)
+            if len(parts) == 2:
+                server_name, remote_tool = parts
+                client = get_mcp_client()
+                try:
+                    return client.call_tool(server_name, remote_tool, {"query": query}, authz)
+                except Exception as exc:
+                    return {"status": "error", "error": str(exc)}
 
         return {"status": "noop", "tool": tool.name}
 

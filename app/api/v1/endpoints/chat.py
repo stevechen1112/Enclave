@@ -200,6 +200,18 @@ async def chat_stream(
             # Phase 1: 狀態 — 正在檢索
             yield _sse({"type": "status", "content": "正在搜尋可存取知識…"})
 
+            # P1-4：職能模組 Router — 依使用者角色/部門決定檢索範圍
+            module_scope = {}
+            from app.config import settings
+            if settings.MODULE_ROUTER_ENABLED:
+                from app.services.module_router import get_module_router
+                router = get_module_router()
+                available_modules = router.get_available_modules(authz)
+                if available_modules:
+                    # 取第一個可用模組的檢索範圍
+                    module_scope = router.get_retrieval_scope(available_modules[0].name, authz)
+                    yield _sse({"type": "status", "content": f"已切換至 {available_modules[0].label} 模組"})
+
             # T7-2: 查詢改寫
             effective_question = request.question
             if history:

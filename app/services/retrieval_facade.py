@@ -115,6 +115,28 @@ class RetrievalFacade:
             filter_dict=scope,
         )
         chunks = self._dicts_to_chunks(raw)
+
+        # P2-1：Know-how Card draft isolation — draft 不可被命中
+        from app.config import settings
+        if settings.KNOWHOW_CARD_ENABLED and settings.KNOWHOW_DRAFT_ISOLATION:
+            from app.services.knowhow_card import get_knowhow_manager
+            mgr = get_knowhow_manager()
+            indexable_cards = mgr.get_indexable_cards()
+            if indexable_cards:
+                # 將 approved know-how cards 注入檢索結果
+                for card in indexable_cards:
+                    raw.append({
+                        "id": f"knowhow:{card.card_id}",
+                        "score": 0.85,
+                        "content": f"[知識卡] {card.title}\n{card.summary}",
+                        "document_id": card.source_document_id or card.card_id,
+                        "filename": f"knowhow:{card.title}",
+                        "chunk_index": 0,
+                        "metadata": {"type": "knowhow_card", "card_id": card.card_id, "version": card.version},
+                        "source": "knowhow",
+                    })
+                chunks = self._dicts_to_chunks(raw)
+
         citations = self._citation.build(
             chunks,
             acl_revision=getattr(authz, "policy_revision", 1) or 1,

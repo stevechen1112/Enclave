@@ -456,8 +456,30 @@ def parse_document(
         raise RuntimeError("RAGFLOW_FORCE_PARSE=true but document was not routed to RAGFlow")
 
     warnings: List[Any] = []
+    # P3-4：Docling Parser（feature-flagged，條件式採用）
+    docling_text = ""
+    from app.config import settings
+    if settings.DOCLING_ENABLED:
+        from app.services.docling_ablation import DoclingParser
+        docling = DoclingParser()
+        if docling.is_available():
+            try:
+                docling_result = docling.parse(file_path, file_type)
+                if docling_result.success and docling_result.text:
+                    docling_text = docling_result.text
+                    metadata["docling_used"] = True
+                    metadata["docling_elapsed_ms"] = int(docling_result.elapsed_seconds * 1000)
+                    metadata["docling_tables"] = len(docling_result.tables)
+            except Exception as exc:
+                logger.warning("Docling parse failed: %s", exc)
+
     try:
         text_content, metadata = DocumentParser.parse(file_path, file_type)
+        # 若 Docling 產出更多文字，採用 Docling
+        if docling_text and len(docling_text) > len(text_content or "") * 1.2:
+            text_content = docling_text
+            metadata["parse_engine"] = "docling"
+            metadata["docling_adopted"] = True
     except ValueError as exc:
         if not _scan_route(route):
             raise
