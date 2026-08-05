@@ -174,6 +174,30 @@ class Settings(BaseSettings):
     # Semantic Lint（稽核文件 §7.4，借鑑 OpenKB linter.py）
     WIKI_LINT_ENABLED: bool = False          # Wiki 編譯後 semantic lint
 
+    # ── P3：需求驅動整合 ──
+    # Connector Materialize（稽核文件 §9.3、§9.4）
+    # 雲端 connector resource 下載到本機再進 canonical
+    CONNECTOR_MATERIALIZE_ENABLED: bool = False  # 雲端 resource 下載到本機
+    CONNECTOR_MATERIALIZE_TIMEOUT: int = 300     # 下載超時（秒）
+    CONNECTOR_MATERIALIZE_MAX_SIZE: int = 100     # 單檔上限（MB）
+
+    # Read-only FastMCP Server（稽核文件 §8.2 P1）
+    # 借鑑 OpenRAG src/mcp_http/server.py
+    MCP_SERVER_ENABLED: bool = False            # Enclave read-only FastMCP server
+    MCP_SERVER_HOST: str = "0.0.0.0"
+    MCP_SERVER_PORT: int = 9000
+
+    # MCP Client + Allowlist + ApprovalGate（稽核文件 §8.2 P2）
+    MCP_CLIENT_ENABLED: bool = False            # 連接外部 MCP server
+    MCP_CLIENT_ALLOWLIST: str = ""              # 允許的 MCP server（逗號分隔）
+    MCP_CLIENT_REQUIRE_APPROVAL: bool = True   # mutating tool 需 approval
+
+    # Docling Parser Ablation（稽核文件 §8.3）
+    # 條件式採用 — 先 ablation 證明增量
+    DOCLING_ENABLED: bool = False               # Docling Serve 整合
+    DOCLING_BASE_URL: str = "http://docling-serve:5001"
+    DOCLING_TIMEOUT: int = 120                   # 解析超時（秒）
+
     # ── CG-AUTH-SSO：email 驗證與 MFA ──
     # 開啟後，email_verified=false 的用戶不可聊天（其餘 API 不受限）
     EMAIL_VERIFICATION_ENABLED: bool = False
