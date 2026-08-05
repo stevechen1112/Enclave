@@ -93,6 +93,8 @@ def login(client: httpx.Client) -> None:
 
 def stream_answer(client: httpx.Client, question: str, timeout: int = 600) -> str:
     collected: list[str] = []
+    retrieval_info: dict | None = None
+    sources_info: list | None = None
     try:
         with client.stream(
             "POST",
@@ -118,12 +120,27 @@ def stream_answer(client: httpx.Client, question: str, timeout: int = 600) -> st
                     continue
                 if d.get("type") == "token" and "content" in d:
                     collected.append(d["content"])
+                elif d.get("type") == "retrieval":
+                    retrieval_info = d.get("retrieval") or {}
+                elif d.get("type") == "sources":
+                    sources_info = d.get("sources") or []
                 elif "content" in d and "type" not in d:
                     collected.append(d["content"])
     except Exception as exc:  # keep suite alive on any stream failure
         partial = "".join(collected)
         return f"[ERROR {type(exc).__name__}] {exc}; partial={partial[:200]}"
-    return "".join(collected)
+    answer = "".join(collected)
+    # P0-3：將 retrieval 細節附加到 answer 物件（用特殊前綴，不影響 verdict 判定）
+    # 這些資訊會在 results.append 時被提取
+    global _last_retrieval_info, _last_sources_info
+    _last_retrieval_info = retrieval_info
+    _last_sources_info = sources_info
+    return answer
+
+
+# P0-3：全域暫存上次 SSE 的 retrieval/sources 事件
+_last_retrieval_info: dict | None = None
+_last_sources_info: list | None = None
 
 
 def main() -> int:
@@ -205,12 +222,64 @@ def main() -> int:
             verdict = "review"
             note = "no transcribed ground truth — needs human/agent judgement"
 
+        # P0-3：分層診斷 — 區分「文件沒找到／段落漏掉／生成漏寫／安全門檻」
+        retrieval_detail = _last_retrieval_info or {}
+        sources_detail = _last_sources_info or []
+        # 提取 retrieval rank 與 selected chunks
+        retrieval_results = retrieval_detail.get("results") or retrieval_detail.get("chunks") or []
+        retrieval_rank = [
+            {
+                "document_id": r.get("document_id", ""),
+                "filename": r.get("filename", ""),
+                "chunk_index": r.get("chunk_index"),
+                "score": r.get("score", 0),
+            }
+            for r in retrieval_results[:10]  # 只記前 10 個
+        ]
+        # 判定 refusal reason
+        refusal_reason = ""
+        if verdict == "pass" and exp.get("must_refuse"):
+            refusal_reason = "intended_refusal"
+        elif verdict == "fail" and exp.get("must_refuse") and not any(m in answer for m in REFUSAL_MARKERS):
+            refusal_reason = "should_refuse_but_didnt"
+        elif verdict == "blocked":
+            refusal_reason = "expected_docs_offline"
+        elif retrieval_detail.get("refusal"):
+            refusal_reason = retrieval_detail["refusal"].get("reason", "retrieval_refusal")
+        # 分層診斷
+        if verdict == "fail" and not exp.get("must_refuse"):
+            if not retrieval_rank:
+                diagnosis = "retrieval_miss"  # 文件沒找到
+            elif span_hits and not all(s in answer for s in spans):
+                diagnosis = "generation_miss"  # 證據完整但生成漏寫
+            else:
+                diagnosis = "chunk_miss"  # 文件找對但段落漏掉
+        elif verdict == "pass" and exp.get("must_refuse"):
+            diagnosis = "correct_refusal"
+        elif verdict == "pass":
+            diagnosis = "correct_answer"
+        elif verdict == "blocked":
+            diagnosis = "blocked_offline"
+        elif verdict == "review":
+            diagnosis = "needs_review"
+        else:
+            diagnosis = "unknown"
+
         results.append({
             "id": q["id"], "category": q.get("category"), "query": q["query"],
             "expected_docs": [manifest.get(d, d) for d in exp_docs],
             "missing_docs": missing,
             "spans_expected": spans, "spans_hit": span_hits,
             "answer": answer, "verdict": verdict, "note": note,
+            # P0-3：retrieval 細節
+            "retrieval_rank": retrieval_rank,
+            "retrieval_total": len(retrieval_results),
+            "retrieval_status": retrieval_detail.get("status", ""),
+            "retrieval_refusal": retrieval_detail.get("refusal"),
+            "sources": sources_detail[:5],
+            "providers_called": retrieval_detail.get("providers_called", []),
+            "refusal_reason": refusal_reason,
+            "diagnosis": diagnosis,
         })
         print(f"{q['id']} [{q.get('category')}] verdict={verdict} {note}", flush=True)
         # incremental checkpoint so timeouts don't lose progress
