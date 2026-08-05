@@ -19,7 +19,6 @@ from sqlalchemy import (
     Text, JSON, Boolean, UniqueConstraint, Index,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
 
@@ -233,7 +232,7 @@ class ApprovalPolicy(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
-class ApprovalRequest(Base):
+class MKAApprovalRequest(Base):
     """簽核請求（業務簽核，與 AgentApprovalRequest 分離）。"""
     __tablename__ = "mka_approval_requests"
 
@@ -262,7 +261,9 @@ class KnowhowCardModel(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    card_id = Column(String, nullable=True, index=True)  # 與記憶體 KnowhowCard.card_id 對應
     title = Column(String, nullable=False)
+    summary = Column(Text, nullable=True)  # 補上記憶體 KnowhowCard 的 summary
     status = Column(String, default="draft")  # draft | pending_review | approved | rejected | retired
     authority_level = Column(Integer, default=60)  # §7.3 authority: 100/90/80/70/60/20/0
     applicable_roles = Column(JSON, default=list)
@@ -271,6 +272,11 @@ class KnowhowCardModel(Base):
     customer_ids = Column(JSON, default=list)
     problem_context = Column(Text, nullable=True)
     recommended_actions = Column(JSON, default=list)
+    steps = Column(JSON, default=list)  # 補上記憶體 KnowhowCard 的 steps
+    cautions = Column(JSON, default=list)  # 補上記憶體 KnowhowCard 的 cautions
+    source_quotes = Column(JSON, default=list)  # 補上記憶體 KnowhowCard 的 source_quotes
+    source_type = Column(String, nullable=True)  # audio | document | manual
+    source_document_id = Column(String, nullable=True)
     prerequisites = Column(JSON, default=list)
     risks = Column(JSON, default=list)
     prohibited_actions = Column(JSON, default=list)

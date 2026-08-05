@@ -21,9 +21,9 @@ Gate 分類（§10.2）：
 import argparse
 import json
 import subprocess
-import sys
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
@@ -157,8 +157,10 @@ def check_approval():
         actor_id=uuid4(), actor_name="test",
         action_summary="test",
     )
-    sm.approve(ctx.request_id, approved_by="admin")
-    sm.approve(ctx.request_id, approved_by="admin")  # 冪等
+    # mock _persist 避免 DB FK violation 噪音
+    with patch.object(sm, '_persist'):
+        sm.approve(ctx.request_id, approved_by="admin")
+        sm.approve(ctx.request_id, approved_by="admin")  # 冪等
     if ctx.state == ApprovalState.APPROVED:
         return True, "idempotent approve works"
     return False, "approve failed"
@@ -241,7 +243,7 @@ def main() -> int:
         result = run_gate(gate_name, GATES[gate_name])
         results[gate_name] = result
 
-        status_icon = "✅" if result["status"] == "pass" else "❌"
+        status_icon = "[PASS]" if result["status"] == "pass" else "[FAIL]"
         print(f"{status_icon} {gate_name}: {result['status']}")
         for f in result["failures"]:
             print(f"   FAIL: {f}")
@@ -272,9 +274,9 @@ def main() -> int:
     print(f"\n{'='*60}")
     print(f"MKA Gates: {summary['passed']}/{summary['total']} passed")
     if all_passed:
-        print("ALL PASSED ✅")
+        print("ALL PASSED")
     else:
-        print("SOME FAILED ❌")
+        print("SOME FAILED")
     print(f"Summary: {summary_path}")
 
     return 0 if all_passed else 1

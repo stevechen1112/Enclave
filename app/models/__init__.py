@@ -40,5 +40,5 @@ from app.models.tenant import TenantSSOConfig
 from app.models.mka import (
     JobModule, TenantModuleBinding, InteractionSession,
     TenantTermDictionary, FormDefinition, FormInstance,
-    RuleSet, ApprovalPolicy, ApprovalRequest, KnowhowCardModel,
+    RuleSet, ApprovalPolicy, MKAApprovalRequest, KnowhowCardModel,
 )
