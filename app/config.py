@@ -110,6 +110,17 @@ class Settings(BaseSettings):
     RETRIEVAL_CACHE_TTL: int = 300         # 快取秒數
     RETRIEVAL_TOP_K: int = 5               # 預設返回數量
 
+    # P0-1：Parent Document / Sibling Expansion / Context Fitting
+    # 借鑑 OpenDocuments 的 parent-doc.ts / retriever.ts / context-window.ts
+    # 預設關閉，需通過 ablation 證明增量後才開啟
+    PARENT_DOC_ENABLED: bool = False          # 命中 chunk 後，若 parent_chunk_id 非空，改回傳 parent text
+    SIBLING_EXPANSION_ENABLED: bool = False   # 命中 chunk 後，附加相鄰 chunk_index ± 1 的 sibling
+    SIBLING_EXPANSION_WINDOW: int = 1          # 每側擴展幾個 sibling（1 = 前後各 1 個）
+    SIBLING_SCORE_DISCOUNT: float = 0.85      # sibling 的 score 乘以此折扣（避免 sibling 壓過原始命中）
+    CONTEXT_FITTING_ENABLED: bool = False      # 依 token 預算裁切 context，避免 parent/sibling 擴展後超窗
+    CONTEXT_FITTING_TOKEN_BUDGET: int = 6000   # context 總 token 預算（不含 citation 標記）
+    CONTEXT_FITTING_MODEL: str = "voyage-4-lite"  # tokenizer 估算用模型名（僅作粗估）
+
     # Source-grounded 逐字溯源驗證（生成之後、輸出之前的稽核層）
     # off    = 不驗證（現行行為）
     # shadow = 照常輸出，事後稽核並記錄（收集數據用，不影響使用者）

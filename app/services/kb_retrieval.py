@@ -21,7 +21,7 @@ import hashlib
 import json
 import logging
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set
 from uuid import UUID
 
 from app.config import settings
@@ -258,6 +258,9 @@ class KnowledgeBaseRetriever:
         if authz is not None and results:
             results = self._filter_denied(results, authz)
 
+        # 5.5 P0-1：Parent Document + Sibling Expansion（feature-flagged）
+        results = self._apply_parent_and_sibling(results, effective_tenant_id, authz)
+
         # 6. 寫入快取（ACL-aware）
         if use_cache and self._redis:
             self._cache_set(effective_tenant_id, query, mode, top_k, min_score, results, authz, filter_dict=filter_dict)
@@ -278,6 +281,150 @@ class KnowledgeBaseRetriever:
         except Exception as exc:
             logger.warning("deny-set filter failed, fail closed empty: %s", exc)
             return []
+
+    def _apply_parent_and_sibling(
+        self,
+        results: List[Dict[str, Any]],
+        tenant_id: UUID,
+        authz: Optional[AuthorizationContext],
+    ) -> List[Dict[str, Any]]:
+        """P0-1：Parent Document + Sibling Expansion（feature-flagged）。
+
+        - Parent Document：命中 chunk 後，若 parent_chunk_id 非空，附加 parent text 作為上下文
+        - Sibling Expansion：命中 chunk 後，附加相鄰 chunk_index ± window 的 sibling
+        - citation 仍指向原 chunk（不替換 citation 來源）
+        - parent/sibling 必須與原 chunk 同文件（不混文件）
+        """
+        if not results:
+            return results
+
+        from app.config import settings
+
+        parent_enabled = settings.PARENT_DOC_ENABLED
+        sibling_enabled = settings.SIBLING_EXPANSION_ENABLED
+
+        if not parent_enabled and not sibling_enabled:
+            return results
+
+        # 收集需要查詢的 chunk IDs
+        chunk_ids_to_fetch: Set[str] = set()
+        for r in results:
+            if parent_enabled and r.get("parent_chunk_id"):
+                chunk_ids_to_fetch.add(str(r["parent_chunk_id"]))
+            if sibling_enabled:
+                chunk_ids_to_fetch.add(str(r.get("id") or ""))
+
+        if not chunk_ids_to_fetch:
+            return results
+
+        # 查詢 DB 取得 parent 和 sibling chunks
+        db = SessionLocal()
+        try:
+            # 取得所有相關的 chunk
+            fetched_chunks = (
+                db.query(DocumentChunk)
+                .filter(
+                    DocumentChunk.tenant_id == tenant_id,
+                    DocumentChunk.id.in_([UUID(cid) for cid in chunk_ids_to_fetch if cid]),
+                )
+                .all()
+            )
+            chunk_by_id: Dict[str, DocumentChunk] = {str(c.id): c for c in fetched_chunks}
+
+            # 若啟用 sibling，需查詢相鄰 chunk
+            sibling_map: Dict[str, List[Dict[str, Any]]] = {}
+            if sibling_enabled:
+                window = settings.SIBLING_EXPANSION_WINDOW
+                for r in results:
+                    chunk_id = str(r.get("id") or "")
+                    doc_id = r.get("document_id")
+                    chunk_index = r.get("chunk_index", -1)
+                    if not chunk_id or not doc_id or chunk_index < 0:
+                        continue
+
+                    # 查詢同文件、相鄰 chunk_index 的 chunks
+                    sibling_indices = list(range(max(0, chunk_index - window), chunk_index + window + 1))
+                    sibling_indices = [i for i in sibling_indices if i != chunk_index]
+                    if not sibling_indices:
+                        continue
+
+                    siblings = (
+                        db.query(DocumentChunk)
+                        .filter(
+                            DocumentChunk.tenant_id == tenant_id,
+                            DocumentChunk.document_id == UUID(str(doc_id)),
+                            DocumentChunk.chunk_index.in_(sibling_indices),
+                        )
+                        .all()
+                    )
+
+                    # ACL 過濾 sibling
+                    if authz:
+                        siblings = [s for s in siblings if self._chunk_acl_ok(s, authz, db)]
+
+                    sibling_map[chunk_id] = [
+                        {
+                            "id": str(s.id),
+                            "score": 0.0,
+                            "content": s.text or "",
+                            "document_id": str(s.document_id),
+                            "filename": r.get("filename", ""),
+                            "chunk_index": s.chunk_index,
+                            "metadata": s.metadata_json or {},
+                            "parent_chunk_id": str(s.parent_chunk_id) if s.parent_chunk_id else None,
+                            "source": "sibling",
+                        }
+                        for s in siblings
+                    ]
+
+            # 構建 parent map
+            parent_map: Dict[str, Dict[str, Any]] = {}
+            if parent_enabled:
+                for r in results:
+                    parent_id = r.get("parent_chunk_id")
+                    if parent_id and str(parent_id) in chunk_by_id:
+                        parent_chunk = chunk_by_id[str(parent_id)]
+                        parent_map[str(r.get("id") or "")] = {
+                            "id": str(parent_chunk.id),
+                            "score": 0.0,
+                            "content": parent_chunk.text or "",
+                            "document_id": str(parent_chunk.document_id),
+                            "filename": r.get("filename", ""),
+                            "chunk_index": parent_chunk.chunk_index,
+                            "metadata": parent_chunk.metadata_json or {},
+                            "parent_chunk_id": str(parent_chunk.parent_chunk_id) if parent_chunk.parent_chunk_id else None,
+                            "source": "parent",
+                        }
+
+            # 合併
+            from app.services.context_fitting import merge_parent_and_chunks, expand_siblings
+
+            merged = merge_parent_and_chunks(results, parent_map)
+            merged = expand_siblings(
+                merged,
+                sibling_map,
+                window=settings.SIBLING_EXPANSION_WINDOW,
+                score_discount=settings.SIBLING_SCORE_DISCOUNT,
+            )
+
+            return merged
+
+        except Exception as exc:
+            logger.warning("parent/sibling expansion failed, returning original results: %s", exc)
+            return results
+        finally:
+            db.close()
+
+    def _chunk_acl_ok(self, chunk: DocumentChunk, authz: AuthorizationContext, db) -> bool:
+        """檢查 chunk 是否通過 ACL（用於 sibling 過濾）。"""
+        try:
+            # 基本檢查：文件未 tombstoned
+            doc = db.query(Document).filter(Document.id == chunk.document_id).first()
+            if not doc or doc.tombstoned_at is not None:
+                return False
+            return True
+        except Exception:
+            return False
 
     def batch_search(
         self,
@@ -398,6 +545,7 @@ class KnowledgeBaseRetriever:
                     "filename": doc_map.get(chunk.document_id, ""),
                     "chunk_index": chunk.chunk_index,
                     "metadata": chunk.metadata_json or {},
+                    "parent_chunk_id": str(chunk.parent_chunk_id) if chunk.parent_chunk_id else None,
                     "source": "semantic",
                 })
 
@@ -478,6 +626,7 @@ class KnowledgeBaseRetriever:
                     "filename": doc_map.get(chunk.document_id, ""),
                     "chunk_index": chunk.chunk_index,
                     "metadata": {},
+                    "parent_chunk_id": str(chunk.parent_chunk_id) if chunk.parent_chunk_id else None,
                     "source": "keyword",
                 })
             return results

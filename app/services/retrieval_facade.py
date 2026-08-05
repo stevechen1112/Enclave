@@ -36,6 +36,18 @@ class RetrievalResult:
     gateway_status: Optional[str] = None  # success | partial | error
 
     def to_context_parts(self) -> List[str]:
+        from app.config import settings
+
+        # P0-1：Context Fitting（feature-flagged）
+        if settings.CONTEXT_FITTING_ENABLED:
+            from app.services.context_fitting import fit_context
+            fitted = fit_context(
+                self.results,
+                token_budget=settings.CONTEXT_FITTING_TOKEN_BUDGET,
+            )
+            return fitted.parts
+
+        # 預設路徑：無 token 預算，逐 chunk 串接（原行為）
         parts = []
         for i, r in enumerate(self.results):
             text = r.get("text") or r.get("content") or ""
@@ -235,6 +247,11 @@ class RetrievalFacade:
                 meta.setdefault("chunk_hash", r["chunk_hash"])
             if r.get("content_hash"):
                 meta.setdefault("content_hash", r["content_hash"])
+            # P0-1：攜帶 parent_chunk_id / chunk_index 供下游 context assembly 使用
+            if r.get("parent_chunk_id"):
+                meta.setdefault("parent_chunk_id", r["parent_chunk_id"])
+            if r.get("chunk_index") is not None:
+                meta.setdefault("chunk_index", r["chunk_index"])
             chunks.append(
                 ChunkResult(
                     id=str(r.get("id") or r.get("chunk_id") or ""),
