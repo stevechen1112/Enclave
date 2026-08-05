@@ -1,0 +1,7 @@
+{
+  "corpus_snapshot_id": "",
+  "created_at": "",
+  "description": "Z5 hold-out corpus — 待建立新語料集",
+  "documents": [],
+  "note": "此為骨架，需填入新語料的文件清單（不同於 Z3/Z4）"
+}
