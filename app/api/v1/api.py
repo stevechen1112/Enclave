@@ -33,6 +33,18 @@ from app.api.v1.endpoints import (
     internal_service_auth,
     knowhow,
     mka_approvals,
+    interaction,
+    scene,
+    scene_admin,
+    job_modules,
+    job_roles,
+    tasks,
+    terms,
+    audio_policy,
+    form_templates,
+    enterprise,
+    mka_metrics,
+    interview,
 )
 
 api_router = APIRouter()
@@ -79,3 +91,21 @@ api_router.include_router(mcp.router, tags=["mcp"])
 api_router.include_router(voice.router, tags=["voice"])
 # P1-2 — Fixed Form
 api_router.include_router(forms.router, tags=["forms"])
+# MKA-P1 — Interaction API (§5.2)
+api_router.include_router(interaction.router, tags=["interaction"])
+# MKA-P1 — Scene API (§5.3)
+api_router.include_router(scene.router, tags=["scene"])
+api_router.include_router(scene_admin.router, tags=["scene-admin"])
+# MKA-P4 — Module Admin API (§5.4)
+api_router.include_router(job_modules.router, tags=["job-modules"])
+api_router.include_router(job_roles.router, tags=["job-roles"])
+api_router.include_router(tasks.router, tags=["tasks"])
+# MKA-P1 — Term Dictionary API (§4.5)
+api_router.include_router(terms.router, tags=["terms"])
+# MKA — Audio Retention Policy API (§12.1)
+api_router.include_router(audio_policy.router, tags=["audio-policy"])
+# MKA — 公司版型／企業整合／指標／訪談
+api_router.include_router(form_templates.router, tags=["form-templates"])
+api_router.include_router(enterprise.router, tags=["enterprise"])
+api_router.include_router(mka_metrics.router, tags=["mka-metrics"])
+api_router.include_router(interview.router, tags=["interview"])

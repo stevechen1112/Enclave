@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, ChevronRight, X } from 'lucide-react'
 import { useAuth } from '../auth'
-import { hasCapability } from '../navigation/capabilities'
+import { useHasCapability } from '../navigation/useCapabilities'
 import api from '../api'
 import clsx from 'clsx'
 import { isTestAskDone, TEST_ASK_DONE_EVENT } from '../lib/readiness'
@@ -17,12 +17,12 @@ type Step = {
 }
 
 export default function ReadinessBanner() {
-  const { user, experience } = useAuth()
+  const { experience } = useAuth()
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(STORAGE_KEY) === '1')
   const [steps, setSteps] = useState<Step[] | null>(null)
   const [testAskTick, setTestAskTick] = useState(0)
 
-  const isAdmin = hasCapability(user?.role, 'admin_home', user?.is_superuser)
+  const isAdmin = useHasCapability('admin_home')
 
   useEffect(() => {
     const onDone = () => setTestAskTick(t => t + 1)

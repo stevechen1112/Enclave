@@ -1,138 +1,174 @@
 #!/bin/bash
 # ========================================================
-# Enclave — Linode 快速部署腳本
+# Enclave — Linode 一鍵部署腳本（2026-08 重寫版）
 # ========================================================
-# IP: 172.237.11.179
-# 使用 sslip.io 臨時網域
+# 用法：
+#   bash scripts/deploy_linode.sh --ip 172.237.11.179
+#   bash scripts/deploy_linode.sh --ip 172.237.11.179 --domain app.example.com
+#   bash scripts/deploy_linode.sh --ip ... --repo https://github.com/you/enclave.git
+#
+# 前置條件：
+#   1. Ubuntu 22.04/24.04，已安裝 Docker（curl -fsSL https://get.docker.com | sh）
+#   2. 專案已 clone 至 /opt/enclave（或用 --repo 讓腳本 clone）
+#   3. .env.production 已建立並填妥必填項（腳本會檢查）
 # ========================================================
 
-set -e  # 遇到錯誤立即停止
+set -euo pipefail
+
+# ── 參數解析 ──
+IP=""
+DOMAIN=""
+REPO=""
+APP_DIR="/opt/enclave"
+SKIP_CONFIRM=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --ip)       IP="$2"; shift 2 ;;
+        --domain)   DOMAIN="$2"; shift 2 ;;
+        --repo)     REPO="$2"; shift 2 ;;
+        --dir)      APP_DIR="$2"; shift 2 ;;
+        --yes)      SKIP_CONFIRM=true; shift ;;
+        *) echo "未知參數: $1"; exit 1 ;;
+    esac
+done
+
+if [[ -z "$IP" && -z "$DOMAIN" ]]; then
+    echo "錯誤：必須提供 --ip 或 --domain"
+    echo "範例：bash scripts/deploy_linode.sh --ip 172.237.11.179"
+    exit 1
+fi
+
+# 未給正式網域時用 sslip.io
+if [[ -z "$DOMAIN" ]]; then
+    DOMAIN="app.$(echo "$IP" | tr '.' '-').sslip.io"
+fi
+
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+step() { echo -e "\n${YELLOW}[$1/8] $2${NC}"; }
+ok()   { echo -e "${GREEN}✓ $1${NC}"; }
+die()  { echo -e "${RED}✗ $1${NC}"; exit 1; }
 
 echo "========================================="
-echo "Enclave - Linode 部署開始"
+echo "Enclave — Linode 部署"
+echo "目錄: $APP_DIR"
+echo "網域: $DOMAIN"
 echo "========================================="
-
-# 顏色定義
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
 
 # 1. 檢查必要工具
-echo -e "${YELLOW}[1/8] 檢查必要工具...${NC}"
+step 1 "檢查必要工具"
 for cmd in docker git python3; do
-    if ! command -v $cmd &> /dev/null; then
-        echo -e "${RED}錯誤: $cmd 未安裝${NC}"
-        exit 1
-    fi
+    command -v $cmd &>/dev/null || die "$cmd 未安裝（Docker: curl -fsSL https://get.docker.com | sh）"
 done
-echo -e "${GREEN}✓ 必要工具已安裝${NC}"
+docker compose version &>/dev/null || die "docker compose plugin 不可用"
+ok "工具齊全"
 
-# 2. Clone 或更新專案
-echo -e "${YELLOW}[2/8] 下載專案...${NC}"
-if [ -d "/opt/aihr" ]; then
-    echo "專案已存在，更新中..."
-    cd /opt/aihr
-    git pull
+# 2. 取得專案
+step 2 "準備專案目錄"
+if [[ -d "$APP_DIR/.git" ]]; then
+    cd "$APP_DIR"
+    git pull --ff-only || echo -e "${YELLOW}警告：git pull 失敗，使用現有代碼${NC}"
+elif [[ -n "$REPO" ]]; then
+    git clone "$REPO" "$APP_DIR"
+    cd "$APP_DIR"
+elif [[ -f "$APP_DIR/docker-compose.prod.yml" ]]; then
+    cd "$APP_DIR"
+    echo "使用現有目錄（非 git repo）"
 else
-    echo "Clone 專案..."
-    cd /opt
-    git clone https://github.com/stevechen1112/aihr.git
-    cd /opt/aihr
+    die "找不到專案：請先 git clone 至 $APP_DIR，或用 --repo 指定"
 fi
-echo -e "${GREEN}✓ 專案已準備${NC}"
+ok "專案就緒：$(pwd)"
 
-# 3. 生成環境配置
-echo -e "${YELLOW}[3/8] 生成環境配置...${NC}"
-if [ -f ".env.production" ]; then
-    echo -e "${YELLOW}警告: .env.production 已存在，備份為 .env.production.backup${NC}"
-    cp .env.production .env.production.backup
+# 3. 環境配置
+step 3 "檢查 .env.production"
+if [[ ! -f .env.production ]]; then
+    cp .env.production.example .env.production
+    python3 scripts/generate_secrets.py --output .env.production
+    echo -e "${RED}.env.production 已從範本建立，請先編輯填入必填項後重跑：${NC}"
+    echo "  vim $APP_DIR/.env.production"
+    echo "  必填：OPENAI_API_KEY（或 GEMINI_API_KEY）、FIRST_SUPERUSER_EMAIL、FIRST_SUPERUSER_PASSWORD"
+    exit 1
 fi
 
-python3 scripts/generate_secrets.py --output .env.production
-echo -e "${GREEN}✓ 環境配置已生成${NC}"
-
-# 4. 更新 .env.production 使用 sslip.io 網域
-echo -e "${YELLOW}[4/8] 配置 sslip.io 網域...${NC}"
-IP="172.237.11.179"
-DOMAIN="172-237-11-179.sslip.io"
-
-# 更新 CORS
-sed -i "s|BACKEND_CORS_ORIGINS=.*|BACKEND_CORS_ORIGINS=http://app.${DOMAIN}|g" .env.production
-
-# 添加 Frontend URLs（如果不存在）
-if ! grep -q "FRONTEND_URL=" .env.production; then
-    echo "FRONTEND_URL=http://app.${DOMAIN}" >> .env.production
+# 必填項檢查
+missing=()
+grep -qE "^SECRET_KEY=\S{32,}" .env.production          || missing+=("SECRET_KEY")
+grep -qE "^POSTGRES_PASSWORD=\S+" .env.production        || missing+=("POSTGRES_PASSWORD")
+grep -qE "^REDIS_PASSWORD=\S+" .env.production           || missing+=("REDIS_PASSWORD")
+grep -qE "^FIRST_SUPERUSER_EMAIL=\S+" .env.production    || missing+=("FIRST_SUPERUSER_EMAIL")
+grep -qE "^FIRST_SUPERUSER_PASSWORD=\S{12,}" .env.production || missing+=("FIRST_SUPERUSER_PASSWORD(≥12字元)")
+grep -qE "^(OPENAI_API_KEY|GEMINI_API_KEY)=\S+" .env.production || missing+=("OPENAI_API_KEY 或 GEMINI_API_KEY")
+if [[ ${#missing[@]} -gt 0 ]]; then
+    printf '%s\n' "${missing[@]}"
+    die "上述必填項未設定"
 fi
-echo -e "${GREEN}✓ 網域配置完成${NC}"
-echo -e "${YELLOW}使用網域:${NC}"
-echo -e "  - 使用者介面: http://app.${DOMAIN}"
-echo -e "  - 系統方介面: 與使用者介面同網址（依角色顯示）"
-echo -e "  - API: http://app.${DOMAIN}/api"
-echo -e "  - Grafana: http://grafana.${DOMAIN}"
 
-# 5. 手動配置提示
-echo -e "${YELLOW}[5/8] 請手動配置以下必填項目...${NC}"
-echo -e "${RED}請使用編輯器打開 .env.production 並填入：${NC}"
-echo "  1. OPENAI_API_KEY"
-echo "  2. VOYAGE_API_KEY"
-echo "  3. LLAMAPARSE_API_KEY (如果使用)"
-echo "  4. FIRST_SUPERUSER_EMAIL"
-echo "  5. FIRST_SUPERUSER_PASSWORD"
-echo ""
-echo -e "${YELLOW}按 Enter 繼續（完成編輯後）...${NC}"
-read
+# MKA 旗標檢查（漏設會讓表單/知識卡消失）
+for flag in FIXED_FORM_ENABLED KNOWHOW_CARD_ENABLED MODULE_ROUTER_ENABLED; do
+    grep -qE "^${flag}=true" .env.production || echo -e "${YELLOW}警告：$flag 未設為 true，MKA 功能將被停用${NC}"
+done
 
-# 6. 配置 Gateway（使用 sslip.io 版本）
-echo -e "${YELLOW}[6/8] 配置 Nginx Gateway...${NC}"
-if [ -f "nginx/gateway.conf.sslip" ]; then
-    cp nginx/gateway.conf.sslip nginx/gateway.conf.active
-    echo -e "${GREEN}✓ Gateway 配置已更新（HTTP 模式，SSL 待配置）${NC}"
+# 寫入網域相關設定
+sed -i "s|^BACKEND_CORS_ORIGINS=.*|BACKEND_CORS_ORIGINS=http://${DOMAIN},https://${DOMAIN}|" .env.production
+sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=http://${DOMAIN}|" .env.production
+ok ".env.production 檢查通過，網域已設定為 $DOMAIN"
+
+# 4. 防火牆
+step 4 "設定防火牆（ufw）"
+if command -v ufw &>/dev/null; then
+    ufw allow 22/tcp  >/dev/null
+    ufw allow 80/tcp  >/dev/null
+    ufw allow 443/tcp >/dev/null
+    ufw --force enable >/dev/null
+    ok "ufw：22/80/443 已開放"
 else
-    echo -e "${YELLOW}警告: nginx/gateway.conf.sslip 不存在，使用預設 gateway.conf${NC}"
-    cp nginx/gateway.conf nginx/gateway.conf.active
+    echo "ufw 未安裝，跳過（請自行確認 80/443 對外開放）"
 fi
 
-# 7. 啟動服務
-echo -e "${YELLOW}[7/8] 啟動 Docker 服務...${NC}"
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+# 5. 建置映像
+step 5 "建置 Docker 映像（首次約 10–20 分鐘）"
+docker compose -f docker-compose.prod.yml --env-file .env.production build
+ok "映像建置完成"
 
-echo "等待服務啟動..."
-sleep 15
-
-# 檢查服務狀態
+# 6. 啟動服務
+step 6 "啟動服務"
+EMBED_PROFILE=""
+if grep -qE "^EMBEDDING_PROVIDER=ollama" .env.production; then
+    EMBED_PROFILE="--profile embed"
+fi
+docker compose -f docker-compose.prod.yml --env-file .env.production $EMBED_PROFILE up -d
+echo "等待服務健康檢查（60 秒）..."
+sleep 60
 docker compose -f docker-compose.prod.yml ps
+ok "服務已啟動"
 
-# 8. 初始化資料庫
-echo -e "${YELLOW}[8/8] 初始化資料庫...${NC}"
-echo "執行資料庫遷移..."
+# 7. Embedding 模型與資料庫初始化
+step 7 "初始化（embedding 模型 / DB migration / 初始資料）"
+if [[ -n "$EMBED_PROFILE" ]]; then
+    if ! docker compose -f docker-compose.prod.yml exec -T ollama-embed ollama list 2>/dev/null | grep -q bge-m3; then
+        echo "拉取 bge-m3 embedding 模型（約 1.2GB）..."
+        docker compose -f docker-compose.prod.yml exec -T ollama-embed ollama pull bge-m3
+    fi
+    ok "bge-m3 就緒"
+fi
 docker compose -f docker-compose.prod.yml exec -T web alembic upgrade head
+# .dockerignore 排除了 scripts/，映像內無此目錄 → 先複製進容器再執行
+docker cp "$APP_DIR/scripts" "$(docker compose -f docker-compose.prod.yml ps -q web):/code/"
+docker compose -f docker-compose.prod.yml exec -T -e PYTHONPATH=/code web python scripts/initial_data.py
+ok "資料庫初始化完成"
 
-echo "創建初始租戶與超級管理員..."
-docker compose -f docker-compose.prod.yml exec -T web python scripts/initial_data.py
+# 8. 驗證
+step 8 "部署驗證"
+DOMAIN="$DOMAIN" PROTOCOL="http" APP_DIR="$APP_DIR" bash scripts/verify_deployment.sh || true
 
-echo -e "${GREEN}=========================================${NC}"
-echo -e "${GREEN}✓ 部署完成！${NC}"
-echo -e "${GREEN}=========================================${NC}"
-echo ""
-echo -e "${YELLOW}存取網址（HTTP）：${NC}"
-echo -e "  使用者介面: http://app.${DOMAIN}"
-echo -e "  系統方介面: http://admin.${DOMAIN}"
-echo -e "  API 文件: http://api.${DOMAIN}/docs"
-echo -e "  Grafana: http://grafana.${DOMAIN}"
-echo ""
-echo -e "${YELLOW}下一步（可選）：${NC}"
-echo "  1. 配置 SSL 憑證（Certbot + Let's Encrypt）"
-echo "     詳見：docs/LINODE_DEPLOYMENT.md § 7"
-echo "  2. IP 白名單管理介面（建議啟用）"
-echo "  3. 設定自動備份（scripts/backup.sh）"
-echo ""
-echo -e "${YELLOW}查看日誌：${NC}"
-echo "  docker compose -f docker-compose.prod.yml logs -f"
-echo ""
-echo -e "${YELLOW}常用指令：${NC}"
-echo "  重啟服務: docker compose -f docker-compose.prod.yml restart"
-echo "  停止服務: docker compose -f docker-compose.prod.yml stop"
-echo "  查看狀態: docker compose -f docker-compose.prod.yml ps"
-echo ""
+echo -e "\n${GREEN}=========================================${NC}"
 echo -e "${GREEN}部署完成！${NC}"
+echo -e "${GREEN}=========================================${NC}"
+echo "  使用者介面: http://${DOMAIN}"
+echo "  API 健康檢查: http://${DOMAIN}/health"
+echo ""
+echo "下一步："
+echo "  1. 申請 SSL：certbot certonly --standalone -d ${DOMAIN}（先停 gateway）"
+echo "     詳見 docs/LINODE_DEPLOYMENT.md §7"
+echo "  2. 設定每日備份：crontab -e → 0 2 * * * cd $APP_DIR && bash scripts/backup.sh"
+echo "  3. 日誌：docker compose -f docker-compose.prod.yml logs -f"

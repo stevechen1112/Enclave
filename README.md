@@ -1,26 +1,22 @@
-# Enclave 2.0 — 地端企業知識 Control Plane
+# Enclave — 企業知識 Control Plane ＋ MKA 製造業知識助理
 
-> 客戶只面對**一套**身分、權限、知識庫生命週期、問答與維運。  
+> 客戶只面對**一套**身分、權限、知識庫生命週期、問答與維運。
 > 高品質解析、企業來源同步、知識編譯以**可開關的 sidecar 能力包**接入；資料權威與最終授權留在 Enclave。
+> **MKA（Manufacturing Knowledge Assistant）**是長在 Control Plane 上的第一個垂直產品：讓製造業每個職務的人用講話、掃碼、打字把知識放進來、取出來——**每句回答有出處、每次寫入有簽核、與 SOP 的矛盾會被攔下**。
 
-| 項目 | 狀態（2026-08-04） |
+| 項目 | 狀態（2026-08-06） |
 |------|-------------------------|
-| 產品線名稱 | **Enclave 2.0**（Triple Injection：RAGFlow + PipesHub + WeKnora） |
-| 本機核心／計畫可自動化出口 | **已完成**（code 閘門 32/32、檢查點 67/73、false_green=0） |
-| 能力啟用與價值證明 | **已閉環**（見 `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md`／`docs/CAPABILITY_CLAIMS.md`） |
-| AI 問答品質（Point A→B） | **~90%**（主集 128/128、盲測 27/27、對抗 8/8；逐字溯源稽核層 shadow 上線；見 `docs/VISION_POINT_A_TO_B.md`） |
-| UI／UX 2.0 IA | **已落地**（總覽｜問答｜知識｜治理｜系統；知識含 Wiki 瀏覽＋管理員編輯） |
-| 本機 Pilot DB | **單一租戶乾淨庫**（`Demo Tenant`；見下方 §6.3） |
-| DD P0 Correctness Freeze | **已完成**（見 `docs/ENCLAVE_2_0_TECHNICAL_DD.md` §10.1） |
-| DD P1 Architecture Convergence | **主幹完成**（見同 DD §10.2） |
-| DD P2 Productization | **主幹完成**（compose overlays、Wiki 唯讀 UI、Graph API-only、Mobile experimental…） |
-| 商業 GA 宣稱 | **未達**（缺外部滲透；法律／現場簽核屬人工） |
-| 雲端化（Accepted 2026-08-04） | **Phase 1 動工**：StorageBackend 抽象＋S3 相容後端落地（23 測試）；租戶 RLS shadow 上線（27 表 policy、live 繞過攻擊測試全綠；ADR-011/012/013） |
-| 雲端來源 OAuth（SharePoint／Drive） | **本機階段 SKIP**（首發連接器為本機 NAS + BookStack） |
-| 舊 README「Phase 13+ 生產就緒」 | **已作廢**；以下為現況真相 |
+| 產品線 | **Enclave 平台**（Triple Injection：RAGFlow + PipesHub + WeKnora）＋ **MKA 製造業垂直層** |
+| **生產環境** | **已上線：https://kachu.tw**（Linode 8GB 大阪，HTTPS＋自動續期，10 容器全健康；見 `docs/LINODE_MIGRATION_ASSESSMENT.md`） |
+| MKA 願景平台 | **28/28 閘門通過**；三劇本程式化 E2E **26/26**（本機＋生產各跑過一輪） |
+| AI 問答品質（Point A→B） | 主集 128/128、對抗 8/8；**hold-out 盲測 Z3 67/85、Z4 39/50（未見文件約 78–79%）**；Point B「敢亂問」**未達標**（見 `docs/VISION_POINT_A_TO_B.md`、`docs/STAGE_SUMMARY_2026-08-05.md`） |
+| 流程強弱地圖 | `docs/PIPELINE_STRENGTH_MAP.md`（逐環節評級＋證據＋宣稱邊界） |
+| 能力啟用與價值證明 | 已閉環（消融閘門定價；見 `docs/CAPABILITY_CLAIMS.md`——**接線完成 ≠ 價值證明完成**） |
+| 商業 GA 宣稱 | **未達**（缺外部滲透；法律／現場簽核屬人工；生產 PoC 關閉 ClamAV） |
+| 雲端化 | Phase 1 落地：StorageBackend 雙實作、租戶 RLS shadow（27 表）、SSO/MFA/配額/計費程式層完成 |
+| 雲端來源 OAuth（SharePoint／Drive） | 本機階段 SKIP（首發連接器為本機 NAS + BookStack） |
 
-進度管制：`docs/OPEN_GATES.md` · `docs/PLAN_PROGRESS.md` · `docs/DEVELOPMENT_PLAN_TRIPLE_INJECTION.md`  
-能力誠信邊界：`docs/CAPABILITY_CLAIMS.md`（**接線完成 ≠ 價值證明完成**）
+進度管制：`docs/OPEN_GATES.md` · `docs/PLAN_PROGRESS.md` · `docs/DEVELOPMENT_PLAN_TRIPLE_INJECTION.md`
 
 ---
 
@@ -29,13 +25,14 @@
 **是**
 
 - 企業 AI 知識 **Control Plane**：租戶、部門、RBAC、稽核、文件生命週期、主知識索引（pgvector）
+- **MKA 製造業知識助理**：職務即入口的工作台、語音開單、掃碼進場景、表單簽核、師傅知識卡生命週期、SOP 衝突攔截（見 §2）
 - 可選整合三個開源引擎為 sidecar，而不是把三套 UI 拼給客戶
 - **三種販售形態**（同一套程式碼，見 `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md`）：
 
 | 形態 | 說明 | 現況 |
 |------|------|------|
 | **A 地端自管** | 客戶 Compose／air-gap | 本機 Pilot 主路徑 |
-| **B 託管私有雲** | 每客獨立實例（Phase 1 主推） | Runbook＋開通腳本已備；實機待雲端帳號 |
+| **B 託管私有雲** | 每客獨立實例 | **kachu.tw 即為首個實例**（已上線） |
 | **C 多租戶 SaaS** | 共享控制面＋RLS | Phase 2（shadow RLS 已落地） |
 
 **不是**
@@ -43,28 +40,53 @@
 - 不是「已全面 GA、可對所有客戶宣稱零風險上線」
 - 不是必須連 SharePoint／Google 才能進資料（本機資料夾／上傳即可）
 - 不是把資料權威下放給 RAGFlow／PipesHub／WeKnora
+- 不是「亂丟亂問都穩」——未見文件答題 78–79%，重要決策仍須人工核對
 
 ---
 
-## 2. 能力包（Product Packs）
+## 2. MKA 製造業知識助理（首個垂直產品）
 
-| Pack | 環境開關 | 能力 | 本機現況 |
-|------|----------|------|----------|
+**解決的問題**：知識在老師傅腦袋裡、規格在業務的 Excel 裡、SOP 在沒人翻的文件櫃裡。
+
+### 2.1 核心能力
+
+| 能力 | 說明 |
+|------|------|
+| **職務即入口** | 登入後依「租戶＋職能＋部門」動態生成工作台；5 個正式職能模組（規格SOP／報價／異常交接／品質8D／訓練傳承）DB 路由，非 prompt 假裝 |
+| **語音輸入** | OpenAI STT/TTS；語音開報價單、語音異常回報，關鍵欄位標「需確認」不硬猜 |
+| **掃碼進場景** | SceneRegistry 把 opaque QR token 解析成設備場景；之後的問答與表單**自動限定該設備**並預填欄位；未註冊 QR fail-closed |
+| **表單＋簽核** | 報價單／異常報告／交接班：建單→驗證→計算→送審→核准→匯出；樂觀鎖、idempotency、不可變快照 |
+| **公司版型** | 上傳公司自己的 DOCX/XLSX 版型，`{{placeholder}}` 映射，匯出即正式文件 |
+| **師傅知識卡** | 訪談模式：口述→系統抽出步驟/注意事項→草稿；**核准後新人才查得到**（草稿隔離） |
+| **SOP 衝突攔截** | 知識卡送審時與正式 SOP 比對，矛盾（如老做法違反現行禁令）**攔下並攤開**，人工處置後才放行 |
+| **企業寫入護欄** | ERP/CRM/MES adapter fail-closed；DB 化 write guardrail（最小權限、冪等、核准 token、可回滾） |
+
+### 2.2 線上體驗（生產環境）
+
+- 入口：**https://kachu.tw**
+- 測試帳號：`sales / field / master / newcomer / viewer @demo.mka`（密碼統一 `Demo12345`），管理員帳號見主機 `/opt/enclave/.env.production`
+- ** DEMO 劇本**：`docs/MKA_DEMO_QUESTION_SET.md`（**有 PDF 版**；開場白、逐字問題、預期畫面、救場備案，拿到就能上台）
+- 完整測試劇本：`docs/MKA_UX_TEST_SCRIPTS.md`（有 PDF 版；三劇本＋UIUX 觀察點＋權限邊界）
+- 功能驗收矩陣：`docs/MKA_FEATURE_INVENTORY.md` §9
+
+---
+
+## 3. 能力包（Product Packs）
+
+| Pack | 環境開關 | 能力 | 現況 |
+|------|----------|------|------|
 | **Enclave Base** | （永遠開） | 治理、上傳／NAS 進資料、解析管線、混合搜尋、聊天、稽核、備份腳本 | 核心可用 |
-| **Document Intelligence** | `RAGFLOW_ENABLED=true` | DeepDoc／OCR／版面解析（RAGFlow）；**雲端 OCR 增強臂**（`CLOUD_OCR_PROVIDER`，預設關） | Pilot E2E 已驗證 `ragflow/deepdoc`；雲端臂見 §5.4 |
-| **Enterprise Connect** | `PIPESHUB_ENABLED=true` | 企業來源同步與 ACL；**首發 `nas_smb`** | NAS 已認證；SP／Drive OAuth 本機 SKIP |
-| **Knowledge Compiler** | `WEKNORA_ENABLED=true` | Wiki／Graph 編譯與引用（WeKnora） | Wiki 瀏覽＋**管理員編輯 UI** 已上線（`/knowledge/wiki`，編輯建新 revision）；編譯仍 API 觸發（管理員）；Graph 無產品 UI |
-| **Agent Automation** | `AGENT_AUTOMATION_ENABLED` / `REVIEW_QUEUE_ENABLED` | 資料夾監控＋審核佇列（正式）；ReAct／MCP／Sandbox（experimental） | Watcher→Classifier→Review 已接線；工具型 Agent 不進預設導航 |
+| **MKA** | `FIXED_FORM_ENABLED`／`KNOWHOW_CARD_ENABLED`／`MODULE_ROUTER_ENABLED`／`VOICE_STT_ENABLED`／`VOICE_TTS_ENABLED` | §2 全部 | 生產已啟用 |
+| **Document Intelligence** | `RAGFLOW_ENABLED=true` | DeepDoc／OCR／版面解析；雲端 OCR 增強臂（預設關） | Pilot E2E 已驗證；生產 PoC 關閉（8GB RAM 取捨） |
+| **Enterprise Connect** | `PIPESHUB_ENABLED=true` | 企業來源同步與 ACL；首發 `nas_smb` | NAS 已認證；SP／Drive OAuth 本機 SKIP |
+| **Knowledge Compiler** | `WEKNORA_ENABLED=true` | Wiki／Graph 編譯與引用 | Wiki 瀏覽＋管理員編輯 UI 已上線；Graph 無產品 UI |
+| **Agent Automation** | `AGENT_AUTOMATION_ENABLED` / `REVIEW_QUEUE_ENABLED` | 資料夾監控＋審核佇列（正式）；ReAct／MCP／Sandbox（experimental） | Watcher→Classifier→Review 已接線 |
 
-部署建議：
-
-- **Lite** = 只開 Base（最小可演示）
-- **Standard** = Base + 需要的 sidecar packs
-- **Enterprise** = Standard + 觀測／HA 等（見 compose profiles）
+部署建議：**Lite**＝只開 Base · **Standard**＝Base＋需要的 sidecar packs · **Enterprise**＝Standard＋觀測／HA（見 compose profiles）
 
 ---
 
-## 3. 架構總覽
+## 4. 架構總覽
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
@@ -73,7 +95,8 @@
                             │
 ┌───────────────────────────▼─────────────────────────────────┐
 │  Enclave Control Plane (FastAPI + Celery + Beat)            │
-│  · JWT / 部門 PEP / 稽核                                     │
+│  · JWT / 部門 PEP / 稽核 / 配額 / 計費                       │
+│  · MKA：模組路由、場景、表單、知識卡、衝突檢查、審核          │
 │  · Knowledge Gateway (授權 fan-out + 聚合 + citation)       │
 │  · Outbox → 投影到啟用中的 sidecar（失敗可重試，禁假收斂）   │
 │  · Canonical Index: PostgreSQL + pgvector                   │
@@ -90,47 +113,22 @@
 |------|------|
 | `app/main.py` / `app/api/` | API 入口與路由 |
 | `app/gateway/` | Knowledge Gateway、adapters、授權邊界 |
-| `app/services/` | 解析、檢索、connector、wiki、outbox… |
-| `app/services/resource_policy.py` | 統一 Resource PEP |
+| `app/services/` | 解析、檢索、connector、wiki、outbox、**MKA 服務群**（`mka_persistence`／`module_router`／`sop_conflict`／`write_guardrail`／`form_template_service`…） |
 | `app/services/retrieval_facade.py` | 統一 RetrievalFacade |
-| `app/services/source_verifier.py` | Source-grounded 逐字溯源稽核（見 §5.5） |
-| `app/services/document_revocation.py` | 統一撤銷（tombstone + 資源級 deny） |
-| `app/services/credential_vault.py` | Connector 憑證（`var/credentials/`，Fernet） |
+| `app/services/source_verifier.py` | Source-grounded 逐字溯源稽核（見 §6.5） |
+| `app/models/mka.py` | MKA 領域模型（場景／職能／表單／知識卡／審核／事件） |
 | `app/tasks/` | Celery：文件處理、outbox、reconcile、connector poll |
-| `app/agent/` | 資料夾監控／審核佇列（+ experimental 工具型 Agent） |
 | `app/db/migrations/` | **唯一** Alembic migration 鏈 |
-| `frontend/` | Web SPA（Vault Control IA） |
+| `frontend/` | Web SPA（Vault Control IA＋MKA 職能頁面） |
 | `mobile/` | Expo App；**非 GA**（見 `mobile/EXPERIMENTAL.md`） |
 | `compose/` | Compose overlays（見 `compose/README.md`） |
-| `scripts/` | 評測、閘門、ops、`initial_data.py`、帳號腳本 |
-| `docs/` | 計畫、ADR、runbook、UIUX、安全登記 |
-
-### Compose（base 入口 + overlays）
-
-| 檔案 | 用途 |
-|------|------|
-| `docker-compose.yml` | 本機開發最小堆疊（db:`5435`、redis:`6380`） |
-| `docker-compose.profiles.yml` | lite / standard / enterprise |
-| `docker-compose.prod.yml` | 生產硬化 |
-| `compose/image-pins.env` | Sidecar image digest pins |
-| `compose/pack-enabled.env` | Pack flag 與 sidecar 同開 |
-
-本機 Lite：
-
-```bash
-docker compose -f docker-compose.profiles.yml --profile lite up -d
-```
-
-本機 Standard：
-
-```bash
-docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled.env \
-  -f docker-compose.profiles.yml --profile standard up -d
-```
+| `scripts/` | 評測、閘門、ops、`initial_data.py`、部署（`deploy_linode.sh`） |
+| `test-materials/` | MKA 測試語料、版型、語音腳本、E2E 腳組（見其 README） |
+| `docs/` | 計畫、ADR、runbook、UIUX、安全登記、**DEMO 劇本** |
 
 ---
 
-## 4. 資料怎麼進來（不必雲端）
+## 5. 資料怎麼進來（不必雲端）
 
 | 方式 | 說明 | 狀態 |
 |------|------|------|
@@ -139,43 +137,44 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 | SharePoint／Google Drive | 需雲端 OAuth | **本機階段跳過** |
 | Agent 監控資料夾 | 掃描 → 審核 → 索引 | 可用 |
 
-向量索引與文件同庫：**PostgreSQL + pgvector**（本機開發預設 `localhost:5435`，**不是**遠端 Linode，除非 `.env` 另行指向）。
+向量索引與文件同庫：**PostgreSQL + pgvector**（本機開發預設 `localhost:5435`；生產見 `docker-compose.prod.yml`）。
 
 ---
 
-## 5. 完成度稽核結論（2026-08-04）
+## 6. 完成度稽核（2026-08-06 更新）
 
-### 5.1 已真正具備
+### 6.1 已真正具備
 
 - 多租戶文件管線、混合檢索、聊天 SSE、部門權限與 tombstone／撤權
 - Outbox 投影、sidecar 可關、故障不假收斂
-- UI 2.0：角色導覽、知識生命週期（來源→審核→入庫→引用→撤銷）、總覽待辦、**Wiki 瀏覽＋管理員編輯（revision 制）**
+- UI 2.0：角色導覽、知識生命週期、Wiki 瀏覽＋管理員編輯（revision 制）
+- **MKA 全鏈路**：§2 所列能力皆有程式化 E2E 證據（26/26，本機＋生產）
 - NAS connector 認證、retrieval／security／module-disable 等 artifact PASS
-- 三 sidecar 差異化能力逐項啟用並以消融閘門定價（見 §5.4）
-- 嚴格進度閘門：`python scripts/plan_progress_gate.py --write-md --strict`
+- 雲端化 Phase 1：StorageBackend、RLS shadow、SSO/MFA、配額、NewebPay 計費（程式層）
+- 嚴格進度閘門：`plan_progress_gate.py --strict`（47/48，唯一缺外部滲透）、`mka_progress_gate.py --all`（28/28）
 
-### 5.2 刻意未做／不可代勞
+### 6.2 刻意未做／不可代勞
 
-- 外部滲透測試
-- 法律／模型商用授權審查
-- 客戶現場 DR 簽核
+- 外部滲透測試（商業 GA 唯一未勾出口）
+- 法律／模型商用授權審查、客戶現場 DR 簽核
+- 真實客戶 DOCX/XLSX 版型比對、ERP/MES 真實整合、真人 UX 研究、真機弱網噪音測試
 - SharePoint／Drive OAuth（本機 SKIP）
 
-### 5.3 產品完整度缺口
+### 6.3 已知弱點（誠實清單）
 
-| 缺口 | 說明 |
-|------|------|
-| Wiki 編輯限管理員手動修訂 | 瀏覽全角色；管理員可在閱讀頁編輯（新增 revision 不覆寫歷史）；編譯仍由 WeKnora 觸發 |
-| Graph **無生產寫入路徑與產品 UI** | 僅 tests/eval |
-| Connector 表面過寬 | **真實認證僅 `nas_smb` + `bookstack`** |
-| SSO | 程式存在但未掛入產品導航 |
-| Mobile | experimental，無正式 CI |
+逐環節評級與證據見 **`docs/PIPELINE_STRENGTH_MAP.md`**。摘要：
 
-### 5.4 能力啟用與價值證明（2026-08-03 閉環）
+- 未見文件答題 **78–79%**（Z3/Z4 凍結基線）——找錯檔、金額漏招、跨庫干擾為主要失分類
+- 掃描版 PDF 生產不支援（LlamaParse 關閉）；生產 ClamAV 關閉（RAM 取捨）
+- 語音在工廠噪音、中英夾雜料號情境未測
+- 單機單點無 HA；BM25 索引全量記憶體，大庫效能未驗證
+- MKA 工作流僅經自製語料驗證，無 hold-out 盲測證據（Z5 待做）
 
-以 `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md` 逐項啟用三 sidecar 的差異化能力，並以消融閘門證明增量價值；誠信邊界見 `docs/CAPABILITY_CLAIMS.md`。
+### 6.4 能力啟用與價值證明（2026-08-03 閉環）
 
-**已證明（PASS／MARGINAL 有證據）**
+以消融閘門逐項證明 sidecar 差異化能力的增量價值；誠信邊界見 `docs/CAPABILITY_CLAIMS.md`。
+
+**已證明（PASS 有證據）**
 
 | 能力 | 閘門 | 結果 |
 |------|------|------|
@@ -188,110 +187,96 @@ docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled
 | Wiki sole-source 撤權 | CV-WK-06 | PASS——來源撤權後 Wiki 頁對該使用者不可見（嚴格交集 ACL） |
 | 引用 lineage（chunk→頁面 bbox） | B4 | PASS——DeepDoc bbox 串到引用定位 |
 
-**已證明無增量價值（NO_VALUE，停用或維持預設關閉）**
+**已證明無增量價值（NO_VALUE，停用或維持預設關閉）**：RAPTOR 階層摘要、GraphRAG 圖譜檢索、Parent-child chunking、文件模板抽取。
 
-| 能力 | 結論 |
-|------|------|
-| RAPTOR 階層摘要 | 對本語料無檢索增益，不啟用 |
-| GraphRAG 圖譜檢索 | 對本語料問答無增益，維持 eval-only |
-| Parent-child chunking | 無顯著增益 |
-| 文件模板抽取 | 無增益 |
+**掃描件 OCR 品質（CV-RF-01b，五臂消融定案）**：地端 DeepDOC 24.2% 嚴格命中為預設；gemini-3-flash-preview 與 mistral-ocr-latest 並列最佳（30.3%）但未達 +20pp 全語料門檻；雲端 OCR 已接為**選配增強臂**（`CLOUD_OCR_PROVIDER`，僅主解析產出過少時觸發）。
 
-**掃描件 OCR 品質（CV-RF-01b，五臂消融定案）**
-
-| 臂 | 66 欄嚴格命中 | 備註 |
-|----|--------------|------|
-| DeepDOC（地端預設） | 24.2% | 乾淨印刷掃描可用；手寫／拍照 CER 0.8+ |
-| gpt-5.6-luna | 24.2%（Δ=0） | **手寫件輸出自信幻覺**，NO_VALUE |
-| gpt-5.6-terra | 25.8% | INCONCLUSIVE |
-| gemini-3-flash-preview | **30.3%** | 並列最佳；手寫切結書 4/4 全對 |
-| mistral-ocr-latest（OCR 4） | **30.3%** | 並列最佳；最快（586s）、最便宜（$4/千頁）、含 typed blocks＋bbox |
-
-結論：OCR 專精模型 > 通用模型；雲端臂仍未達 +20pp 全語料門檻（剩餘未命中屬真困難樣本）。**預設維持地端 DeepDOC**；雲端 OCR 已接為**選配增強臂**（`.env` 設 `CLOUD_OCR_PROVIDER=gemini|mistral|openai` + 對應 API key，僅在主解析產出過少時觸發，見 `app/services/cloud_ocr.py`）。
-
-### 5.5 AI 問答品質架構（2026-08-04，Point A→B 路線）
+### 6.5 AI 問答品質架構（Point A→B 路線）
 
 目標：問答的正確性、穩定性、可解釋性由**架構**撐住，不靠 prompt 或運氣。總綱見 `docs/VISION_POINT_A_TO_B.md`。
 
-**驗收數字**
+**驗收數字（誠實版）**
 
-| 題庫 | 結果 |
-|------|------|
-| 主黃金集（40＋展開 88＝128 題） | **128/128 = 100%** |
-| 盲測集（8 份未見文件 × 27 題，ground truth 獨立抽取） | **27/27 = 100%** |
-| 對抗集（誘騙／庫外／未來事實） | **8/8 PASS** |
-| 模型消融（Luna／Terra／Sol 同條件＋盲測對決） | 三模型盲測皆 27/27 平手；主模型定案 **gpt-5.6-luna**，備用 Terra，Sol 退場 |
+| 題庫 | 結果 | 性質 |
+|------|------|------|
+| 主黃金集（40＋展開 88＝128 題） | 128/128 | 開發集 |
+| 盲測 Z2（8 份未見文件 × 27 題） | 27/27 | 小樣本，**不得單獨當 Point B** |
+| **盲測 Z3（55 檔 hold-out × 85 題）** | **67 pass／3 fail／15 review** | 凍結基線 |
+| **盲測 Z4（40 檔全新 hold-out × 50 題）** | **39 pass／5 fail／6 review**；拒答 D 類 6/6 | 凍結基線，排除 Z2/Z3 用過檔名與高頻客戶 |
+| 對抗集（誘騙／庫外／未來事實） | 8/8 PASS | — |
+
+**白話**：未見文件約 78–79%；內部示範與試用可以，「隨便丟隨便問都穩」還不行。修洞後禁止重跑 Z3/Z4 主集當證明——須以新 hold-out（Z5）驗證泛化。
 
 **問答管線架構層**（`app/services/`）
 
 | 層 | 模組 | 作用 |
 |----|------|------|
 | 意圖規劃 | `query_planner` / `tool_router` / `multi_step_orchestrator` | QueryPlan 六類意圖驅動多臂檢索；檔名導向 scoped 檢索＋document head 不變式 |
-| 檢索融合 | `retrieval_facade` / gateway fusion | 文件／Wiki／Graph／Connector 統一入口；Voyage rerank-2.5 |
+| 檢索融合 | `retrieval_facade` / gateway fusion | 文件／Wiki／Graph／Connector 統一入口；上下文組裝含跨文件多樣性保護（2026-08-06 修復） |
 | 拒答紀律 | 結構化 refusal（`refusal` in retrieval ctx） | 不可答題強制拒答，不讓 LLM 胡謅 |
-| **逐字溯源稽核** | `source_verifier.py` | 生成後稽核：每條論點須附逐字 `source_quote`，程式化子字串比對檢索片段；`derived` 型別涵蓋換算／欄位對應／摘要（basis_quotes 具結） |
+| **逐字溯源稽核** | `source_verifier.py` | 生成後稽核：每條論點須附逐字 `source_quote`，程式化子字串比對；`derived` 型別涵蓋換算／摘要 |
 
-**Source-grounded 稽核層開關**（`.env`）
-
-| 變數 | 值 | 行為 |
-|------|-----|------|
-| `SOURCE_VERIFY_MODE` | `off`（預設） | 不稽核 |
-| | `shadow`（**目前常駐**） | 照常輸出，事後稽核記 log＋`context["source_verification"]`，收集數據 |
-| | `enforce` | 緩衝→稽核通過才輸出；失敗約束式重生成一次；再失敗只給已驗證重點 |
-| `SOURCE_VERIFY_MODEL` | 預設空＝內部模型 | 稽核專用模型覆寫（現設 `qwen3.6:35b`，本地 Ollama 零邊際成本） |
-
-Shadow 實測：131 次稽核 0 故障；strict 逐字通過率 74.8%，未通過抽樣 **0 條真幻覺**（皆為正確但非逐字表述，已由 derived 型別收斂）。enforce 全域上線待更多 shadow 數據排除 OCR 雜訊假陽性（~1-2%）後決定。
+**Source-grounded 稽核層開關**（`.env`）：`SOURCE_VERIFY_MODE=off|shadow|enforce`（目前常駐 shadow：131 次稽核 0 故障、strict 逐字通過率 74.8%、未通過抽樣 0 條真幻覺；enforce 待更多數據排除 OCR 雜訊假陽性）。
 
 **誠信邊界**：稽核層保證「回答忠實於檢索到的證據」；「檢索到對的證據」由意圖規劃／scoped 檢索／交付閘門負責——兩道牆互補，不互相替代。
 
 ---
 
-## 6. 快速啟動（本機）
+## 7. 部署
 
-### 6.1 本機開發埠（常見）
+### 7.1 生產（Linode 實績）
+
+- **https://kachu.tw** — Linode 8GB／4 vCPU／大阪；Docker Compose（`docker-compose.prod.yml`）10 容器：web／worker／worker-beat／db／redis／gateway(nginx)／frontend／ollama-embed／prometheus／grafana
+- HTTPS：Let's Encrypt（certbot，自動續期 hooks 已設）
+- 一鍵部署腳本：`scripts/deploy_linode.sh`；驗證腳本：`scripts/verify_deployment.sh`
+- 完整評估、上線實績與取捨：`docs/LINODE_MIGRATION_ASSESSMENT.md`
+
+### 7.2 本機 Compose
+
+```bash
+# Lite（最小可演示）
+docker compose -f docker-compose.profiles.yml --profile lite up -d
+
+# Standard（含 sidecar packs）
+docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled.env \
+  -f docker-compose.profiles.yml --profile standard up -d
+
+# 全堆疊（最接近生產的本機驗證路徑）：web:8001 + frontend:3001
+docker compose up -d --build
+```
+
+---
+
+## 8. 快速啟動（本機開發）
+
+### 8.1 本機開發埠（常見）
 
 | 服務 | 位址 |
 |------|------|
-| API（uvicorn） | `http://127.0.0.1:8000` |
-| Web（Vite） | `http://127.0.0.1:5173`（或以 `frontend/vite.config.ts` 預設 `3000`） |
+| API（uvicorn） | `http://127.0.0.1:8000`（MKA 實測期間用 `:8005`） |
+| Web（Vite） | `http://127.0.0.1:5173`（或 `frontend/vite.config.ts` 預設 `3000`） |
 | Postgres（Docker） | `localhost:5435` → 容器 `5432`，DB 名 `enclave` |
 | Redis（Docker） | `localhost:6380` → 容器 `6379` |
-| OpenAPI | `http://127.0.0.1:8000/docs` |
+| OpenAPI | `http://127.0.0.1:8000/api/v1/openapi.json`（`/docs` 生產關閉） |
 
-### 6.2 依賴 + API + 前端
+### 8.2 依賴 + API + 前端
 
 ```bash
 cp .env.example .env
 # 至少：SECRET_KEY、FIRST_SUPERUSER_*、POSTGRES_*、REDIS_*
 
-# 依賴
 docker compose up -d db redis
-
-# Migration（空庫可從頭跑；正式鏈在 app/db/migrations）
 python -m alembic upgrade head
+python scripts/initial_data.py          # 單一 Demo Tenant + superuser
+python scripts/ensure_ux_test_users.py  # Pilot 測試帳號
 
-# 種子：單一 Demo Tenant + superuser（email 來自 .env FIRST_SUPERUSER_EMAIL）
-python scripts/initial_data.py
-
-# Pilot 測試帳號（同租戶）
-python scripts/ensure_ux_test_users.py
-
-# API
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-
-# Worker（文件入庫需要）
 python -m celery -A app.celery_app worker --loglevel=info --pool=solo
-
-# Beat（outbox／reconcile；沒有則投影不收斂）
 python -m celery -A app.celery_app beat --loglevel=info
-
-# 前端
 cd frontend && npm install && npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-### 6.3 清空本機庫並重建單一租戶（Pilot 建議）
-
-測試污染多租戶時，可重建乾淨 Pilot：
+### 8.3 清空本機庫並重建單一租戶（Pilot 建議）
 
 ```bash
 docker exec enclave-db-1 psql -U postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='enclave' AND pid<>pg_backend_pid();"
@@ -305,43 +290,33 @@ python scripts/ensure_ux_test_users.py
 docker exec enclave-redis-1 redis-cli FLUSHALL
 ```
 
-之後知識庫為空，需重新上傳文件或接 NAS，問答才有證據。
+### 8.4 測試帳號
 
-### 6.4 Pilot 測試帳號（同 `Demo Tenant`）
+**平台 Pilot 帳號（本機 `Demo Tenant`）**
 
-| 帳號 | 密碼 | 角色 | 預設導覽 |
+| 帳號 | 密碼 | 角色 |
+|------|------|------|
+| `admin@example.com` | `admin123` | owner（superuser） |
+| `hr_test@enclave.local` | `hr123456` | hr |
+| `employee@example.com` | `employee123` | employee |
+
+**MKA 演示帳號（本機與生產 kachu.tw 通用）**
+
+| 帳號 | 密碼 | 職能 | 對應劇本 |
 |------|------|------|----------|
-| `admin@example.com` | `admin123` | owner（superuser） | 總覽｜問答｜知識｜治理｜系統 |
-| `admin@enclave.local` | （`.env` `FIRST_SUPERUSER_PASSWORD`，預設 `admin123`） | owner | 同上 |
-| `hr_test@enclave.local` | `hr123456` | hr | 問答｜知識｜我的用量 |
-| `employee@example.com` | `employee123` | employee | 問答｜知識 |
+| `sales@demo.mka` | `Demo12345` | 業務 | 劇本 A |
+| `field@demo.mka` | `Demo12345` | 設備 | 劇本 B |
+| `master@demo.mka` | `Demo12345` | 班長（師傅） | 劇本 C |
+| `newcomer@demo.mka` | `Demo12345` | 新人 | 劇本 C 後段 |
+| `viewer@demo.mka` | `Demo12345` | 唯讀 | 權限邊界 |
 
-### 6.5 Compose 一鍵 Lite／Standard／全堆疊
+建立方式：`python test-materials/e2e/setup_test_env.py`（細節見 `test-materials/README.md`）。
 
-```bash
-docker compose -f docker-compose.profiles.yml --profile lite up -d --build
-
-docker compose --env-file compose/image-pins.env --env-file compose/pack-enabled.env \
-  -f docker-compose.profiles.yml --profile standard up -d --build
-```
-
-**容器化全堆疊（最接近生產的本機驗證路徑）**：
+### 8.5 驗證
 
 ```bash
-docker compose up -d --build   # web:8001 + frontend:3001 + db + redis + worker + beat
-docker compose ps              # 確認全部 healthy
-```
-
-瀏覽 `http://localhost:3001`（API 走 nginx 反代 `http://localhost:8001`）。首次啟動後如需 Wiki 演示資料：
-
-```bash
-docker compose exec web python scripts/seed_wiki_from_weknora.py
-```
-
-### 6.6 驗證
-
-```bash
-python scripts/plan_progress_gate.py --write-md --strict
+python scripts/plan_progress_gate.py --write-md --strict   # 主計畫閘門
+python scripts/mka_progress_gate.py --all                  # MKA 閘門（28 項）
 python scripts/preflight_check.py --profile lite
 python scripts/e2e_vertical_slice_full.py
 python scripts/eval_retrieval_gate.py
@@ -349,91 +324,103 @@ python scripts/security_findings_gate.py
 python scripts/certify_connector.py --type nas_smb
 python scripts/ops_lifecycle.py backup
 
-python -m pytest tests/ -q          # 後端全套（含 wiki 整合／雲端 OCR 管線）
-cd frontend && npm test             # 前端 vitest（Wiki 列表／閱讀／編輯流程）
+# MKA 三劇本程式化 E2E（需先 setup＋入庫，見 test-materials/README.md）
+python test-materials/e2e/setup_test_env.py
+python test-materials/e2e/ingest_docs.py
+python test-materials/e2e/e2e_walkthrough.py
+
+python -m pytest tests/ -q          # 後端全套
+cd frontend && npm test             # 前端 vitest
 ```
 
 ---
 
-## 7. Web IA（角色導覽）
+## 9. Web IA（角色導覽）
 
 | 主選單 | 子頁 | 誰看得到 |
 |--------|------|----------|
-| **總覽** | `/overview` | owner／admin |
+| **工作台** | `/job`（職務動態生成） | 全角色（依職能不同） |
 | **問答** | `/ask` | 全角色 |
-| **知識** | 文件／**Wiki**／來源／審核／品質 | 文件、Wiki：可瀏覽知識；來源／審核：管理角色；品質：治理 |
+| **知識** | 文件／Wiki／來源／審核／品質 | 文件、Wiki：可瀏覽知識；來源／審核：管理角色 |
+| **表單** | `/forms/mine`、`/forms/:formKey` | 依職能模組 |
+| **知識卡** | `/knowhow`、`/knowhow/interview` | 依職能模組 |
+| **審核中心** | `/approvals` | 管理角色 |
 | **治理** | 組織／部門／稽核／問答品質 | 治理角色 |
-| **系統** | 能力包／健康／備份／部署 | 系統維運 |
-| **創作** | `/create`（使用者選單，非主軸） | 有創作能力者 |
-| **我的用量** | `/me/usage` | 依角色（如 HR） |
+| **系統** | 能力包／模組／健康／備份／部署 | 系統維運 |
+| **我的用量** | `/me/usage` | 依角色 |
 
-細節與文案原則見 `docs/UIUX_2_0_PLAN.md`、`frontend/README.md`。
+細節見 `docs/UIUX_2_0_PLAN.md`、`frontend/README.md`。
 
 ---
 
-## 8. 核心 API 面（摘要）
+## 10. 核心 API 面（摘要）
 
-完整 OpenAPI：`http://127.0.0.1:8000/docs`
+完整 OpenAPI：`/api/v1/openapi.json`
 
 | 領域 | 前綴 | 備註 |
 |------|------|------|
 | 認證／使用者 | `/api/v1/auth`, `/users` | 登入：`POST /auth/login/access-token` |
 | 文件 | `/documents` | 預設 `limit=100`；前端以分頁累加 |
-| 知識維護 | `/kb-maintenance` | 健康、缺口、分類、備份、integrity |
-| 聊天／生成 | `/chat`, `/generate` | |
+| 聊天／生成 | `/chat`, `/generate` | SSE 串流；支援 `module_key`＋`scene_context` |
+| **MKA** | `/job-modules`, `/job-roles`, `/scene/registry`, `/forms`, `/knowhow`, `/interview`, `/approvals`, `/form-templates`, `/enterprise`, `/mka-metrics` | 見 `docs/MKA_FEATURE_INVENTORY.md` |
 | Knowledge Gateway | `/gateway` | |
 | Connectors | `/connectors` | 首發 NAS |
-| Wiki／Graph | `/wiki`, `/graph` | Wiki 唯讀 UI 已上線；Graph API-only |
-| Agent／審核 | `/agent`, `/agent-approvals` | |
+| Wiki／Graph | `/wiki`, `/graph` | Wiki UI 已上線；Graph API-only |
+| 知識維護 | `/kb-maintenance` | 健康、缺口、分類、備份、integrity |
 | 公司／組織 | `/company`, `/organization` | |
 | 維運／稽核 | `/operations`, `/admin`, `/audit` | |
 
 ---
 
-## 9. 前端與行動端
+## 11. 前端與行動端
 
-**Web（`frontend/`）**  
-React 19 + Vite + Tailwind 4：Vault Control IA（總覽／問答／知識／治理／系統），知識含 Wiki 瀏覽與管理員編輯。單元測試：vitest + testing-library（`npm test`）。詳見 `frontend/README.md`。
+**Web（`frontend/`）**
+React 19 + Vite + Tailwind 4：Vault Control IA＋MKA 職能頁面（動態工作台、表單、知識卡、訪談、審核）。單元測試：vitest（`npm test`）。
 
-**Mobile（`mobile/`）**  
-Expo 子集；**非 2.0 GA 路徑**——見 `mobile/README.md`、`mobile/EXPERIMENTAL.md`。
+**Mobile（`mobile/`）**
+Expo 子集；**非 GA 路徑**——見 `mobile/README.md`、`mobile/EXPERIMENTAL.md`。
 
 ---
 
-## 10. 相關文件
+## 12. 相關文件
 
 | 文件 | 內容 |
 |------|------|
-| `docs/UIUX_2_0_PLAN.md` | UI/UX 規劃書 |
-| `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md` | 能力啟用與價值證明計畫（消融閘門結果） |
-| `docs/CAPABILITY_CLAIMS.md` | 能力宣稱誠信邊界（可宣稱／不可宣稱） |
-| `docs/VISION_POINT_A_TO_B.md` | AI 問答品質願景路線（Point A→B；盲測／消融／逐字溯源稽核） |
-| `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md` | 雲端化與商業產品化中長期計畫（託管私有雲→多租戶 SaaS；參照 UniHR） |
+| **`docs/MKA_DEMO_QUESTION_SET.md`** | **對外 DEMO 表演劇本（有 PDF）** |
+| `docs/MKA_UX_TEST_SCRIPTS.md` | MKA 三劇本完整測試腳本（有 PDF） |
+| `docs/MKA_FEATURE_INVENTORY.md` | MKA 功能驗收矩陣 |
+| **`docs/PIPELINE_STRENGTH_MAP.md`** | **整條流程逐環節強弱地圖（活文件）** |
+| `docs/LINODE_MIGRATION_ASSESSMENT.md` | 雲端化評估＋Linode 上線實績 |
+| `docs/STAGE_SUMMARY_2026-08-05.md` | 階段總結（Z3/Z4 盲測證據與宣稱邊界） |
+| `docs/VISION_POINT_A_TO_B.md` | AI 問答品質願景路線 |
+| `docs/CAPABILITY_CLAIMS.md` | 能力宣稱誠信邊界 |
+| `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md` | 雲端化與商業產品化計畫 |
 | `docs/ENCLAVE_2_0_TECHNICAL_DD.md` | 技術 Due Diligence |
-| `docs/DEVELOPMENT_PLAN_TRIPLE_INJECTION.md` | 主計畫與出口條件 |
 | `docs/OPEN_GATES.md` | 開放／SKIP 閘門 |
 | `docs/PLAN_PROGRESS.md` | 自動進度看板 |
+| `test-materials/README.md` | MKA 測試語料總表與環境操作 |
 | `compose/README.md` | Compose overlays |
 | `frontend/README.md` | Web 路由與開發 |
 | `docs/adr/` | 架構決策記錄 |
-| `docs/runbooks/` | Pilot／Connector runbook |
+| `docs/runbooks/` | Pilot／Connector／託管私有雲 runbook |
 | `docs/security/FINDINGS_REGISTER.md` | 安全發現登記 |
 | `artifacts/*_last_run.json` | 自動化驗收證據 |
 
 ---
 
-## 11. 版本敘事
+## 13. 版本敘事
 
 | 稱呼 | 含義 |
 |------|------|
 | Enclave 1.x（歷史） | 單一知識庫／聊天／生成／Agent 監控 |
-| **Enclave 2.0（現況）** | Control Plane + Triple Injection；UI 2.0 IA（含 Wiki 唯讀瀏覽）；本機核心與能力價值證明已閉環；AI 問答品質架構（意圖規劃＋逐字溯源稽核）上線，盲測 27/27 |
-| Enclave GA（未來） | 2.0 + 外部滲透關閉 + 法律／現場簽核 +（可選）雲端 connector |
-| Enclave Cloud（路線） | 託管私有雲 → 多租戶 SaaS；見 `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md`（Proposed） |
+| Enclave 2.0 | Control Plane + Triple Injection；UI 2.0 IA；能力價值證明閉環；問答品質架構上線 |
+| **Enclave 2.0 + MKA（現況）** | 2.0 之上長出第一個垂直產品：製造業知識助理（職能工作台／語音／掃碼／表單簽核／知識卡／SOP 衝突攔截）；**首個託管實例 kachu.tw 上線**；hold-out 盲測 78–79%，Point B 未達標 |
+| Enclave GA（未來） | 現況 + 外部滲透關閉 + 法律／現場簽核 + Z5 泛化驗證 +（可選）雲端 connector |
+| Enclave Cloud（路線） | 託管私有雲 → 多租戶 SaaS；見 `docs/CLOUD_AND_COMMERCIALIZATION_PLAN.md` |
 
 ---
 
 ## 授權與商用聲明
 
-程式授權見倉庫 `LICENSE`／NOTICE。  
+程式授權見倉庫 `LICENSE`／NOTICE。
 **模型權重、第三方 SaaS、開源依賴的商用條款需另行法律審查**——本 README 不做合規保證。

@@ -11,8 +11,8 @@ export default function GovernanceLayout() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <DomainChrome
-        title="治理"
-        subtitle="誰能看什麼、誰做了什麼、問答品質如何 — 權限與稽核都在這裡。"
+        title="管理"
+        subtitle="誰能用什麼功能、誰動過什麼資料、系統答得好不好 — 都在這裡看。"
       />
       <SubNav items={GOVERNANCE_SUBNAV} />
       <div className="flex-1 overflow-hidden">

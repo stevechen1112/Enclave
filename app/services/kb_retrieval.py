@@ -81,7 +81,12 @@ class KnowledgeBaseRetriever:
         runtime = resolve_runtime_profiles_no_db()
         embed_cfg = runtime.get("embedding", {})
         self._embedding_provider = str(embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))).lower()
-        self._embedding_model = str(embed_cfg.get("model", getattr(settings, "OLLAMA_EMBED_MODEL", "bge-m3")))
+        _default_model = (
+            settings.VOYAGE_MODEL
+            if self._embedding_provider == "voyage"
+            else settings.OLLAMA_EMBED_MODEL
+        )
+        self._embedding_model = str(embed_cfg.get("model", _default_model))
 
         if self._embedding_provider == "ollama":
             self.voyage_client = None  # not needed
@@ -512,12 +517,12 @@ class KnowledgeBaseRetriever:
         authz: Optional[AuthorizationContext] = None,
     ) -> List[Dict[str, Any]]:
         """使用 pgvector 的 cosine distance 進行語意檢索（Phase 0：ACL-aware）。"""
-        from app.tasks.document_tasks import embed_texts
+        from app.services.embedding_cache import embed_query_cached
 
         db = SessionLocal()
         try:
-            # 1. 取得查詢向量（Ollama / Voyage 自動切換）
-            query_embedding = embed_texts([query], input_type="query")[0]
+            # 1. 取得查詢向量（Ollama / Voyage 自動切換；§7.2 query embedding cache）
+            query_embedding = embed_query_cached(query)
 
             # 2. 使用 pgvector cosine distance 搜尋
             query_obj = (

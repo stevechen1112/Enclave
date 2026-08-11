@@ -2,7 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth'
 import Layout from './components/Layout'
-import { defaultHomePath, hasCapability, type Capability } from './navigation/capabilities'
+import type { Capability } from './navigation/capabilities'
+import { useDefaultHomePath, useHasCapability } from './navigation/useCapabilities'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const OverviewPage = lazy(() => import('./pages/OverviewPage'))
@@ -31,6 +32,16 @@ const HealthPage = lazy(() => import('./pages/system/HealthPage'))
 const BackupPage = lazy(() => import('./pages/system/BackupPage'))
 const DeployPage = lazy(() => import('./pages/system/DeployPage'))
 const CreateLayout = lazy(() => import('./pages/create/CreateLayout'))
+const JobHomePage = lazy(() => import('./pages/job/JobHomePage'))
+const TaskWorkspacePage = lazy(() => import('./pages/job/TaskWorkspacePage'))
+const TenantAdminPage = lazy(() => import('./pages/system/TenantAdminPage'))
+const FormPage = lazy(() => import('./pages/forms/FormPage'))
+const FormInstancesPage = lazy(() => import('./pages/forms/FormInstancesPage'))
+const FormInstanceDetailPage = lazy(() => import('./pages/forms/FormInstanceDetailPage'))
+const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'))
+const KnowhowListPage = lazy(() => import('./pages/knowhow/KnowhowListPage'))
+const KnowhowDetailPage = lazy(() => import('./pages/knowhow/KnowhowDetailPage'))
+const InterviewPage = lazy(() => import('./pages/knowhow/InterviewPage'))
 
 function PageLoader() {
   return (
@@ -58,17 +69,19 @@ function CapGuard({
   children: React.ReactNode
   capability: Capability
 }) {
-  const { user } = useAuth()
-  if (!hasCapability(user?.role, capability, user?.is_superuser)) {
-    return <Navigate to={defaultHomePath(user?.role, user?.is_superuser)} replace />
+  const allowed = useHasCapability(capability)
+  const home = useDefaultHomePath()
+  if (!allowed) {
+    return <Navigate to={home} replace />
   }
   return <>{children}</>
 }
 
 function HomeRedirect() {
   const { user, loading } = useAuth()
+  const home = useDefaultHomePath()
   if (loading || !user) return <PageLoader />
-  return <Navigate to={defaultHomePath(user.role, user.is_superuser)} replace />
+  return <Navigate to={home} replace />
 }
 
 function LegacyReportDetailRedirect() {
@@ -78,7 +91,7 @@ function LegacyReportDetailRedirect() {
 
 function AppRoutes() {
   const { token, user, loading } = useAuth()
-  const home = defaultHomePath(user?.role, user?.is_superuser)
+  const home = useDefaultHomePath()
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -139,6 +152,7 @@ function AppRoutes() {
           >
             <Route index element={<Navigate to="modules" replace />} />
             <Route path="modules" element={<ModulesPage />} />
+            <Route path="tenant-admin" element={<TenantAdminPage />} />
             <Route path="health" element={<HealthPage />} />
             <Route path="backup" element={<BackupPage />} />
             <Route path="deploy" element={<DeployPage />} />
@@ -146,6 +160,48 @@ function AppRoutes() {
           </Route>
 
           <Route path="me/usage" element={<UsagePage />} />
+
+          {/* MKA 現場作業（製造業 PWA）：職務入口／報價／審核／師傅經驗庫 */}
+          <Route
+            path="job"
+            element={<CapGuard capability="field_work"><JobHomePage /></CapGuard>}
+          />
+          <Route
+            path="job/tasks/:taskKey"
+            element={<CapGuard capability="field_work"><TaskWorkspacePage /></CapGuard>}
+          />
+          <Route
+            path="quote"
+            element={<Navigate to="/forms/quote" replace />}
+          />
+          <Route
+            path="forms/mine"
+            element={<CapGuard capability="field_work"><FormInstancesPage /></CapGuard>}
+          />
+          <Route
+            path="forms/instances/:instanceId"
+            element={<CapGuard capability="field_work"><FormInstanceDetailPage /></CapGuard>}
+          />
+          <Route
+            path="forms/:formKey"
+            element={<CapGuard capability="field_work"><FormPage /></CapGuard>}
+          />
+          <Route
+            path="approvals"
+            element={<CapGuard capability="field_work"><ApprovalsPage /></CapGuard>}
+          />
+          <Route
+            path="knowhow"
+            element={<CapGuard capability="field_work"><KnowhowListPage /></CapGuard>}
+          />
+          <Route
+            path="knowhow/interview"
+            element={<CapGuard capability="field_work"><InterviewPage /></CapGuard>}
+          />
+          <Route
+            path="knowhow/:id"
+            element={<CapGuard capability="field_work"><KnowhowDetailPage /></CapGuard>}
+          />
 
           {/* V1.1 create workspace — user menu, not primary nav */}
           <Route

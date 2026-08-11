@@ -66,11 +66,11 @@ describe('WikiListPage', () => {
     expect(await screen.findByText('公司制度總覽')).toBeInTheDocument()
     expect(screen.getByText('常見問題')).toBeInTheDocument()
     expect(screen.getByText('摘要')).toBeInTheDocument()
-    expect(screen.getByText('FAQ')).toBeInTheDocument()
+    expect(screen.getByText('常見問答')).toBeInTheDocument()
     expect(screen.getByText('已發布')).toBeInTheDocument()
     expect(screen.getByText('草稿')).toBeInTheDocument()
-    expect(screen.getByText('rev 3')).toBeInTheDocument()
-    expect(screen.getByText('2 頁')).toBeInTheDocument()
+    expect(screen.getByText('版本 3')).toBeInTheDocument()
+    expect(screen.getByText(/2 頁/)).toBeInTheDocument()
   })
 
   it('sends Authorization header from stored token', async () => {
@@ -84,14 +84,14 @@ describe('WikiListPage', () => {
   it('shows empty state when no pages exist', async () => {
     mockFetchOnce([])
     renderList()
-    expect(await screen.findByText('尚未有 Wiki 頁面')).toBeInTheDocument()
+    expect(await screen.findByText('尚未有知識頁')).toBeInTheDocument()
   })
 
   it('shows error toast when fetch fails', async () => {
     mockFetchOnce({}, false)
     renderList()
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('載入 Wiki 頁面失敗'),
+      expect(toast.error).toHaveBeenCalledWith('載入知識頁失敗'),
     )
   })
 
@@ -107,7 +107,7 @@ describe('WikiListPage', () => {
     renderList()
     await screen.findByText('公司制度總覽')
     mockFetchOnce([PAGES[1]])
-    await userEvent.type(screen.getByPlaceholderText('搜尋 Wiki 標題...'), '常見')
+    await userEvent.type(screen.getByPlaceholderText('搜尋知識頁標題…'), '常見')
     await userEvent.click(screen.getByRole('button', { name: '搜尋' }))
     await waitFor(() => {
       const calls = (fetch as ReturnType<typeof vi.fn>).mock.calls

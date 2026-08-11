@@ -12,8 +12,6 @@
 #      See compose/README.md (DD-M10 / DD-M11).
 # ========================================================
 
-version: '3.8'
-
 services:
   # ── Backend API ──
   web:
@@ -52,6 +50,7 @@ services:
       - PIPESHUB_API_KEY=${PIPESHUB_API_KEY:-}
       - WEKNORA_API_KEY=${WEKNORA_API_KEY:-}
       - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
+      - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
     volumes:
       - uploads_data:/code/uploads    # Persist uploaded files only
     depends_on:
@@ -174,6 +173,7 @@ services:
       - PIPESHUB_API_KEY=${PIPESHUB_API_KEY:-}
       - WEKNORA_API_KEY=${WEKNORA_API_KEY:-}
       - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
+      - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
     volumes:
       - uploads_data:/code/uploads    # Shared with web for file processing
     depends_on:
@@ -210,6 +210,9 @@ services:
       dockerfile: Dockerfile
     command: celery -A app.celery_app beat --loglevel=info
     restart: always
+    # beat 不開 HTTP port，停用映像內建的 curl /health 檢查（否則永遠 unhealthy）
+    healthcheck:
+      disable: true
     env_file: .env.production
     environment:
       - APP_ENV=production
@@ -235,6 +238,41 @@ services:
         reservations:
           cpus: '0.05'
           memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ── Ollama Embedding（CPU；EMBEDDING_PROVIDER=ollama 時啟用）──
+  # 啟用方式：docker compose ... --profile embed up -d
+  # 首次啟動後需拉模型：docker compose ... exec ollama-embed ollama pull bge-m3
+  ollama-embed:
+    image: ollama/ollama:0.9.0
+    profiles: ["embed"]
+    restart: always
+    environment:
+      # 常駐模型：預設 keep_alive 5 分鐘會卸載，bge-m3 冷載入約 2 分鐘，
+      # 每次冷載都會讓檢索逾時 → 設 -1 永不卸載（約佔 1.5GB RAM）
+      - OLLAMA_KEEP_ALIVE=-1
+    expose:
+      - "11434"
+    volumes:
+      - ollama_embed_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     logging:
       driver: json-file
       options:
@@ -273,16 +311,17 @@ services:
       - "${GATEWAY_HTTP_PORT:-80}:80"
       - "${GATEWAY_HTTPS_PORT:-443}:443"
     volumes:
-      - ./nginx/gateway.conf:/etc/nginx/conf.d/default.conf:ro
-      # For SSL support (Let's Encrypt):
-      # - /etc/letsencrypt:/etc/letsencrypt:ro
+      # SSL 上線後於 .env.production 設 GATEWAY_CONF=gateway-ssl.conf
+      - ./nginx/${GATEWAY_CONF:-gateway.conf}:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       web:
         condition: service_healthy
       frontend:
         condition: service_started
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:80/"]
+      # /health 在 HTTP/HTTPS 兩種設定下都可用（/ 在 SSL 模式會 301）
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:80/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -355,3 +394,4 @@ volumes:
   uploads_data:
   prometheus_data:
   grafana_data:
+  ollama_embed_data:

@@ -66,6 +66,49 @@ class TestVoiceGateway:
         assert len(fields) == 1
         assert "500" in fields[0]["value"]
 
+    def test_extract_demo_sentence_full_coverage(self):
+        """DEMO 例句：幫台中精機報價，料號 P-100，兩百個，單價一百二 → 四欄位全抓。"""
+        gateway = VoiceInteractionGateway()
+        fields = gateway.extract_confirm_fields(
+            "幫台中精機報價，料號 P-100，兩百個，單價一百二",
+            ["amount", "unit_price", "part_number", "quantity", "customer"],
+        )
+        by_type = {f["type"]: f["value"] for f in fields}
+        assert by_type["customer"] == "台中精機"
+        assert by_type["part_number"] == "P-100"
+        assert by_type["quantity"] == "200"
+        assert by_type["unit_price"] == "120"
+
+    def test_extract_chinese_numeral_variants(self):
+        gateway = VoiceInteractionGateway()
+        fields = gateway.extract_confirm_fields(
+            "單價三千五，數量二十件",
+            ["unit_price", "quantity"],
+        )
+        by_type = {f["type"]: f["value"] for f in fields}
+        assert by_type["unit_price"] == "3500"
+        assert by_type["quantity"] == "20"
+
+    def test_extract_customer_verb_frame(self):
+        gateway = VoiceInteractionGateway()
+        fields = gateway.extract_confirm_fields(
+            "給大立光電開單",
+            ["customer"],
+        )
+        assert len(fields) == 1
+        assert fields[0]["value"] == "大立光電"
+
+    def test_extract_amount_not_confused_with_unit_price(self):
+        """總價與單價是不同型別，可同時抽取。"""
+        gateway = VoiceInteractionGateway()
+        fields = gateway.extract_confirm_fields(
+            "總價 24000 元，單價 120 元",
+            ["amount", "unit_price"],
+        )
+        by_type = {f["type"]: f["value"] for f in fields}
+        assert by_type["amount"] == "24000"
+        assert by_type["unit_price"] == "120"
+
     def test_transcribe_requires_authz(self):
         gateway = VoiceInteractionGateway()
         with pytest.raises(ValueError, match="AuthorizationContext"):
@@ -283,55 +326,176 @@ class TestApprovalStateMachine:
         assert not ApprovalTransition.can_transition(ApprovalState.EXECUTED, ApprovalState.PENDING)
 
 
-# ── P1-4 Module Router ──
+# ── P1-4 Module Router（DB-backed 契約）──
 
 class TestModuleRouter:
-    def test_default_modules_registered(self):
-        router = get_module_router()
+    @pytest.fixture()
+    def db(self):
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.pool import StaticPool
+
+        import app.models  # noqa: F401 - register relationship targets
+        from app.db.base_class import Base
+        from app.models.mka import JobModule, TenantModuleBinding
+
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(
+            engine, tables=[JobModule.__table__, TenantModuleBinding.__table__]
+        )
+        session = sessionmaker(bind=engine)()
+        try:
+            yield session
+        finally:
+            session.close()
+            engine.dispose()
+
+    def test_canonical_modules_seeded_from_db(self, db):
+        router = get_module_router(db=db)
         modules = router.list_modules()
-        assert "procurement" in modules
-        assert "sales" in modules
-        assert "warehouse" in modules
-        assert "production" in modules
-        assert "quality" in modules
-        assert "finance" in modules
-        assert "hr" in modules
+        for key in (
+            "spec_sop",
+            "sales_quote",
+            "incident_handover",
+            "quality_8d",
+            "training_knowhow",
+        ):
+            assert key in modules
 
-    def test_get_module(self):
-        router = get_module_router()
-        module = router.get_module("procurement")
+    def test_get_module(self, db):
+        router = get_module_router(db=db)
+        module = router.get_module("sales_quote")
         assert module is not None
-        assert module.label == "採購管理"
-        assert "purchase_order" in module.forms
+        assert module.label == "業務報價"
+        assert "quote" in module.forms
 
-    def test_get_available_modules_no_authz(self):
-        router = get_module_router()
+    def test_get_available_modules_no_authz(self, db):
+        router = get_module_router(db=db)
         modules = router.get_available_modules(authz=None)
         assert modules == []
 
-    def test_get_available_modules_with_authz(self):
-        router = get_module_router()
+    def _bind_all(self, db, tenant_id):
+        """新租戶 opt-in：測試用，為指定租戶啟用全部 canonical 模組。"""
+        from app.models.mka import JobModule, TenantModuleBinding
+
+        for m in db.query(JobModule).filter(JobModule.tenant_id.is_(None)).all():
+            db.add(TenantModuleBinding(
+                tenant_id=tenant_id, module_key=m.module_key,
+                enabled=True, license_state="active", config_json={},
+            ))
+        db.flush()
+
+    def test_get_available_modules_with_authz(self, db):
+        router = get_module_router(db=db)
         authz = MagicMock()
-        authz.roles = ["procurement", "owner"]
+        authz.tenant_id = uuid4()
+        authz.roles = ["employee"]
         authz.department_id = None
+        self._bind_all(db, authz.tenant_id)
         modules = router.get_available_modules(authz)
         module_names = [m.name for m in modules]
-        assert "procurement" in module_names
+        assert "sales_quote" in module_names
+        assert "spec_sop" in module_names
 
-    def test_get_retrieval_scope(self):
-        router = get_module_router()
+    def test_get_available_modules_no_binding_means_opt_in(self, db):
+        """新租戶無 binding → 看不到任何全域模組（opt-in 語意）。"""
+        router = get_module_router(db=db)
+        authz = MagicMock()
+        authz.tenant_id = uuid4()
+        authz.roles = ["employee"]
+        authz.department_id = None
+        assert router.get_available_modules(authz) == []
+
+    def test_get_available_modules_role_filtered(self, db):
+        router = get_module_router(db=db)
+        authz = MagicMock()
+        authz.tenant_id = uuid4()
+        authz.roles = ["no_such_role"]
+        authz.department_id = None
+        assert router.get_available_modules(authz) == []
+
+    # ── 真實 AuthorizationContext 契約（role_ids／department_ids）──
+    # 回歸防護：router 曾只讀 stub 屬性 roles/department_id，
+    # 導致 chat runtime 傳入真實 AuthorizationContext 時模組 ACL 全部誤判為無權。
+
+    def _real_authz(self, roles, departments=None):
+        from app.core.authorization import AuthorizationContext
+
+        return AuthorizationContext(
+            tenant_id=uuid4(),
+            subject_id=uuid4(),
+            role_ids=list(roles),
+            department_ids=list(departments or []),
+        )
+
+    def test_real_authorization_context_employee_gets_modules(self, db):
+        router = get_module_router(db=db)
+        authz = self._real_authz(["employee"])
+        self._bind_all(db, authz.tenant_id)
+        names = [m.name for m in router.get_available_modules(authz)]
+        assert "sales_quote" in names
+        assert "spec_sop" in names
+
+    def test_real_authorization_context_viewer_gets_no_modules(self, db):
+        router = get_module_router(db=db)
+        authz = self._real_authz(["viewer"])
+        assert router.get_available_modules(authz) == []
+
+    def test_real_authorization_context_workspace_entries(self, db):
+        router = get_module_router(db=db)
+        authz = self._real_authz(["employee"])
+        self._bind_all(db, authz.tenant_id)
+        entries = router.workspace_entries(authz)
+        paths = {e["path"] for e in entries}
+        assert "/job/tasks/quote" in paths
+
+    def test_real_authorization_context_department_acl(self, db):
+        from app.models.mka import JobModule, TenantModuleBinding
+
+        dept_id = uuid4()
+        row = JobModule(
+            tenant_id=None,
+            module_key="dept_only",
+            name="部門限定",
+            status="enabled",
+            allowed_roles=["employee"],
+            allowed_departments=[str(dept_id)],
+        )
+        db.add(row)
+        db.flush()
+
+        router = get_module_router(db=db)
+        outsider = self._real_authz(["employee"], departments=[uuid4()])
+        self._bind_all(db, outsider.tenant_id)
+        names = [m.name for m in router.get_available_modules(outsider)]
+        assert "dept_only" not in names
+
+        insider = self._real_authz(["employee"], departments=[dept_id])
+        db.add(TenantModuleBinding(
+            tenant_id=insider.tenant_id, module_key="dept_only",
+            enabled=True, license_state="active", config_json={},
+        ))
+        db.flush()
+        names = [m.name for m in router.get_available_modules(insider)]
+        assert "dept_only" in names
+
+    def test_get_retrieval_scope(self, db):
+        router = get_module_router(db=db)
         authz = MagicMock()
         authz.department_id = None
-        scope = router.get_retrieval_scope("procurement", authz)
-        assert "category" in scope
-        assert "採購" in scope["category"]
+        scope = router.get_retrieval_scope("spec_sop", authz)
+        assert scope.get("doc_type") == ["sop", "spec"]
 
-    def test_get_forms_for_module(self):
-        router = get_module_router()
-        forms = router.get_forms_for_module("sales")
+    def test_get_forms_for_module(self, db):
+        router = get_module_router(db=db)
+        forms = router.get_forms_for_module("sales_quote")
         assert "quote" in forms
 
-    def test_get_tools_for_module(self):
-        router = get_module_router()
-        tools = router.get_tools_for_module("warehouse")
-        assert "kb_search" in tools
+    def test_get_tools_for_module(self, db):
+        router = get_module_router(db=db)
+        tools = router.get_tools_for_module("sales_quote")
+        assert "price_lookup" in tools

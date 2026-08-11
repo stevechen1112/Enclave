@@ -10,6 +10,7 @@ Redis 不可用時自動放行，不阻擋正常使用。
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import Optional, Tuple
 
@@ -33,7 +34,11 @@ class RateLimiter:
         elif getattr(settings, "REDIS_HOST", None):
             host = settings.REDIS_HOST
             port = int(getattr(settings, "REDIS_PORT", 6379))
-            self._redis_url = f"redis://{host}:{port}/2"
+            # production 的 Redis 有密碼（compose 以 REDIS_PASSWORD 注入），
+            # 不帶密碼連線會被 NOAUTH 拒絕，限流器退化為常放行
+            pwd = os.environ.get("REDIS_PASSWORD", "")
+            auth = f":{pwd}@" if pwd else ""
+            self._redis_url = f"redis://{auth}{host}:{port}/2"
         else:
             self._redis_url = getattr(settings, "CELERY_BROKER_URL", "redis://localhost:6379/2")
         self._redis: Optional[redis.Redis] = None

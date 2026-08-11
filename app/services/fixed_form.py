@@ -317,6 +317,171 @@ def _create_default_schemas() -> Dict[str, FixedFormSchema]:
     )
     schemas["purchase_order"] = po_form
 
+    # 現場異常回報（MKA-P3 模組 C 產品切片）
+    incident_form = FixedFormSchema(
+        name="incident_report",
+        version="1.0",
+        description="現場異常回報單",
+        require_approval=True,
+        approver_roles=["owner", "admin"],
+        fields=[
+            FormField(name="equipment_id", label="設備編號", type=FieldType.TEXT, required=True),
+            FormField(name="location", label="發生位置／產線", type=FieldType.TEXT, required=True),
+            FormField(name="occurred_at", label="發生時間", type=FieldType.DATE, required=True),
+            FormField(name="category", label="異常類別", type=FieldType.SELECT,
+                      options=["設備故障", "品質異常", "安全事件", "停機", "其他"], required=True),
+            FormField(name="severity", label="嚴重程度", type=FieldType.SELECT,
+                      options=["輕微（可繼續生產）", "中等（需注意）", "嚴重（已停機）"], required=True),
+            FormField(name="description", label="異常狀況描述", type=FieldType.TEXT, required=True),
+            FormField(name="immediate_action", label="已採取的緊急處置", type=FieldType.TEXT, required=False),
+            FormField(name="reporter", label="回報人", type=FieldType.TEXT, required=True),
+        ],
+    )
+    schemas["incident_report"] = incident_form
+
+    # 交接班紀錄（MKA-P3 模組 C）
+    handover_form = FixedFormSchema(
+        name="shift_handover",
+        version="1.0",
+        description="交接班紀錄",
+        require_approval=True,
+        approver_roles=["owner", "admin"],
+        fields=[
+            FormField(name="shift_date", label="班次日期", type=FieldType.DATE, required=True),
+            FormField(name="shift", label="班次", type=FieldType.SELECT,
+                      options=["早班", "中班", "晚班"], required=True),
+            FormField(name="line", label="產線／區域", type=FieldType.TEXT, required=True),
+            FormField(name="outgoing", label="交班人", type=FieldType.TEXT, required=True),
+            FormField(name="incoming", label="接班人", type=FieldType.TEXT, required=True),
+            FormField(name="production_summary", label="本班生產狀況", type=FieldType.TEXT, required=True),
+            FormField(name="pending_issues", label="未完成事項／待追蹤", type=FieldType.TEXT, required=False),
+            FormField(name="equipment_notes", label="設備注意事項", type=FieldType.TEXT, required=False),
+        ],
+    )
+    schemas["shift_handover"] = handover_form
+
+    # 會議／拜訪紀錄
+    schemas["meeting_visit"] = FixedFormSchema(
+        name="meeting_visit",
+        version="1.0",
+        description="會議／拜訪紀錄",
+        require_approval=False,
+        approver_roles=["owner", "admin"],
+        fields=[
+            FormField(name="customer_id", label="客戶", type=FieldType.TEXT, required=True),
+            FormField(name="visit_date", label="日期", type=FieldType.DATE, required=True),
+            FormField(name="attendees", label="與會者", type=FieldType.TEXT, required=True),
+            FormField(name="purpose", label="目的", type=FieldType.TEXT, required=True),
+            FormField(name="summary", label="摘要", type=FieldType.TEXT, required=True),
+            FormField(name="next_actions", label="後續行動", type=FieldType.TEXT, required=False),
+        ],
+    )
+
+    # 設備維修
+    schemas["equipment_repair"] = FixedFormSchema(
+        name="equipment_repair",
+        version="1.0",
+        description="設備維修紀錄",
+        require_approval=True,
+        approver_roles=["owner", "admin"],
+        fields=[
+            FormField(name="equipment_id", label="設備編號", type=FieldType.TEXT, required=True),
+            FormField(name="equipment_model", label="機型", type=FieldType.TEXT, required=False),
+            FormField(name="fault_symptom", label="故障現象", type=FieldType.TEXT, required=True),
+            FormField(name="root_cause", label="原因分析", type=FieldType.TEXT, required=False),
+            FormField(name="repair_action", label="維修處置", type=FieldType.TEXT, required=True),
+            FormField(name="parts_used", label="更換零件", type=FieldType.TEXT, required=False),
+            FormField(name="technician", label="維修人員", type=FieldType.TEXT, required=True),
+            FormField(name="completed_at", label="完成日", type=FieldType.DATE, required=True),
+        ],
+    )
+
+    # 請款單
+    schemas["payment_request"] = FixedFormSchema(
+        name="payment_request",
+        version="1.0",
+        description="請款單",
+        require_approval=True,
+        approver_roles=["owner", "finance"],
+        fields=[
+            FormField(name="customer", label="客戶", type=FieldType.TEXT, required=True),
+            FormField(name="invoice_no", label="發票／對帳單號", type=FieldType.TEXT, required=True),
+            FormField(name="amount", label="請款金額", type=FieldType.AMOUNT, required=True, min_value=0),
+            FormField(name="due_date", label="收款期限", type=FieldType.DATE, required=True),
+            FormField(name="description", label="說明", type=FieldType.TEXT, required=False),
+        ],
+    )
+
+    # 8D／CAPA
+    schemas["quality_8d"] = FixedFormSchema(
+        name="quality_8d",
+        version="1.0",
+        description="8D／CAPA",
+        require_approval=True,
+        approver_roles=["owner", "admin", "quality"],
+        fields=[
+            FormField(name="customer_id", label="客戶／客訴來源", type=FieldType.TEXT, required=True),
+            FormField(name="part_number", label="料號", type=FieldType.PART_NUMBER, required=True),
+            FormField(name="problem", label="問題描述", type=FieldType.TEXT, required=True),
+            FormField(name="containment", label="圍堵措施（D3）", type=FieldType.TEXT, required=True),
+            FormField(name="root_cause", label="根因（D4）", type=FieldType.TEXT, required=True),
+            FormField(name="corrective_action", label="矯正措施（D5）", type=FieldType.TEXT, required=True),
+            FormField(name="owner", label="責任人", type=FieldType.TEXT, required=True),
+            FormField(name="due_date", label="完成期限", type=FieldType.DATE, required=True),
+        ],
+    )
+    schemas["capa"] = FixedFormSchema(
+        name="capa",
+        version="1.0",
+        description="CAPA 追蹤",
+        require_approval=True,
+        approver_roles=["owner", "admin", "quality"],
+        fields=[
+            FormField(name="related_8d", label="關聯 8D 編號", type=FieldType.TEXT, required=False),
+            FormField(name="action", label="改善行動", type=FieldType.TEXT, required=True),
+            FormField(name="owner", label="責任人", type=FieldType.TEXT, required=True),
+            FormField(name="due_date", label="期限", type=FieldType.DATE, required=True),
+            FormField(name="status_note", label="進度說明", type=FieldType.TEXT, required=False),
+            FormField(name="effectiveness", label="有效性驗證", type=FieldType.TEXT, required=False),
+        ],
+    )
+
+    # 新人訓練 checklist
+    schemas["training_checklist"] = FixedFormSchema(
+        name="training_checklist",
+        version="1.0",
+        description="新人訓練 Checklist",
+        require_approval=True,
+        approver_roles=["owner", "admin"],
+        fields=[
+            FormField(name="trainee", label="受訓人", type=FieldType.TEXT, required=True),
+            FormField(name="job_role", label="職務", type=FieldType.TEXT, required=True),
+            FormField(name="required_docs", label="必讀文件", type=FieldType.TEXT, required=True),
+            FormField(name="quiz_score", label="情境測驗分數", type=FieldType.NUMBER, required=False, min_value=0, max_value=100),
+            FormField(name="common_mistakes", label="常見錯誤複習", type=FieldType.TEXT, required=False),
+            FormField(name="mentor", label="指導人", type=FieldType.TEXT, required=True),
+            FormField(name="completed_at", label="完成日", type=FieldType.DATE, required=False),
+        ],
+    )
+
+    # 工作日報（職能任務平台 Phase 6：現場職能）
+    schemas["daily_report"] = FixedFormSchema(
+        name="daily_report",
+        version="1.0",
+        description="工作日報",
+        require_approval=False,
+        approver_roles=["owner", "admin"],
+        fields=[
+            FormField(name="report_date", label="日期", type=FieldType.DATE, required=True),
+            FormField(name="shift", label="班次", type=FieldType.SELECT,
+                      options=["早班", "中班", "晚班", "常日班"], required=True),
+            FormField(name="line", label="產線／區域", type=FieldType.TEXT, required=True),
+            FormField(name="work_summary", label="今日工作內容", type=FieldType.TEXT, required=True),
+            FormField(name="issues", label="異常／待追蹤", type=FieldType.TEXT, required=False),
+            FormField(name="tomorrow_plan", label="明日計畫", type=FieldType.TEXT, required=False),
+        ],
+    )
+
     return schemas
 
 

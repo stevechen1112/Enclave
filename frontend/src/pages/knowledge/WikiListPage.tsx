@@ -1,14 +1,16 @@
 /**
- * Wiki 列表頁（唯讀 Beta）
+ * 知識頁列表（唯讀，試用中）
  *
- * /knowledge/wiki — 列出目前角色可見的 Auto-Wiki 頁面。
+ * /knowledge/wiki — 列出目前角色可見的知識頁。
  * 可見性由後端嚴格交集 ACL 決定（所有來源文件可讀才可見）。
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BookOpen, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
+import AsyncState from '../../components/AsyncState'
+import PageHeader from '../../components/PageHeader'
 
 interface WikiPageSummary {
   id: string
@@ -21,26 +23,33 @@ interface WikiPageSummary {
 
 const PAGE_TYPE_LABELS: Record<string, string> = {
   summary: '摘要',
-  faq: 'FAQ',
+  faq: '常見問答',
   guide: '指南',
 }
 
-const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  published: { label: '已發布', cls: 'bg-green-50 text-green-600' },
-  draft: { label: '草稿', cls: 'bg-gray-100 text-gray-500' },
+const STATUS_LABELS: Record<string, { label: string; chip: string }> = {
+  published: { label: '已發布', chip: 'chip-success' },
+  draft: { label: '草稿', chip: 'chip-neutral' },
 }
 
 export default function WikiListPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [pages, setPages] = useState<WikiPageSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') ?? '')
+  const [search, setSearch] = useState(searchParams.get('q') ?? '')
 
   const fetchPages = useCallback(async () => {
     setLoading(true)
+    setError(null)
     const token = localStorage.getItem('token')
-    if (!token) return
+    if (!token) {
+      setLoading(false)
+      setError('尚未登入，請先登入後再試。')
+      return
+    }
     const params = new URLSearchParams()
     if (search) params.set('q', search)
     try {
@@ -50,7 +59,8 @@ export default function WikiListPage() {
       if (!res.ok) throw new Error()
       setPages(await res.json())
     } catch {
-      toast.error('載入 Wiki 頁面失敗')
+      setError('載入知識頁失敗')
+      toast.error('載入知識頁失敗')
     } finally {
       setLoading(false)
     }
@@ -62,81 +72,71 @@ export default function WikiListPage() {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <BookOpen className="w-6 h-6 text-blue-600" />
-            <h1 className="text-xl font-bold text-gray-900">Wiki</h1>
-            <span className="text-sm text-gray-400">{pages.length} 頁</span>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-              Beta
-            </span>
-          </div>
-        </div>
+      <div className="mx-auto max-w-5xl px-4 py-6 md:px-8">
+        <PageHeader
+          variant="section"
+          title="知識頁"
+          subtitle={`由知識編譯器從已審核文件自動整理產生 · ${pages.length} 頁`}
+          actions={<span className="chip-highlight">試用中</span>}
+          className="mb-6"
+        />
 
-        <div className="flex gap-3 mb-5">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="mb-5 flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
             <input
               type="text"
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && setSearch(searchInput)}
-              placeholder="搜尋 Wiki 標題..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              placeholder="搜尋知識頁標題…"
+              className="input pl-10"
+              aria-label="搜尋知識頁標題"
             />
           </div>
           <button
+            type="button"
             onClick={() => setSearch(searchInput)}
-            className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
+            className="btn-outline"
           >
             搜尋
           </button>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          </div>
-        ) : pages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-            <BookOpen className="w-12 h-12 mb-3 opacity-30" />
-            <p className="text-sm">
-              {search ? '沒有符合條件的 Wiki 頁面' : '尚未有 Wiki 頁面'}
-            </p>
-            <p className="text-xs text-gray-300 mt-2">
-              Wiki 頁由知識編譯器從已審核文件自動編譯產生
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
+        <AsyncState
+          loading={loading}
+          error={error}
+          onRetry={fetchPages}
+          empty={!error && pages.length === 0}
+          emptyTitle={search ? '沒有符合條件的知識頁' : '尚未有知識頁'}
+          emptyDescription="知識頁由知識編譯器從已審核文件自動編譯產生"
+        >
+          <div className="space-y-3">
             {pages.map(p => {
-              const st = STATUS_LABELS[p.status] ?? { label: p.status, cls: 'bg-gray-100 text-gray-500' }
+              const st = STATUS_LABELS[p.status] ?? { label: p.status, chip: 'chip-neutral' }
               return (
-                <div
+                <button
                   key={p.id}
+                  type="button"
                   onClick={() => navigate(`/knowledge/wiki/${p.id}`)}
-                  className="flex items-center gap-4 bg-white border rounded-xl px-4 py-3 hover:border-blue-200 hover:shadow-sm transition cursor-pointer"
+                  className="card-interactive flex w-full items-center gap-4 px-4 py-4 text-left animate-rise-in"
                 >
-                  <BookOpen className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-gray-900 truncate">{p.title}</h3>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{p.slug}</p>
-                  </div>
-                  <div className="flex-shrink-0 flex items-center gap-2">
-                    <span className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-50 text-blue-600">
-                      {PAGE_TYPE_LABELS[p.page_type] ?? p.page_type}
-                    </span>
-                    <span className={`inline-block px-2 py-0.5 text-[10px] font-medium rounded-full ${st.cls}`}>
-                      {st.label}
-                    </span>
-                    <span className="text-[11px] text-gray-400">rev {p.active_revision}</span>
-                  </div>
-                </div>
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft">
+                    <BookOpen className="h-5 w-5 text-accent" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-base font-semibold text-ink">{p.title}</span>
+                    <span className="mt-1 block text-sm text-muted">版本 {p.active_revision}</span>
+                  </span>
+                  <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    <span className="chip-accent">{PAGE_TYPE_LABELS[p.page_type] ?? p.page_type}</span>
+                    <span className={st.chip}>{st.label}</span>
+                  </span>
+                </button>
               )
             })}
           </div>
-        )}
+        </AsyncState>
       </div>
     </div>
   )

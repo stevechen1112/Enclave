@@ -93,13 +93,14 @@ describe('WikiDetailPage', () => {
     expect(await screen.findByText('summary-kb2')).toBeInTheDocument()
   })
 
-  it('redirects to list with toast when page missing or forbidden', async () => {
+  it('shows error state with retry when page missing or forbidden', async () => {
     mockFetchOnce({}, false)
     renderDetail()
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith('Wiki 頁面不存在或無權限檢視'),
+      expect(toast.error).toHaveBeenCalledWith('知識頁不存在或無權限檢視'),
     )
-    expect(screen.getByTestId('location')).toHaveTextContent('/knowledge/wiki')
+    expect(await screen.findByText('知識頁不存在或無權限檢視')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /重試/ })).toBeInTheDocument()
   })
 
   it('admin sees edit button and saves via PATCH', async () => {
@@ -116,7 +117,7 @@ describe('WikiDetailPage', () => {
     )
     await userEvent.click(screen.getByRole('button', { name: '儲存' }))
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('已儲存（新增 revision）'),
+      expect(toast.success).toHaveBeenCalledWith('已儲存（新增版本）'),
     )
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(url).toBe('/api/v1/wiki/pages/p1')

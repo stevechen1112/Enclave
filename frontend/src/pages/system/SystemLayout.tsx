@@ -12,7 +12,7 @@ export default function SystemLayout() {
     <div className="flex h-full flex-col overflow-hidden">
       <DomainChrome
         title="系統"
-        subtitle="能力包、健康、備份與部署 — 營運人員的基礎設施面板。"
+        subtitle="功能開關、資料健檢、備份與版本更新 — 平時不用動，有狀況再來。"
       />
       <SubNav items={SYSTEM_SUBNAV} />
       <div className="flex-1 overflow-hidden">

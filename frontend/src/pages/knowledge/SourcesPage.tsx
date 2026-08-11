@@ -1,6 +1,6 @@
 /**
  * Knowledge sources hub — NAS + folder monitoring (V1 certified path only)
- * Steps: path → scope → department/review → test → enable (UIUX §9.6)
+ * Steps: path → scope → department/review → check → enable (UIUX §9.6)
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -37,7 +37,7 @@ type AgentStatus = {
   pending_review_count: number
 }
 
-const STEPS = ['路徑', '掃描範圍', '部門與審核', '測試連線', '啟用'] as const
+const STEPS = ['路徑', '掃描範圍', '部門與審核', '檢查路徑', '啟用'] as const
 
 export default function SourcesPage() {
   const [loading, setLoading] = useState(true)
@@ -112,10 +112,10 @@ export default function SourcesPage() {
     }
     setBusy(true)
     try {
-      // Soft test: validate path shape client-side; backend may reject on create
-      const ok = rootPath.length >= 3
+      // 僅前端格式檢查；後端目前無即時連線測試端點，實際連線於啟用後首次同步時驗證
+      const ok = rootPath.trim().length >= 3
       setTestOk(ok)
-      if (ok) toast.success('路徑格式檢查通過（實際連線於啟用時驗證）')
+      if (ok) toast.success('路徑格式正確（實際連線會在啟用後首次同步時驗證）')
       else toast.error('路徑過短，請確認')
     } finally {
       setBusy(false)
@@ -130,6 +130,19 @@ export default function SourcesPage() {
       await load()
     } catch (e: unknown) {
       toast.error(formatErrorWithTrace(parseApiError(e, '同步失敗')))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const pauseResume = async (id: string, action: 'pause' | 'resume') => {
+    setBusy(true)
+    try {
+      await api.post(`/connectors/${id}/${action}`)
+      toast.success(action === 'pause' ? '已暫停此來源' : '已恢復此來源')
+      await load()
+    } catch (e: unknown) {
+      toast.error(formatErrorWithTrace(parseApiError(e, action === 'pause' ? '暫停失敗' : '恢復失敗')))
     } finally {
       setBusy(false)
     }
@@ -156,35 +169,32 @@ export default function SourcesPage() {
     step === 4
 
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mx-auto max-w-4xl space-y-8">
         <PageHeader
           variant="section"
           title="來源"
           subtitle="V1 已認證：手動上傳（文件頁）與 NAS／監控資料夾。SharePoint、Google Drive 尚未認證。"
           actions={(
-            <div className="flex flex-wrap items-center gap-2">
-              <Link
-                to="/knowledge/documents"
-                className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover"
-              >
+            <>
+              <Link to="/knowledge/documents" className="btn-primary">
                 手動上傳文件
               </Link>
               <button
                 type="button"
                 onClick={load}
-                className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-line px-3 py-2 text-sm"
+                className="btn-outline"
                 aria-label="重新整理來源"
               >
                 <RefreshCw className="h-4 w-4" aria-hidden /> 重新整理
               </button>
-            </div>
+            </>
           )}
         />
 
         <AsyncState loading={loading} error={error} onRetry={load}>
           <>
-            <section className="rounded-xl border border-line bg-surface p-5 space-y-4">
+            <section className="card space-y-4 p-5">
               <div className="flex items-center gap-2">
                 <Plug className="h-5 w-5 text-accent" aria-hidden />
                 <h2 className="font-semibold text-ink">新增 NAS／本機路徑</h2>
@@ -195,8 +205,7 @@ export default function SourcesPage() {
                   <li
                     key={label}
                     className={clsx(
-                      'rounded-full px-2.5 py-1 text-xs',
-                      i === step ? 'bg-accent text-white' : i < step ? 'bg-emerald-50 text-emerald-800' : 'bg-wash text-muted',
+                      i === step ? 'chip-accent' : i < step ? 'chip-success' : 'chip-neutral',
                     )}
                   >
                     {i + 1}. {label}
@@ -205,52 +214,61 @@ export default function SourcesPage() {
               </ol>
 
               {step === 0 && (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <input
-                    className="rounded-lg border border-line px-3 py-2 text-sm min-h-11"
-                    placeholder="名稱"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    aria-label="來源名稱"
-                  />
-                  <input
-                    className="rounded-lg border border-line px-3 py-2 text-sm sm:col-span-2 min-h-11"
-                    placeholder="本機或 UNC 路徑，例如 C:\\shares\\docs"
-                    value={rootPath}
-                    onChange={e => { setRootPath(e.target.value); setTestOk(false) }}
-                    aria-label="根路徑"
-                  />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="src-name" className="input-label">名稱</label>
+                    <input
+                      id="src-name"
+                      className="input"
+                      placeholder="名稱"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="src-path" className="input-label">根路徑</label>
+                    <input
+                      id="src-path"
+                      className="input"
+                      placeholder="本機或 UNC 路徑，例如 C:\shares\docs"
+                      value={rootPath}
+                      onChange={e => { setRootPath(e.target.value); setTestOk(false) }}
+                    />
+                  </div>
                 </div>
               )}
               {step === 1 && (
-                <label className="block text-sm">
-                  <span className="text-muted">最大掃描檔案數</span>
+                <div>
+                  <label htmlFor="src-max" className="input-label">最大掃描檔案數</label>
                   <input
+                    id="src-max"
                     type="number"
                     min={1}
                     max={5000}
-                    className="mt-1 w-full rounded-lg border border-line px-3 py-2 min-h-11"
+                    className="input"
                     value={maxFiles}
                     onChange={e => setMaxFiles(Number(e.target.value) || 200)}
                   />
-                </label>
+                </div>
               )}
               {step === 2 && (
                 <div className="space-y-3 text-sm">
-                  <label className="block">
-                    <span className="text-muted">部門提示（選填）</span>
+                  <div>
+                    <label htmlFor="src-dept" className="input-label">部門提示（選填）</label>
                     <input
-                      className="mt-1 w-full rounded-lg border border-line px-3 py-2 min-h-11"
+                      id="src-dept"
+                      className="input"
                       value={departmentHint}
                       onChange={e => setDepartmentHint(e.target.value)}
                       placeholder="例如：人資／法務"
                     />
-                  </label>
-                  <label className="flex items-center gap-2 min-h-11">
+                  </div>
+                  <label className="flex min-h-11 items-center gap-2">
                     <input
                       type="checkbox"
                       checked={requireReview}
                       onChange={e => setRequireReview(e.target.checked)}
+                      className="h-5 w-5"
                     />
                     入庫前需審核（建議開啟）
                   </label>
@@ -259,26 +277,29 @@ export default function SourcesPage() {
               {step === 3 && (
                 <div className="space-y-3">
                   <p className="text-sm text-muted">路徑：<span className="font-mono text-ink">{rootPath || '—'}</span></p>
+                  <p className="rounded-xl bg-wash px-3 py-2 text-sm text-muted">
+                    這一步只檢查路徑格式是否正確，還不會真的連線；實際連線會在啟用後首次同步時驗證。
+                  </p>
                   <button
                     type="button"
                     disabled={busy}
                     onClick={runTest}
-                    className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 text-sm hover:bg-wash"
+                    className="btn-outline"
                   >
-                    測試連線／路徑
+                    檢查路徑格式
                   </button>
-                  {testOk && <p className="text-xs text-emerald-700">檢查通過，可進入啟用</p>}
+                  {testOk && <p className="text-sm text-success">格式正確，可進入啟用</p>}
                 </div>
               )}
               {step === 4 && (
-                <div className="space-y-2 text-sm text-muted">
+                <div className="space-y-3 text-sm text-muted">
                   <p>將建立來源「{name}」，路徑 {rootPath}，掃描上限 {maxFiles}。</p>
                   <p>審核：{requireReview ? '需要' : '略過'} · 部門提示：{departmentHint || '無'}</p>
                   <button
                     type="button"
                     disabled={busy || !testOk}
                     onClick={createNas}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
+                    className="btn-primary"
                   >
                     <Plus className="h-4 w-4" aria-hidden /> 啟用來源
                   </button>
@@ -290,7 +311,7 @@ export default function SourcesPage() {
                   type="button"
                   disabled={step === 0 || busy}
                   onClick={() => setStep(s => Math.max(0, s - 1))}
-                  className="min-h-11 rounded-lg border border-line px-3 py-2 text-sm disabled:opacity-40"
+                  className="btn-outline"
                 >
                   上一步
                 </button>
@@ -299,7 +320,7 @@ export default function SourcesPage() {
                     type="button"
                     disabled={!canNext || busy}
                     onClick={() => setStep(s => Math.min(4, s + 1))}
-                    className="min-h-11 rounded-lg bg-accent px-3 py-2 text-sm text-white disabled:opacity-40"
+                    className="btn-primary"
                   >
                     下一步
                   </button>
@@ -310,7 +331,7 @@ export default function SourcesPage() {
             <section className="space-y-3">
               <h2 className="font-semibold text-ink">已建立來源</h2>
               {connectors.length === 0 ? (
-                <p className="text-sm text-muted">尚未建立 NAS 來源</p>
+                <p className="card p-6 text-sm text-muted">尚未建立 NAS 來源</p>
               ) : (
                 connectors.map(c => (
                   <SourceHealth
@@ -327,24 +348,26 @@ export default function SourcesPage() {
                           type="button"
                           disabled={busy}
                           onClick={() => sync(c.id)}
-                          className="rounded-lg border border-line px-2 py-1 text-xs min-h-11"
+                          className="btn-outline px-3"
                           aria-label={`同步 ${c.name}`}
                         >
-                          <RefreshCw className="inline h-4 w-4" aria-hidden /> 同步
+                          <RefreshCw className="h-4 w-4" aria-hidden /> 同步
                         </button>
                         <button
                           type="button"
-                          onClick={() => api.post(`/connectors/${c.id}/pause`).then(load)}
-                          className="rounded-lg border border-line px-2 py-1 min-h-11"
-                          aria-label="暫停"
+                          disabled={busy}
+                          onClick={() => pauseResume(c.id, 'pause')}
+                          className="icon-btn"
+                          aria-label={`暫停 ${c.name}`}
                         >
                           <Pause className="h-4 w-4" aria-hidden />
                         </button>
                         <button
                           type="button"
-                          onClick={() => api.post(`/connectors/${c.id}/resume`).then(load)}
-                          className="rounded-lg border border-line px-2 py-1 min-h-11"
-                          aria-label="恢復"
+                          disabled={busy}
+                          onClick={() => pauseResume(c.id, 'resume')}
+                          className="icon-btn"
+                          aria-label={`恢復 ${c.name}`}
                         >
                           <Play className="h-4 w-4" aria-hidden />
                         </button>
@@ -355,24 +378,20 @@ export default function SourcesPage() {
               )}
             </section>
 
-            <section className="rounded-xl border border-line bg-surface p-5 space-y-4">
+            <section className="card space-y-4 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <FolderOpen className="h-5 w-5 text-accent" aria-hidden />
                   <div>
                     <h2 className="font-semibold text-ink">監控資料夾</h2>
-                    <p className="text-xs text-muted">啟用後自動發現新檔並送入審核（若已開啟審核佇列）</p>
+                    <p className="text-sm text-muted">啟用後自動發現新檔並送入審核（若已開啟審核佇列）</p>
                   </div>
                 </div>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={toggleMonitor}
-                  className={
-                    agent?.watcher_running
-                      ? 'inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-danger px-3 py-2 text-sm text-white'
-                      : 'inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white'
-                  }
+                  className={agent?.watcher_running ? 'btn-danger' : 'btn-primary'}
                 >
                   {agent?.watcher_running ? (
                     <><Square className="h-4 w-4" aria-hidden /> 停止監控</>
@@ -382,7 +401,7 @@ export default function SourcesPage() {
                 </button>
               </div>
 
-              <ul className="divide-y rounded-lg border border-line">
+              <ul className="divide-y divide-line/70 rounded-2xl border border-line">
                 {folders.length === 0 && (
                   <li className="px-4 py-6 text-sm text-muted">尚未設定監控資料夾。</li>
                 )}
@@ -390,14 +409,14 @@ export default function SourcesPage() {
                   <li key={f.id} className="px-4 py-3 text-sm">
                     <p className="font-medium text-ink">{f.display_name || f.folder_path}</p>
                     {f.display_name && <p className="font-mono text-xs text-muted">{f.folder_path}</p>}
-                    <p className="mt-1 text-xs text-muted">
+                    <p className="mt-1 text-sm text-muted">
                       {f.is_active ? '啟用' : '停用'} · 已掃描 {f.total_files_watched}
                       {f.last_scan_at && ` · 上次 ${new Date(f.last_scan_at).toLocaleDateString()}`}
                     </p>
                   </li>
                 ))}
               </ul>
-              <p className="text-xs text-muted">
+              <p className="text-sm text-muted">
                 <Link to="/advanced/agent-wizard" className="text-accent underline-offset-2 hover:underline">
                   開啟監控資料夾進階精靈
                 </Link>

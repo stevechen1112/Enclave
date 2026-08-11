@@ -2,26 +2,34 @@
 
 @layer base {
   :root {
-    /* Vault Control tokens — slate + teal enterprise */
+    /* 暖工坊 Warm Workshop — 傳產友善的現代設計語言 */
     --color-accent: #0f766e;
     --color-accent-hover: #0d9488;
-    --color-ink: #0f172a;
-    --color-muted: #64748b;
-    --color-line: #e2e8f0;
-    --color-wash: #eef2f6;
+    --color-accent-soft: #e2f2f0;
+    --color-accent-ink: #0b4f4a;
+    --color-highlight: #b45309;
+    --color-highlight-soft: #fdf1de;
+    --color-ink: #1c1917;
+    --color-muted: #78716c;
+    --color-line: #e8e4df;
+    --color-wash: #f6f4f1;
     --color-surface: #ffffff;
     --color-danger: #dc2626;
-    --color-sidebar: #0f172a;
-    --color-sidebar-elevated: #1e293b;
-    --color-sidebar-line: #334155;
-    --color-sidebar-fg: #f8fafc;
-    --color-sidebar-muted: #94a3b8;
-    --color-sidebar-hover: #1e293b;
+    --color-danger-soft: #fdeaea;
+    --color-success: #15803d;
+    --color-success-soft: #e6f4ea;
+    --color-sidebar: #1c1917;
+    --color-sidebar-elevated: #292524;
+    --color-sidebar-line: #44403c;
+    --color-sidebar-fg: #fafaf9;
+    --color-sidebar-muted: #a8a29e;
+    --color-sidebar-hover: #292524;
     --color-sidebar-active: #0f766e;
   }
 
   html {
     font-family: "Noto Sans TC", "Segoe UI", sans-serif;
+    font-size: 16px;
   }
 
   body {
@@ -29,8 +37,8 @@
     color: var(--color-ink);
     background-color: var(--color-wash);
     background-image:
-      radial-gradient(ellipse 90% 55% at 0% -10%, rgba(15, 118, 110, 0.08), transparent 55%),
-      radial-gradient(ellipse 70% 45% at 100% 0%, rgba(51, 65, 85, 0.06), transparent 50%);
+      radial-gradient(ellipse 90% 55% at 0% -10%, rgba(15, 118, 110, 0.07), transparent 55%),
+      radial-gradient(ellipse 70% 45% at 100% 0%, rgba(180, 83, 9, 0.05), transparent 50%);
     background-attachment: fixed;
   }
 
@@ -43,12 +51,19 @@
 @theme {
   --color-accent: var(--color-accent);
   --color-accent-hover: var(--color-accent-hover);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-accent-ink: var(--color-accent-ink);
+  --color-highlight: var(--color-highlight);
+  --color-highlight-soft: var(--color-highlight-soft);
   --color-ink: var(--color-ink);
   --color-muted: var(--color-muted);
   --color-line: var(--color-line);
   --color-wash: var(--color-wash);
   --color-surface: var(--color-surface);
   --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
   --color-sidebar: var(--color-sidebar);
   --color-sidebar-elevated: var(--color-sidebar-elevated);
   --color-sidebar-line: var(--color-sidebar-line);
@@ -58,6 +73,8 @@
   --color-sidebar-active: var(--color-sidebar-active);
   --font-display: "Source Serif 4", "Noto Sans TC", serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --shadow-card: 0 1px 2px rgba(28, 25, 23, 0.05), 0 4px 16px -8px rgba(28, 25, 23, 0.08);
+  --shadow-lift: 0 2px 4px rgba(28, 25, 23, 0.06), 0 12px 32px -12px rgba(28, 25, 23, 0.18);
 }
 
 .font-display {
@@ -65,11 +82,77 @@
   letter-spacing: -0.01em;
 }
 
+/* ===== 共用元件 class：全站統一 building blocks，禁止各頁自刻 ===== */
+@layer components {
+  /* 卡片 */
+  .card {
+    @apply rounded-2xl border border-line/70 bg-surface shadow-card;
+  }
+  .card-interactive {
+    @apply rounded-2xl border border-line/70 bg-surface shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift hover:border-accent/40 cursor-pointer;
+  }
+
+  /* 按鈕：全部 ≥44px 觸控目標 */
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-accent-hover hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-outline {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line bg-surface px-5 text-sm font-semibold text-ink transition-all duration-150 hover:border-accent/50 hover:bg-accent-soft/40 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-muted transition-colors hover:bg-wash hover:text-ink disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  /* 大主按鈕（現場／主要 CTA） */
+  .btn-hero {
+    @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-accent px-8 text-base font-semibold text-white shadow-md transition-all duration-150 hover:bg-accent-hover hover:shadow-lift active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* 圖示鈕：≥44px */
+  .icon-btn {
+    @apply inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-muted transition-colors hover:bg-wash hover:text-ink disabled:opacity-40;
+  }
+
+  /* 狀態 chip */
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
+  }
+  .chip-accent { @apply inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-ink; }
+  .chip-highlight { @apply inline-flex items-center gap-1.5 rounded-full bg-highlight-soft px-3 py-1 text-xs font-semibold text-highlight; }
+  .chip-success { @apply inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success; }
+  .chip-danger { @apply inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-3 py-1 text-xs font-semibold text-danger; }
+  .chip-neutral { @apply inline-flex items-center gap-1.5 rounded-full bg-wash px-3 py-1 text-xs font-semibold text-muted; }
+
+  /* 表單 */
+  .input {
+    @apply min-h-11 w-full rounded-xl border border-line bg-surface px-4 text-[15px] text-ink placeholder:text-muted/70 transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20;
+  }
+  .input-label {
+    @apply mb-1.5 block text-sm font-semibold text-ink;
+  }
+
+  /* 分段頁籤（pill 式，取代底線 tabs） */
+  .seg-tabs {
+    @apply inline-flex max-w-full gap-1 overflow-x-auto rounded-2xl border border-line/70 bg-surface p-1.5 shadow-card;
+  }
+  .seg-tab {
+    @apply min-h-11 shrink-0 rounded-xl px-5 text-sm font-semibold text-muted transition-all hover:text-ink;
+  }
+  .seg-tab-active {
+    @apply min-h-11 shrink-0 rounded-xl bg-accent px-5 text-sm font-semibold text-white shadow-sm;
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a8a29e; }
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(4px); }
@@ -77,4 +160,12 @@
 }
 .animate-fade-in {
   animation: fade-in 0.28s ease-out both;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-rise-in {
+  animation: rise-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

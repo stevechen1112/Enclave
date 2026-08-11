@@ -136,11 +136,18 @@ class Settings(BaseSettings):
     VOICE_TTS_ENABLED: bool = False          # 文字轉語音（TTS）輸出
     VOICE_STT_PROVIDER: str = "openai"       # openai | azure | local
     VOICE_TTS_PROVIDER: str = "openai"       # openai | azure | local
-    VOICE_STT_MODEL: str = "whisper-1"        # OpenAI Whisper model name
-    VOICE_TTS_MODEL: str = "tts-1"           # OpenAI TTS model name
-    VOICE_TTS_VOICE: str = "alloy"            # OpenAI TTS voice
+    VOICE_STT_MODEL: str = "gpt-transcribe"         # 2026 最高精度 STT（gpt-transcribe 精度最高，gpt-4o-mini-transcribe CP 最佳）
+    VOICE_TTS_MODEL: str = "gpt-4o-mini-tts"         # 2026 最新 TTS（GPT-4o mini 驅動，語調自然）
+    VOICE_TTS_VOICE: str = "alloy"            # TTS 語音（alloy/echo/fable/onyx/nova/shimmer）
     VOICE_MAX_AUDIO_SECONDS: int = 120       # 單次語音輸入上限（秒）
+    VOICE_MAX_AUDIO_BYTES: int = 25 * 1024 * 1024  # 上傳位元組上限（120 秒無損 WAV 立體聲約 21MB）
     VOICE_DRAFT_FIRST: bool = True           # 音訊轉寫先進 draft，不可直接回答（§6.8 驗收）
+    VOICE_STT_COST_PER_SECOND: float = 0.0   # STT 每秒成本（依部署方案設定；§13.4 COGS）
+
+    # Query embedding cache（ENGINEERING_PLAN §7.2 P0 補強）
+    EMBEDDING_CACHE_ENABLED: bool = True
+    EMBEDDING_CACHE_TTL_SECONDS: int = 86400
+    EMBEDDING_CACHE_MAX_ENTRIES: int = 10000  # Redis 不可用時的程序內 fallback 上限
 
     # Fixed Form Schema（稽核文件 §11.3）
     # 完成不等於 LLM 生成 Markdown，而是 schema + required fields + deterministic calculations
@@ -155,7 +162,7 @@ class Settings(BaseSettings):
     AGENT_APPROVAL_REQUIRE_FOR_MUTATING: bool = True  # mutating tool 預設需 approval（§6.8）
 
     # 職能模組 Router（稽核文件 §10 P1）
-    MODULE_ROUTER_ENABLED: bool = False
+    MODULE_ROUTER_ENABLED: bool = True
 
     # ── P2：Know-how 與長文件 ──
     # Know-how Card（稽核文件 §7.4 P0、§11.4）
@@ -221,6 +228,7 @@ class Settings(BaseSettings):
     NEWEBPAY_TEST_MODE: bool = True
 
     # ── CG-OBS：Sentry + Langfuse ──
+    METRICS_INTERNAL_ONLY: bool = True  # production 下 /metrics 僅允許內網存取
     SENTRY_DSN: str = ""
     SENTRY_ENVIRONMENT: str = ""
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1

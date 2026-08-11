@@ -58,9 +58,8 @@ export default function AuditLogsPage() {
       <div className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">稽核</h2>
-            <p className="text-sm text-muted">誰對知識與權限做了什麼</p>
-            <p className="text-sm text-gray-500">追蹤系統所有操作記錄</p>
+            <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">操作紀錄</h2>
+            <p className="text-sm text-muted">誰在什麼時候動過什麼資料，都記在這裡</p>
           </div>
           <div className="flex items-center gap-2">
             <button

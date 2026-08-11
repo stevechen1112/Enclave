@@ -153,10 +153,16 @@ class AuthorizationContext:
         department_ids: List[UUID] = []
         if user.department_id:
             department_ids.append(user.department_id)
-            # 向上走訪祖先部門
+            # 向上走訪祖先部門；深度上限防止部門樹成環時請求卡死
             current = getattr(user, "department", None)
             seen: Set[UUID] = {user.department_id}
-            while current and current.parent_id and current.parent_id not in seen:
+            max_depth = 32
+            while (
+                current
+                and current.parent_id
+                and current.parent_id not in seen
+                and len(department_ids) < max_depth
+            ):
                 department_ids.append(current.parent_id)
                 seen.add(current.parent_id)
                 current = current.parent

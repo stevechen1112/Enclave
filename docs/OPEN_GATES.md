@@ -1,5 +1,7 @@
 # 仍開放閘門（整份計畫未閉環項）
 
+> **流程強弱整合視圖**：`docs/PIPELINE_STRENGTH_MAP.md`（逐環節評級＋證據＋宣稱邊界；本文件是閘門清單，強弱判讀看那份）。
+
 同步來源：`DEVELOPMENT_PLAN_TRIPLE_INJECTION.md`、`docs/PLAN_PROGRESS.md`、`artifacts/plan_progress_last_run.json`。  
 能力啟用／增量價值閘門（CV-*）：見 `docs/CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md`（與下方商業 GA 人工閘門互補；舊 checkbox PASS 不自動等同 CV PASS）。
 
@@ -43,6 +45,26 @@
 
 ```bash
 python scripts/plan_progress_gate.py --write-md --strict
+```
+
+## MKA（製造業知識助理）狀態
+
+> 2026-08-06 **願景補齊驗證**：`mka_progress_gate.py --all` → **28/28 PASS**；migration head=`mka_p2_vision_platform_001`；執行中 API `:8005` OpenAPI 已含 scene registry／job-roles／templates／enterprise／metrics／interview。
+> 本輪可程式項：SceneRegistry 正式 migration＋管理 API；Scene→表單預填／聊天檢索；JobRole 指派＋五正式模組 DB 路由；動態 JobHome；公司 DOCX/XLSX 版型；表單 instance 清單／詳情；訪談建卡；真 Document SOP 衝突；ERP/CRM/MES fail-closed adapter＋DB write guardrail；MKA 事件指標；刪除死代碼 `pages/quote|incident`。詳見 `docs/MKA_FEATURE_INVENTORY.md` §9 驗收矩陣。
+
+| 類別 | 項目 | 狀態 |
+|------|------|------|
+| 程式 | MKA 願景平台＋28 gates（含 runtime OpenAPI） | ✅ 已驗證（2026-08-06） |
+| 程式 | 動態職能工作台／模組管理／表單歷程／訪談 UI | ✅ 已驗證（2026-08-06） |
+| 不可代勞 | 真實客戶 DOCX／XLSX 版型比對驗收 | ❌ 需客戶檔案 |
+| 不可代勞 | ERP／MES 真實規格與憑證 | ❌ 外部 gate |
+| 不可代勞 | 三角色 UX 研究／任務測試（MKA-UX-*） | ❌ 需真人訪談 |
+| 不可代勞 | 真機＋弱網＋噪音 E2E | ❌ 需真實手機 |
+| 不可代勞 | Design Partner UAT | ❌ 需真實客戶 |
+| 不可代勞 | Cloud pentest／法律簽核 | ❌ 同下方人工閘門 |
+
+```bash
+python scripts/mka_progress_gate.py --all   # MKA 獨立閘門（不混入主計畫統計）
 ```
 
 ## 目前狀態（自動閘門）

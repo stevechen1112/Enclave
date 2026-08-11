@@ -1,17 +1,18 @@
 /**
- * Wiki 閱讀頁（唯讀 Beta）
+ * 知識頁閱讀頁（試用中）
  *
  * /knowledge/wiki/:id — Markdown 內容渲染、來源引用（citation_map → 文件詳情）、
- *                       backlinks。ACL 由後端把關，無權限一律 404。
+ *                       反向連結。ACL 由後端把關，無權限一律 404。
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ArrowLeft, BookOpen, FileText, Link2, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../../auth'
+import AsyncState from '../../components/AsyncState'
 
 interface Citation {
   document_id?: string
@@ -32,6 +33,12 @@ interface WikiPageDetail {
   backlinks: string[]
 }
 
+const PAGE_TYPE_LABELS: Record<string, string> = {
+  summary: '摘要',
+  faq: '常見問答',
+  guide: '指南',
+}
+
 export default function WikiDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -39,32 +46,38 @@ export default function WikiDetailPage() {
   const canEdit = !!user && (user.is_superuser || user.role === 'owner' || user.role === 'admin')
   const [page, setPage] = useState<WikiPageDetail | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    const fetchPage = async () => {
-      setLoading(true)
-      const token = localStorage.getItem('token')
-      if (!token) return
-      try {
-        const res = await fetch(`/api/v1/wiki/pages/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) throw new Error()
-        setPage(await res.json())
-      } catch {
-        toast.error('Wiki 頁面不存在或無權限檢視')
-        navigate('/knowledge/wiki')
-      } finally {
-        setLoading(false)
-      }
+  const fetchPage = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    const token = localStorage.getItem('token')
+    if (!token) {
+      setLoading(false)
+      setError('尚未登入，請先登入後再試。')
+      return
     }
-    fetchPage()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    try {
+      const res = await fetch(`/api/v1/wiki/pages/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error()
+      setPage(await res.json())
+    } catch {
+      setError('知識頁不存在或無權限檢視')
+      toast.error('知識頁不存在或無權限檢視')
+    } finally {
+      setLoading(false)
+    }
   }, [id])
+
+  useEffect(() => {
+    fetchPage()
+  }, [fetchPage])
 
   const startEdit = () => {
     if (!page) return
@@ -89,7 +102,7 @@ export default function WikiDetailPage() {
       if (!res.ok) throw new Error()
       setPage({ ...page, title: editTitle, content: editContent })
       setEditing(false)
-      toast.success('已儲存（新增 revision）')
+      toast.success('已儲存（新增版本）')
     } catch {
       toast.error('儲存失敗')
     } finally {
@@ -97,140 +110,135 @@ export default function WikiDetailPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-full">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-      </div>
-    )
-  }
-
-  if (!page) return null
-
   return (
     <div className="h-full overflow-y-auto">
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        <button
-          onClick={() => navigate('/knowledge/wiki')}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" /> 返回 Wiki 列表
-        </button>
+      <AsyncState loading={loading} error={error} onRetry={fetchPage} empty={false}>
+        {page && (
+          <div className="mx-auto max-w-4xl px-4 py-6 md:px-8">
+            <button
+              type="button"
+              onClick={() => navigate('/knowledge/wiki')}
+              className="btn-ghost mb-4 -ml-3"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden /> 返回知識頁列表
+            </button>
 
-        <div className="bg-white border rounded-xl p-5 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-blue-500" />
-              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
-                {page.page_type}
-              </span>
-              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
-                Beta
-              </span>
+            <div className="card mb-4 p-5 animate-fade-in">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-accent" aria-hidden />
+                  <span className="chip-accent">{PAGE_TYPE_LABELS[page.page_type] ?? page.page_type}</span>
+                  <span className="chip-highlight">試用中</span>
+                </div>
+                {canEdit && !editing && (
+                  <button
+                    type="button"
+                    onClick={startEdit}
+                    className="btn-outline"
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden /> 編輯
+                  </button>
+                )}
+              </div>
+              {editing ? (
+                <input
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  className="input mt-3 font-semibold"
+                  aria-label="知識頁標題"
+                />
+              ) : (
+                <h1 className="mt-3 font-display text-xl font-semibold text-ink md:text-2xl">{page.title}</h1>
+              )}
             </div>
-            {canEdit && !editing && (
-              <button
-                onClick={startEdit}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 border rounded-lg px-2.5 py-1.5 transition"
-              >
-                <Pencil className="w-3.5 h-3.5" /> 編輯
-              </button>
+
+            <div className="card mb-4 p-5">
+              {editing ? (
+                <div>
+                  <textarea
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    rows={18}
+                    className="input min-h-0 w-full p-3 font-mono text-sm"
+                    aria-label="知識頁內容"
+                  />
+                  <p className="mt-2 text-sm text-muted">
+                    儲存會建立新版本，不覆寫歷史；下次編譯會產生更新的版本。
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="btn-primary"
+                    >
+                      {saving ? '儲存中…' : '儲存'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(false)}
+                      disabled={saving}
+                      className="btn-outline"
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="prose prose-sm max-w-none text-ink">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {page.content}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+
+            {page.citation_map && page.citation_map.length > 0 && (
+              <div className="card mb-4 p-5">
+                <h2 className="mb-3 text-sm font-semibold text-ink">來源引用</h2>
+                <div className="space-y-2">
+                  {page.citation_map.map((c, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-xs font-bold text-accent-ink">
+                        {i + 1}
+                      </span>
+                      {c.document_id ? (
+                        <Link
+                          to={`/knowledge/documents/${c.document_id}`}
+                          className="flex min-h-11 items-center gap-1.5 text-accent hover:underline"
+                        >
+                          <FileText className="h-4 w-4" aria-hidden />
+                          {c.title || c.filename || '來源文件'}
+                        </Link>
+                      ) : (
+                        <span className="flex min-h-11 items-center text-ink">{c.title || c.filename || `來源 ${i + 1}`}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {page.backlinks && page.backlinks.length > 0 && (
+              <div className="card p-5">
+                <h2 className="mb-1 text-sm font-semibold text-ink">提到此頁的其他知識頁</h2>
+                <p className="mb-3 text-sm text-muted">點擊可在列表中搜尋該頁</p>
+                <div className="flex flex-wrap gap-2">
+                  {page.backlinks.map((b, i) => (
+                    <Link
+                      key={i}
+                      to={`/knowledge/wiki?q=${encodeURIComponent(b)}`}
+                      className="chip-neutral min-h-11 hover:bg-accent-soft hover:text-accent-ink"
+                    >
+                      <Link2 className="h-3.5 w-3.5" aria-hidden /> {b}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
-          {editing ? (
-            <input
-              value={editTitle}
-              onChange={e => setEditTitle(e.target.value)}
-              className="w-full text-lg font-bold text-gray-900 border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          ) : (
-            <>
-              <h1 className="text-lg font-bold text-gray-900">{page.title}</h1>
-              <p className="text-xs text-gray-400 mt-1">{page.slug}</p>
-            </>
-          )}
-        </div>
-
-        <div className="bg-white border rounded-xl p-5 mb-4">
-          {editing ? (
-            <div>
-              <textarea
-                value={editContent}
-                onChange={e => setEditContent(e.target.value)}
-                rows={18}
-                className="w-full font-mono text-sm text-gray-800 border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-300"
-              />
-              <p className="text-[11px] text-gray-400 mt-2">
-                儲存會建立新 revision，不覆寫歷史；下次編譯會產生更新的 revision。
-              </p>
-              <div className="flex gap-2 mt-3">
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving ? '儲存中…' : '儲存'}
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  disabled={saving}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="prose prose-sm max-w-none text-gray-800">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {page.content}
-              </ReactMarkdown>
-            </div>
-          )}
-        </div>
-
-        {page.citation_map && page.citation_map.length > 0 && (
-          <div className="bg-white border rounded-xl p-5 mb-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">來源引用</h2>
-            <div className="space-y-2">
-              {page.citation_map.map((c, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center">
-                    {i + 1}
-                  </span>
-                  {c.document_id ? (
-                    <Link
-                      to={`/knowledge/documents/${c.document_id}`}
-                      className="flex items-center gap-1.5 text-blue-600 hover:underline"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      {c.title || c.filename || `文件 ${c.document_id.slice(0, 8)}…`}
-                    </Link>
-                  ) : (
-                    <span className="text-gray-700">{c.title || c.filename || `來源 ${i + 1}`}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         )}
-
-        {page.backlinks && page.backlinks.length > 0 && (
-          <div className="bg-white border rounded-xl p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">反向連結</h2>
-            <div className="flex flex-wrap gap-2">
-              {page.backlinks.map((b, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded-full"
-                >
-                  <Link2 className="w-3 h-3" /> {b}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      </AsyncState>
     </div>
   )
 }

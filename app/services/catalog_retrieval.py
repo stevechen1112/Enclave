@@ -177,6 +177,50 @@ class CatalogRetriever:
         hits.sort(key=lambda h: h.score, reverse=True)
         return hits[:top_k]
 
+    def filename_token_hit(
+        self,
+        *,
+        tenant_id: UUID,
+        tokens: List[str],
+        db=None,
+    ) -> bool:
+        """任一 token 命中租戶已完成文件的檔名即回 True。
+
+        供 catalog 臂的前置判斷：只在檔名索引實際命中時才掛臂，
+        避免一般問答（如「加班費怎麼算」）誤觸發盤點查詢。
+        """
+        from sqlalchemy import or_
+
+        from app.db.session import SessionLocal
+        from app.models.document import Document
+
+        clauses = []
+        for t in tokens:
+            clean = str(t or "").replace("%", "").replace("_", "").strip()
+            if clean:
+                clauses.append(Document.filename.ilike(f"%{clean}%"))
+        if not clauses:
+            return False
+
+        own_session = db is None
+        session = db or SessionLocal()
+        try:
+            return (
+                session.query(Document.id)
+                .filter(
+                    Document.tenant_id == tenant_id,
+                    Document.status == "completed",
+                    Document.tombstoned_at.is_(None),
+                    or_(*clauses),
+                )
+                .limit(1)
+                .first()
+                is not None
+            )
+        finally:
+            if own_session:
+                session.close()
+
 
 _retriever: Optional[CatalogRetriever] = None
 

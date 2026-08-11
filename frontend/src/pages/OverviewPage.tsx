@@ -1,14 +1,20 @@
 /**
- * Admin overview — task-first control surface (UIUX §9.3)
+ * 總覽 — 給老闆／管理員看的「今天公司知識庫狀況」。
+ *
+ * 設計原則：不用任何技術術語。不說「來源監控」「生命週期」「控制面」，
+ * 只回答三個問題：
+ *   1. 有沒有事情需要我處理？
+ *   2. 員工問問題，系統答得出來嗎？
+ *   3. 公司的資料有沒有順利進來？
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  CheckCircle2, RefreshCw, Loader2, Plug, ArrowRight,
+  CheckCircle2, RefreshCw, Loader2, ArrowRight,
+  FileWarning, Inbox, FolderInput, MessageCircleQuestion,
 } from 'lucide-react'
 import api, { docApi, parseApiError, type ApiErrorInfo } from '../api'
 import clsx from 'clsx'
-import TaskInbox, { type TaskItem } from '../components/TaskInbox'
 import AsyncState from '../components/AsyncState'
 
 type AgentStatus = {
@@ -20,13 +26,44 @@ type AgentStatus = {
 
 type DocRow = { status: string; tombstoned_at?: string | null; updated_at?: string | null }
 
-function StatPill({ label, value, warn }: { label: string; value: string | number; warn?: boolean }) {
+type TodoCard = {
+  id: string
+  icon: typeof Inbox
+  title: string
+  description: string
+  to: string
+  actionLabel: string
+  tone: 'warning' | 'danger'
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  warn,
+}: {
+  label: string
+  value: string | number
+  hint: string
+  warn?: boolean
+}) {
   return (
-    <div className="min-w-[7rem] flex-1 rounded-xl border border-line/80 bg-surface/80 px-4 py-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className={clsx('mt-1 font-display text-2xl font-semibold tabular-nums', warn ? 'text-amber-700' : 'text-ink')}>
+    <div
+      className={clsx(
+        'flex-1 min-w-[10rem] rounded-2xl border-2 p-5',
+        warn ? 'border-amber-300 bg-amber-50' : 'border-line bg-surface',
+      )}
+    >
+      <p className="text-base font-semibold text-muted">{label}</p>
+      <p
+        className={clsx(
+          'mt-1 text-3xl font-bold tabular-nums',
+          warn ? 'text-amber-800' : 'text-ink',
+        )}
+      >
         {value}
       </p>
+      <p className="mt-1 text-sm text-muted">{hint}</p>
     </div>
   )
 }
@@ -45,7 +82,6 @@ export default function OverviewPage() {
     setLoading(true)
     setError(null)
     try {
-      // 列表 API 預設 limit=100 且排除 tombstone；listAll 分頁累加後才可當營運統計。
       let allDocs: DocRow[] = []
       let docsFailed = false
       let docsError: unknown = null
@@ -83,10 +119,7 @@ export default function OverviewPage() {
       }
 
       if (agentFailed && docsFailed) {
-        setError(parseApiError(
-          docsError,
-          '無法載入總覽資料，請稍後重試。',
-        ))
+        setError(parseApiError(docsError, '無法載入總覽資料，請稍後重試。'))
       }
     } finally {
       setLoading(false)
@@ -95,160 +128,196 @@ export default function OverviewPage() {
 
   useEffect(() => { load() }, [load])
 
-  const tasks: TaskItem[] = []
+  const todos: TodoCard[] = []
   const pendingReview = agent?.pending_review_count ?? 0
+
   if (docStats && docStats.total === 0) {
-    tasks.push({
+    todos.push({
       id: 'empty-kb',
-      title: '尚未導入知識',
-      description: '上傳文件或接上 NAS／監控資料夾，才能開始審核與提問。',
+      icon: FolderInput,
+      title: '知識庫還是空的',
+      description: '還沒有任何公司資料。上傳文件，或設定自動收取資料夾，員工才問得到答案。',
       tone: 'warning',
       to: '/knowledge/sources',
-      actionLabel: '管理來源',
+      actionLabel: '去放資料',
     })
   }
   if (pendingReview > 0) {
-    tasks.push({
+    todos.push({
       id: 'review',
-      title: `${pendingReview} 筆待審核`,
-      description: '新文件等待確認分類後才會進入可搜尋知識庫。',
-      count: pendingReview,
+      icon: Inbox,
+      title: `${pendingReview} 份新文件等您確認`,
+      description: '確認過的文件才會開放給員工查詢，避免錯誤資料被引用。',
       tone: 'warning',
       to: '/knowledge/review',
-      actionLabel: '前往審核',
+      actionLabel: '去確認',
     })
   }
   if (docStats && docStats.failed > 0) {
-    tasks.push({
+    todos.push({
       id: 'failed',
-      title: `${docStats.failed} 份文件處理失敗`,
-      description: '失敗文件無法被問到。請查看原因後重試或重新上傳。',
-      count: docStats.failed,
+      icon: FileWarning,
+      title: `${docStats.failed} 份文件讀取失敗`,
+      description: '這些文件目前問不到。可能是檔案損壞或格式不支援，請查看後重新上傳。',
       tone: 'danger',
       to: '/knowledge/documents',
-      actionLabel: '查看文件',
+      actionLabel: '看是哪幾份',
     })
   }
   if (agent && !agent.watcher_running && (agent.active_folders ?? 0) > 0) {
-    tasks.push({
+    todos.push({
       id: 'watcher',
-      title: '監控資料夾已設定但未啟用',
-      description: '啟用監控後，NAS／資料夾中的新檔才會自動進入入庫流程。',
+      icon: FolderInput,
+      title: '自動收檔案的功能沒有啟動',
+      description: '您設定過要自動收取的資料夾，但目前沒在跑。啟動後新檔案才會自動進來。',
       tone: 'warning',
       to: '/knowledge/sources',
-      actionLabel: '管理來源',
+      actionLabel: '去啟動',
     })
   }
-  const healthy = !loading && !error && tasks.length === 0 && docStats != null
+
+  const healthy = !loading && !error && todos.length === 0 && docStats != null
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="relative overflow-hidden border-b border-line/70">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-90"
-          style={{
-            background:
-              'linear-gradient(135deg, rgba(15,118,110,0.12) 0%, transparent 42%), linear-gradient(225deg, rgba(15,23,42,0.06) 0%, transparent 40%)',
-          }}
-          aria-hidden
-        />
-        <div className="relative mx-auto flex max-w-5xl flex-wrap items-end justify-between gap-4 px-4 py-8 md:px-8 md:py-10">
-          <div className="max-w-xl">
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-accent">控制面</p>
-            <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-ink md:text-4xl">
-              總覽
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-muted md:text-[15px]">
-              先處理需要你出手的事，再確認知識是否健康流轉。
+      <div className="border-b border-line/70 bg-wash/50">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-end justify-between gap-4 px-4 py-8 md:px-8">
+          <div>
+            <h1 className="text-3xl font-bold text-ink">公司知識庫狀況</h1>
+            <p className="mt-2 text-lg text-muted">
+              有沒有需要您處理的事、資料健不健康，一眼看清楚。
             </p>
           </div>
           <button
             type="button"
             onClick={load}
             disabled={loading}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface/90 px-3 py-2 text-sm text-muted shadow-sm hover:text-ink disabled:opacity-50"
+            className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-line bg-surface px-4 text-base font-semibold text-muted hover:text-ink disabled:opacity-50"
             aria-label="重新整理總覽"
           >
-            <RefreshCw className={clsx('h-4 w-4', loading && 'animate-spin')} aria-hidden />
+            <RefreshCw className={clsx('h-5 w-5', loading && 'animate-spin')} aria-hidden />
             重新整理
           </button>
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8 md:py-8">
-        <div className="flex flex-wrap gap-3" aria-label="知識生命週期狀態">
-          <StatPill
-            label="來源監控"
-            value={
-              loading
-                ? '—'
-                : agent == null
-                  ? '未知'
-                  : agent.watcher_running
-                    ? '運行中'
-                    : '未啟用'
-            }
-            warn={!loading && agent != null && !agent.watcher_running}
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8">
+        <div className="flex flex-wrap gap-4" aria-label="知識庫數字">
+          <StatCard
+            label="員工可查的文件"
+            value={loading ? '—' : (docStats?.total ?? '—')}
+            hint="這些文件，員工提問時系統找得到"
           />
-          <StatPill
-            label="待審"
+          <StatCard
+            label="等您確認"
             value={loading || agent == null ? '—' : pendingReview}
+            hint="新進來的文件，確認後才開放查詢"
             warn={!loading && agent != null && pendingReview > 0}
           />
-          <StatPill label="處理中" value={loading ? '—' : (docStats?.pending ?? '—')} />
-          <StatPill label="可存取文件" value={loading ? '—' : (docStats?.total ?? '—')} />
+          <StatCard
+            label="讀取失敗"
+            value={loading ? '—' : (docStats?.failed ?? '—')}
+            hint="這些文件目前問不到，需要處理"
+            warn={!loading && (docStats?.failed ?? 0) > 0}
+          />
         </div>
 
         <AsyncState loading={loading} error={error} onRetry={load}>
           {healthy ? (
-            <div className="animate-fade-in rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 to-surface p-7 shadow-sm">
+            <div className="animate-fade-in rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-7">
               <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                  <CheckCircle2 className="h-6 w-6" aria-hidden />
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <CheckCircle2 className="h-7 w-7" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 className="font-display text-xl font-semibold text-emerald-950">知識系統正常</h2>
-                  <p className="mt-1.5 max-w-lg text-sm leading-relaxed text-emerald-900/75">
-                    目前沒有待處理事項。可用問答驗證證據，或到來源繼續擴充知識。
+                  <h2 className="text-xl font-bold text-emerald-950">目前一切正常</h2>
+                  <p className="mt-1.5 text-base leading-relaxed text-emerald-900/80">
+                    沒有需要您處理的事。員工問問題時，系統都能從公司資料找到答案。
                   </p>
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="mt-5 flex flex-wrap gap-3">
                     <Link
                       to="/ask"
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover"
+                      className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-accent px-5 text-base font-bold text-white hover:bg-accent-hover"
                     >
-                      測試提問 <ArrowRight className="h-4 w-4" aria-hidden />
+                      <MessageCircleQuestion className="h-5 w-5" aria-hidden />
+                      試著問一個問題
                     </Link>
                     <Link
                       to="/knowledge/sources"
-                      className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 py-2 text-sm text-ink hover:bg-wash"
+                      className="inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-line bg-surface px-5 text-base font-semibold text-ink hover:bg-wash"
                     >
-                      <Plug className="h-4 w-4" aria-hidden /> 管理來源
+                      繼續放資料 <ArrowRight className="h-5 w-5" aria-hidden />
                     </Link>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <section className="animate-fade-in space-y-3">
-              <h2 className="font-display text-lg font-semibold text-ink">需要處理</h2>
-              <TaskInbox tasks={tasks} />
+            <section className="animate-fade-in space-y-3" aria-label="需要您處理的事">
+              <h2 className="text-xl font-bold text-ink">需要您處理</h2>
+              <ul className="space-y-3">
+                {todos.map(t => (
+                  <li
+                    key={t.id}
+                    className={clsx(
+                      'flex flex-wrap items-center gap-4 rounded-2xl border-2 p-5',
+                      t.tone === 'danger'
+                        ? 'border-red-300 bg-red-50'
+                        : 'border-amber-300 bg-amber-50',
+                    )}
+                  >
+                    <t.icon
+                      className={clsx(
+                        'h-8 w-8 shrink-0',
+                        t.tone === 'danger' ? 'text-red-700' : 'text-amber-700',
+                      )}
+                      aria-hidden
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={clsx(
+                          'text-lg font-bold',
+                          t.tone === 'danger' ? 'text-red-900' : 'text-amber-900',
+                        )}
+                      >
+                        {t.title}
+                      </p>
+                      <p className="mt-0.5 text-base text-ink/80">{t.description}</p>
+                    </div>
+                    <Link
+                      to={t.to}
+                      className={clsx(
+                        'inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-xl px-5 text-base font-bold text-white',
+                        t.tone === 'danger'
+                          ? 'bg-red-700 hover:bg-red-800'
+                          : 'bg-amber-600 hover:bg-amber-700',
+                      )}
+                    >
+                      {t.actionLabel} <ArrowRight className="h-5 w-5" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
         </AsyncState>
 
-        <section className="rounded-2xl border border-line/80 bg-surface/90 p-6 shadow-sm">
-          <h2 className="font-display text-lg font-semibold text-ink">知識生命週期</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            來源 → 審核 → 入庫 → 被引用 → 撤銷。這些步驟都在「知識」完成，不必另找設定頁。
+        <section className="rounded-2xl border-2 border-line bg-surface p-6">
+          <h2 className="text-xl font-bold text-ink">資料是怎麼進來的？</h2>
+          <p className="mt-2 text-base leading-relaxed text-muted">
+            公司文件從放進來到員工問得到，會經過這幾個步驟。每一步都在「知識」區完成：
           </p>
-          <ol className="mt-5 grid gap-2 sm:grid-cols-5">
-            {['來源', '審核', '入庫', '被引用', '撤銷'].map((step, i) => (
-              <li
-                key={step}
-                className="rounded-xl border border-line bg-wash/60 px-3 py-3 text-center"
-              >
-                <span className="block text-[10px] font-medium text-muted">{i + 1}</span>
-                <span className="mt-1 block text-sm font-medium text-ink">{step}</span>
+          <ol className="mt-5 grid gap-3 sm:grid-cols-4">
+            {[
+              { step: '放進來', desc: '上傳或自動收取' },
+              { step: '您確認', desc: '檢查內容沒問題' },
+              { step: '開放查詢', desc: '員工問得到' },
+              { step: '過期下架', desc: '舊資料可撤銷' },
+            ].map(({ step, desc }, i) => (
+              <li key={step} className="rounded-xl border-2 border-line bg-wash/60 px-4 py-4">
+                <span className="block text-sm font-semibold text-muted">第 {i + 1} 步</span>
+                <span className="mt-1 block text-lg font-bold text-ink">{step}</span>
+                <span className="mt-0.5 block text-sm text-muted">{desc}</span>
               </li>
             ))}
           </ol>

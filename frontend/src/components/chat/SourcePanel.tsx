@@ -33,32 +33,34 @@ export default function SourcePanel({ sources, defaultOpen = true }: Props) {
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full min-h-11 items-center justify-between gap-2 text-left text-xs font-medium text-accent hover:text-accent-hover"
+        className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-2 text-left text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-soft/60"
         aria-expanded={expanded}
         aria-label={`證據 ${sources.length} 則，${expanded ? '收合' : '展開'}`}
       >
-        <span>證據（{sources.length}）</span>
-        {expanded ? <ChevronUp className="h-3.5 w-3.5" aria-hidden /> : <ChevronDown className="h-3.5 w-3.5" aria-hidden />}
+        <span className="chip-accent">證據 {sources.length} 則</span>
+        {expanded
+          ? <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
+          : <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />}
       </button>
 
       {expanded && (
-        <div className="mt-2 space-y-2 animate-fade-in" role="list">
+        <div className="mt-2 animate-fade-in space-y-2" role="list">
           {sources.map((s, i) => (
             <div key={`${s.document_id || s.title}-${i}`} role="listitem" className="relative">
               <EvidenceCard source={s} index={i + 1} />
               <button
                 type="button"
                 onClick={() => copyCite(s, i)}
-                className="absolute right-2 top-2 rounded p-1.5 text-muted hover:bg-wash hover:text-ink"
+                className="absolute right-1 top-1 inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-muted transition-colors hover:bg-wash hover:text-ink"
                 aria-label={`複製引用 ${i + 1}`}
               >
                 {copiedIdx === i
-                  ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
-                  : <Copy className="h-3.5 w-3.5" aria-hidden />}
+                  ? <Check className="h-4 w-4 text-success" aria-hidden />
+                  : <Copy className="h-4 w-4" aria-hidden />}
               </button>
             </div>
           ))}
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             相似度僅供參考檢索相關度，不代表答案正確率。
           </p>
         </div>

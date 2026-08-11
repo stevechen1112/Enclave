@@ -73,6 +73,25 @@ export interface ExperienceBootstrap {
     message: string
   }
   features: Record<string, boolean>
+  job_modules?: Array<Record<string, unknown>>
+  workspace_entries?: Array<{
+    module_key?: string
+    key?: string
+    label?: string
+    path?: string
+    description?: string
+  }>
+  job_role_assignments?: Array<{
+    id: string
+    job_role_id?: string
+    role_key?: string | null
+    name?: string | null
+    is_primary?: boolean
+    default_module_keys?: string[]
+  }>
+  active_job_role?: Record<string, unknown> | null
+  default_job_home?: string
+  interaction_capabilities?: Record<string, boolean>
 }
 
 // ─── Chat ───
@@ -80,6 +99,8 @@ export interface ChatRequest {
   question: string
   conversation_id?: string | null
   top_k?: number
+  module_key?: string | null
+  scene_context?: Record<string, string>
 }
 
 export interface ChatResponse {

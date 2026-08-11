@@ -40,6 +40,7 @@ import app.tasks.kb_maintenance_tasks  # noqa: F401, E402
 import app.tasks.outbox_worker  # noqa: F401, E402
 import app.tasks.reconciliation_tasks  # noqa: F401, E402
 import app.tasks.connector_tasks  # noqa: F401, E402
+import app.tasks.mka_tasks  # noqa: F401, E402
 
 from app.observability.sentry import init_sentry
 
@@ -57,5 +58,9 @@ celery_app.conf.beat_schedule = {
     "poll-pending-connectors": {
         "task": "tasks.poll_pending_connectors",
         "schedule": 60.0,
+    },
+    "purge-mka-retention": {
+        "task": "tasks.purge_mka_retention",
+        "schedule": 86400.0,  # 每日硬刪過期轉寫（§12.1）
     },
 }

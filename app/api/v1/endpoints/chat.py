@@ -177,9 +177,16 @@ async def chat_stream(
     user_id = current_user.id
     conversation_id_val = conversation.id
 
+    # 明確指定 module_key 時的授權（必須在 SSE 開始前 403）
+    _assert_chat_module_access(db, current_user, getattr(request, "module_key", None))
+    from app.services.job_context import build_effective_job_context
+
+    _job_role_keys = list(build_effective_job_context(db, current_user).active_job_role_keys)
+
     async def event_generator():
         start_time = time.time()
         full_answer = ""
+        from app.db.session import SessionLocal
         from app.services.chat_observability import (
             finalize_chat_trace,
             record_generation,
@@ -187,6 +194,10 @@ async def chat_stream(
             record_source_verification_span,
             start_chat_trace,
         )
+
+        # SSE generator 在 endpoint return 後才執行，request-scoped db 已關閉；
+        # 所有 DB 操作必須使用這裡新開的 session。
+        stream_db = SessionLocal()
 
         lf_handle = start_chat_trace(
             user_id=user_id,
@@ -200,17 +211,18 @@ async def chat_stream(
             # Phase 1: 狀態 — 正在檢索
             yield _sse({"type": "status", "content": "正在搜尋可存取知識…"})
 
-            # P1-4：職能模組 Router — 依使用者角色/部門決定檢索範圍
-            module_scope = {}
-            from app.config import settings
-            if settings.MODULE_ROUTER_ENABLED:
-                from app.services.module_router import get_module_router
-                router = get_module_router()
-                available_modules = router.get_available_modules(authz)
-                if available_modules:
-                    # 取第一個可用模組的檢索範圍
-                    module_scope = router.get_retrieval_scope(available_modules[0].name, authz)
-                    yield _sse({"type": "status", "content": f"已切換至 {available_modules[0].label} 模組"})
+            # P1-4：職能模組 Router + SceneContext → 檢索 filter
+            from app.services.scene_scope import scene_question_hint, scene_to_filter_dict
+
+            module_key = getattr(request, "module_key", None)
+            module_scope, module_label = _module_retrieval_scope(
+                stream_db, authz, module_key, job_role_keys=_job_role_keys
+            )
+            if module_label:
+                yield _sse({"type": "status", "content": f"已切換至 {module_label} 模組"})
+
+            scene_filter = scene_to_filter_dict(getattr(request, "scene_context", None))
+            filter_dict = {**module_scope, **scene_filter}
 
             # T7-2: 查詢改寫
             effective_question = request.question
@@ -218,6 +230,9 @@ async def chat_stream(
                 effective_question = await orchestrator.contextualize_query(
                     request.question, history
                 )
+            hint = scene_question_hint(getattr(request, "scene_context", None))
+            if hint and hint not in effective_question:
+                effective_question = f"{effective_question}\n{hint}"
 
             # Phase 2: 檢索（Phase 0：傳遞 AuthorizationContext）
             ctx = await orchestrator.retrieve_context(
@@ -225,7 +240,8 @@ async def chat_stream(
                 question=effective_question,
                 top_k=request.top_k,
                 authz=authz,
-                db=db,
+                db=stream_db,
+                filter_dict=filter_dict or None,
             )
 
             # Retrieval honesty (degraded / request_id) before sources
@@ -269,7 +285,7 @@ async def chat_stream(
             # 清理 answer（移除 [建議問題] 區塊）
             clean_answer = _strip_suggestions(full_answer)
             assistant_message = crud_chat.create_message(
-                db,
+                stream_db,
                 conversation_id=conversation_id_val,
                 role="assistant",
                 content=clean_answer,
@@ -277,7 +293,7 @@ async def chat_stream(
 
             # 儲存 retrieval trace
             crud_chat.create_retrieval_trace(
-                db,
+                stream_db,
                 tenant_id=tenant_id,
                 conversation_id=conversation_id_val,
                 message_id=assistant_message.id,
@@ -298,7 +314,7 @@ async def chat_stream(
                 output_tokens = usage.get("output_tokens", output_tokens)
 
             _finalize_chat_usage(
-                db,
+                stream_db,
                 usage_record_id,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
@@ -326,6 +342,8 @@ async def chat_stream(
             logger.exception("chat_stream event_generator 錯誤: %s", e)
             finalize_chat_trace(lf_handle)
             yield _sse({"type": "error", "content": f"處理失敗：{str(e)}"})
+        finally:
+            stream_db.close()
 
 
     headers = {
@@ -399,6 +417,10 @@ async def chat(
     )
 
     authz = AuthorizationContext.from_user(current_user)
+    _assert_chat_module_access(db, current_user, getattr(request, "module_key", None))
+    from app.services.job_context import build_effective_job_context
+
+    _job_role_keys = list(build_effective_job_context(db, current_user).active_job_role_keys)
     lf_handle = start_chat_trace(
         user_id=current_user.id,
         tenant_id=current_user.tenant_id,
@@ -408,6 +430,15 @@ async def chat(
     )
     query_start = time.time()
 
+    # P1-4：職能模組 Router + SceneContext → 檢索 filter（與串流路徑一致）
+    from app.services.scene_scope import scene_question_hint, scene_to_filter_dict
+
+    module_scope, _ = _module_retrieval_scope(
+        db, authz, getattr(request, "module_key", None), job_role_keys=_job_role_keys
+    )
+    scene_ctx = getattr(request, "scene_context", None)
+    filter_dict = {**module_scope, **scene_to_filter_dict(scene_ctx)}
+
     result = await orchestrator.process_query(
         tenant_id=current_user.tenant_id,
         question=request.question,
@@ -415,6 +446,8 @@ async def chat(
         history=history,
         authz=authz,
         db=db,
+        filter_dict=filter_dict or None,
+        question_hint=scene_question_hint(scene_ctx),
     )
 
     record_retrieval_span(
@@ -720,6 +753,56 @@ async def rag_dashboard(
 
 
 # ──────────── 內部 helper ────────────
+
+def _assert_chat_module_access(db: Session, current_user: User, module_key: Optional[str]) -> None:
+    """明確指定 module_key 時的直接 URL 授權（/ask?module= 不只隱藏選單）。
+
+    必須在 SSE 回應開始前呼叫，才能正確回 403。
+    """
+    if not module_key:
+        return
+    from app.config import settings
+
+    if not settings.MODULE_ROUTER_ENABLED:
+        return
+    from app.services.job_context import ModuleAccessDenied, assert_module_access
+
+    try:
+        assert_module_access(db, current_user, module_key)
+    except ModuleAccessDenied as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+
+def _module_retrieval_scope(
+    db: Session, authz: Any, module_key: Optional[str],
+    job_role_keys: Optional[List[str]] = None,
+) -> tuple:
+    """僅在請求明確帶 module_key 時才套用該模組的檢索範圍。
+
+    回傳 (scope_dict, module_label)；未指定或模組不可用時回傳 ({}, None)，
+    避免一般問答被預設模組的 knowledge_scope_policy 限縮。
+    """
+    if not module_key:
+        return {}, None
+    from app.config import settings
+
+    if not settings.MODULE_ROUTER_ENABLED:
+        return {}, None
+    from app.services.module_router import get_module_router
+
+    module_router = get_module_router(db=db)
+    for m in module_router.get_available_modules(authz, job_role_keys=job_role_keys):
+        name = getattr(m, "name", None) or (
+            m.get("module_key") if isinstance(m, dict) else None
+        )
+        if name != module_key:
+            continue
+        label = getattr(m, "label", None) or (
+            m.get("name") if isinstance(m, dict) else None
+        ) or name
+        return module_router.get_retrieval_scope(name, authz) or {}, label
+    return {}, None
+
 
 def _sse(data: dict) -> str:
     """格式化 SSE 事件。"""

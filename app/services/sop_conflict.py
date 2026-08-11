@@ -99,6 +99,123 @@ class SOPConflictChecker:
                 knowhow_card, sop_cautions, sop_title
             ))
 
+            # 4. 禁止事項正向違反：卡片步驟/建議做了 SOP 明令禁止的動作
+            conflicts.extend(self._check_prohibited_actions(
+                knowhow_card, sop_steps + sop_cautions, sop_title
+            ))
+
+        return conflicts
+
+    # ── 禁止事項抽取與比對 ─────────────────────────────────
+
+    _PROHIBIT_RE = None  # lazy compiled
+    _CLAUSE_SPLIT_RE = None
+    _LEAD_STRIP_RE = None
+    _TAIL_CUT_RE = None
+
+    # 過於通用的詞不單獨作為弱比對詞，避免正常內容誤判
+    _WEAK_TERM_STOPLIST = {
+        "操作", "設備", "機台", "人員", "安全", "注意", "確認", "進行", "使用",
+        "檢修", "運轉", "作業", "停機", "處理", "調整", "檢查", "維修", "保養",
+        "生產", "管理", "記錄", "紀錄", "測試", "量測", "設定", "啟動", "關閉",
+        "工具", "徒手", "衣物", "材料",
+    }
+    _PROHIBIT_KEYWORDS = ("禁止", "不得", "不可", "嚴禁", "切勿")
+    # 設備名詞結尾：弱比對詞若為部件名（捲軸、感知器），卡片正常提及不算違反
+    _EQUIP_NOUN_ENDINGS = ("器", "機", "軸", "輪", "閥", "帶", "錶", "表", "計", "泵")
+    # 動詞開頭的片段（判斷張力、觸碰捲軸）：禁止的是「動作＋對象」整體，
+    # 對象單獨出現（張力）不算違反 → 不產生首尾弱比對詞
+    _ACTION_VERB_HEADS = (
+        "判斷", "觸碰", "拆除", "調整", "操作", "移動", "開啟", "關閉",
+        "修改", "變更", "省略", "忽略", "跳過", "拆卸", "短接", "旁路",
+    )
+
+    @classmethod
+    def _ensure_res(cls) -> None:
+        if cls._PROHIBIT_RE is None:
+            import re
+            cls._PROHIBIT_RE = re.compile(
+                r"(?:禁止|不得|不可|嚴禁|切勿)([^。；;！!\n]{1,40})"
+            )
+            cls._CLAUSE_SPLIT_RE = re.compile(r"[、，,或及和與／/「」『』()（）|*·\s]+")
+            cls._LEAD_STRIP_RE = re.compile(r"^(?:以|用|憑|對|於|在|將|把|任意|擅自|自行)+")
+            cls._TAIL_CUT_RE = re.compile(r"(?:代替|替代|取代|繼續|持續|逕行).*$")
+
+    def _extract_prohibited_terms(self, sop_texts: List[str]) -> Dict[str, str]:
+        """從 SOP 文字抽取禁止事項 → {比對詞: 原始禁止子句}。
+
+        強比對詞＝完整禁止片段（如「強制復歸」）；
+        弱比對詞＝片段的首尾 2–3 字（如「復歸」），扣除通用詞。
+        """
+        self._ensure_res()
+        terms: Dict[str, str] = {}
+        for text in sop_texts or []:
+            if not text:
+                continue
+            for m in self._PROHIBIT_RE.finditer(text):  # type: ignore[union-attr]
+                clause = self._TAIL_CUT_RE.sub("", m.group(1))  # type: ignore[union-attr]
+                for frag in self._CLAUSE_SPLIT_RE.split(clause):  # type: ignore[union-attr]
+                    frag = self._LEAD_STRIP_RE.sub("", frag).strip("。.")  # type: ignore[union-attr]
+                    if not (2 <= len(frag) <= 12):
+                        continue
+                    terms.setdefault(frag, m.group(0)[:120])
+                    frag_len = len(frag)
+                    verb_led = frag.startswith(self._ACTION_VERB_HEADS)
+                    # 首部弱詞（目測、手感）：禁止子句的「方式」通常在前，
+                    # 中段長度片段也可取；部件名結尾（張力感知器）與動詞開頭（判斷…）除外
+                    if 3 <= frag_len <= 8 and not verb_led:
+                        if not frag.endswith(self._EQUIP_NOUN_ENDINGS):
+                            for weak in (frag[:2], frag[:3]):
+                                if weak not in self._WEAK_TERM_STOPLIST:
+                                    terms.setdefault(weak, m.group(0)[:120])
+                    # 尾部弱詞（復歸）：只取短片段；長片段尾部多為受詞（…判斷「張力」）
+                    if 3 <= frag_len <= 5 and not verb_led:
+                        for weak in (frag[-2:], frag[-3:]):
+                            if (weak not in self._WEAK_TERM_STOPLIST
+                                    and not weak.endswith(self._EQUIP_NOUN_ENDINGS)):
+                                terms.setdefault(weak, m.group(0)[:120])
+        return terms
+
+    def _check_prohibited_actions(
+        self,
+        card: Any,
+        sop_texts: List[str],
+        sop_title: str,
+    ) -> List[ConflictRecord]:
+        """卡片內容正向提及 SOP 禁止的動作（且該句本身不是警示語）。"""
+        conflicts: List[ConflictRecord] = []
+        terms = self._extract_prohibited_terms(sop_texts)
+        if not terms:
+            return conflicts
+
+        card_fields: List[tuple] = []
+        for i, s in enumerate(getattr(card, "steps", None) or []):
+            card_fields.append((f"step[{i}]", s))
+        for i, s in enumerate(getattr(card, "recommended_actions", None) or []):
+            card_fields.append((f"recommended_actions[{i}]", s))
+        for i, s in enumerate(getattr(card, "cautions", None) or []):
+            card_fields.append((f"cautions[{i}]", s))
+
+        seen: set = set()
+        for field_name, text in card_fields:
+            if not text:
+                continue
+            # 卡片該句本身含禁止／警示語 → 是在轉述禁令，不算違反
+            if any(k in text for k in self._PROHIBIT_KEYWORDS) or "必須" in text:
+                continue
+            for term, clause in terms.items():
+                if term in text and (field_name, term) not in seen:
+                    seen.add((field_name, term))
+                    conflicts.append(ConflictRecord(
+                        conflict_type="mutual_exclusion",
+                        sop_field="prohibition",
+                        knowhow_field=field_name,
+                        sop_value=clause,
+                        knowhow_value=text[:200],
+                        description=(
+                            f"know-how 提及 SOP 禁止的動作「{term}」（SOP: {sop_title}）"
+                        ),
+                    ))
         return conflicts
 
     def _check_step_mismatches(
@@ -137,7 +254,7 @@ class SOPConflictChecker:
     ) -> List[ConflictRecord]:
         """檢查設備適用範圍衝突（雙向）。"""
         conflicts = []
-        card_equipment = set(card.applicable_equipment or [])
+        card_equipment = set(card.equipment_ids or [])
 
         if sop_equipment and card_equipment:
             sop_set = set(sop_equipment)

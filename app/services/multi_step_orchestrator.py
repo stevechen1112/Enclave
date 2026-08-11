@@ -34,10 +34,12 @@ class MultiStepOrchestrator:
         use_gateway: bool = True,
         plan: Optional[QueryPlan] = None,
         db=None,
+        filter_dict: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         from app.services.retrieval_facade import get_retrieval_facade
 
         facade = get_retrieval_facade()
+        self._filter_dict = filter_dict or {}
         plan = plan or build_query_plan(question)
         arms = arms_for_plan(plan)
         # unanswerable 仍做一次輕量 chunk 確認，避免假拒答
@@ -45,10 +47,12 @@ class MultiStepOrchestrator:
             arms = ["chunk"]
         # 客戶／檔名 CJK token：先跑 catalog 再 scoped，避免純語意廣搜撈到同類型雜檔
         # （Blind Z4-028「金正昌報價提案」）
+        # 前置條件：token 必須實際命中 catalog 檔名索引，避免一般問答誤掛盤點臂
         if "catalog" not in arms:
             from app.services.catalog_retrieval import _filename_tokens
 
-            if any(len(t) >= 3 for t in _filename_tokens(question)):
+            tokens = [t for t in _filename_tokens(question) if len(t) >= 3]
+            if tokens and self._catalog_index_hit(authz, tokens, db):
                 arms = ["catalog"] + list(arms)
         # 跨語條款文件：即使非 translate 意圖也掛 compiled 臂讀投影
         ql = (question or "").casefold()
@@ -253,6 +257,22 @@ class MultiStepOrchestrator:
                 )
         return out
 
+    @staticmethod
+    def _catalog_index_hit(authz, tokens: List[str], db) -> bool:
+        """檔名 token 實際命中 catalog 索引才掛 catalog 臂；任何失敗一律不掛。"""
+        try:
+            from app.services.catalog_retrieval import get_catalog_retriever
+
+            tenant_id = getattr(authz, "tenant_id", None)
+            if tenant_id is None:
+                return False
+            return get_catalog_retriever().filename_token_hit(
+                tenant_id=tenant_id, tokens=tokens, db=db
+            )
+        except Exception as exc:
+            logger.debug("catalog index pre-check skipped: %s", exc)
+            return False
+
     async def _run_catalog(self, facade, authz, queries, out, trace, *, db=None) -> None:
         seen = set()
         loop = asyncio.get_event_loop()
@@ -391,6 +411,7 @@ class MultiStepOrchestrator:
             return meta
         for q in queries:
             try:
+                scope = getattr(self, "_filter_dict", None) or None
                 if use_gateway:
                     retrieved = await facade.search_gateway(
                         authz=authz,
@@ -398,13 +419,14 @@ class MultiStepOrchestrator:
                         top_k=top_k,
                         domain=SearchDomain.HYBRID,
                         db=db,
+                        scope=scope,
                     )
                 else:
                     loop = asyncio.get_event_loop()
                     retrieved = await loop.run_in_executor(
                         None,
                         lambda qq=q: facade.search(
-                            authz=authz, query=qq, top_k=top_k, db=db
+                            authz=authz, query=qq, top_k=top_k, db=db, scope=scope
                         ),
                     )
                 titles = []
@@ -512,7 +534,10 @@ class MultiStepOrchestrator:
                     None,
                     lambda f=fn: facade.search(
                         authz=authz, query=clean_query, top_k=scoped_k,
-                        mode="semantic", scope={"filename": f}, db=db,
+                        # hybrid：scoped 內仍需 BM25 關鍵字訊號，否則
+                        # 「單價/MOQ」這類詞在純語意下贏不了產品概述 chunk
+                        # （2026-08-06 線上報價問答根因）
+                        mode="hybrid", scope={"filename": f}, db=db,
                     ),
                 )
                 hits = [

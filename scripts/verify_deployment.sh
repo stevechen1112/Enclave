@@ -1,132 +1,106 @@
 #!/bin/bash
 # ========================================================
-# Enclave — 部署驗證腳本
+# Enclave — 部署驗證腳本（2026-08 對外版）
 # ========================================================
-# 檢查所有服務是否正常運行
+# 使用方式：
+#   bash scripts/verify_deployment.sh
+#   DOMAIN=app.example.com PROTOCOL=https bash scripts/verify_deployment.sh
+#
+# 檢查項目：容器狀態 → 對外端點 → 登入與 MKA 路由 → 基礎設施
 # ========================================================
 
-set -e
+DOMAIN="${DOMAIN:-localhost}"
+PROTOCOL="${PROTOCOL:-http}"
+APP_DIR="${APP_DIR:-/opt/enclave}"
+BASE="${PROTOCOL}://${DOMAIN}"
+COMPOSE="docker compose -f docker-compose.prod.yml --env-file .env.production"
 
-IP="172.237.11.179"
-DOMAIN="172-237-11-179.sslip.io"
-PROTOCOL="http"  # 初次部署使用 HTTP，配置 SSL 後改為 https
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; NC='\033[0m'
+PASS=0; FAIL=0
 
-# 顏色定義
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-echo "========================================="
-echo "Enclave - 部署驗證"
-echo "========================================="
-echo ""
-
-# 計數器
-PASS=0
-FAIL=0
-
-# 檢查函數
-check_service() {
-    local name=$1
-    local url=$2
-    local expected_code=${3:-200}
-    
+check() {
+    local name=$1 url=$2 expected=${3:-200}
     echo -n "檢查 ${name}... "
-    
-    response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${url}" 2>&1 || echo "000")
-    
-    if [ "$response" -eq "$expected_code" ]; then
-        echo -e "${GREEN}✓ OK (${response})${NC}"
-        ((PASS++))
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" 2>/dev/null || echo "000")
+    if [[ "$code" == "$expected" ]]; then
+        echo -e "${GREEN}✓ (${code})${NC}"; ((PASS++))
     else
-        echo -e "${RED}✗ FAIL (${response})${NC}"
-        ((FAIL++))
+        echo -e "${RED}✗ (${code}，預期 ${expected})${NC}"; ((FAIL++))
     fi
 }
 
-# 1. Docker 服務狀態
-echo -e "${YELLOW}[1/3] Docker 服務狀態${NC}"
-echo "---------------------------------------"
-cd /opt/aihr
-docker compose -f docker-compose.prod.yml ps
-echo ""
+echo "========================================="
+echo "Enclave — 部署驗證（${BASE}）"
+echo "========================================="
 
-# 2. 健康檢查端點
-echo -e "${YELLOW}[2/3] API 健康檢查${NC}"
-echo "---------------------------------------"
-check_service "Backend API Health" "${PROTOCOL}://app.${DOMAIN}/health"
-check_service "Backend API Docs" "${PROTOCOL}://app.${DOMAIN}/docs"
-echo ""
+cd "$APP_DIR" 2>/dev/null || cd "$(dirname "$0")/.."
 
-# 3. 前端介面
-echo -e "${YELLOW}[3/3] 前端介面${NC}"
-echo "---------------------------------------"
-check_service "使用者介面 (app)" "${PROTOCOL}://app.${DOMAIN}"
-check_service "系統方介面 (admin role)" "${PROTOCOL}://app.${DOMAIN}"
-check_service "Grafana" "${PROTOCOL}://grafana.${DOMAIN}" "302"
-echo ""
+# 1. 容器狀態
+echo -e "\n${YELLOW}[1/4] 容器狀態${NC}"
+$COMPOSE ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || $COMPOSE ps
+unhealthy=$($COMPOSE ps 2>/dev/null | grep -ciE "unhealthy|restarting|exited" || true)
+if [[ "$unhealthy" -gt 0 ]]; then
+    echo -e "${RED}✗ 有 ${unhealthy} 個容器狀態異常${NC}"; ((FAIL++))
+else
+    echo -e "${GREEN}✓ 容器狀態正常${NC}"; ((PASS++))
+fi
 
-# 4. DNS 解析檢查
-echo -e "${YELLOW}[額外] DNS 解析檢查${NC}"
-echo "---------------------------------------"
-for subdomain in app grafana; do
-    echo -n "檢查 ${subdomain}.${DOMAIN}... "
-    result=$(dig +short ${subdomain}.${DOMAIN} | tail -n1)
-    if [ "$result" = "$IP" ]; then
-        echo -e "${GREEN}✓ ${result}${NC}"
-    else
-        echo -e "${RED}✗ ${result} (預期: ${IP})${NC}"
-    fi
-done
-echo ""
+# 2. 對外端點
+echo -e "\n${YELLOW}[2/4] 對外端點${NC}"
+check "前端 SPA"            "${BASE}/"
+check "API 健康檢查"        "${BASE}/health"
+# gateway 設定檔把 /docs 與 openapi.json 擋下；若未經 gateway（直打 8000）則略過
+check "API docs 已封鎖"     "${BASE}/docs" 403
+check "openapi.json 已封鎖" "${BASE}/api/v1/openapi.json" 403
+check "未授權 API 拒絕"     "${BASE}/api/v1/users/me" 401
 
-# 5. 資料庫連線檢查
-echo -e "${YELLOW}[額外] 資料庫連線${NC}"
-echo "---------------------------------------"
+# 3. 登入與 MKA 路由（用超級管理員 token 驗證）
+echo -e "\n${YELLOW}[3/4] 登入與 MKA 功能路由${NC}"
+SU_EMAIL=$(grep -E "^FIRST_SUPERUSER_EMAIL=" .env.production | cut -d= -f2-)
+SU_PASS=$(grep -E "^FIRST_SUPERUSER_PASSWORD=" .env.production | cut -d= -f2-)
+TOKEN=$(curl -s --max-time 15 -X POST "${BASE}/api/v1/auth/login/access-token" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "username=${SU_EMAIL}&password=${SU_PASS}" | python3 -c "import sys,json;print(json.load(sys.stdin).get('access_token',''))" 2>/dev/null || echo "")
+
+if [[ -z "$TOKEN" ]]; then
+    echo -e "${RED}✗ 超級管理員登入失敗（${SU_EMAIL}）${NC}"; ((FAIL++))
+else
+    echo -e "${GREEN}✓ 超級管理員登入成功${NC}"; ((PASS++))
+    auth=(-H "Authorization: Bearer ${TOKEN}")
+    for route in "/api/v1/job-modules" "/api/v1/forms" "/api/v1/knowhow" "/api/v1/job-roles" "/api/v1/approvals/inbox"; do
+        echo -n "檢查 ${route}... "
+        code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${auth[@]}" "${BASE}${route}" 2>/dev/null || echo "000")
+        if [[ "$code" == "200" ]]; then
+            echo -e "${GREEN}✓${NC}"; ((PASS++))
+        else
+            echo -e "${RED}✗ (${code})${NC}"; ((FAIL++))
+        fi
+    done
+fi
+
+# 4. 基礎設施
+echo -e "\n${YELLOW}[4/4] 基礎設施${NC}"
 echo -n "PostgreSQL... "
-if docker compose -f docker-compose.prod.yml exec -T db pg_isready -q; then
-    echo -e "${GREEN}✓ OK${NC}"
-else
-    echo -e "${RED}✗ FAIL${NC}"
-fi
-
+$COMPOSE exec -T db pg_isready -q \
+    && echo -e "${GREEN}✓${NC}" && ((PASS++)) || { echo -e "${RED}✗${NC}"; ((FAIL++)); }
 echo -n "Redis... "
-REDIS_PASSWORD=$(grep REDIS_PASSWORD= .env.production | cut -d '=' -f2)
-if docker compose -f docker-compose.prod.yml exec -T redis redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG; then
-    echo -e "${GREEN}✓ OK${NC}"
-else
-    echo -e "${RED}✗ FAIL${NC}"
+REDIS_PW=$(grep -E "^REDIS_PASSWORD=" .env.production | cut -d= -f2-)
+$COMPOSE exec -T redis redis-cli -a "$REDIS_PW" ping 2>/dev/null | grep -q PONG \
+    && echo -e "${GREEN}✓${NC}" && ((PASS++)) || { echo -e "${RED}✗${NC}"; ((FAIL++)); }
+if $COMPOSE ps 2>/dev/null | grep -q ollama-embed; then
+    echo -n "Ollama embedding（bge-m3）... "
+    $COMPOSE exec -T ollama-embed ollama list 2>/dev/null | grep -q bge-m3 \
+        && echo -e "${GREEN}✓${NC}" && ((PASS++)) || { echo -e "${RED}✗${NC}"; ((FAIL++)); }
 fi
-echo ""
 
-# 總結
+echo ""
 echo "========================================="
-if [ $FAIL -eq 0 ]; then
-    echo -e "${GREEN}✓ 所有檢查通過！(${PASS}/${PASS})${NC}"
-    echo -e "${GREEN}部署完全正常！${NC}"
+if [[ $FAIL -eq 0 ]]; then
+    echo -e "${GREEN}✓ 全部通過（${PASS} 項）${NC}"
+    echo "系統已上線：${BASE}"
 else
-    echo -e "${RED}✗ 部分檢查失敗 (${PASS} 通過 / ${FAIL} 失敗)${NC}"
-    echo -e "${YELLOW}請檢查：${NC}"
-    echo "  1. docker compose -f docker-compose.prod.yml logs"
-    echo "  2. 防火牆設定（ufw status）"
-    echo "  3. .env.production 配置是否正確"
+    echo -e "${RED}✗ ${PASS} 通過 / ${FAIL} 失敗${NC}"
+    echo "排查：$COMPOSE logs --tail=100 web worker"
+    exit 1
 fi
-echo "========================================="
-echo ""
-
-# 使用指南
-echo -e "${YELLOW}存取網址：${NC}"
-echo "  使用者介面: ${PROTOCOL}://app.${DOMAIN}"
-echo "  系統方介面: ${PROTOCOL}://app.${DOMAIN} (admin 以角色登入)"
-echo "  API 文件: ${PROTOCOL}://app.${DOMAIN}/docs"
-echo "  Grafana: ${PROTOCOL}://grafana.${DOMAIN}"
-echo ""
-echo -e "${YELLOW}登入資訊：${NC}"
-echo "  超級管理員: $(grep FIRST_SUPERUSER_EMAIL= .env.production | cut -d '=' -f2)"
-echo "  密碼: 見 .env.production"
-echo ""
-echo -e "${YELLOW}Grafana 登入：${NC}"
-echo "  帳號: admin"
-echo "  密碼: $(grep GRAFANA_PASSWORD= .env.production | cut -d '=' -f2)"
-echo ""

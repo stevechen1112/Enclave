@@ -1,7 +1,7 @@
 /**
  * Cross-page async UI — loading / empty / error with retry + request ID (UIUX §10)
  */
-import { Loader2, RefreshCw, Inbox } from 'lucide-react'
+import { Loader2, RefreshCw, Inbox, CloudOff } from 'lucide-react'
 import clsx from 'clsx'
 import type { ApiErrorInfo } from '../lib/apiError'
 
@@ -36,8 +36,9 @@ export default function AsyncState({
     return (
       <div className={clsx('flex h-full min-h-[12rem] flex-col', className)} role="status" aria-label="載入中">
         {skeleton || (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-7 w-7 animate-spin text-muted" aria-hidden />
+          <div className="flex flex-1 flex-col items-center justify-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-accent" aria-hidden />
+            <p className="text-sm text-muted">載入中…</p>
           </div>
         )}
       </div>
@@ -49,17 +50,19 @@ export default function AsyncState({
       ? { message: error, retryable: true as const }
       : error
     return (
-      <div className={clsx('flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-4 text-center', className)}>
-        <p className="text-sm text-ink">{info.message}</p>
-        {info.requestId && (
-          <p className="font-mono text-xs text-muted">追蹤：{info.requestId}</p>
-        )}
+      <div className={clsx('flex h-full min-h-[12rem] flex-col items-center justify-center gap-4 px-4 text-center', className)}>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-danger-soft">
+          <CloudOff className="h-7 w-7 text-danger" aria-hidden />
+        </div>
+        <div>
+          <p className="text-[15px] font-semibold text-ink">載入失敗</p>
+          <p className="mt-1 text-sm text-muted">{info.message}</p>
+          {info.requestId && (
+            <p className="mt-1 font-mono text-xs text-muted">追蹤：{info.requestId}</p>
+          )}
+        </div>
         {onRetry && info.retryable !== false && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-sm text-ink hover:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
+          <button type="button" onClick={onRetry} className="btn-outline">
             <RefreshCw className="h-4 w-4" aria-hidden />
             重試
           </button>
@@ -70,18 +73,16 @@ export default function AsyncState({
 
   if (empty) {
     return (
-      <div className={clsx('flex h-full min-h-[12rem] flex-col items-center justify-center gap-3 px-4 text-center', className)}>
-        <Inbox className="h-10 w-10 text-muted/50" aria-hidden />
+      <div className={clsx('flex h-full min-h-[12rem] flex-col items-center justify-center gap-4 px-4 text-center', className)}>
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft">
+          <Inbox className="h-7 w-7 text-accent" aria-hidden />
+        </div>
         <div>
-          <p className="text-sm font-medium text-ink">{emptyTitle}</p>
+          <p className="text-[15px] font-semibold text-ink">{emptyTitle}</p>
           {emptyDescription && <p className="mt-1 text-sm text-muted">{emptyDescription}</p>}
         </div>
         {emptyActionLabel && onEmptyAction && (
-          <button
-            type="button"
-            onClick={onEmptyAction}
-            className="inline-flex min-h-11 items-center rounded-lg bg-accent px-4 py-2 text-sm text-white hover:bg-accent-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-          >
+          <button type="button" onClick={onEmptyAction} className="btn-primary">
             {emptyActionLabel}
           </button>
         )}

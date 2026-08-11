@@ -1,0 +1,32 @@
+{
+  "name": "Enclave 現場作業助手",
+  "short_name": "現場助手",
+  "description": "製造業現場知識助理：語音輸入、掃碼帶入場景、報價與審核、師傅經驗庫",
+  "lang": "zh-TW",
+  "start_url": "/job",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f6",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

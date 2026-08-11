@@ -44,6 +44,9 @@ class ChatRequest(BaseModel):
     question: str
     conversation_id: Optional[UUID] = None
     top_k: int = Field(default=3, ge=1, le=20, description="Number of KB chunks to retrieve")
+    # MKA SceneContext — 限定設備／料號／產品等檢索範圍
+    scene_context: Optional[Dict[str, Any]] = None
+    module_key: Optional[str] = None
 
 
 class ChatResponse(BaseModel):

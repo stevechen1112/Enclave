@@ -1,11 +1,12 @@
 /**
- * System modules / capability packs dashboard (UIUX Vault Control)
+ * System modules — 產品能力包 + 職能模組管理（啟停／授權狀態）
  */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BookOpen, CheckCircle2, Loader2, Network, XCircle,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useAuth } from '../../auth'
 import api from '../../api'
 import ModuleStatus, { type ModuleStatusKind } from '../../components/ModuleStatus'
@@ -20,10 +21,21 @@ type SurfaceStatus = {
   message?: string
 }
 
+type JobModuleRow = {
+  module_key: string
+  name?: string
+  description?: string
+  status?: string
+  version?: string
+  allowed_roles?: string[]
+  form_definition_ids?: string[]
+}
+
 export default function ModulesPage() {
   const { experience, refreshExperience } = useAuth()
   const [wiki, setWiki] = useState<SurfaceStatus | null>(null)
   const [graph, setGraph] = useState<SurfaceStatus | null>(null)
+  const [jobModules, setJobModules] = useState<JobModuleRow[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,19 +44,43 @@ export default function ModulesPage() {
       setLoading(true)
       try {
         await refreshExperience()
-        const [w, g] = await Promise.allSettled([
+        const [w, g, jm] = await Promise.allSettled([
           api.get<SurfaceStatus>('/wiki/product-status'),
           api.get<SurfaceStatus>('/graph/product-status'),
+          api.get<JobModuleRow[]>('/job-modules'),
         ])
         if (cancelled) return
         if (w.status === 'fulfilled') setWiki(w.value.data)
         if (g.status === 'fulfilled') setGraph(g.value.data)
+        if (jm.status === 'fulfilled') {
+          const data = jm.value.data as JobModuleRow[] | { modules?: JobModuleRow[] }
+          setJobModules(Array.isArray(data) ? data : data.modules || [])
+        } else {
+          const fromBootstrap = (experience?.job_modules || []) as JobModuleRow[]
+          setJobModules(fromBootstrap)
+        }
       } finally {
         if (!cancelled) setLoading(false)
       }
     })()
     return () => { cancelled = true }
-  }, [refreshExperience])
+  }, [refreshExperience, experience?.job_modules])
+
+  const toggleModule = async (moduleKey: string, enable: boolean) => {
+    try {
+      if (enable) {
+        await api.post(`/job-modules/admin/${moduleKey}/enable`, {})
+      } else {
+        await api.delete(`/job-modules/admin/${moduleKey}/disable`)
+      }
+      toast.success(enable ? `已啟用 ${moduleKey}` : `已停用 ${moduleKey}`)
+      await refreshExperience()
+      const { data } = await api.get<JobModuleRow[] | { modules?: JobModuleRow[] }>('/job-modules')
+      setJobModules(Array.isArray(data) ? data : data.modules || [])
+    } catch {
+      toast.error('模組啟停失敗')
+    }
+  }
 
   if (loading && !experience) {
     return (
@@ -63,14 +99,15 @@ export default function ModulesPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         <PageHeader
           variant="section"
-          title="能力包"
+          title="產品能力包與職能模組"
           subtitle={
             experience?.product?.maturity_label
-              ? `核心永遠可用；可選包關閉時入口會隱藏。成熟度：${experience.product.maturity_label}`
+              ? `上半：平台能力包；下半：製造業職能模組（啟停／職能授權／版型狀態）。成熟度：${experience.product.maturity_label}`
               : '核心永遠可用；可選包關閉時入口會隱藏，不會假裝功能正常。'
           }
         />
 
+        <h2 className="text-lg font-semibold text-ink">產品能力包</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {packEntries.map(([key, pack]) => {
             const status: ModuleStatusKind = pack.enabled ? 'enabled' : 'disabled'
@@ -125,6 +162,62 @@ export default function ModulesPage() {
             <p className="mt-3 text-sm text-muted">{graph?.message || '無法讀取狀態'}</p>
             {graph?.production_write_path === false && (
               <p className="mt-2 text-xs text-rose-700">正式環境不應期待 Graph 實體有資料。</p>
+            )}
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-ink">職能模組</h2>
+            <button
+              type="button"
+              className="text-sm text-accent underline"
+              onClick={async () => {
+                try {
+                  await api.post('/job-roles/seed')
+                  toast.success('已種子化五個正式模組與預設職能')
+                  await refreshExperience()
+                } catch {
+                  toast.error('種子化失敗')
+                }
+              }}
+            >
+              種子化正式模組
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {(jobModules.length ? jobModules : (experience?.job_modules as JobModuleRow[] | undefined) || []).map(m => (
+              <div key={m.module_key} className="rounded-xl border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-medium text-ink">{m.name || m.module_key}</h3>
+                    <p className="mt-1 text-sm text-muted">{m.description || ''}</p>
+                    <p className="mt-2 text-xs text-muted">
+                      status={m.status || 'unknown'} · roles={(m.allowed_roles || []).join(', ') || '—'} ·
+                      forms={(m.form_definition_ids || []).join(', ') || '—'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm"
+                      onClick={() => toggleModule(m.module_key, true)}
+                    >
+                      啟用
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm"
+                      onClick={() => toggleModule(m.module_key, false)}
+                    >
+                      停用
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {!jobModules.length && !(experience?.job_modules || []).length && (
+              <p className="text-sm text-muted">尚無職能模組資料，請先種子化。</p>
             )}
           </div>
         </section>

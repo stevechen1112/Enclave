@@ -28,6 +28,8 @@ class User(Base):
 
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
     department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id"), nullable=True, index=True)
+    # MKA：多職能使用者的 active 職能（持久化；NULL = 未選擇，fallback 到 primary 指派）
+    active_job_role_id = Column(UUID(as_uuid=True), ForeignKey("mka_job_roles.id"), nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

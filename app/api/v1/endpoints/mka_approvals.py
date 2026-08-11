@@ -36,11 +36,101 @@ def _raise_mka(exc: Exception) -> None:
 
 
 def _can_review(row, user: User) -> bool:
+    # fail-closed，與 decide_approval 一致：reviewers 未配置時不對所有人開放；
+    # 送審人本人仍可追蹤自己的請求。
     return bool(
         user.is_superuser
-        or not row.reviewers
+        or row.submitted_by == user.id
         or user.role in set(row.reviewers or [])
     )
+
+
+# ── 簽核政策設定（租戶管理員）──
+
+class ApprovalPolicyUpsert(BaseModel):
+    object_type: str  # form | knowhow | tool
+    module_key: str | None = None
+    risk_level: str = "medium"
+    steps: list | None = None  # None = 不更動既有 steps
+    timeout_policy: dict | None = None
+    delegation_policy: dict | None = None
+
+
+def _require_admin(user: User) -> None:
+    if not (user.is_superuser or user.role in {"owner", "admin"}):
+        raise HTTPException(status_code=403, detail="admin required")
+
+
+def _policy_dict(row) -> dict:
+    return {
+        "id": str(row.id),
+        "module_key": row.module_key,
+        "object_type": row.object_type,
+        "version": row.version,
+        "status": row.status,
+        "risk_level": row.risk_level,
+        "steps": row.steps or [],
+        "timeout_policy": row.timeout_policy or {},
+        "delegation_policy": row.delegation_policy or {},
+    }
+
+
+@router.get("/policies")
+def list_approval_policies(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(allow_all_authenticated),
+):
+    _require_admin(current_user)
+    from app.models.mka import ApprovalPolicy
+
+    rows = (
+        db.query(ApprovalPolicy)
+        .filter(ApprovalPolicy.tenant_id == current_user.tenant_id)
+        .all()
+    )
+    return [_policy_dict(r) for r in rows]
+
+
+@router.post("/policies", status_code=201)
+def upsert_approval_policy(
+    body: ApprovalPolicyUpsert,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(allow_all_authenticated),
+):
+    """建立或更新本租戶的簽核政策（同 object_type+module_key 視為更新）。"""
+    _require_admin(current_user)
+    if body.object_type not in {"form", "knowhow", "tool"}:
+        raise HTTPException(status_code=422, detail="invalid object_type")
+    from app.models.mka import ApprovalPolicy
+
+    row = (
+        db.query(ApprovalPolicy)
+        .filter(
+            ApprovalPolicy.tenant_id == current_user.tenant_id,
+            ApprovalPolicy.object_type == body.object_type,
+            ApprovalPolicy.module_key == body.module_key,
+            ApprovalPolicy.status == "active",
+        )
+        .first()
+    )
+    if row is None:
+        row = ApprovalPolicy(
+            tenant_id=current_user.tenant_id,
+            object_type=body.object_type,
+            module_key=body.module_key,
+            status="active",
+        )
+        db.add(row)
+    row.risk_level = body.risk_level
+    if body.steps is not None:
+        row.steps = body.steps
+    if body.timeout_policy is not None:
+        row.timeout_policy = body.timeout_policy
+    if body.delegation_policy is not None:
+        row.delegation_policy = body.delegation_policy
+    db.commit()
+    db.refresh(row)
+    return _policy_dict(row)
 
 
 @router.get("")

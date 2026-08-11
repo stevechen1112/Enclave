@@ -10,12 +10,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { auditApi, kbApi, companyApi } from '../api'
+import { auditApi, kbApi, companyApi, parseApiError } from '../api'
+import type { ApiErrorInfo } from '../api'
 import api from '../api'
 import { useAuth } from '../auth'
 import type { UsageSummary, UsageByAction } from '../types'
+import AsyncState from '../components/AsyncState'
 import {
-  BarChart3, Loader2, Coins, MessageSquare, Database, Cpu,
+  BarChart3, Coins, MessageSquare, Database, Cpu,
   FileSpreadsheet, FileText, Users, Building2, Search,
   RefreshCw, ExternalLink, Activity,
 } from 'lucide-react'
@@ -36,6 +38,12 @@ const ACTION_LABELS: Record<string, string> = {
   content_generate: '內容生成',
 }
 
+const actionLabel = (actionType: string) => ACTION_LABELS[actionType] ?? '其他'
+
+// 後端成本以 USD 回傳；對內呈現統一換算新台幣（內部估算匯率）
+const TWD_PER_USD = 32
+const fmtTwd = (usd: number) => `NT$ ${Math.round(usd * TWD_PER_USD).toLocaleString()}`
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -44,19 +52,28 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-function StatCard({ icon: Icon, label, value, sub, color }: {
-  icon: typeof Coins; label: string; value: string | number; sub?: string; color: string
+type StatTone = 'accent' | 'highlight' | 'success' | 'neutral'
+
+const TONE_STYLES: Record<StatTone, string> = {
+  accent: 'bg-accent-soft text-accent',
+  highlight: 'bg-highlight-soft text-highlight',
+  success: 'bg-success-soft text-success',
+  neutral: 'bg-wash text-muted',
+}
+
+function StatCard({ icon: Icon, label, value, sub, tone = 'accent' }: {
+  icon: typeof Coins; label: string; value: string | number; sub?: string; tone?: StatTone
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
-      <div className="flex items-center gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${color}`}>
-          <Icon className="h-5 w-5" />
+    <div className="card p-5">
+      <div className="flex items-center gap-3.5">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${TONE_STYLES[tone]}`}>
+          <Icon className="h-5 w-5" aria-hidden />
         </div>
-        <div>
-          <p className="text-xs font-medium text-gray-500">{label}</p>
-          <p className="text-xl font-bold text-gray-900">{value}</p>
-          {sub && <p className="text-xs text-gray-400">{sub}</p>}
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-muted">{label}</p>
+          <p className="font-display text-2xl font-semibold tabular-nums text-ink">{value}</p>
+          {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
         </div>
       </div>
     </div>
@@ -89,15 +106,24 @@ function OverviewTab() {
   const [summary, setSummary] = useState<UsageSummary | null>(null)
   const [byAction, setByAction] = useState<UsageByAction[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [exporting, setExporting] = useState<'csv' | 'pdf' | null>(null)
 
-  useEffect(() => {
-    Promise.all([
-      auditApi.usageSummary().catch(() => null),
-      auditApi.usageByAction().catch(() => []),
-    ]).then(([s, a]) => { setSummary(s); setByAction(a as UsageByAction[]) })
-      .finally(() => setLoading(false))
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [s, a] = await Promise.all([auditApi.usageSummary(), auditApi.usageByAction()])
+      setSummary(s)
+      setByAction(a)
+    } catch (err) {
+      setError(parseApiError(err))
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => { load() }, [load])
 
   const handleExport = async (format: 'csv' | 'pdf') => {
     setExporting(format)
@@ -108,71 +134,78 @@ function OverviewTab() {
     finally { setExporting(null) }
   }
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
-
-  if (!summary) return (
-    <div className="flex flex-col items-center py-12 text-gray-400">
-      <BarChart3 className="mb-3 h-10 w-10" /><p className="text-sm">尚無用量資料</p>
-    </div>
-  )
-
   return (
-    <div className="space-y-6">
-      {/* Export buttons */}
-      <div className="flex justify-end gap-2">
-        <button onClick={() => handleExport('csv')} disabled={!!exporting}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-          {exporting === 'csv' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />} 匯出 CSV
-        </button>
-        <button onClick={() => handleExport('pdf')} disabled={!!exporting}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-          {exporting === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} 匯出 PDF
-        </button>
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={MessageSquare} label="總操作次數" value={summary.total_actions.toLocaleString()} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={Cpu} label="輸入用量" value={summary.total_input_tokens.toLocaleString()} sub={`輸出：${summary.total_output_tokens.toLocaleString()}`} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={Database} label="知識檢索" value={summary.total_pinecone_queries.toLocaleString()} sub={`索引處理：${summary.total_embedding_calls.toLocaleString()}`} color="bg-green-50 text-green-600" />
-        <StatCard icon={Coins} label="預估費用" value={`$${summary.total_cost.toFixed(4)}`} sub="USD（內部估算）" color="bg-amber-50 text-amber-600" />
-      </div>
-
-      {/* By action type */}
-      {byAction.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-gray-700">依操作類型分佈</h2>
+    <AsyncState
+      loading={loading}
+      error={error}
+      onRetry={load}
+      empty={!summary}
+      emptyTitle="尚無用量資料"
+      emptyDescription="開始使用 AI 問答或上傳文件後，用量統計將顯示在這裡"
+    >
+      {summary && (
+        <div className="space-y-6">
+          {/* Export buttons */}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => handleExport('csv')} disabled={!!exporting} className="btn-outline">
+              {exporting === 'csv'
+                ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted/30 border-t-muted" aria-hidden />
+                : <FileSpreadsheet className="h-4 w-4" aria-hidden />}
+              匯出 CSV
+            </button>
+            <button onClick={() => handleExport('pdf')} disabled={!!exporting} className="btn-outline">
+              {exporting === 'pdf'
+                ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted/30 border-t-muted" aria-hidden />
+                : <FileText className="h-4 w-4" aria-hidden />}
+              匯出 PDF
+            </button>
           </div>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <th className="px-5 py-3">操作類型</th>
-                <th className="px-5 py-3 text-right">次數</th>
-                <th className="px-5 py-3 text-right">輸入用量</th>
-                <th className="px-5 py-3 text-right">輸出用量</th>
-                <th className="px-5 py-3 text-right">預估費用</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {byAction.map(item => (
-                <tr key={item.action_type} className="hover:bg-gray-50">
-                  <td className="px-5 py-3">
-                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-                      {ACTION_LABELS[item.action_type] || item.action_type}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-right text-sm text-gray-700 font-medium">{item.count.toLocaleString()}</td>
-                  <td className="px-5 py-3 text-right text-sm text-gray-500">{item.total_input_tokens.toLocaleString()}</td>
-                  <td className="px-5 py-3 text-right text-sm text-gray-500">{item.total_output_tokens.toLocaleString()}</td>
-                  <td className="px-5 py-3 text-right text-sm text-gray-700 font-medium">${item.total_cost.toFixed(4)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard icon={MessageSquare} label="總操作次數" value={summary.total_actions.toLocaleString()} tone="accent" />
+            <StatCard icon={Cpu} label="輸入用量" value={summary.total_input_tokens.toLocaleString()} sub={`輸出：${summary.total_output_tokens.toLocaleString()}`} tone="neutral" />
+            <StatCard icon={Database} label="知識檢索" value={summary.total_pinecone_queries.toLocaleString()} sub={`索引處理：${summary.total_embedding_calls.toLocaleString()}`} tone="success" />
+            <StatCard icon={Coins} label="預估費用" value={fmtTwd(summary.total_cost)} sub="內部估算（新台幣）" tone="highlight" />
+          </div>
+
+          {/* By action type */}
+          {byAction.length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="border-b border-line/70 px-5 py-4">
+                <h2 className="font-display text-base font-semibold text-ink">依操作類型分佈</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[36rem]">
+                  <thead>
+                    <tr className="border-b border-line/70 bg-wash/60 text-left text-xs font-semibold tracking-wide text-muted">
+                      <th className="px-5 py-3">操作類型</th>
+                      <th className="px-5 py-3 text-right">次數</th>
+                      <th className="px-5 py-3 text-right">輸入用量</th>
+                      <th className="px-5 py-3 text-right">輸出用量</th>
+                      <th className="px-5 py-3 text-right">預估費用</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line/60">
+                    {byAction.map(item => (
+                      <tr key={item.action_type} className="transition-colors hover:bg-wash/50">
+                        <td className="px-5 py-3">
+                          <span className="chip-neutral">{actionLabel(item.action_type)}</span>
+                        </td>
+                        <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-ink">{item.count.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right text-sm tabular-nums text-muted">{item.total_input_tokens.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right text-sm tabular-nums text-muted">{item.total_output_tokens.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-ink">{fmtTwd(item.total_cost)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </AsyncState>
   )
 }
 
@@ -182,196 +215,272 @@ function OverviewTab() {
 function DepartmentTab() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [days, setDays] = useState(30)
   const [report, setReport] = useState<UsageReport | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try { setReport(await kbApi.usageReport(days)) }
-    catch { toast.error('載入失敗') }
+    catch (err) { setError(parseApiError(err)) }
     finally { setLoading(false) }
   }, [days])
 
   useEffect(() => { load() }, [load])
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
-  if (!report) return null
-
   const PERIODS = [{ days: 7, label: '7 天' }, { days: 30, label: '30 天' }, { days: 90, label: '90 天' }]
 
   return (
-    <div className="space-y-6">
-      {/* Period selector + KPIs */}
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard icon={MessageSquare} label="總查詢數" value={fmtNum(report.total_queries)} color="bg-blue-50 text-blue-600" />
-          <StatCard icon={Cpu} label="總生成次數" value={fmtNum(report.total_generations)} color="bg-purple-50 text-purple-600" />
-          <StatCard icon={BarChart3} label="用量合計" value={fmtNum(report.total_tokens)} color="bg-amber-50 text-amber-600" />
-          <StatCard icon={Users} label="活躍使用者" value={report.active_users} color="bg-green-50 text-green-600" />
-        </div>
-        <div className="flex items-center gap-2">
-          {PERIODS.map(p => (
-            <button key={p.days} onClick={() => setDays(p.days)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${days === p.days ? 'bg-blue-600 text-white' : 'border text-gray-600 hover:bg-gray-100'}`}>
-              {p.label}
-            </button>
-          ))}
-          <button onClick={load} className="ml-1 flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm text-gray-600 hover:bg-gray-100">
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Department chart + table */}
-      {report.department_breakdown.length > 0 && (
-        <div className="rounded-xl border bg-white p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <Building2 className="h-4 w-4 text-purple-600" /> 部門使用統計
-          </h3>
-          <div className="h-64 mb-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={report.department_breakdown}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="department_name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="query_count" name="查詢" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="generate_count" name="生成" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="text-left text-gray-500 border-b">
-                <th className="pb-2 font-medium">部門</th>
-                <th className="pb-2 font-medium text-right">查詢</th>
-                <th className="pb-2 font-medium text-right">生成</th>
-                <th className="pb-2 font-medium text-right">用量</th>
-                <th className="pb-2 font-medium text-right">使用者</th>
-              </tr></thead>
-              <tbody>
-                {report.department_breakdown.map(d => (
-                  <tr key={d.department_name} className="border-b last:border-0">
-                    <td className="py-2">{d.department_name}</td>
-                    <td className="py-2 text-right font-mono">{fmtNum(d.query_count)}</td>
-                    <td className="py-2 text-right font-mono">{fmtNum(d.generate_count)}</td>
-                    <td className="py-2 text-right font-mono">{fmtNum(d.total_tokens)}</td>
-                    <td className="py-2 text-right font-mono">{d.active_users}</td>
-                  </tr>
+    <AsyncState
+      loading={loading}
+      error={error}
+      onRetry={load}
+      empty={!report}
+      emptyTitle="尚無部門用量資料"
+    >
+      {report && (
+        <div className="space-y-6">
+          {/* Period selector + KPIs */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="grid flex-1 grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard icon={MessageSquare} label="總查詢數" value={fmtNum(report.total_queries)} tone="accent" />
+              <StatCard icon={Cpu} label="總生成次數" value={fmtNum(report.total_generations)} tone="neutral" />
+              <StatCard icon={BarChart3} label="用量合計" value={fmtNum(report.total_tokens)} tone="highlight" />
+              <StatCard icon={Users} label="活躍使用者" value={report.active_users} tone="success" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="seg-tabs" role="group" aria-label="統計週期">
+                {PERIODS.map(p => (
+                  <button key={p.days} onClick={() => setDays(p.days)}
+                    aria-pressed={days === p.days}
+                    className={days === p.days ? 'seg-tab-active' : 'seg-tab'}>
+                    {p.label}
+                  </button>
                 ))}
-              </tbody>
-            </table>
+              </div>
+              <button onClick={load} className="icon-btn" aria-label="重新整理">
+                <RefreshCw className="h-4 w-4" aria-hidden />
+              </button>
+            </div>
+          </div>
+
+          {/* Department chart + table */}
+          {report.department_breakdown.length > 0 && (
+            <div className="card p-5">
+              <h3 className="mb-4 flex items-center gap-2 font-display text-base font-semibold text-ink">
+                <Building2 className="h-4 w-4 text-accent" aria-hidden /> 部門使用統計
+              </h3>
+              <div className="mb-4 h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={report.department_breakdown}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-line)" />
+                    <XAxis dataKey="department_name" tick={{ fontSize: 12, fill: 'var(--color-muted)' }} />
+                    <YAxis tick={{ fontSize: 12, fill: 'var(--color-muted)' }} />
+                    <Tooltip />
+                    <Bar dataKey="query_count" name="查詢" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="generate_count" name="生成" fill="var(--color-highlight)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[32rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-line/70 text-left text-xs font-semibold tracking-wide text-muted">
+                      <th className="pb-2">部門</th>
+                      <th className="pb-2 text-right">查詢</th>
+                      <th className="pb-2 text-right">生成</th>
+                      <th className="pb-2 text-right">用量</th>
+                      <th className="pb-2 text-right">使用者</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.department_breakdown.map(d => (
+                      <tr key={d.department_name} className="border-b border-line/60 last:border-0">
+                        <td className="py-2.5 font-medium text-ink">{d.department_name}</td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-muted">{fmtNum(d.query_count)}</td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-muted">{fmtNum(d.generate_count)}</td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-muted">{fmtNum(d.total_tokens)}</td>
+                        <td className="py-2.5 text-right font-mono tabular-nums text-muted">{d.active_users}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Top Documents */}
+            {report.top_documents.length > 0 && (
+              <div className="card p-5">
+                <h3 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-ink">
+                  <FileText className="h-4 w-4 text-accent" aria-hidden /> 最常被檢索文件
+                </h3>
+                <div>
+                  {report.top_documents.map((d, i) => (
+                    <div key={d.document_id} className="flex items-center gap-3 border-b border-line/60 py-2.5 last:border-0">
+                      <span className="w-6 text-right font-mono text-xs text-muted">{i + 1}</span>
+                      <span className="flex-1 truncate text-sm text-ink">{d.filename}</span>
+                      <span className="chip-neutral">{d.query_hit_count} 次</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Top Queries — link to analytics */}
+            {report.top_queries.length > 0 && (
+              <div className="card p-5">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="flex items-center gap-2 font-display text-base font-semibold text-ink">
+                    <Search className="h-4 w-4 text-success" aria-hidden /> 最常被問的問題
+                  </h3>
+                  <button onClick={() => navigate('/query-analytics')}
+                    className="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-accent transition-colors hover:bg-accent-soft/60">
+                    查看完整分析 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+                <div>
+                  {report.top_queries.slice(0, 5).map((q, i) => (
+                    <div key={i} className="flex items-center gap-3 border-b border-line/60 py-2.5 last:border-0">
+                      <span className="w-6 text-right font-mono text-xs text-muted">{i + 1}</span>
+                      <span className="flex-1 truncate text-sm text-ink">{q.query_text}</span>
+                      <span className="chip-neutral">{q.count} 次</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Top Documents */}
-        {report.top_documents.length > 0 && (
-          <div className="rounded-xl border bg-white p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <FileText className="h-4 w-4 text-blue-600" /> 最常被檢索文件
-            </h3>
-            <div className="space-y-1">
-              {report.top_documents.map((d, i) => (
-                <div key={d.document_id} className="flex items-center gap-3 py-1.5 border-b last:border-0">
-                  <span className="w-6 text-right text-xs font-mono text-gray-400">{i + 1}</span>
-                  <span className="flex-1 text-sm text-gray-700 truncate">{d.filename}</span>
-                  <span className="text-xs font-mono text-gray-500">{d.query_hit_count} 次</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Top Queries — link to analytics */}
-        {report.top_queries.length > 0 && (
-          <div className="rounded-xl border bg-white p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <Search className="h-4 w-4 text-green-600" /> 最常被問的問題
-              </h3>
-              <button onClick={() => navigate('/query-analytics')}
-                className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline">
-                查看完整分析 <ExternalLink className="h-3 w-3" />
-              </button>
-            </div>
-            <div className="space-y-1">
-              {report.top_queries.slice(0, 5).map((q, i) => (
-                <div key={i} className="flex items-center gap-3 py-1.5 border-b last:border-0">
-                  <span className="w-6 text-right text-xs font-mono text-gray-400">{i + 1}</span>
-                  <span className="flex-1 text-sm text-gray-700 truncate">{q.query_text}</span>
-                  <span className="text-xs font-mono text-gray-500">{q.count} 次</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+    </AsyncState>
   )
 }
 
 /* ════════════════════════════════════════════════════════════════
    Tab 3 — 成員明細
    ════════════════════════════════════════════════════════════════ */
-function MembersTab() {
-  const [summary, setSummary] = useState<any>(null)
-  const [byUser, setByUser] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+interface MemberSummary {
+  total_actions: number
+  total_input_tokens: number
+  total_output_tokens: number
+  total_pinecone_queries: number
+  total_cost?: number
+}
+interface MemberUsageRow {
+  full_name?: string
+  email: string
+  monthly_queries: number
+  monthly_tokens?: number
+  monthly_cost?: number
+}
 
-  useEffect(() => {
-    Promise.all([companyApi.usageSummary(), companyApi.usageByUser()])
-      .then(([s, u]) => { setSummary(s); setByUser(u as any[]) })
-      .catch(() => null)
-      .finally(() => setLoading(false))
+function MembersTab() {
+  const [summary, setSummary] = useState<MemberSummary | null>(null)
+  const [byUser, setByUser] = useState<MemberUsageRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<ApiErrorInfo | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [s, u] = await Promise.all([companyApi.usageSummary(), companyApi.usageByUser()])
+      setSummary(s as MemberSummary)
+      setByUser(u as MemberUsageRow[])
+    } catch (err) {
+      setError(parseApiError(err))
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
-  if (!summary) return <div className="flex flex-col items-center py-12 text-gray-400"><Users className="mb-3 h-10 w-10" /><p className="text-sm">無法載入用量資料</p></div>
+  useEffect(() => { load() }, [load])
 
   return (
-    <div className="space-y-6">
-      {/* Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={BarChart3} label="總操作數" value={summary.total_actions} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={MessageSquare} label="總用量" value={(summary.total_input_tokens + summary.total_output_tokens).toLocaleString()} color="bg-green-50 text-green-600" />
-        <StatCard icon={Database} label="知識檢索" value={summary.total_pinecone_queries} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={Coins} label="預估費用" value={`$${summary.total_cost?.toFixed(4) || '0'}`} color="bg-amber-50 text-amber-600" />
-      </div>
-
-      {/* By user */}
-      {byUser.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <div className="border-b border-gray-100 px-5 py-3">
-            <h2 className="text-sm font-semibold text-gray-700">按成員用量明細</h2>
+    <AsyncState
+      loading={loading}
+      error={error}
+      onRetry={load}
+      empty={!summary}
+      emptyTitle="尚無成員用量資料"
+    >
+      {summary && (
+        <div className="space-y-6">
+          {/* Summary */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard icon={BarChart3} label="總操作數" value={summary.total_actions} tone="accent" />
+            <StatCard icon={MessageSquare} label="總用量" value={(summary.total_input_tokens + summary.total_output_tokens).toLocaleString()} tone="success" />
+            <StatCard icon={Database} label="知識檢索" value={summary.total_pinecone_queries} tone="neutral" />
+            <StatCard icon={Coins} label="預估費用" value={fmtTwd(summary.total_cost || 0)} sub="內部估算（新台幣）" tone="highlight" />
           </div>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <th className="px-5 py-3">成員</th>
-                <th className="px-5 py-3 text-right">查詢次數</th>
-                <th className="px-5 py-3 text-right">用量</th>
-                <th className="px-5 py-3 text-right">預估費用</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {byUser.map((u: any, i: number) => (
-                <tr key={i} className="hover:bg-gray-50">
-                  <td className="px-5 py-2">
-                    <p className="text-sm font-medium text-gray-900">{u.full_name || u.email}</p>
-                    {u.full_name && <p className="text-xs text-gray-400">{u.email}</p>}
-                  </td>
-                  <td className="px-5 py-2 text-right text-sm text-gray-600">{u.monthly_queries}</td>
-                  <td className="px-5 py-2 text-right text-sm text-gray-600">{(u.monthly_tokens || 0).toLocaleString()}</td>
-                  <td className="px-5 py-2 text-right text-sm font-medium text-gray-700">${(u.monthly_cost || 0).toFixed(4)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+          {/* By user */}
+          {byUser.length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="border-b border-line/70 px-5 py-4">
+                <h2 className="font-display text-base font-semibold text-ink">按成員用量明細</h2>
+              </div>
+
+              {/* 手機：卡片清單 */}
+              <div className="divide-y divide-line/60 md:hidden">
+                {byUser.map((u, i) => (
+                  <div key={i} className="space-y-3 p-5">
+                    <div>
+                      <p className="text-sm font-semibold text-ink">{u.full_name || u.email}</p>
+                      {u.full_name && <p className="text-xs text-muted">{u.email}</p>}
+                    </div>
+                    <dl className="grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-xl bg-wash/70 px-2 py-2">
+                        <dt className="text-xs text-muted">查詢次數</dt>
+                        <dd className="mt-0.5 font-display text-base font-semibold tabular-nums text-ink">{u.monthly_queries}</dd>
+                      </div>
+                      <div className="rounded-xl bg-wash/70 px-2 py-2">
+                        <dt className="text-xs text-muted">用量</dt>
+                        <dd className="mt-0.5 font-display text-base font-semibold tabular-nums text-ink">{(u.monthly_tokens || 0).toLocaleString()}</dd>
+                      </div>
+                      <div className="rounded-xl bg-wash/70 px-2 py-2">
+                        <dt className="text-xs text-muted">預估費用</dt>
+                        <dd className="mt-0.5 font-display text-base font-semibold tabular-nums text-ink">{fmtTwd(u.monthly_cost || 0)}</dd>
+                      </div>
+                    </dl>
+                  </div>
+                ))}
+              </div>
+
+              {/* 桌面：表格 */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-line/70 bg-wash/60 text-left text-xs font-semibold tracking-wide text-muted">
+                      <th className="px-5 py-3">成員</th>
+                      <th className="px-5 py-3 text-right">查詢次數</th>
+                      <th className="px-5 py-3 text-right">用量</th>
+                      <th className="px-5 py-3 text-right">預估費用</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line/60">
+                    {byUser.map((u, i) => (
+                      <tr key={i} className="transition-colors hover:bg-wash/50">
+                        <td className="px-5 py-3">
+                          <p className="text-sm font-semibold text-ink">{u.full_name || u.email}</p>
+                          {u.full_name && <p className="text-xs text-muted">{u.email}</p>}
+                        </td>
+                        <td className="px-5 py-3 text-right text-sm tabular-nums text-muted">{u.monthly_queries}</td>
+                        <td className="px-5 py-3 text-right text-sm tabular-nums text-muted">{(u.monthly_tokens || 0).toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums text-ink">{fmtTwd(u.monthly_cost || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </AsyncState>
   )
 }
 
@@ -396,85 +505,95 @@ interface PersonalUsage {
 function PersonalTab() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [usage, setUsage] = useState<PersonalUsage | null>(null)
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/audit/usage/me/summary').then(r => r.data).catch(() => null),
-      api.get('/audit/usage/me/by-action').then(r => r.data).catch(() => []),
-    ]).then(([summary, byAction]) => {
-      if (summary) {
-        setUsage({
-          total_queries: summary.total_actions || 0,
-          total_input_tokens: summary.total_input_tokens || 0,
-          total_output_tokens: summary.total_output_tokens || 0,
-          total_cost_usd: summary.total_cost || 0,
-          recent_actions: byAction || [],
-        })
-      }
-    }).finally(() => setLoading(false))
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [summary, byAction] = await Promise.all([
+        api.get('/audit/usage/me/summary').then(r => r.data),
+        api.get('/audit/usage/me/by-action').then(r => r.data),
+      ])
+      setUsage({
+        total_queries: summary.total_actions || 0,
+        total_input_tokens: summary.total_input_tokens || 0,
+        total_output_tokens: summary.total_output_tokens || 0,
+        total_cost_usd: summary.total_cost || 0,
+        recent_actions: byAction || [],
+      })
+    } catch (err) {
+      setError(parseApiError(err))
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-gray-400" /></div>
+  useEffect(() => { load() }, [load])
+
+  const isEmpty = !usage || usage.total_queries === 0
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-gray-500">
-        {user?.full_name || user?.email} 的個人使用統計
-      </p>
+    <AsyncState
+      loading={loading}
+      error={error}
+      onRetry={load}
+      empty={isEmpty}
+      emptyTitle="尚無使用記錄"
+      emptyDescription="開始使用 AI 問答或上傳文件後，您的用量統計將顯示在這裡"
+    >
+      {usage && !isEmpty && (
+        <div className="space-y-6">
+          <p className="text-sm text-muted">
+            {user?.full_name || user?.email} 的個人使用統計
+          </p>
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={MessageSquare} label="總操作次數" value={usage?.total_queries?.toLocaleString() ?? '0'} color="bg-blue-50 text-blue-600" />
-        <StatCard icon={Cpu} label="輸入用量" value={usage?.total_input_tokens?.toLocaleString() ?? '0'} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={Cpu} label="輸出用量" value={usage?.total_output_tokens?.toLocaleString() ?? '0'} color="bg-indigo-50 text-indigo-600" />
-        <StatCard icon={Coins} label="內部估算" value={`$${(usage?.total_cost_usd ?? 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
-      </div>
+          {/* Stats */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard icon={MessageSquare} label="總操作次數" value={usage.total_queries.toLocaleString()} tone="accent" />
+            <StatCard icon={Cpu} label="輸入用量" value={usage.total_input_tokens.toLocaleString()} tone="neutral" />
+            <StatCard icon={Cpu} label="輸出用量" value={usage.total_output_tokens.toLocaleString()} tone="success" />
+            <StatCard icon={Coins} label="預估費用" value={fmtTwd(usage.total_cost_usd)} sub="內部估算（新台幣）" tone="highlight" />
+          </div>
 
-      {/* By action type */}
-      {usage?.recent_actions && usage.recent_actions.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <div className="border-b border-gray-200 px-6 py-4">
-            <h2 className="text-sm font-semibold text-gray-900">按類型分析</h2>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-left">
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500">操作類型</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">次數</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸入用量</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">輸出用量</th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 text-right">內部估算</th>
-                </tr>
-              </thead>
-              <tbody>
-                {usage.recent_actions.map((a) => (
-                  <tr key={a.action_type} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="px-6 py-3 font-medium text-gray-900">
-                      {ACTION_LABELS[a.action_type] || a.action_type}
-                    </td>
-                    <td className="px-6 py-3 text-right text-gray-600">{a.count.toLocaleString()}</td>
-                    <td className="px-6 py-3 text-right text-gray-600">{a.total_input_tokens.toLocaleString()}</td>
-                    <td className="px-6 py-3 text-right text-gray-600">{a.total_output_tokens.toLocaleString()}</td>
-                    <td className="px-6 py-3 text-right text-gray-600">${a.total_cost.toFixed(4)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* By action type */}
+          {usage.recent_actions.length > 0 && (
+            <div className="card overflow-hidden">
+              <div className="border-b border-line/70 px-5 py-4">
+                <h2 className="font-display text-base font-semibold text-ink">按類型分析</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[36rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-line/70 bg-wash/60 text-left text-xs font-semibold tracking-wide text-muted">
+                      <th className="px-5 py-3">操作類型</th>
+                      <th className="px-5 py-3 text-right">次數</th>
+                      <th className="px-5 py-3 text-right">輸入用量</th>
+                      <th className="px-5 py-3 text-right">輸出用量</th>
+                      <th className="px-5 py-3 text-right">預估費用</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line/60">
+                    {usage.recent_actions.map((a) => (
+                      <tr key={a.action_type} className="transition-colors hover:bg-wash/50">
+                        <td className="px-5 py-3">
+                          <span className="chip-neutral">{actionLabel(a.action_type)}</span>
+                        </td>
+                        <td className="px-5 py-3 text-right font-semibold tabular-nums text-ink">{a.count.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-muted">{a.total_input_tokens.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-muted">{a.total_output_tokens.toLocaleString()}</td>
+                        <td className="px-5 py-3 text-right font-semibold tabular-nums text-ink">{fmtTwd(a.total_cost)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
-
-      {/* Empty state */}
-      {(!usage || usage.total_queries === 0) && (
-        <div className="flex flex-col items-center py-16 text-gray-400">
-          <Activity className="mb-3 h-12 w-12" />
-          <p className="text-sm font-medium">尚無使用記錄</p>
-          <p className="mt-1 text-xs">開始使用 AI 問答或上傳文件後，您的用量統計將顯示在這裡</p>
-        </div>
-      )}
-    </div>
+    </AsyncState>
   )
 }
 
@@ -514,33 +633,44 @@ export default function UsagePage() {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-2 mb-1">
-          <BarChart3 className="h-5 w-5 text-blue-600" />
-          <h1 className="text-lg font-semibold text-gray-900">用量統計</h1>
+      <div className="border-b border-line/70 bg-surface px-4 py-5 sm:px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft">
+            <BarChart3 className="h-5 w-5 text-accent" aria-hidden />
+          </div>
+          <div>
+            <h1 className="font-display text-xl font-semibold text-ink">用量統計</h1>
+            <p className="text-sm text-muted">
+              {isAdmin ? '組織用量、部門分佈與成員明細' : '你最近的問答與操作次數'}
+            </p>
+          </div>
         </div>
-        <p className="text-sm text-gray-500 mb-3">
-          {isAdmin ? '組織用量、部門分佈與成員明細' : '你最近的問答與操作次數'}
-        </p>
         {tabs.length > 1 && (
-          <div className="flex gap-1">
+          <div className="seg-tabs mt-4" role="tablist" aria-label="用量統計分頁">
             {tabs.map(t => (
               <button key={t.key} onClick={() => setTab(t.key)}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  tab === t.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}>
-                <t.icon className="h-4 w-4" /> {t.label}
+                role="tab" id={`usage-tab-${t.key}`} aria-selected={tab === t.key}
+                aria-controls={`usage-panel-${t.key}`}
+                className={`${tab === t.key ? 'seg-tab-active' : 'seg-tab'} inline-flex items-center gap-1.5`}>
+                <t.icon className="h-4 w-4" aria-hidden /> {t.label}
               </button>
             ))}
           </div>
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
-        {tab === 'overview' && <OverviewTab />}
-        {tab === 'department' && <DepartmentTab />}
-        {tab === 'members' && <MembersTab />}
-        {tab === 'personal' && <PersonalTab />}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div
+          role="tabpanel"
+          id={`usage-panel-${tab}`}
+          aria-labelledby={`usage-tab-${tab}`}
+          className="animate-fade-in mx-auto max-w-6xl"
+        >
+          {tab === 'overview' && <OverviewTab />}
+          {tab === 'department' && <DepartmentTab />}
+          {tab === 'members' && <MembersTab />}
+          {tab === 'personal' && <PersonalTab />}
+        </div>
       </div>
     </div>
   )

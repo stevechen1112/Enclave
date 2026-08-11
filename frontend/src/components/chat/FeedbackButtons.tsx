@@ -48,42 +48,45 @@ export default function FeedbackButtons({ messageId, initialFeedback = null }: P
           onClick={() => submit('up')}
           disabled={submitting}
           className={clsx(
-            'min-h-11 min-w-11 rounded p-2 transition-colors',
+            'icon-btn',
             feedback === 'up'
-              ? 'bg-green-50 text-green-600'
-              : 'text-gray-300 hover:bg-green-50 hover:text-green-500',
+              ? 'bg-success-soft text-success hover:bg-success-soft hover:text-success'
+              : 'hover:text-success',
           )}
           aria-label="有幫助"
           aria-pressed={feedback === 'up'}
         >
-          <ThumbsUp className="h-3.5 w-3.5" aria-hidden />
+          <ThumbsUp className="h-4 w-4" aria-hidden />
         </button>
         <button
           type="button"
           onClick={() => setShowCats(v => !v)}
           disabled={submitting}
           className={clsx(
-            'min-h-11 min-w-11 rounded p-2 transition-colors',
+            'icon-btn',
             feedback === 'down'
-              ? 'bg-red-50 text-red-500'
-              : 'text-gray-300 hover:bg-red-50 hover:text-red-400',
+              ? 'bg-danger-soft text-danger hover:bg-danger-soft hover:text-danger'
+              : 'hover:text-danger',
           )}
           aria-label="需要改善"
           aria-pressed={feedback === 'down'}
           aria-expanded={showCats}
         >
-          <ThumbsDown className="h-3.5 w-3.5" aria-hidden />
+          <ThumbsDown className="h-4 w-4" aria-hidden />
         </button>
+        {feedback && (
+          <span className="ml-1 text-xs text-muted">感謝回饋</span>
+        )}
       </div>
       {showCats && (
-        <div className="mt-1 flex flex-wrap gap-1" role="group" aria-label="負評原因">
+        <div className="mt-2 flex animate-fade-in flex-wrap gap-2" role="group" aria-label="負評原因">
           {DOWN_CATEGORIES.map(c => (
             <button
               key={c.id}
               type="button"
               disabled={submitting}
               onClick={() => submit('down', c.id)}
-              className="rounded-full border border-line px-2.5 py-1 text-[11px] text-muted hover:border-accent hover:text-accent"
+              className="inline-flex min-h-11 items-center rounded-full border border-line bg-surface px-4 text-sm font-semibold text-muted transition-colors hover:border-accent/50 hover:bg-accent-soft/40 hover:text-accent-ink"
             >
               {c.label}
             </button>

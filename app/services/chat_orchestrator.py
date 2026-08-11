@@ -136,6 +136,7 @@ class ChatOrchestrator:
         authz = None,  # Phase 0: AuthorizationContext
         use_gateway: bool = True,
         db = None,  # request-scoped SQLAlchemy Session
+        filter_dict: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """純檢索：經 MultiStepOrchestrator（計劃→多臂→合成）組裝上下文。"""
         request_id = str(uuid.uuid4())
@@ -156,6 +157,7 @@ class ChatOrchestrator:
                 top_k=top_k,
                 use_gateway=use_gateway,
                 db=db,
+                filter_dict=filter_dict,
             )
         except Exception as exc:
             logger.warning("multi-step orchestration failed: %s", exc)
@@ -260,8 +262,36 @@ class ChatOrchestrator:
         # 檔名鎖定（《檔名》）查詢：證據集中在單一文件，放寬上下文段數上限，
         # 避免長文件的目標章節被固定 5 段截掉（2026-08-03 盲測 B02/B07/B13 根因）
         _qp = company_policy.get("query_plan") or {}
-        _max_ctx = 12 if _qp.get("mentioned_documents") else 5
-        top_results = (company_policy.get("results") or [])[:_max_ctx]
+        _locked = bool(_qp.get("mentioned_documents"))
+        _max_ctx = 12 if _locked else 5
+        _all_results = company_policy.get("results") or []
+        if _locked:
+            top_results = _all_results[:_max_ctx]
+        else:
+            # 多步編排的結果是依文件分組而非分數排序；比較型問題（如版本差異）
+            # 需要跨文件多樣性，否則單一文件的 chunks 會佔滿上下文，
+            # 另一份關鍵文件的內容永遠進不了 LLM（2026-08-06 線上 E2E A2 根因）
+            _sorted = sorted(
+                _all_results, key=lambda r: r.get("score") or 0, reverse=True
+            )
+            top_results = []
+            _per_doc: Dict[str, int] = {}
+            for r in _sorted:
+                fn = r.get("filename") or ""
+                if _per_doc.get(fn, 0) >= 2:
+                    continue
+                _per_doc[fn] = _per_doc.get(fn, 0) + 1
+                top_results.append(r)
+                if len(top_results) >= _max_ctx:
+                    break
+            if len(top_results) < _max_ctx:
+                _picked = {id(r) for r in top_results}
+                for r in _sorted:
+                    if id(r) in _picked:
+                        continue
+                    top_results.append(r)
+                    if len(top_results) >= _max_ctx:
+                        break
         if top_results:
             context["company_policy_raw"] = {
                 "content": top_results[0].get("content") or "",
@@ -670,12 +700,15 @@ class ChatOrchestrator:
         history: Optional[List[Dict[str, str]]] = None,
         authz = None,  # Phase 0: AuthorizationContext
         db = None,  # request-scoped SQLAlchemy Session
+        filter_dict: Optional[Dict[str, Any]] = None,
+        question_hint: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         處理用戶查詢（非串流，向下相容）。
-        
+
         新增 conversation_id / history 參數以支援多輪對話。
         Phase 0: 接受 AuthorizationContext 做 ACL 過濾。
+        filter_dict / question_hint：職能模組與 SceneContext 的檢索範圍（與串流路徑一致）。
         """
         structured = try_structured_answer(tenant_id, question, history=history)
         if structured:
@@ -692,6 +725,8 @@ class ChatOrchestrator:
         effective_question = question
         if history:
             effective_question = await self.contextualize_query(question, history)
+        if question_hint and question_hint not in effective_question:
+            effective_question = f"{effective_question}\n{question_hint}"
 
         # 檢索（Phase 0: 傳遞 authz）
         ctx = await self.retrieve_context(
@@ -700,6 +735,7 @@ class ChatOrchestrator:
             top_k=top_k,
             authz=authz,
             db=db,
+            filter_dict=filter_dict,
         )
 
         # 生成回答（非串流）

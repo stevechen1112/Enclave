@@ -5,8 +5,8 @@ import { useAuth } from '../auth'
 import RiskBanner from '../components/RiskBanner'
 import type { Conversation, Message, ChatSource, SSEEvent, SearchResult, RetrievalInfo } from '../types'
 import {
-  Send, Plus, Loader2, Trash2,
-  Download, Search, X, PanelRightOpen, PanelRightClose, FlaskConical,
+  Send, Plus, Loader2, Trash2, Download, Search, X, Menu,
+  PanelRightOpen, PanelRightClose, FlaskConical, MessageSquare,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
@@ -19,7 +19,7 @@ import TypingIndicator from '../components/chat/TypingIndicator'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from './ask/EmptyState'
 import { classifyEmptyAnswer, EMPTY_ANSWER_LABEL, type EmptyAnswerKind } from './ask/emptyAnswer'
-import { hasCapability } from '../navigation/capabilities'
+import { useHasCapability } from '../navigation/useCapabilities'
 import { markTestAskDone } from '../lib/readiness'
 
 const TEST_KNOWLEDGE_KEY = 'enclave_test_knowledge'
@@ -37,18 +37,24 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeConvId, setActiveConvId] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [input, setInput] = useState('')
+  // MKA 語音確認後帶入的查詢（/ask?q=...）
+  const [input, setInput] = useState(() => searchParams.get('q') ?? '')
   const [sending, setSending] = useState(false)
   const [loadingConvs, setLoadingConvs] = useState(true)
   const [streamStatus, setStreamStatus] = useState<string | null>(null)
   const [streamingContent, setStreamingContent] = useState('')
   const [streamingSources, setStreamingSources] = useState<ChatSource[]>([])
-  const [evidenceOpen, setEvidenceOpen] = useState(true)
+  // 手機上證據抽屜預設關閉（bottom sheet 會蓋住半個螢幕）；桌機預設開啟
+  const [evidenceOpen, setEvidenceOpen] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
+  )
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [deleteConvId, setDeleteConvId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [retrieval, setRetrieval] = useState<RetrievalInfo | null>(null)
   const [messagesError, setMessagesError] = useState<string | null>(null)
-  const canTestKnowledge = hasCapability(user?.role, 'admin_home', user?.is_superuser)
+  const [sceneContext, setSceneContext] = useState<Record<string, string> | null>(null)
+  const canTestKnowledge = useHasCapability('admin_home')
   const [testKnowledge, setTestKnowledge] = useState(() => {
     try {
       return localStorage.getItem(TEST_KNOWLEDGE_KEY) === '1'
@@ -68,6 +74,13 @@ export default function ChatPage() {
   useEffect(() => {
     retrievalRef.current = retrieval
   }, [retrieval])
+
+  // 離開頁面時中止進行中的 SSE 串流，避免幽靈請求與 setState on unmounted
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
 
   const toggleTestKnowledge = () => {
     setTestKnowledge(prev => {
@@ -95,9 +108,18 @@ export default function ChatPage() {
     loadConversations()
   }, [loadConversations])
 
-  // Deep-link: /ask?q=...
+  // Deep-link: /ask?q=...&scene=...
   useEffect(() => {
     const q = searchParams.get('q')
+    const sceneRaw = searchParams.get('scene')
+    if (sceneRaw) {
+      try {
+        const parsed = JSON.parse(sceneRaw) as Record<string, string>
+        setSceneContext(parsed)
+      } catch {
+        /* ignore bad scene */
+      }
+    }
     if (q) {
       setInput(q)
       setSearchParams({}, { replace: true })
@@ -171,7 +193,12 @@ export default function ChatPage() {
 
     try {
       await chatApi.stream(
-        { question, conversation_id: activeConvId },
+        {
+          question,
+          conversation_id: activeConvId,
+          scene_context: sceneContext || undefined,
+          module_key: searchParams.get('module') || undefined,
+        },
         (event: SSEEvent) => {
           switch (event.type) {
             case 'status':
@@ -289,6 +316,12 @@ export default function ChatPage() {
     setStreamingContent('')
     setStreamingSources([])
     setStreamStatus(null)
+    setSidebarOpen(false)
+  }
+
+  const handleSelectConv = (convId: string) => {
+    setActiveConvId(convId)
+    setSidebarOpen(false)
   }
 
   const handleDeleteConv = (convId: string, e: React.MouseEvent) => {
@@ -362,117 +395,198 @@ export default function ChatPage() {
       ? messages[messages.length - 1].suggestions
       : undefined
 
-  return (
-    <div className="flex h-full">
-      {/* ──── Conversation sidebar ──── */}
-      <div className="hidden md:flex w-64 flex-col border-r border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-gray-700">對話記錄</h2>
+  const retryLoadMessages = () => {
+    if (!activeConvId) return
+    setMessagesError(null)
+    chatApi.messages(activeConvId)
+      .then(msgs => setMessages(msgs))
+      .catch((err) => setMessagesError(formatErrorWithTrace(parseApiError(err))))
+  }
+
+  const clearSearch = () => {
+    setSearchQuery('')
+    setSearchResults(null)
+  }
+
+  // ──── 對話側欄內容（桌機靜態欄＋手機 drawer 共用）────
+  const sidebarBody = (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <h2 className="font-display text-sm font-semibold text-ink">對話記錄</h2>
+        <div className="flex items-center gap-1">
           <button
+            type="button"
             onClick={handleNewChat}
-            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
-            title="新對話"
+            className="icon-btn"
+            aria-label="新對話"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-5 w-5" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="icon-btn md:hidden"
+            aria-label="關閉對話記錄"
+          >
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
+      </div>
 
-        {/* T7-13: search bar */}
-        <div className="px-3 py-2 border-b border-gray-100">
-          <div className="flex items-center gap-1">
-            <input
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="搜尋對話..."
-              className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs focus:border-blue-400 focus:outline-none"
-            />
-            {searchQuery ? (
-              <button
-                onClick={() => { setSearchQuery(''); setSearchResults(null) }}
-                className="p-1 text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <button onClick={handleSearch} className="p-1 text-gray-400 hover:text-gray-600">
-                <Search className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Search results or conversation list */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-          {searchResults !== null ? (
-            searchResults.length === 0 ? (
-              <p className="py-8 text-center text-xs text-gray-400">無搜尋結果</p>
-            ) : (
-              searchResults.map((r, i) => (
-                <div
-                  key={i}
-                  onClick={() => {
-                    setActiveConvId(r.conversation_id)
-                    setSearchResults(null)
-                    setSearchQuery('')
-                  }}
-                  className="rounded-lg px-3 py-2 text-xs cursor-pointer hover:bg-gray-50 text-gray-600"
-                >
-                  <p className="font-medium truncate">{r.conversation_title || '對話'}</p>
-                  <p className="text-gray-400 truncate mt-0.5">{r.snippet}</p>
-                </div>
-              ))
-            )
-          ) : loadingConvs ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-            </div>
-          ) : conversations.length === 0 ? (
-            <p className="py-8 text-center text-xs text-gray-400">尚無對話</p>
+      {/* T7-13: search bar */}
+      <div className="border-b border-line px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSearch()}
+            placeholder="搜尋對話…"
+            aria-label="搜尋對話"
+            className="input flex-1 text-sm"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="icon-btn shrink-0"
+              aria-label="清除搜尋"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
           ) : (
-            conversations.map(conv => (
-              <div
-                key={conv.id}
-                onClick={() => setActiveConvId(conv.id)}
-                className={clsx(
-                  'group flex items-center justify-between rounded-lg px-3 py-2 text-sm cursor-pointer transition-colors',
-                  activeConvId === conv.id ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50',
-                )}
-              >
-                <div className="flex-1 truncate">
-                  <p className="truncate font-medium">{conv.title || '新對話'}</p>
-                  <p className="text-xs text-gray-400">{format(new Date(conv.created_at), 'MM/dd HH:mm')}</p>
-                </div>
-                <div className="ml-2 hidden gap-0.5 group-hover:flex">
-                  <button
-                    onClick={e => handleExport(conv.id, e)}
-                    className="rounded p-1 text-gray-400 hover:bg-blue-50 hover:text-blue-500 transition-colors"
-                    title="匯出"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={e => handleDeleteConv(conv.id, e)}
-                    className="rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                    aria-label="刪除對話"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            ))
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="icon-btn shrink-0"
+              aria-label="搜尋"
+            >
+              <Search className="h-4 w-4" aria-hidden />
+            </button>
           )}
         </div>
       </div>
 
+      {/* Search results or conversation list */}
+      <div className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+        {searchResults !== null ? (
+          searchResults.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted">找不到符合的對話</p>
+          ) : (
+            searchResults.map((r, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  handleSelectConv(r.conversation_id)
+                  clearSearch()
+                }}
+                className="card-interactive block w-full px-4 py-3 text-left"
+              >
+                <p className="truncate text-sm font-semibold text-ink">{r.conversation_title || '對話'}</p>
+                <p className="mt-0.5 truncate text-xs text-muted">{r.snippet}</p>
+              </button>
+            ))
+          )
+        ) : loadingConvs ? (
+          <div className="flex justify-center py-10">
+            <Loader2 className="h-5 w-5 animate-spin text-muted" aria-hidden />
+          </div>
+        ) : conversations.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <MessageSquare className="h-6 w-6 text-muted/60" aria-hidden />
+            <p className="text-sm text-muted">尚無對話，從右邊輸入問題開始</p>
+          </div>
+        ) : (
+          conversations.map(conv => (
+            <div
+              key={conv.id}
+              className={clsx(
+                'flex items-stretch gap-1 rounded-2xl border transition-colors',
+                activeConvId === conv.id
+                  ? 'border-accent/40 bg-accent-soft'
+                  : 'border-transparent hover:border-line hover:bg-wash',
+              )}
+            >
+              <button
+                type="button"
+                onClick={() => handleSelectConv(conv.id)}
+                className="min-h-11 min-w-0 flex-1 rounded-2xl px-3 py-2 text-left"
+                aria-current={activeConvId === conv.id ? 'true' : undefined}
+              >
+                <p className={clsx(
+                  'truncate text-sm font-semibold',
+                  activeConvId === conv.id ? 'text-accent-ink' : 'text-ink',
+                )}>
+                  {conv.title || '新對話'}
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {format(new Date(conv.created_at), 'MM/dd HH:mm')}
+                </p>
+              </button>
+              <div className="flex shrink-0 items-center">
+                <button
+                  type="button"
+                  onClick={e => handleExport(conv.id, e)}
+                  className="icon-btn"
+                  aria-label={`匯出對話「${conv.title || '新對話'}」`}
+                >
+                  <Download className="h-4 w-4" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  onClick={e => handleDeleteConv(conv.id, e)}
+                  className="icon-btn hover:bg-danger-soft hover:text-danger"
+                  aria-label={`刪除對話「${conv.title || '新對話'}」`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="flex h-full">
+      {/* ──── Conversation sidebar（桌機）──── */}
+      <div className="hidden w-72 flex-col border-r border-line bg-surface md:flex">
+        {sidebarBody}
+      </div>
+
+      {/* ──── Conversation drawer（手機）──── */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="對話記錄">
+          <button
+            type="button"
+            className="absolute inset-0 h-full w-full cursor-default bg-ink/40"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="關閉對話記錄"
+            tabIndex={-1}
+          />
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] animate-fade-in bg-surface shadow-lift">
+            {sidebarBody}
+          </div>
+        </div>
+      )}
+
       {/* ──── Chat area ──── */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Header: mobile + admin test toggle */}
-        <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <h2 className="text-sm font-semibold text-ink md:hidden">問答</h2>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2 border-b border-line bg-surface px-3 py-2 md:px-4">
+          <div className="flex min-w-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="icon-btn md:hidden"
+              aria-label="開啟對話記錄"
+            >
+              <Menu className="h-5 w-5" aria-hidden />
+            </button>
+            <h2 className="truncate font-display text-sm font-semibold text-ink md:hidden">問答</h2>
             {testKnowledge && canTestKnowledge && (
-              <span className="inline-flex items-center gap-1 rounded-md bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">
+              <span className="chip-highlight shrink-0">
                 <FlaskConical className="h-3 w-3" aria-hidden /> 測試知識
               </span>
             )}
@@ -485,12 +599,9 @@ export default function ChatPage() {
                 aria-checked={testKnowledge}
                 onClick={toggleTestKnowledge}
                 className={clsx(
-                  'hidden sm:inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
-                  testKnowledge
-                    ? 'border-accent/40 bg-accent/10 text-accent'
-                    : 'border-line text-muted hover:text-ink',
+                  'btn-outline hidden min-h-11 px-3 text-xs sm:inline-flex',
+                  testKnowledge && 'border-accent/40 bg-accent-soft text-accent-ink',
                 )}
-                title="Admin：切換測試知識語境（僅前端）"
               >
                 <FlaskConical className="h-3.5 w-3.5" aria-hidden />
                 測試知識
@@ -499,23 +610,26 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => setEvidenceOpen(v => !v)}
-              className="rounded-lg p-1.5 text-muted hover:bg-wash"
+              className="icon-btn"
               aria-label={evidenceOpen ? '關閉證據' : '開啟證據'}
             >
-              {evidenceOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
+              {evidenceOpen
+                ? <PanelRightClose className="h-5 w-5" aria-hidden />
+                : <PanelRightOpen className="h-5 w-5" aria-hidden />}
             </button>
             <button
+              type="button"
               onClick={handleNewChat}
-              className="rounded-lg p-1.5 text-muted hover:bg-wash hover:text-accent md:hidden"
+              className="icon-btn md:hidden"
               aria-label="新對話"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" aria-hidden />
             </button>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-5 md:px-6">
           {messages.length === 0 && !streamingContent ? (
             <EmptyState
               userName={user?.full_name}
@@ -525,18 +639,12 @@ export default function ChatPage() {
           ) : (
             <div className="mx-auto max-w-3xl space-y-4">
               {messagesError && (
-                <div className="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-sm text-danger">
-                  {messagesError}
+                <div className="card flex items-center justify-between gap-3 border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
+                  <span className="min-w-0 flex-1">{messagesError}</span>
                   <button
                     type="button"
-                    className="ml-3 underline"
-                    onClick={() => {
-                      if (!activeConvId) return
-                      setMessagesError(null)
-                      chatApi.messages(activeConvId)
-                        .then(msgs => setMessages(msgs))
-                        .catch((err) => setMessagesError(formatErrorWithTrace(parseApiError(err))))
-                    }}
+                    className="btn-outline min-h-11 shrink-0 px-4 text-sm"
+                    onClick={retryLoadMessages}
                   >
                     重試
                   </button>
@@ -546,23 +654,22 @@ export default function ChatPage() {
                 <div key={msg.id} className={clsx('animate-fade-in flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
                   <div
                     className={clsx(
-                      'max-w-[85%] md:max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed',
+                      'max-w-[92%] rounded-2xl px-4 py-3 text-base leading-relaxed md:max-w-[80%] md:px-5 md:text-sm',
                       msg.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-800 border border-gray-200 shadow-sm',
+                        ? 'rounded-br-md bg-accent text-white shadow-card'
+                        : 'card rounded-bl-md text-ink',
                     )}
                   >
                     {msg.role === 'assistant' ? (
                       <div>
-                        <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 border-b border-line pb-2 text-[11px] text-muted">
-                          <span>證據 {msg.sources?.length ?? 0}</span>
+                        <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 border-b border-line pb-2 text-xs text-muted">
+                          <span>根據 {msg.sources?.length ?? 0} 份公司文件回答</span>
                           <span>
-                            資料更新{' '}
+                            資料更新至{' '}
                             {msg.sources?.find(s => s.updated_at)?.updated_at
                               ? new Date(msg.sources.find(s => s.updated_at)!.updated_at!).toLocaleDateString()
                               : '未知'}
                           </span>
-                          <span>回答範圍：可存取知識</span>
                         </div>
                         {(() => {
                           // Historical API messages omit sources — do not invent empty-answer banners
@@ -591,7 +698,7 @@ export default function ChatPage() {
                         )}
                       </div>
                     ) : (
-                      <span>{msg.content}</span>
+                      <span className="whitespace-pre-wrap">{msg.content}</span>
                     )}
                   </div>
                 </div>
@@ -599,8 +706,8 @@ export default function ChatPage() {
 
               {/* ──── Streaming in-progress ──── */}
               {sending && streamingContent && (
-                <div className="flex justify-start animate-fade-in">
-                  <div className="max-w-[85%] md:max-w-[80%] rounded-2xl bg-white border border-gray-200 px-4 py-3 shadow-sm text-sm leading-relaxed text-gray-800">
+                <div className="flex animate-fade-in justify-start">
+                  <div className="card max-w-[92%] rounded-bl-md px-4 py-3 text-base leading-relaxed text-ink md:max-w-[80%] md:px-5 md:text-sm">
                     <MarkdownRenderer content={streamingContent} />
                     {streamingSources.length > 0 && <SourcePanel sources={streamingSources} />}
                   </div>
@@ -622,9 +729,9 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Input */}
-        <div className="border-t border-line bg-surface p-3 md:p-4">
-          <div className="mx-auto flex max-w-3xl items-end gap-2 md:gap-3">
+        {/* Input：浮起的大卡片（手機加大字體與觸控目標） */}
+        <div className="bg-gradient-to-t from-wash via-wash to-transparent px-3 pb-3 pt-2 md:px-6 md:pb-5">
+          <div className="card mx-auto flex max-w-3xl items-end gap-2 p-2 shadow-lift md:gap-3 md:p-3">
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -632,21 +739,23 @@ export default function ChatPage() {
               placeholder="輸入你的問題…"
               rows={1}
               aria-label="問題輸入"
-              className="flex-1 resize-none rounded-xl border border-line px-4 py-3 text-sm focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none transition-shadow"
-              style={{ maxHeight: '120px' }}
+              className="max-h-32 min-h-12 flex-1 resize-none rounded-xl border border-transparent bg-transparent px-3 py-2.5 text-base text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 md:text-[15px]"
               onInput={e => {
                 const target = e.target as HTMLTextAreaElement
                 target.style.height = 'auto'
-                target.style.height = Math.min(target.scrollHeight, 120) + 'px'
+                target.style.height = Math.min(target.scrollHeight, 128) + 'px'
               }}
             />
             <button
+              type="button"
               onClick={handleSend}
               disabled={!input.trim() || sending}
-              className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-white hover:bg-accent-hover disabled:opacity-40 transition-colors shrink-0"
+              className="btn-primary min-h-12 min-w-12 shrink-0 px-3"
               aria-label="送出"
             >
-              <Send className="h-4 w-4" />
+              {sending
+                ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+                : <Send className="h-6 w-6" aria-hidden />}
             </button>
           </div>
         </div>
@@ -657,19 +766,19 @@ export default function ChatPage() {
         <aside
           className={clsx(
             'border-line bg-surface',
-            'fixed inset-x-0 bottom-0 z-30 max-h-[45vh] overflow-y-auto rounded-t-2xl border-t shadow-lg p-4 md:static md:z-0 md:max-h-none md:w-80 md:rounded-none md:border-l md:border-t-0 md:shadow-none',
+            'fixed inset-x-0 bottom-0 z-30 max-h-[45vh] overflow-y-auto rounded-t-2xl border-t p-4 shadow-lift md:static md:z-0 md:max-h-none md:w-80 md:rounded-none md:border-l md:border-t-0 md:shadow-none',
           )}
           aria-label="證據抽屜"
         >
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink">證據</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-sm font-semibold text-ink">證據</h2>
             <button
               type="button"
-              className="rounded p-1 text-muted hover:bg-wash md:hidden"
+              className="icon-btn md:hidden"
               onClick={() => setEvidenceOpen(false)}
-              aria-label="關閉"
+              aria-label="關閉證據"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" aria-hidden />
             </button>
           </div>
           {retrieval?.degraded && (
@@ -681,12 +790,14 @@ export default function ChatPage() {
             />
           )}
           {!retrieval?.degraded && retrieval?.label && drawerSources.length > 0 && (
-            <p className="mb-2 text-[11px] text-muted">{retrieval.label}</p>
+            <p className="mb-2 text-xs text-muted">{retrieval.label}</p>
           )}
           {drawerSources.length === 0 ? (
-            <p className="text-xs text-muted leading-relaxed">
-              回答產生後，此處會顯示可核對的文件證據。沒有證據時不應把答案當成確定事實。
-            </p>
+            <div className="card px-4 py-4">
+              <p className="text-sm leading-relaxed text-muted">
+                回答產生後，此處會顯示可核對的文件證據。沒有證據時不應把答案當成確定事實。
+              </p>
+            </div>
           ) : (
             <SourcePanel sources={drawerSources} defaultOpen />
           )}
@@ -697,10 +808,10 @@ export default function ChatPage() {
         <button
           type="button"
           onClick={() => setEvidenceOpen(true)}
-          className="hidden md:flex w-10 flex-col items-center justify-start border-l border-line bg-surface pt-4 text-muted hover:text-accent"
+          className="hidden w-12 flex-col items-center justify-start border-l border-line bg-surface pt-4 text-muted transition-colors hover:text-accent md:flex"
           aria-label="開啟證據抽屜"
         >
-          <PanelRightOpen className="h-4 w-4" />
+          <PanelRightOpen className="h-5 w-5" aria-hidden />
         </button>
       )}
 

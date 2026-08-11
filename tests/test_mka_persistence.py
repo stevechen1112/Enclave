@@ -17,6 +17,7 @@ from app.models.mka import (
     KnowhowCardModel,
     MKAApprovalRequest,
 )
+from app.models.document import Document, DocumentChunk
 from app.models.permission import Department
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -24,6 +25,7 @@ from app.core.authorization import AuthorizationContext
 from app.services.mka_persistence import (
     MKAConflictError,
     MKAForbiddenError,
+    MKAPersistenceError,
     MKARepository,
 )
 
@@ -45,6 +47,9 @@ def db():
         MKAApprovalRequest.__table__,
         FormInstance.__table__,
         KnowhowCardModel.__table__,
+        # SOP 衝突檢查會真實查詢 Document／DocumentChunk，測試庫必須建表
+        Document.__table__,
+        DocumentChunk.__table__,
     ]
     Base.metadata.create_all(engine, tables=tables)
     session = sessionmaker(bind=engine)()
@@ -558,6 +563,7 @@ def test_knowhow_submit_blocks_unresolved_sop_conflict(db):
         tenant_id=tenant.id,
         title="unsafe draft",
         data={"conflict_report": [{"type": "step_mismatch", "resolved": False}]},
+        owner_id=user.id,
     )
     with pytest.raises(MKAConflictError, match="unresolved SOP conflicts"):
         repo.submit_knowhow(
@@ -567,3 +573,194 @@ def test_knowhow_submit_blocks_unresolved_sop_conflict(db):
             expected_version=1,
             idempotency_key="knowhow-submit-1",
         )
+
+
+def test_approved_form_export_uses_immutable_snapshot(db):
+    tenant, owner = _identity(db, role="owner")
+    repo = MKARepository(db)
+    form = repo.create_form_instance(
+        tenant_id=tenant.id,
+        owner_id=owner.id,
+        form_key="quote",
+        values=_valid_quote(),
+    )
+    for status in ("draft", "pending_review"):
+        with pytest.raises(MKAConflictError, match="not approved"):
+            repo.export_form(
+                tenant_id=tenant.id,
+                instance_id=form.id,
+                actor_id=owner.id,
+                format="md",
+            )
+        if status == "draft":
+            form, approval = repo.submit_form(
+                tenant_id=tenant.id,
+                instance_id=form.id,
+                submitted_by=owner.id,
+                expected_version=1,
+                idempotency_key="export-submit",
+            )
+    repo.decide_approval(
+        tenant_id=tenant.id,
+        approval_id=approval.id,
+        reviewer_id=owner.id,
+        reviewer_roles=["owner"],
+        expected_version=1,
+        idempotency_key="export-approve",
+        action="approve",
+    )
+    assert form.status == "approved"
+    result = repo.export_form(
+        tenant_id=tenant.id,
+        instance_id=form.id,
+        actor_id=owner.id,
+        format="md",
+    )
+    assert result.success
+    content = result.content.decode("utf-8")
+    assert "ACME" in content
+    assert "Version" in content
+    assert result.filename.endswith(".md")
+    assert form.export_artifacts[-1]["format"] == "md"
+    assert form.export_artifacts[-1]["exported_by"] == str(owner.id)
+    with pytest.raises(MKAPersistenceError, match="unsupported export format"):
+        repo.export_form(
+            tenant_id=tenant.id,
+            instance_id=form.id,
+            actor_id=owner.id,
+            format="exe",
+        )
+
+
+def test_form_export_endpoint_registered_with_actor_context():
+    import inspect as _inspect
+
+    import app.api.v1.endpoints.forms as forms_endpoint
+
+    source = _inspect.getsource(forms_endpoint)
+    assert '"/forms/instances/{instance_id}/export"' in source
+    assert "export_form(" in source
+    assert source.count("**_actor_kwargs(current_user)") >= 5
+
+
+def test_knowhow_list_queries_are_bounded(db):
+    tenant, user = _identity(db)
+    repo = MKARepository(db)
+    for i in range(5):
+        card = repo.create_knowhow(
+            tenant_id=tenant.id, title=f"card-{i}", steps=["s"]
+        )
+        card.status = "approved"
+    db.flush()
+    assert len(repo.list_knowhow(tenant_id=tenant.id)) == 5
+    assert len(repo.list_knowhow(tenant_id=tenant.id, limit=3)) == 3
+    assert len(repo.list_approved_knowhow(tenant_id=tenant.id, limit=2)) == 2
+    src = inspect.getsource(MKARepository.list_approved_knowhow)
+    assert ".limit(" in src
+
+
+def test_voice_endpoint_enforces_upload_cap_duration_and_metrics():
+    import app.api.v1.endpoints.voice as voice_endpoint
+
+    source = inspect.getsource(voice_endpoint)
+    assert "VOICE_MAX_AUDIO_BYTES" in source
+    assert "status_code=413" in source
+    assert "VOICE_MAX_AUDIO_SECONDS" in source
+    assert "record_mka_stt" in source
+
+
+def _approved_quote(db):
+    """建立並核准一張報價單，回傳 (tenant, owner, form)。"""
+    tenant, owner = _identity(db, role="owner")
+    repo = MKARepository(db)
+    form = repo.create_form_instance(
+        tenant_id=tenant.id,
+        owner_id=owner.id,
+        form_key="quote",
+        values=_valid_quote(),
+    )
+    form, approval = repo.submit_form(
+        tenant_id=tenant.id,
+        instance_id=form.id,
+        submitted_by=owner.id,
+        expected_version=1,
+        idempotency_key=f"submit-{uuid.uuid4()}",
+    )
+    repo.decide_approval(
+        tenant_id=tenant.id,
+        approval_id=approval.id,
+        reviewer_id=owner.id,
+        reviewer_roles=["owner"],
+        expected_version=1,
+        idempotency_key=f"approve-{uuid.uuid4()}",
+        action="approve",
+    )
+    return tenant, owner, form
+
+
+def test_assert_form_exportable_pre_check(db):
+    tenant, owner = _identity(db, role="owner")
+    repo = MKARepository(db)
+    form = repo.create_form_instance(
+        tenant_id=tenant.id,
+        owner_id=owner.id,
+        form_key="quote",
+        values=_valid_quote(),
+    )
+    with pytest.raises(MKAConflictError, match="not approved"):
+        repo.assert_form_exportable(
+            tenant_id=tenant.id, instance_id=form.id, actor_id=owner.id
+        )
+    tenant2, owner2, approved = _approved_quote(db)
+    row = MKARepository(db).assert_form_exportable(
+        tenant_id=tenant2.id, instance_id=approved.id, actor_id=owner2.id
+    )
+    assert row.status == "approved"
+
+
+def test_render_form_export_task_stores_artifact(db, tmp_path, monkeypatch):
+    import app.services.rls as rls_module
+    import app.tasks.mka_tasks as mka_tasks
+    from app.config import settings
+    from app.services import storage as storage_module
+
+    tenant, owner, form = _approved_quote(db)
+    tenant_id_s, owner_id_s, form_id = str(tenant.id), str(owner.id), form.id
+    monkeypatch.setattr(mka_tasks, "SessionLocal", lambda: db)
+    monkeypatch.setattr(rls_module, "apply_rls_context", lambda *a, **k: None)
+    monkeypatch.setattr(settings, "STORAGE_BACKEND", "local")
+    monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path))
+    storage_module.reset_storage_backend()
+    try:
+        result = mka_tasks.render_form_export(
+            tenant_id_s, str(form_id), owner_id_s, "md", export_task_id="test-export-job"
+        )
+        assert result["storage_key"].startswith(f"{tenant_id_s}/")
+        assert (tmp_path / result["storage_key"]).exists()
+        # task 內 commit/close 過 session，重新查詢而非沿用舊 ORM 物件
+        reloaded = MKARepository(db).get_form_instance(
+            tenant_id=uuid.UUID(tenant_id_s),
+            instance_id=form_id,
+            actor_id=uuid.UUID(owner_id_s),
+        )
+        latest = reloaded.export_artifacts[-1]
+        assert latest["storage_key"] == result["storage_key"]
+        assert latest["status"] == "completed"
+        assert latest["task_id"] == "test-export-job"
+        content = storage_module.get_storage_backend().get_bytes(result["storage_key"])
+        assert "ACME".encode("utf-8") in content
+    finally:
+        storage_module.reset_storage_backend()
+
+
+def test_form_async_export_endpoints_registered():
+    import app.api.v1.endpoints.forms as forms_endpoint
+
+    source = inspect.getsource(forms_endpoint)
+    assert "async_export" in source
+    assert "render_form_export.delay" in source
+    assert "JSONResponse" in source
+    assert "status_code=202" in source
+    assert '"/forms/instances/{instance_id}/exports"' in source
+    assert '"/forms/instances/{instance_id}/exports/{artifact_index}/download"' in source
+    assert "assert_key_matches_tenant" in source

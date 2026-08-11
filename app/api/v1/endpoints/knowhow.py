@@ -1,4 +1,5 @@
 """Tenant-scoped DB API for governed know-how cards."""
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -17,8 +18,13 @@ from app.services.mka_persistence import (
     approval_to_dict,
     knowhow_to_dict,
 )
+from app.services.knowhow_lifecycle import get_knowhow_lifecycle_manager
 
 router = APIRouter(prefix="/knowhow", tags=["knowhow"])
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class KnowhowCreateRequest(BaseModel):
@@ -87,6 +93,7 @@ def create_knowhow(
             summary=summary,
             steps=steps,
             data=payload,
+            owner_id=current_user.id,
         )
         db.commit()
         db.refresh(row)
@@ -94,6 +101,15 @@ def create_knowhow(
     except Exception as exc:
         db.rollback()
         _raise_mka(exc)
+
+
+def _can_read_knowhow(row, user: User) -> bool:
+    """核准卡全租戶可讀；非核准狀態僅擁有者／owner/admin/superuser 可讀。"""
+    if row.status == "approved":
+        return True
+    if user.is_superuser or user.role in {"owner", "admin"}:
+        return True
+    return row.owner_id is not None and row.owner_id == user.id
 
 
 @router.get("")
@@ -105,7 +121,7 @@ def list_knowhow(
     rows = MKARepository(db).list_knowhow(
         tenant_id=current_user.tenant_id, status=status
     )
-    return [knowhow_to_dict(row) for row in rows]
+    return [knowhow_to_dict(row) for row in rows if _can_read_knowhow(row, current_user)]
 
 
 @router.get("/{knowhow_id}")
@@ -118,6 +134,8 @@ def get_knowhow(
         row = MKARepository(db).get_knowhow(
             tenant_id=current_user.tenant_id, knowhow_id=knowhow_id
         )
+        if not _can_read_knowhow(row, current_user):
+            raise MKAForbiddenError("know-how card is not approved")
         return knowhow_to_dict(row)
     except Exception as exc:
         _raise_mka(exc)
@@ -136,6 +154,9 @@ def patch_knowhow(
             knowhow_id=knowhow_id,
             expected_version=request.version,
             data=request.values,
+            actor_id=current_user.id,
+            actor_roles=[current_user.role],
+            is_superuser=bool(current_user.is_superuser),
         )
         db.commit()
         db.refresh(row)
@@ -159,6 +180,8 @@ def submit_knowhow(
             submitted_by=current_user.id,
             expected_version=request.version,
             idempotency_key=request.idempotency_key,
+            actor_roles=[current_user.role],
+            is_superuser=bool(current_user.is_superuser),
         )
         db.commit()
         db.refresh(row)
@@ -167,6 +190,20 @@ def submit_knowhow(
             "knowhow": knowhow_to_dict(row),
             "approval": approval_to_dict(approval),
         }
+    except MKAConflictError as exc:
+        db.rollback()
+        # 衝突報告必須存活於 409 之後，否則 UI 永遠看不到待處置項目
+        report = getattr(exc, "conflict_report", None)
+        if report is not None:
+            try:
+                row = MKARepository(db).get_knowhow(
+                    tenant_id=current_user.tenant_id, knowhow_id=knowhow_id
+                )
+                row.conflict_report = report
+                db.commit()
+            except Exception:
+                db.rollback()
+        raise HTTPException(status_code=409, detail=str(exc))
     except Exception as exc:
         db.rollback()
         _raise_mka(exc)
@@ -200,9 +237,23 @@ def approve_knowhow(
         row = repository.get_knowhow(
             tenant_id=current_user.tenant_id, knowhow_id=knowhow_id
         )
+
+        # ── Knowhow lifecycle: review reminder 與核准同一筆交易 ──
+        # 若 reminder 寫入失敗，rollback 會一併撤銷核准，避免「已核准但無提醒」
+        lifecycle = get_knowhow_lifecycle_manager(db=db, tenant_id=current_user.tenant_id)
+        lifecycle.create_review_reminder(
+            card_id=str(row.id),
+            card_title=row.title,
+            reviewer=str(current_user.id),
+            due_at=(_now() + timedelta(days=180)).isoformat(),
+            reminder_type="periodic_review",
+            message=f"知識卡「{row.title}」已核准 180 天，請複核",
+        )
+
         db.commit()
         db.refresh(row)
         db.refresh(approval)
+
         return {
             "knowhow": knowhow_to_dict(row),
             "approval": approval_to_dict(approval),
@@ -222,8 +273,14 @@ def retire_knowhow(
         row = MKARepository(db).retire_knowhow(
             tenant_id=current_user.tenant_id, knowhow_id=knowhow_id
         )
+
+        # ── Knowhow lifecycle: purge expired audio on retire（與 retire 同交易）──
+        lifecycle = get_knowhow_lifecycle_manager(db=db, tenant_id=current_user.tenant_id)
+        lifecycle.purge_expired_audio(card_id=str(row.id))
+
         db.commit()
         db.refresh(row)
+
         return knowhow_to_dict(row)
     except Exception as exc:
         db.rollback()

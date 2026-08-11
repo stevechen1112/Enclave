@@ -69,8 +69,15 @@ class ModuleRegistry:
         tenant_id: UUID,
         user_roles: List[str],
         user_department_ids: List[str],
+        job_role_keys: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        """取得使用者可用的模組（含 tenant binding 檢查）。"""
+        """取得使用者可用的模組（含 tenant binding 檢查）。
+
+        job_role_keys：呼叫者的 active 業務職能 key 清單。
+        - None：不套用職能過濾（管理／設定介面用途）。
+        - []（空清單）：無職能指派 → 只回傳「不限職能」的模組。
+        - ["sales", ...]：模組有 allowed_job_role_keys 時需交集。
+        """
         from app.models.mka import JobModule, TenantModuleBinding
         from sqlalchemy import or_
 
@@ -92,13 +99,16 @@ class ModuleRegistry:
         )
         bound_keys = {b.module_key for b in bindings}
 
+        # 新租戶 opt-in：無任何啟用 binding 的租戶看不到全域模組。
+        # Demo Tenant 由 bootstrap 自動 seed binding；其他租戶須管理員明確啟用。
+        if not bound_keys:
+            return []
+
         available = []
         for module in all_modules:
-            # 若有 tenant binding 限制，檢查是否已啟用
-            if bound_keys and module.module_key not in bound_keys:
-                # 檢查是否為全租戶模組（tenant_id=NULL）
-                if module.tenant_id is not None:
-                    continue
+            # 模組必須已 binding 啟用
+            if module.module_key not in bound_keys:
+                continue
 
             # 檢查角色
             if module.allowed_roles:
@@ -108,6 +118,12 @@ class ModuleRegistry:
             # 檢查部門
             if module.allowed_departments:
                 if not any(str(d) in module.allowed_departments for d in user_department_ids):
+                    continue
+
+            # 檢查業務職能 allowlist（空 = 不限職能）
+            if job_role_keys is not None:
+                allowed_job = module.allowed_job_role_keys or []
+                if allowed_job and not any(k in allowed_job for k in job_role_keys):
                     continue
 
             available.append(self._to_dict(module))
@@ -170,15 +186,147 @@ class ModuleRegistry:
             return True
         return False
 
+    def update_config(
+        self,
+        tenant_id: UUID,
+        module_key: str,
+        config: Dict[str, Any],
+    ) -> bool:
+        """更新租戶模組設定。"""
+        from app.models.mka import TenantModuleBinding
+
+        binding = (
+            self.db.query(TenantModuleBinding)
+            .filter(
+                TenantModuleBinding.tenant_id == tenant_id,
+                TenantModuleBinding.module_key == module_key,
+            )
+            .first()
+        )
+
+        if binding:
+            binding.config_json = config
+            self.db.commit()
+            return True
+        return False
+
+    # ── 租戶 config：版本化 merge + 驗證（Phase 1）──
+
+    @staticmethod
+    def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+        out = dict(base)
+        for key, value in (override or {}).items():
+            if isinstance(value, dict) and isinstance(out.get(key), dict):
+                out[key] = ModuleRegistry._deep_merge(out[key], value)
+            else:
+                out[key] = value
+        return out
+
+    def validate_module_config(self, module_key: str, config: Dict[str, Any]) -> List[str]:
+        """以正式模組的 default_config 為 schema：鍵必須已知、型別必須一致。
+
+        回傳錯誤清單（空 = 通過）。租戶自訂模組（無 default_config）不做鍵限制。
+        """
+        from app.services.mka_module_seed import canonical_default_config
+
+        defaults = canonical_default_config(module_key)
+        errors: List[str] = []
+        if not isinstance(config, dict):
+            return ["config 必須是 JSON object"]
+        if not defaults:
+            return errors
+        for key, value in config.items():
+            if key not in defaults:
+                errors.append(f"未知設定鍵：{key}")
+                continue
+            expected = defaults[key]
+            # bool 是 int 子類，需先排除
+            if isinstance(expected, bool):
+                if not isinstance(value, bool):
+                    errors.append(f"{key} 應為 bool，收到 {type(value).__name__}")
+            elif isinstance(expected, int):
+                if not isinstance(value, int) or isinstance(value, bool):
+                    errors.append(f"{key} 應為 int，收到 {type(value).__name__}")
+            elif isinstance(expected, str):
+                if not isinstance(value, str):
+                    errors.append(f"{key} 應為 str，收到 {type(value).__name__}")
+            elif isinstance(expected, list):
+                if not isinstance(value, list):
+                    errors.append(f"{key} 應為 list，收到 {type(value).__name__}")
+        return errors
+
+    def get_effective_config(self, tenant_id: UUID, module_key: str) -> Dict[str, Any]:
+        """effective config = canonical defaults ← 租戶 config_json（含版本號）。"""
+        from app.models.mka import TenantModuleBinding
+        from app.services.mka_module_seed import canonical_default_config
+
+        binding = (
+            self.db.query(TenantModuleBinding)
+            .filter(
+                TenantModuleBinding.tenant_id == tenant_id,
+                TenantModuleBinding.module_key == module_key,
+            )
+            .first()
+        )
+        defaults = canonical_default_config(module_key)
+        override = (binding.config_json if binding else None) or {}
+        return {
+            "module_key": module_key,
+            "config_version": binding.config_version if binding else 0,
+            "enabled": bool(binding.enabled) if binding else False,
+            "defaults": defaults,
+            "overrides": override,
+            "effective": self._deep_merge(defaults, override),
+        }
+
+    def update_config_versioned(
+        self,
+        tenant_id: UUID,
+        module_key: str,
+        config: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """驗證後寫入租戶 config 並遞增版本。驗證失敗 raise ValueError。"""
+        from app.models.mka import TenantModuleBinding
+
+        errors = self.validate_module_config(module_key, config)
+        if errors:
+            raise ValueError("；".join(errors))
+
+        binding = (
+            self.db.query(TenantModuleBinding)
+            .filter(
+                TenantModuleBinding.tenant_id == tenant_id,
+                TenantModuleBinding.module_key == module_key,
+            )
+            .first()
+        )
+        if binding is None:
+            binding = TenantModuleBinding(
+                tenant_id=tenant_id,
+                module_key=module_key,
+                enabled=False,
+                license_state="trial",
+                config_json={},
+                config_version=0,
+            )
+            self.db.add(binding)
+            self.db.flush()
+        binding.config_json = config
+        binding.config_version = (binding.config_version or 0) + 1
+        self.db.commit()
+        return self.get_effective_config(tenant_id, module_key)
+
     def get_interaction_capabilities(self, tenant_id: UUID) -> Dict[str, bool]:
         """取得租戶的 interaction capabilities（誠實狀態）。"""
         from app.config import settings
 
+        # QR：scene resolve API + QrScanner 前端已接線
+        # camera／offline：PWA mediaDevices + service worker 已存在於前端
         return {
-            "voice": settings.VOICE_STT_ENABLED,
-            "camera": False,  # 待前端 PWA 實作
-            "qr": False,  # 待 scene resolver 實作
-            "offline": False,  # 待 PWA service worker 實作
+            "voice": bool(settings.VOICE_STT_ENABLED),
+            "camera": True,
+            "qr": True,
+            "offline": True,
         }
 
     def _to_dict(self, module: Any) -> Dict[str, Any]:
@@ -192,6 +340,7 @@ class ModuleRegistry:
             "status": module.status,
             "allowed_roles": module.allowed_roles or [],
             "allowed_departments": module.allowed_departments or [],
+            "allowed_job_role_keys": module.allowed_job_role_keys or [],
             "knowledge_scope_policy": module.knowledge_scope_policy or {},
             "supported_intents": module.supported_intents or [],
             "allowed_tools": module.allowed_tools or [],

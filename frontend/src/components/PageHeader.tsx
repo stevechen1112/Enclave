@@ -18,15 +18,15 @@ export default function PageHeader({
 }: Props) {
   const isSection = variant === 'section'
   return (
-    <div className={clsx('flex flex-wrap items-end justify-between gap-3', className)}>
+    <div className={clsx('flex flex-wrap items-end justify-between gap-4', className)}>
       <div className="min-w-0">
         {isSection ? (
-          <h2 className="text-base font-semibold tracking-tight text-ink md:text-lg">{title}</h2>
+          <h2 className="text-lg font-bold tracking-tight text-ink md:text-xl">{title}</h2>
         ) : (
-          <h1 className="font-display text-xl font-semibold tracking-tight text-ink md:text-2xl">{title}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink md:text-3xl">{title}</h1>
         )}
         {subtitle && (
-          <p className={clsx('max-w-2xl text-sm leading-relaxed text-muted', isSection ? 'mt-0.5' : 'mt-1')}>
+          <p className={clsx('max-w-2xl text-[15px] leading-relaxed text-muted', isSection ? 'mt-1' : 'mt-1.5')}>
             {subtitle}
           </p>
         )}

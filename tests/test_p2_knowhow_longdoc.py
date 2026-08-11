@@ -163,7 +163,7 @@ class TestSOPConflict:
         checker = SOPConflictChecker()
         card = MagicMock()
         card.steps = ["開機", "設定轉速為 5000", "開始加工"]
-        card.applicable_equipment = []
+        card.equipment_ids = []
         card.cautions = []
         sop_docs = [{
             "title": "CNC 操作 SOP",
@@ -180,7 +180,7 @@ class TestSOPConflict:
         checker = SOPConflictChecker()
         card = MagicMock()
         card.steps = []
-        card.applicable_equipment = ["CNC-001", "CNC-002", "CNC-003"]
+        card.equipment_ids = ["CNC-001", "CNC-002", "CNC-003"]
         card.cautions = []
         sop_docs = [{
             "title": "CNC SOP",
@@ -196,7 +196,7 @@ class TestSOPConflict:
         checker = SOPConflictChecker()
         card = MagicMock()
         card.steps = []
-        card.applicable_equipment = []
+        card.equipment_ids = []
         card.cautions = ["可以高速運轉"]
         sop_docs = [{
             "title": "安全 SOP",
@@ -224,7 +224,7 @@ class TestSOPConflict:
         checker = SOPConflictChecker()
         card = MagicMock()
         card.steps = ["開機", "設定參數"]
-        card.applicable_equipment = ["CNC-001"]
+        card.equipment_ids = ["CNC-001"]
         card.cautions = ["注意安全"]
         sop_docs = [{
             "title": "SOP",

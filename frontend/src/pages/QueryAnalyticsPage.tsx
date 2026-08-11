@@ -13,7 +13,7 @@ import { chatApi } from '../api'
 import {
   BarChart2, HelpCircle, MessageSquare, TrendingUp,
   AlertTriangle, CheckCircle, Loader2, RefreshCw,
-  Clock, ThumbsUp,
+  Clock, ThumbsUp, ThumbsDown,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import clsx from 'clsx'
@@ -109,7 +109,7 @@ function OverviewTab({ days }: { days: number }) {
         <StatCard icon={TrendingUp} title="平均輪次" value={data.avg_turns_per_conversation} color="bg-purple-100 text-purple-600" />
         <StatCard icon={Clock} title="平均延遲" value={`${data.avg_latency_ms}ms`} color="bg-amber-100 text-amber-600" />
         <StatCard icon={ThumbsUp} title="好評率"
-          value={data.feedback.total > 0 ? `${(data.feedback.positive_rate * 100).toFixed(1)}%` : 'N/A'}
+          value={data.feedback.total > 0 ? `${(data.feedback.positive_rate * 100).toFixed(1)}%` : '尚無資料'}
           color="bg-green-100 text-green-600"
         />
       </div>
@@ -178,11 +178,15 @@ function OverviewTab({ days }: { days: number }) {
             </div>
             <div>
               <p className="text-2xl font-bold text-green-600">{data.feedback.positive}</p>
-              <p className="text-xs text-gray-500 mt-1">👍 正面</p>
+              <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
+                <ThumbsUp className="h-3.5 w-3.5" aria-hidden /> 正面
+              </p>
             </div>
             <div>
               <p className="text-2xl font-bold text-red-500">{data.feedback.negative}</p>
-              <p className="text-xs text-gray-500 mt-1">👎 負面</p>
+              <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
+                <ThumbsDown className="h-3.5 w-3.5" aria-hidden /> 負面
+              </p>
             </div>
           </div>
         </div>

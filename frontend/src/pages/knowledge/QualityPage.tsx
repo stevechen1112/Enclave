@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Layers, Loader2, Plus, Search } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Layers, Plus, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { kbApi } from '../../api'
+import { kbApi, parseApiError, type ApiErrorInfo } from '../../api'
+import AsyncState from '../../components/AsyncState'
+import PageHeader from '../../components/PageHeader'
 
 interface KnowledgeGap {
   id: string
@@ -21,6 +23,7 @@ interface Category {
 
 export default function QualityPage() {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [gaps, setGaps] = useState<KnowledgeGap[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [newName, setNewName] = useState('')
@@ -28,6 +31,7 @@ export default function QualityPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const [g, c] = await Promise.all([
         kbApi.listGaps('open'),
@@ -35,8 +39,8 @@ export default function QualityPage() {
       ])
       setGaps(g)
       setCategories(c)
-    } catch {
-      toast.error('無法載入知識品質資料')
+    } catch (err) {
+      setError(parseApiError(err, '無法載入知識品質資料'))
     } finally {
       setLoading(false)
     }
@@ -47,10 +51,10 @@ export default function QualityPage() {
   const handleScan = async () => {
     try {
       await kbApi.scanGaps(7)
-      toast.success('結構化缺口掃描已排程')
+      toast.success('缺口掃描已排程，稍後自動更新')
       setTimeout(load, 2000)
-    } catch {
-      toast.error('排程失敗')
+    } catch (err) {
+      toast.error(parseApiError(err, '排程失敗').message)
     }
   }
 
@@ -59,8 +63,8 @@ export default function QualityPage() {
       await kbApi.resolveGap(id, { resolve_note: '已標記解決' })
       toast.success('已標記解決')
       load()
-    } catch {
-      toast.error('操作失敗')
+    } catch (err) {
+      toast.error(parseApiError(err, '操作失敗').message)
     }
   }
 
@@ -72,106 +76,108 @@ export default function QualityPage() {
       setNewName('')
       toast.success('分類已新增')
       load()
-    } catch {
-      toast.error('新增失敗')
+    } catch (err) {
+      toast.error(parseApiError(err, '新增失敗').message)
     } finally {
       setAdding(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-muted" />
-      </div>
-    )
-  }
-
   return (
-    <div className="h-full overflow-y-auto p-4 md:p-6">
+    <div className="h-full overflow-y-auto p-4 md:p-8">
       <div className="mx-auto max-w-4xl space-y-8">
-        <section className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-ink">結構化缺口</h2>
-              <p className="text-sm text-muted">
-                系統掃描出的知識覆蓋缺口（與「未答覆問題」不同，後者在治理 → 問答品質）。
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleScan}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-sm text-white hover:bg-accent-hover"
-            >
-              <Search className="h-4 w-4" /> 掃描
-            </button>
-          </div>
-          {gaps.length === 0 ? (
-            <div className="rounded-xl border border-line bg-surface p-8 text-center text-muted">
-              <CheckCircle2 className="mx-auto mb-2 h-10 w-10 text-emerald-400" />
-              <p className="text-sm">目前沒有待處理的結構化缺口</p>
-            </div>
-          ) : (
-            <div className="divide-y rounded-xl border border-line bg-surface">
-              {gaps.map(g => (
-                <div key={g.id} className="flex items-start gap-3 p-4">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-ink">{g.query_text}</p>
-                    <p className="mt-1 text-xs text-muted">
-                      相關度參考 {(g.confidence_score * 100).toFixed(0)}%
-                      {g.suggested_topic && ` · 主題：${g.suggested_topic}`}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleResolve(g.id)}
-                    className="shrink-0 rounded-lg border border-line px-2.5 py-1 text-xs text-muted hover:text-ink"
-                  >
-                    標記解決
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <PageHeader
+          variant="section"
+          title="品質"
+          subtitle="追蹤知識庫還缺哪些內容，並維護文件分類。"
+        />
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-ink">分類</h2>
-          </div>
-          <div className="flex gap-2">
-            <input
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="新分類名稱"
-              className="flex-1 rounded-lg border border-line px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
-            />
-            <button
-              type="button"
-              disabled={adding || !newName.trim()}
-              onClick={handleAddCategory}
-              className="inline-flex items-center gap-1 rounded-lg bg-accent px-3 py-2 text-sm text-white hover:bg-accent-hover disabled:opacity-50"
-            >
-              <Plus className="h-4 w-4" /> 新增
-            </button>
-          </div>
-          {categories.length === 0 ? (
-            <p className="rounded-xl border border-line bg-surface p-8 text-center text-sm text-muted">
-              <Layers className="mx-auto mb-2 h-10 w-10 text-line" />
-              尚無分類
-            </p>
-          ) : (
-            <ul className="divide-y rounded-xl border border-line bg-surface">
-              {categories.map(c => (
-                <li key={c.id} className="px-4 py-3 text-sm">
-                  <p className="font-medium text-ink">{c.name}</p>
-                  {c.description && <p className="text-xs text-muted">{c.description}</p>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <AsyncState loading={loading} error={error} onRetry={load}>
+          <>
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-ink">知識缺口</h2>
+                  <p className="mt-1 max-w-xl text-sm text-muted">
+                    系統發現「大家常問、但知識庫還沒有資料能回答」的主題。補上相關文件後，回答就會更完整。
+                    （這裡與「治理 → 問答品質」的未答覆問題不同：那邊是逐題紀錄，這裡是整理過的主題缺口。）
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleScan}
+                  className="btn-primary shrink-0"
+                >
+                  <Search className="h-4 w-4" aria-hidden /> 掃描缺口
+                </button>
+              </div>
+              {gaps.length === 0 ? (
+                <div className="card p-8 text-center text-muted">
+                  <CheckCircle2 className="mx-auto mb-2 h-10 w-10 text-success" aria-hidden />
+                  <p className="text-sm">目前沒有待處理的知識缺口</p>
+                </div>
+              ) : (
+                <div className="card divide-y divide-line/70">
+                  {gaps.map(g => (
+                    <div key={g.id} className="flex flex-wrap items-start gap-3 p-4">
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-highlight" aria-hidden />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-ink">{g.query_text}</p>
+                        <p className="mt-1 text-sm text-muted">
+                          相關度參考 {(g.confidence_score * 100).toFixed(0)}%
+                          {g.suggested_topic && ` · 主題：${g.suggested_topic}`}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleResolve(g.id)}
+                        className="btn-outline shrink-0 px-3"
+                      >
+                        標記解決
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="font-semibold text-ink">分類</h2>
+              <div className="flex gap-2">
+                <input
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="新分類名稱"
+                  className="input flex-1"
+                  aria-label="新分類名稱"
+                />
+                <button
+                  type="button"
+                  disabled={adding || !newName.trim()}
+                  onClick={handleAddCategory}
+                  className="btn-primary shrink-0"
+                >
+                  <Plus className="h-4 w-4" aria-hidden /> 新增
+                </button>
+              </div>
+              {categories.length === 0 ? (
+                <p className="card p-8 text-center text-sm text-muted">
+                  <Layers className="mx-auto mb-2 h-10 w-10 text-line" aria-hidden />
+                  尚無分類
+                </p>
+              ) : (
+                <ul className="card divide-y divide-line/70">
+                  {categories.map(c => (
+                    <li key={c.id} className="px-4 py-3 text-sm">
+                      <p className="font-medium text-ink">{c.name}</p>
+                      {c.description && <p className="text-sm text-muted">{c.description}</p>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        </AsyncState>
       </div>
     </div>
   )

@@ -76,6 +76,10 @@ def test_bootstrap_shape():
     user.role = "owner"
     user.tenant_id = "00000000-0000-0000-0000-000000000002"
     user.is_superuser = False
+    # bootstrap 現在走真實 AuthorizationContext.from_user；未設定的 MagicMock
+    # department 會無限生成 parent mock 導致祖先遍歷永遠不停
+    user.department_id = None
+    user.department = None
     with patch(
         "app.services.deployment_mode.resolve_runtime_profiles",
         return_value={"main": {"provider": "ollama"}},

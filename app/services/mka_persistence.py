@@ -7,12 +7,15 @@ must use the request session and must not create process-wide DB sessions.
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 from uuid import UUID
 
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.models.mka import (
     ApprovalPolicy,
@@ -118,10 +121,22 @@ def form_definition_to_dict(row: FormDefinition) -> Dict[str, Any]:
 
 
 def form_instance_to_dict(row: FormInstance) -> Dict[str, Any]:
+    form_key = None
+    try:
+        from sqlalchemy.orm import object_session
+        from app.models.mka import FormDefinition as _FormDefinition
+
+        db = object_session(row)
+        if db is not None and row.form_definition_id:
+            defn = db.query(_FormDefinition).filter(_FormDefinition.id == row.form_definition_id).first()
+            form_key = defn.form_key if defn else None
+    except Exception:
+        form_key = None
     return {
         "id": str(row.id),
         "tenant_id": str(row.tenant_id),
         "form_definition_id": str(row.form_definition_id),
+        "form_key": form_key,
         "form_version": row.form_version,
         "module_key": row.module_key,
         "owner_id": str(row.owner_id),
@@ -131,8 +146,10 @@ def form_instance_to_dict(row: FormInstance) -> Dict[str, Any]:
         "provenance": row.provenance_json or {},
         "calculation_snapshot": row.calculation_snapshot or {},
         "validation_result": row.validation_result or {},
+        "scene_context": row.scene_context or {},
         "approval_request_id": str(row.approval_request_id) if row.approval_request_id else None,
         "immutable_snapshot": row.immutable_snapshot or {},
+        "export_artifacts": row.export_artifacts or [],
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "updated_at": row.updated_at.isoformat() if row.updated_at else None,
     }
@@ -181,6 +198,7 @@ def knowhow_to_dict(row: KnowhowCardModel) -> Dict[str, Any]:
     return {
         "id": str(row.id),
         "tenant_id": str(row.tenant_id),
+        "owner_id": str(row.owner_id) if row.owner_id else None,
         "card_id": row.card_id,
         "title": row.title,
         "summary": row.summary or "",
@@ -407,6 +425,27 @@ class MKARepository:
             raise MKANotFoundError(f"form definition not found: {form_key}")
         return row
 
+    def validate_form_values(
+        self,
+        *,
+        tenant_id: UUID,
+        form_key: str,
+        values: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """以租戶 DB 的 FormDefinition 驗證一組值（不落地 instance）。
+
+        與 create/validate_form 同一條 schema 來源，避免 endpoint 走記憶體
+        registry 造成租戶專屬表單規則不一致。
+        """
+        definition = self.get_form_definition(tenant_id=tenant_id, form_key=form_key)
+        schema = _schema_from_definition(definition)
+        errors = FixedFormValidator.validate(schema, dict(values or {}))
+        return {
+            "valid": not errors,
+            "errors": errors,
+            "schema_version": schema.version,
+        }
+
     def create_form_instance(
         self,
         *,
@@ -416,6 +455,7 @@ class MKARepository:
         values: Optional[Dict[str, Any]] = None,
         provenance: Optional[Dict[str, Any]] = None,
         module_key: Optional[str] = None,
+        scene_context: Optional[Dict[str, Any]] = None,
     ) -> FormInstance:
         definition = self.get_form_definition(tenant_id=tenant_id, form_key=form_key)
         schema = _schema_from_definition(definition)
@@ -424,6 +464,15 @@ class MKARepository:
             for field in schema.fields
             if field.default is not None
         }
+        # SceneContext 預填：僅填 schema 已有且尚未提供的欄位
+        scene = _copy_json(scene_context or {})
+        field_names = {f.name for f in schema.fields}
+        for key in (
+            "equipment_id", "equipment_model", "work_order_id", "product_id",
+            "part_number", "customer_id", "site_id", "plant_id", "line_id",
+        ):
+            if key in field_names and key not in (values or {}) and scene.get(key):
+                initial[key] = scene[key]
         initial.update(values or {})
         row = FormInstance(
             tenant_id=tenant_id,
@@ -435,6 +484,7 @@ class MKARepository:
             record_version=1,
             values_json=_copy_json(initial),
             provenance_json=_copy_json(provenance or {}),
+            scene_context=scene,
         )
         self.db.add(row)
         self.db.flush()
@@ -656,6 +706,153 @@ class MKARepository:
         self.db.flush()
         return row, approval
 
+    _EXPORT_FORMATS = ("pdf", "docx", "xlsx", "md")
+
+    def assert_form_exportable(
+        self,
+        *,
+        tenant_id: UUID,
+        instance_id: UUID,
+        actor_id: UUID,
+        actor_roles: Iterable[str] = (),
+        is_superuser: bool = False,
+    ) -> FormInstance:
+        """匯出預檢（非同步匯出排程前呼叫）：授權＋已核准＋snapshot 存在。"""
+        row = self.get_form_instance(
+            tenant_id=tenant_id,
+            instance_id=instance_id,
+            actor_id=actor_id,
+            actor_roles=actor_roles,
+            is_superuser=is_superuser,
+        )
+        if row.status != "approved":
+            raise MKAConflictError(
+                f"form is not approved; export forbidden while status={row.status}"
+            )
+        if not (row.immutable_snapshot or {}):
+            raise MKAConflictError("approved form is missing immutable snapshot")
+        return row
+
+    def export_form(
+        self,
+        *,
+        tenant_id: UUID,
+        instance_id: UUID,
+        actor_id: UUID,
+        actor_roles: Iterable[str] = (),
+        is_superuser: bool = False,
+        format: str = "pdf",
+        artifact_extra: Optional[Dict[str, Any]] = None,
+    ):
+        """Render an approved form from its immutable snapshot.
+
+        計畫硬性規則（MKA-P2 Exit）：未核准不可正式匯出；匯出內容必須來自
+        immutable snapshot，不可使用可變的目前欄位值。
+        """
+        from app.services.template_renderer import ExportResult, get_template_renderer
+
+        fmt = (format or "").lower()
+        if fmt not in self._EXPORT_FORMATS:
+            raise MKAPersistenceError(f"unsupported export format: {format}")
+        row = self.assert_form_exportable(
+            tenant_id=tenant_id,
+            instance_id=instance_id,
+            actor_id=actor_id,
+            actor_roles=actor_roles,
+            is_superuser=is_superuser,
+        )
+        snapshot = dict(row.immutable_snapshot or {})
+        approval_info = {
+            "version": snapshot.get("schema_version") or row.form_version or "1.0",
+            "approved_by": str(row.approved_by) if row.approved_by else "",
+            "approved_at": row.approved_at.isoformat() if row.approved_at else "",
+            "submitted_by": snapshot.get("submitted_by", ""),
+            "submitted_at": snapshot.get("submitted_at", ""),
+        }
+        values = dict(snapshot.get("values") or {})
+        form_key = snapshot.get("form_key") or ""
+        if not form_key:
+            try:
+                form_key = self._form_definition_for_instance(tenant_id, row).form_key
+            except Exception:
+                form_key = "form"
+
+        # 公司版型優先：DOCX/XLSX 套既有範本；缺依賴 fail-closed（不冒充通用兩欄表）
+        result = None
+        if fmt in {"docx", "xlsx"}:
+            try:
+                from app.services.form_template_service import FormTemplateService
+
+                tmpl = FormTemplateService(self.db).get_active(tenant_id, form_key)
+                if tmpl is not None and tmpl.format == fmt:
+                    content, filename, _media = FormTemplateService(self.db).preview(
+                        tenant_id=tenant_id,
+                        template_id=tmpl.id,
+                        values=values,
+                    )
+                    result = ExportResult(
+                        format=fmt,
+                        content=content,
+                        filename=filename,
+                        metadata={"template_id": str(tmpl.id), "version": tmpl.version},
+                    )
+                elif tmpl is not None and tmpl.format != fmt:
+                    result = ExportResult(
+                        format=fmt,
+                        error=(
+                            f"active company template is {tmpl.format}; "
+                            f"requested {fmt} — refuse generic fallback"
+                        ),
+                    )
+            except Exception as exc:
+                result = ExportResult(format=fmt, error=f"company template render failed: {exc}")
+
+        if result is None:
+            renderer = get_template_renderer()
+            render = {
+                "pdf": renderer.render_pdf,
+                "docx": renderer.render_docx,
+                "xlsx": renderer.render_excel,
+                "md": renderer.render_markdown,
+            }[fmt]
+            # 若租戶有公司版型卻走到通用渲染，DOCX/XLSX 應已上面處理；
+            # PDF 由核准版文件轉出（無轉檔依賴時 fail-closed）
+            if fmt == "pdf":
+                try:
+                    from app.services.form_template_service import FormTemplateService
+                    tmpl = FormTemplateService(self.db).get_active(tenant_id, form_key)
+                    if tmpl is not None:
+                        result = ExportResult(
+                            format="pdf",
+                            error=(
+                                "PDF export from company template requires conversion "
+                                "dependency; refuse generic two-column PDF fallback"
+                            ),
+                        )
+                except Exception:
+                    pass
+            if result is None:
+                result = render(
+                    title=form_key,
+                    fields=values,
+                    provenance=dict(snapshot.get("provenance") or {}),
+                    approval_info=approval_info,
+                )
+        if result.success:
+            artifacts = list(row.export_artifacts or [])
+            entry: Dict[str, Any] = {
+                "format": result.format,
+                "filename": result.filename,
+                "exported_by": str(actor_id),
+                "exported_at": _now().isoformat(),
+            }
+            if artifact_extra:
+                entry.update(artifact_extra)
+            artifacts.append(entry)
+            row.export_artifacts = artifacts
+            self.db.flush()
+        return result
+
     def _form_definition_for_instance(
         self, tenant_id: UUID, instance: FormInstance
     ) -> FormDefinition:
@@ -704,14 +901,14 @@ class MKARepository:
 
     # MKA approvals ---------------------------------------------------------
     def list_approvals(
-        self, *, tenant_id: UUID, status: str = "pending"
+        self, *, tenant_id: UUID, status: str = "pending", limit: int = 100
     ) -> List[MKAApprovalRequest]:
         query = self.db.query(MKAApprovalRequest).filter(
             MKAApprovalRequest.tenant_id == tenant_id
         )
         if status:
             query = query.filter(MKAApprovalRequest.status == status)
-        return query.order_by(MKAApprovalRequest.created_at.desc()).limit(100).all()
+        return query.order_by(MKAApprovalRequest.created_at.desc()).limit(limit).all()
 
     def get_approval(
         self, *, tenant_id: UUID, approval_id: UUID
@@ -777,10 +974,16 @@ class MKARepository:
         )
         required_roles = set(self._step_roles(policy, row.current_step))
         actual_roles = set(reviewer_roles)
-        if not is_superuser and required_roles and required_roles.isdisjoint(actual_roles):
-            raise MKAForbiddenError(
-                "reviewer role not allowed for current approval step"
-            )
+        if not is_superuser:
+            # fail-closed：政策步驟未配置角色時拒絕決審，而非跳過授權檢查
+            if not required_roles:
+                raise MKAForbiddenError(
+                    "approval step has no reviewer roles configured"
+                )
+            if required_roles.isdisjoint(actual_roles):
+                raise MKAForbiddenError(
+                    "reviewer role not allowed for current approval step"
+                )
 
         decided_step = row.current_step
         row.record_version += 1
@@ -934,10 +1137,12 @@ class MKARepository:
         summary: str = "",
         steps: Optional[List[str]] = None,
         data: Optional[Dict[str, Any]] = None,
+        owner_id: Optional[UUID] = None,
     ) -> KnowhowCardModel:
         data = dict(data or {})
         row = KnowhowCardModel(
             tenant_id=tenant_id,
+            owner_id=owner_id,
             card_id=data.pop("card_id", str(uuid.uuid4())),
             title=title,
             summary=summary,
@@ -950,29 +1155,59 @@ class MKARepository:
         self.db.flush()
         return row
 
+    @staticmethod
+    def _check_knowhow_owner(
+        row: KnowhowCardModel,
+        *,
+        actor_id: Optional[UUID],
+        actor_roles: Iterable[str] = (),
+        is_superuser: bool = False,
+    ) -> None:
+        """PATCH／submit 授權：僅卡片擁有者或 owner/admin/superuser 可修改。
+
+        無 owner_id 的既有卡片 fail-closed：API 路徑（必帶 actor）下僅管理員可動。
+        """
+        if is_superuser:
+            return
+        if set(actor_roles or ()) & {"owner", "admin"}:
+            return
+        if row.owner_id is not None and actor_id is not None and row.owner_id == actor_id:
+            return
+        if row.owner_id is None and actor_id is None:
+            return  # 舊有 repo 呼叫（未傳 actor）且卡片無主：維持相容
+        raise MKAForbiddenError(
+            "only the card owner or an admin can modify this know-how card"
+        )
+
     def list_knowhow(
         self,
         *,
         tenant_id: UUID,
         status: Optional[str] = None,
+        limit: int = 200,
     ) -> List[KnowhowCardModel]:
         query = self.db.query(KnowhowCardModel).filter(
             KnowhowCardModel.tenant_id == tenant_id
         )
         if status:
             query = query.filter(KnowhowCardModel.status == status)
-        return query.order_by(KnowhowCardModel.created_at.desc()).all()
+        return query.order_by(KnowhowCardModel.created_at.desc()).limit(limit).all()
 
     def list_approved_knowhow(
-        self, *, tenant_id: UUID
+        self, *, tenant_id: UUID, limit: int = 500
     ) -> List[KnowhowCardModel]:
+        # 檢索熱路徑使用：必須有上限，避免卡片成長後拖垮每次查詢
         return (
             self.db.query(KnowhowCardModel)
             .filter(
                 KnowhowCardModel.tenant_id == tenant_id,
                 KnowhowCardModel.status == "approved",
             )
-            .order_by(KnowhowCardModel.updated_at.desc())
+            .order_by(
+                KnowhowCardModel.updated_at.desc(),
+                KnowhowCardModel.id.desc(),
+            )
+            .limit(limit)
             .all()
         )
 
@@ -998,8 +1233,14 @@ class MKARepository:
         knowhow_id: UUID,
         expected_version: int,
         data: Dict[str, Any],
+        actor_id: Optional[UUID] = None,
+        actor_roles: Iterable[str] = (),
+        is_superuser: bool = False,
     ) -> KnowhowCardModel:
         row = self.get_knowhow(tenant_id=tenant_id, knowhow_id=knowhow_id)
+        self._check_knowhow_owner(
+            row, actor_id=actor_id, actor_roles=actor_roles, is_superuser=is_superuser
+        )
         if row.status not in self._KNOWHOW_MUTABLE_STATES:
             raise MKAConflictError(f"know-how is immutable while status={row.status}")
         self._check_version(row.version, expected_version)
@@ -1023,6 +1264,8 @@ class MKARepository:
         submitted_by: UUID,
         expected_version: int,
         idempotency_key: str,
+        actor_roles: Iterable[str] = (),
+        is_superuser: bool = False,
     ) -> tuple[KnowhowCardModel, MKAApprovalRequest]:
         existing = (
             self.db.query(MKAApprovalRequest)
@@ -1038,16 +1281,28 @@ class MKARepository:
             return self.get_knowhow(tenant_id=tenant_id, knowhow_id=knowhow_id), existing
 
         row = self.get_knowhow(tenant_id=tenant_id, knowhow_id=knowhow_id)
+        self._check_knowhow_owner(
+            row, actor_id=submitted_by, actor_roles=actor_roles, is_superuser=is_superuser
+        )
         if row.status not in self._KNOWHOW_MUTABLE_STATES:
             raise MKAConflictError(f"cannot submit know-how from {row.status}")
         self._check_version(row.version, expected_version)
+
+        # ── SOP conflict detection (MKA-P5-CONFLICT) — 真實 Document 查詢 ──
+        self._run_sop_conflict_check(row)
+
         unresolved = [
             item for item in (row.conflict_report or []) if not item.get("resolved")
         ]
         if unresolved:
-            raise MKAConflictError(
-                f"know-how has {len(unresolved)} unresolved SOP conflicts"
+            err = MKAConflictError(
+                f"know-how has {len(unresolved)} unresolved SOP conflicts; "
+                "resolve in UI before submit"
             )
+            # 端點 rollback 會連 conflict_report 一起洗掉；隨例外帶出，
+            # 讓端點能用新交易把報告存回去，UI 才看得到待處置衝突
+            err.conflict_report = row.conflict_report or []  # type: ignore[attr-defined]
+            raise err
         snapshot = _copy_json(knowhow_to_dict(row))
         policy = self._approval_policy(
             tenant_id=tenant_id, policy_id=None, object_type="knowhow"
@@ -1084,6 +1339,121 @@ class MKARepository:
         row.retired_at = _now()
         self.db.flush()
         return row
+
+    def _run_sop_conflict_check(self, row: KnowhowCardModel) -> None:
+        """Run SOP conflict detection against real Document / Chunk content.
+
+        衝突不得自動掩蓋：寫入 conflict_report，resolved=False，由 UI 顯示差異與處置。
+        """
+        from app.models.document import Document, DocumentChunk
+        from app.services.sop_conflict import SOPConflictChecker
+
+        checker = SOPConflictChecker()
+        sop_docs: List[Dict[str, Any]] = []
+
+        doc_ids = list(row.related_sop_ids or [])
+        query = self.db.query(Document).filter(Document.tenant_id == row.tenant_id)
+        if doc_ids:
+            # related_sop_ids 可能是 UUID 字串或檔名
+            from sqlalchemy import or_
+            clauses = []
+            for sid in doc_ids:
+                try:
+                    clauses.append(Document.id == UUID(str(sid)))
+                except Exception:
+                    clauses.append(Document.filename.ilike(f"%{sid}%"))
+            if clauses:
+                query = query.filter(or_(*clauses))
+        else:
+            from sqlalchemy import or_
+            # 依設備／標題關鍵字找 SOP
+            query = query.filter(
+                or_(
+                    Document.filename.ilike("%SOP%"),
+                    Document.filename.ilike("%sop%"),
+                    Document.filename.ilike("%作業標準%"),
+                )
+            )
+            if row.equipment_ids:
+                eq = str((row.equipment_ids or [None])[0] or "")
+                if eq:
+                    # 設備個體號（EQ-100-01）與機型（EQ-100）都可能是文件名稱的一部分；
+                    # 僅用完整個體號會漏掉以機型命名的 SOP（如 D02_EQ-100_...SOP.md）
+                    import re as _re
+                    candidates = [eq]
+                    model = _re.sub(r"-\d+$", "", eq)
+                    if model and model != eq:
+                        candidates.append(model)
+                    query = query.filter(
+                        or_(*[Document.filename.ilike(f"%{c}%") for c in candidates])
+                    )
+
+        documents = query.limit(10).all()
+        for doc in documents:
+            chunks = (
+                self.db.query(DocumentChunk)
+                .filter(
+                    DocumentChunk.document_id == doc.id,
+                    DocumentChunk.tenant_id == row.tenant_id,
+                )
+                .order_by(DocumentChunk.chunk_index.asc())
+                .limit(40)
+                .all()
+            )
+            texts = [c.text or "" for c in chunks if c.text]
+            steps = [t for t in texts if any(k in t for k in ("步驟", "1.", "2.", "操作"))]
+            cautions = [t for t in texts if any(k in t for k in ("注意", "禁止", "危險", "安全"))]
+            sop_docs.append({
+                "id": str(doc.id),
+                "title": doc.filename or str(doc.id),
+                "steps": steps or texts[:5],
+                "applicable_equipment": list(row.equipment_ids or []),
+                "cautions": cautions,
+            })
+
+        if not sop_docs:
+            return
+
+        conflicts = checker.check_conflicts(row, sop_docs)
+        if not conflicts:
+            row.conflict_report = []
+            return
+
+        # 不自動 resolve — 正式 SOP 優先，但必須人工確認差異。
+        # 已處置過的衝突（同一衝突鍵）保留 resolved/resolution，
+        # 否則使用者在 UI 標記處置後送審會被重跑偵測重置回未解決，永遠卡住。
+        def _conflict_key(d: Dict[str, Any]) -> tuple:
+            return (
+                str(d.get("conflict_type") or ""),
+                str(d.get("sop_field") or ""),
+                str(d.get("sop_value") or "")[:80],
+                str(d.get("knowhow_value") or "")[:80],
+            )
+
+        prior = {
+            _conflict_key(item): item
+            for item in (row.conflict_report or [])
+            if isinstance(item, dict)
+        }
+        report = []
+        for c in conflicts:
+            d = c.to_dict()
+            existing = prior.get(_conflict_key(d))
+            if existing and existing.get("resolved"):
+                d["resolved"] = True
+                d["resolution"] = existing.get("resolution") or "manual"
+            else:
+                d["resolved"] = False
+                d["resolution"] = ""
+            d["preferred"] = "sop"
+            report.append(d)
+        row.conflict_report = report
+        logger.info(
+            "SOP conflict check for knowhow %s: %s conflicts (%s unresolved)",
+            row.card_id,
+            len(report),
+            sum(1 for item in report if not item.get("resolved")),
+        )
 
     @staticmethod
     def _knowhow_fields(data: Dict[str, Any]) -> Dict[str, Any]:

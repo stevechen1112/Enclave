@@ -251,7 +251,17 @@ class RetrievalFacade:
         raw: List[Dict[str, Any]],
         db: Optional[Session],
     ) -> None:
-        """Append approved cards from the current request session only."""
+        """Append approved cards from the current request session only.
+
+        Authority-based scoring (§7.3):
+        - authority_level 100 (formal_policy) → score * 1.0
+        - authority_level 90 (approved_sop) → score * 0.95
+        - authority_level 80 (approved_spec) → score * 0.90
+        - authority_level 70 (approved_case) → score * 0.85
+        - authority_level 60 (approved_knowhow) → score * 0.80
+        - authority_level 20 (external_reference) → score * 0.50
+        Draft (0) is excluded by draft isolation.
+        """
         from app.config import settings
 
         if not (
@@ -262,13 +272,28 @@ class RetrievalFacade:
             return
         from app.services.mka_persistence import MKARepository
 
+        # Authority score multiplier mapping (§7.3)
+        AUTHORITY_MULTIPLIER = {
+            100: 1.0,   # formal_policy
+            90: 0.95,   # approved_sop
+            80: 0.90,   # approved_spec_or_contract
+            70: 0.85,   # approved_case
+            60: 0.80,   # approved_knowhow
+            20: 0.50,   # external_reference
+        }
+
         for card in MKARepository(db).list_approved_knowhow(
             tenant_id=authz.tenant_id
         ):
+            authority = getattr(card, "authority_level", 60) or 60
+            multiplier = AUTHORITY_MULTIPLIER.get(authority, 0.80)
+            base_score = 0.85
+            adjusted_score = round(base_score * multiplier, 4)
+
             raw.append(
                 {
                     "id": f"knowhow:{card.card_id}",
-                    "score": 0.85,
+                    "score": adjusted_score,
                     "content": (
                         f"[知識卡] {card.title}\n{card.summary or ''}\n"
                         + "\n".join(card.steps or [])
@@ -280,11 +305,26 @@ class RetrievalFacade:
                         "type": "knowhow_card",
                         "card_id": card.card_id,
                         "version": card.version,
+                        "authority_level": authority,
                     },
                     "source": "knowhow",
                     "provider": "knowhow",
                 }
             )
+
+        # Re-sort: know-how cards 按 authority 排序後插入適當位置，
+        # 但不破壞原有 rerank 排序的 chunk 順序。
+        # 策略：將 know-how card 按 authority-adjusted score 插入，
+        # 保留原有 chunk 的相對順序。
+        original_chunks = [r for r in raw if r.get("source") != "knowhow"]
+        knowhow_entries = [r for r in raw if r.get("source") == "knowhow"]
+        # know-how card 之間按 score 降序
+        knowhow_entries.sort(key=lambda r: r.get("score", 0), reverse=True)
+        # 重新組裝：原有 chunk 在前，know-how card 在後
+        # （know-how 的 score 通常低於 rerank 後的 chunk，自然排在後面）
+        raw.clear()
+        raw.extend(original_chunks)
+        raw.extend(knowhow_entries)
 
     @staticmethod
     def _dicts_to_chunks(raw: List[Dict[str, Any]]) -> List[ChunkResult]:

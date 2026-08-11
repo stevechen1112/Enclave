@@ -36,9 +36,14 @@ from app.models.kb_maintenance import (
 from app.models.generated_report import GeneratedReport
 from app.models.billing import BillingRecord
 from app.models.tenant import TenantSSOConfig
+# ADR-013: sidecar 歸屬綁定（未 import 會導致測試 DB create_all 缺表）
+from app.models.sidecar_binding import TenantSidecarBinding
 # MKA: 製造業知識助理領域模型
 from app.models.mka import (
     JobModule, TenantModuleBinding, InteractionSession,
     TenantTermDictionary, FormDefinition, FormInstance,
     RuleSet, ApprovalPolicy, MKAApprovalRequest, KnowhowCardModel,
+    MKAAudioPolicy, MKATaskCost, SceneRegistry, JobRole,
+    UserJobRoleAssignment, FormTemplate, MKAWriteRequest,
+    MKAWriteAudit, MKAEvent, KnowhowLineage, MKAReviewReminder,
 )

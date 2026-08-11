@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -14,25 +14,28 @@ from app.services.product_license import ProductModule, module_status
 router = APIRouter()
 
 # Formal roles only — manager is not a UserRole
+# 注意：此表必須與 frontend/src/navigation/capabilities.ts 的 ROLE_CAPS 保持一致；
+# bootstrap 是能力唯一來源，前端本地表僅作 bootstrap 未載入時的 route-guard fallback。
 _ROLE_CAPS: Dict[str, List[str]] = {
     "owner": [
         "ask", "browse_knowledge", "upload_documents", "manage_sources",
         "review_queue", "governance", "system_ops", "create_content",
-        "view_usage", "admin_home",
+        "view_usage", "admin_home", "field_work",
     ],
     "admin": [
         "ask", "browse_knowledge", "upload_documents", "manage_sources",
         "review_queue", "governance", "system_ops", "create_content",
-        "view_usage", "admin_home",
+        "view_usage", "admin_home", "field_work",
     ],
     "hr": [
         "ask", "browse_knowledge", "upload_documents", "create_content", "view_usage",
+        "field_work",
     ],
     "employee": [
-        "ask", "browse_knowledge", "create_content", "view_usage",
+        "ask", "browse_knowledge", "create_content", "view_usage", "field_work",
     ],
     "viewer": [
-        "ask", "browse_knowledge", "view_usage",
+        "ask", "browse_knowledge", "view_usage", "field_work",
     ],
 }
 
@@ -109,23 +112,74 @@ def experience_bootstrap(
 
     # MKA: job modules + interaction capabilities（§5.4）
     job_modules: List[Dict[str, Any]] = []
+    workspace_entries: List[Dict[str, Any]] = []
+    job_role_assignments: List[Dict[str, Any]] = []
+    active_job_role: Optional[Dict[str, Any]] = None
     interaction_caps: Dict[str, bool] = {
         "voice": False, "camera": False, "qr": False, "offline": False,
     }
-    default_job_home = "ask"
+    default_job_home = "job"
+    needs_job_role_assignment = False
     try:
+        from app.services.job_context import build_effective_job_context
         from app.services.module_registry import get_module_registry
+        from app.services.module_router import get_module_router
+        from app.services.mka_module_seed import (
+            ensure_tenant_module_bindings,
+            seed_canonical_modules,
+            seed_canonical_task_definitions,
+            seed_default_job_roles,
+        )
+
+        seed_canonical_modules(db)
+        seed_canonical_task_definitions(db)
+        # 新租戶模組改為 opt-in：只有 Demo Tenant 自動啟用全部正式模組，
+        # 其他租戶由管理員在設定中心逐個啟用（避免新租戶工作台全攤平）。
+        from app.models.tenant import Tenant
+
+        tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
+        if tenant is not None and tenant.name == "Demo Tenant":
+            ensure_tenant_module_bindings(db, current_user.tenant_id)
+        seed_default_job_roles(db, current_user.tenant_id)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+        # EffectiveJobContext：安全角色（AuthorizationContext）＋業務職能（JobRole 指派）
+        job_ctx = build_effective_job_context(db, current_user)
+        job_role_assignments = [a.to_dict() for a in job_ctx.assignments]
+        active_job_role = job_ctx.active_job_role.to_dict() if job_ctx.active_job_role else None
+        needs_job_role_assignment = job_ctx.needs_job_role_assignment
+
         registry = get_module_registry(db)
         available = registry.get_available_modules(
             tenant_id=current_user.tenant_id,
-            user_roles=[current_user.role] if current_user.role else [],
-            user_department_ids=[str(current_user.department_id)] if hasattr(current_user, "department_id") and current_user.department_id else [],
+            user_roles=list(job_ctx.security_roles),
+            user_department_ids=list(job_ctx.department_ids),
+            # 與 assert_module_access／chat／Task Engine 一致：依 active 職能過濾，
+            # 避免 bootstrap 回傳使用者實際無權使用的模組（看得到、點進去 403）。
+            job_role_keys=list(job_ctx.active_job_role_keys),
         )
         job_modules = available
         interaction_caps = registry.get_interaction_capabilities(current_user.tenant_id)
-        if available:
-            # 依第一個模組決定首頁
-            first_key = available[0].get("module_key", "")
+
+        if needs_job_role_assignment:
+            # 無職能指派 → 空態，禁止回退成全部功能：
+            # workspace_entries、job_modules、default_job_home 全部清空，
+            # 與後端 runtime 路徑（chat／tasks／forms 的模組授權）一致。
+            workspace_entries = []
+            job_modules = []
+        else:
+            # 使用真實 AuthorizationContext（role_ids/department_ids 含祖先部門），
+            # 不再維護 ad-hoc stub，避免與 chat 等 runtime 路徑的 ACL 不一致。
+            from app.core.authorization import AuthorizationContext
+
+            authz = AuthorizationContext.from_user(current_user)
+            module_keys = job_ctx.active_module_keys or None
+            workspace_entries = get_module_router(db=db).workspace_entries(authz, module_keys)
+        if job_modules:
+            first_key = job_modules[0].get("module_key", "")
             default_job_home = f"module:{first_key}"
     except Exception:
         pass  # 誠實降級 — 不顯示假功能
@@ -146,7 +200,12 @@ def experience_bootstrap(
             "is_superuser": bool(current_user.is_superuser),
         },
         "capabilities": caps,
-        "default_home": "overview" if "admin_home" in caps else "ask",
+        # 與前端 defaultHomePath 一致：admin → overview；現場人員 → job；其他 → ask
+        "default_home": (
+            "overview" if "admin_home" in caps
+            else "job" if "field_work" in caps
+            else "ask"
+        ),
         "packs": _pack_states(),
         "inference": _inference_boundary(db),
         "features": {
@@ -160,6 +219,10 @@ def experience_bootstrap(
         },
         # MKA §5.4: job modules + interaction capabilities
         "job_modules": job_modules,
+        "workspace_entries": workspace_entries,
+        "job_role_assignments": job_role_assignments,
+        "active_job_role": active_job_role,
+        "needs_job_role_assignment": needs_job_role_assignment,
         "default_job_home": default_job_home,
         "interaction_capabilities": interaction_caps,
     }

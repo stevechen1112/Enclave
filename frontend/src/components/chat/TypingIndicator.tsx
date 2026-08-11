@@ -8,16 +8,16 @@ interface Props {
  */
 export default function TypingIndicator({ status }: Props) {
   return (
-    <div className="flex justify-start animate-fade-in">
-      <div className="rounded-2xl bg-white border border-gray-200 px-4 py-3 shadow-sm">
+    <div className="flex animate-fade-in justify-start">
+      <div className="card rounded-bl-md px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex gap-1">
-            <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="h-2 w-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="flex gap-1.5">
+            <span className="h-2 w-2 animate-bounce rounded-full bg-accent/70" style={{ animationDelay: '0ms' }} />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-accent/70" style={{ animationDelay: '150ms' }} />
+            <span className="h-2 w-2 animate-bounce rounded-full bg-accent/70" style={{ animationDelay: '300ms' }} />
           </div>
           {status && (
-            <span className="text-xs text-gray-400">{status}</span>
+            <span className="text-sm text-muted">{status}</span>
           )}
         </div>
       </div>
