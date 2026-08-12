@@ -4,6 +4,9 @@ from __future__ import annotations
 import io
 import logging
 import re
+import subprocess
+import tempfile
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID, uuid4
 
@@ -12,6 +15,43 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 _PLACEHOLDER_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}")
+
+
+def convert_office_template_to_pdf(content: bytes, source_format: str, stem: str) -> bytes:
+    """Convert a rendered company DOCX/XLSX template to PDF with LibreOffice."""
+    extension = source_format.lower().lstrip(".")
+    if extension not in {"docx", "xlsx"}:
+        raise ValueError(f"unsupported office template format: {source_format}")
+    safe_stem = re.sub(r"[^A-Za-z0-9_.-]", "_", stem or "form")
+    with tempfile.TemporaryDirectory(prefix="enclave-form-pdf-") as temp_dir:
+        root = Path(temp_dir)
+        source = root / f"{safe_stem}.{extension}"
+        output_dir = root / "output"
+        profile_dir = root / "profile"
+        output_dir.mkdir()
+        profile_dir.mkdir()
+        source.write_bytes(content)
+        completed = subprocess.run(
+            [
+                "soffice",
+                f"-env:UserInstallation={profile_dir.as_uri()}",
+                "--headless",
+                "--convert-to",
+                "pdf",
+                "--outdir",
+                str(output_dir),
+                str(source),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+        pdf = output_dir / f"{safe_stem}.pdf"
+        if completed.returncode != 0 or not pdf.exists() or pdf.stat().st_size == 0:
+            detail = (completed.stderr or completed.stdout).strip()[:500]
+            raise RuntimeError(f"company template PDF conversion failed: {detail or 'no PDF output'}")
+        return pdf.read_bytes()
 
 
 def extract_placeholders_docx(content: bytes) -> List[str]:

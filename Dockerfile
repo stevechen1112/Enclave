@@ -36,6 +36,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-chi-tra \
     poppler-utils \
+    libreoffice-writer \
+    libreoffice-calc \
     libmagic1 \
     libxml2 \
     libxslt1.1 \

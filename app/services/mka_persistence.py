@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 from uuid import UUID
 
+from sqlalchemy import inspect
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -779,9 +780,12 @@ class MKARepository:
 
         # 公司版型優先：DOCX/XLSX 套既有範本；缺依賴 fail-closed（不冒充通用兩欄表）
         result = None
-        if fmt in {"docx", "xlsx"}:
+        if fmt in {"docx", "xlsx", "pdf"}:
             try:
-                from app.services.form_template_service import FormTemplateService
+                from app.services.form_template_service import (
+                    FormTemplateService,
+                    convert_office_template_to_pdf,
+                )
 
                 tmpl = FormTemplateService(self.db).get_active(tenant_id, form_key)
                 if tmpl is not None and tmpl.format == fmt:
@@ -796,7 +800,20 @@ class MKARepository:
                         filename=filename,
                         metadata={"template_id": str(tmpl.id), "version": tmpl.version},
                     )
-                elif tmpl is not None and tmpl.format != fmt:
+                elif tmpl is not None and fmt == "pdf":
+                    content, _filename, _media = FormTemplateService(self.db).preview(
+                        tenant_id=tenant_id,
+                        template_id=tmpl.id,
+                        values=values,
+                    )
+                    pdf = convert_office_template_to_pdf(content, tmpl.format, form_key)
+                    result = ExportResult(
+                        format="pdf",
+                        content=pdf,
+                        filename=f"{form_key}.pdf",
+                        metadata={"template_id": str(tmpl.id), "version": tmpl.version},
+                    )
+                elif tmpl is not None:
                     result = ExportResult(
                         format=fmt,
                         error=(
@@ -817,20 +834,6 @@ class MKARepository:
             }[fmt]
             # 若租戶有公司版型卻走到通用渲染，DOCX/XLSX 應已上面處理；
             # PDF 由核准版文件轉出（無轉檔依賴時 fail-closed）
-            if fmt == "pdf":
-                try:
-                    from app.services.form_template_service import FormTemplateService
-                    tmpl = FormTemplateService(self.db).get_active(tenant_id, form_key)
-                    if tmpl is not None:
-                        result = ExportResult(
-                            format="pdf",
-                            error=(
-                                "PDF export from company template requires conversion "
-                                "dependency; refuse generic two-column PDF fallback"
-                            ),
-                        )
-                except Exception:
-                    pass
             if result is None:
                 result = render(
                     title=form_key,
@@ -1018,6 +1021,10 @@ class MKARepository:
             }
         )
         row.decision_log = log
+        # Persist the business decision before looking up its optional task
+        # workspace counterpart.  The lookup may issue SQL, and therefore
+        # must not cause a premature/autoflush of the just-mutated form.
+        self.db.flush()
         self._sync_task_run_for_approval(
             row,
             reviewer_id=reviewer_id,
@@ -1112,6 +1119,17 @@ class MKARepository:
         the review feedback nor resume the same task.
         """
         if approval.status not in {"approved", "rejected", "changes_requested"}:
+            return
+
+        # The repository is also used by narrow persistence tests and legacy
+        # installations that predate the task workspace tables.  A business
+        # approval must still succeed there; only the optional workspace sync
+        # is unavailable.
+        # Inspect the session connection, rather than its Engine.  This is
+        # essential for SQLite's StaticPool test setup: opening an Engine
+        # connection there would share the DB-API connection and roll back the
+        # current approval transaction when the inspector closes it.
+        if "mka_task_runs" not in inspect(self.db.connection()).get_table_names():
             return
 
         from app.models.mka import TaskRun, TaskRunEvent
