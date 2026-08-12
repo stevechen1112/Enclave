@@ -153,7 +153,7 @@ class TestQuoteEndToEnd:
 
         # 2. 執行：知識補值 + 規則計算 + 缺欄位
         result = engine.execute(run, sales)
-        assert run.status == "waiting_review"
+        assert run.status == "in_progress"
         assert run.field_sources["unit_price"]["source"] == "knowledge"
         assert run.field_sources["subtotal"]["source"] == "rule"
         assert "valid_until" in run.provenance["missing_fields"]
@@ -173,6 +173,83 @@ class TestQuoteEndToEnd:
                 tenant_id=tenant.id, instance_id=form_id,
                 actor_id=sales.id, actor_roles=["employee"],
             )
+
+    def test_returned_quote_resumes_same_task_and_can_be_approved(self, db):
+        tenant = _tenant(db, "Review lifecycle")
+        sales = _user(db, tenant, "sales@review.example")
+        owner = _user(db, tenant, "owner@review.example", role="owner")
+        _bind(db, tenant, "sales_quote", allowed_job_role_keys=["sales"], forms=["quote"])
+        _assign(db, tenant, sales, "sales", ["sales_quote"])
+        seed_canonical_task_definitions(db)
+        db.commit()
+
+        engine = TaskEngine(db)
+        run, _ = engine.start_run(
+            user=sales,
+            task_key="quote",
+            idempotency_key="p8-review-lifecycle-001",
+            inputs={
+                "values": {
+                    "customer": "Review customer",
+                    "part_number": "P-100",
+                    "quantity": 2,
+                    "unit_price": 1200,
+                    "valid_until": "2026-12-31",
+                    "payment_terms": "月結30天",
+                },
+            },
+        )
+        first = engine.execute(run, sales)
+        assert run.status == "waiting_review"
+        first_form_id = uuid.UUID(first.output_refs["form_instance_id"])
+        first_approval_id = uuid.UUID(first.output_refs["approval_id"])
+
+        repo = MKARepository(db)
+        repo.decide_approval(
+            tenant_id=tenant.id,
+            approval_id=first_approval_id,
+            reviewer_id=owner.id,
+            reviewer_roles=["owner"],
+            expected_version=1,
+            idempotency_key="p8-review-return-001",
+            action="request_changes",
+            reason="Please correct the quantity",
+        )
+        db.commit()
+        db.refresh(run)
+        assert run.status == "rejected"
+        assert run.provenance["review"]["status"] == "changes_requested"
+        assert run.provenance["review"]["reason"] == "Please correct the quantity"
+        assert db.query(TaskRunEvent).filter(
+            TaskRunEvent.run_id == run.id,
+            TaskRunEvent.event_type == "approval_decided",
+        ).count() == 1
+
+        engine.transition(run, "draft")
+        second = engine.execute(run, sales)
+        assert run.status == "waiting_review"
+        assert second.output_refs["form_instance_id"] != str(first_form_id)
+
+        second_approval_id = uuid.UUID(second.output_refs["approval_id"])
+        repo.decide_approval(
+            tenant_id=tenant.id,
+            approval_id=second_approval_id,
+            reviewer_id=owner.id,
+            reviewer_roles=["owner"],
+            expected_version=1,
+            idempotency_key="p8-review-approve-001",
+            action="approve",
+        )
+        db.commit()
+        db.refresh(run)
+        assert run.status == "approved"
+        final_form_id = uuid.UUID(second.output_refs["form_instance_id"])
+        repo.assert_form_exportable(
+            tenant_id=tenant.id,
+            instance_id=final_form_id,
+            actor_id=sales.id,
+            actor_roles=["employee"],
+        )
 
 
 class TestSecondTenantIsolation:
@@ -342,7 +419,14 @@ class TestReviewFixes:
         engine = TaskEngine(db)
         run, _ = engine.start_run(
             user=user, task_key="quote", idempotency_key="p8-fix-001",
-            inputs={"values": {"customer": "台中精機"}},
+            inputs={"values": {
+                "customer": "台中精機",
+                "part_number": "P-100",
+                "quantity": 1,
+                "unit_price": 100,
+                "valid_until": "2026-12-31",
+                "payment_terms": "月結30天",
+            }},
         )
         engine.execute(run, user)
         db.commit()

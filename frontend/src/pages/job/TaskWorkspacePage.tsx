@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ArrowLeft, ExternalLink, Send } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Plus, RotateCcw, Send } from 'lucide-react'
 import PushToTalk from '../../components/mka/PushToTalk'
 import { formsApi, type FormFieldSpec, type TranscribeResponse } from '../../services/mka'
 import { tasksApi, type TaskDefinition, type TaskRun } from '../../services/tasks'
@@ -24,6 +24,23 @@ const SOURCE_LABEL: Record<string, string> = {
 
 function newIdempotencyKey(): string {
   return `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+const TASK_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  in_progress: '填寫中',
+  waiting_review: '已送審，等待審核',
+  rejected: '需要修正',
+  approved: '已核准',
+  executed: '已完成',
+  exported: '已匯出',
+  failed: '執行失敗',
+}
+
+type ReviewInfo = {
+  status?: string
+  reason?: string
+  decided_at?: string
 }
 
 export default function TaskWorkspacePage() {
@@ -61,6 +78,7 @@ export default function TaskWorkspacePage() {
   )
   const editable = run?.status === 'draft' || run?.status === 'in_progress'
   const formInstanceId = run?.output_refs?.form_instance_id as string | undefined
+  const review = (run?.provenance?.review ?? {}) as ReviewInfo
 
   // 表單狀態（簽核進度與 guarded 匯出）
   useEffect(() => {
@@ -111,7 +129,7 @@ export default function TaskWorkspacePage() {
 
         const runs = await tasksApi.listRuns({
           task_key: taskKey,
-          status: 'draft,in_progress',
+          status: 'draft,in_progress,waiting_review,rejected,approved,executed',
         })
         if (cancelled) return
         if (runs.length > 0) {
@@ -237,6 +255,39 @@ export default function TaskWorkspacePage() {
     }
   }, [run])
 
+  const handleStartRevision = useCallback(async () => {
+    if (!run || run.status !== 'rejected') return
+    setBusy(true)
+    try {
+      const updated = await tasksApi.transition(run.id, 'draft')
+      setRun(updated)
+      setDraftValues({})
+      toast.success('已開啟修正；完成後可重新送審')
+    } catch {
+      toast.error('無法開啟修正，請重新整理後再試')
+    } finally {
+      setBusy(false)
+    }
+  }, [run])
+
+  const handleStartNew = useCallback(async () => {
+    setBusy(true)
+    try {
+      const created = await tasksApi.startRun(taskKey, {
+        idempotency_key: newIdempotencyKey(),
+      })
+      setRun(created)
+      setDraftValues({})
+      setText('')
+      setFormStatus(null)
+      toast.success('已建立新單')
+    } catch {
+      toast.error('建立新單失敗，請稍後再試')
+    } finally {
+      setBusy(false)
+    }
+  }, [taskKey])
+
   // Guarded action：只有表單 approved 才能匯出（後端亦強制）
   const handleExport = useCallback(async () => {
     if (!formInstanceId || formStatus !== 'approved') return
@@ -290,7 +341,7 @@ export default function TaskWorkspacePage() {
         <div>
           <h1 className="text-2xl font-bold text-ink">{definition.name}</h1>
           <p className="text-base text-muted">
-            狀態：{run?.status ?? '—'}　版本：{definition.version}
+            狀態：{TASK_STATUS_LABEL[run?.status ?? ''] ?? run?.status ?? '—'}　版本：{definition.version}
           </p>
         </div>
       </header>
@@ -386,6 +437,26 @@ export default function TaskWorkspacePage() {
         </section>
       </div>
 
+      {run?.status === 'waiting_review' && (
+        <section className="rounded-2xl border-2 border-amber-400 bg-amber-50 p-4 text-amber-950">
+          <p className="font-bold">已送出審核，暫時不能修改</p>
+          <p className="mt-1 text-sm">核准後可在這裡匯出；若被退回，系統會顯示原因並讓你回到此單修正。</p>
+        </section>
+      )}
+
+      {run?.status === 'rejected' && (
+        <section className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-red-950">
+          <p className="font-bold">此單需要修正後重新送審</p>
+          {review.reason ? <p className="mt-1 text-sm">審核意見：{review.reason}</p> : null}
+        </section>
+      )}
+
+      {run?.status === 'approved' && (
+        <section className="rounded-2xl border-2 border-green-300 bg-green-50 p-4 text-green-950">
+          <p className="font-bold">此單已核准，可以匯出正式文件。</p>
+        </section>
+      )}
+
       <footer className="flex flex-wrap items-center gap-3">
         {editable && (
           <button
@@ -420,6 +491,28 @@ export default function TaskWorkspacePage() {
             匯出 PDF
           </button>
         )}
+        {run?.status === 'rejected' && (
+          <button
+            type="button"
+            onClick={handleStartRevision}
+            disabled={busy}
+            className="flex min-h-12 items-center gap-2 rounded-xl bg-amber-600 px-5 text-lg font-bold text-white disabled:opacity-40"
+          >
+            <RotateCcw className="h-5 w-5" aria-hidden />
+            開始修正
+          </button>
+        )}
+        {['approved', 'executed'].includes(run?.status ?? '') && (
+          <button
+            type="button"
+            onClick={handleStartNew}
+            disabled={busy}
+            className="flex min-h-12 items-center gap-2 rounded-xl border-2 border-line px-5 text-lg font-bold text-ink disabled:opacity-40"
+          >
+            <Plus className="h-5 w-5" aria-hidden />
+            建立新單
+          </button>
+        )}
         {missingRequired.length > 0 && (
           <span className="text-sm text-amber-700">
             還缺 {missingRequired.length} 個必填欄位
@@ -428,11 +521,15 @@ export default function TaskWorkspacePage() {
         {formKey && (
           <button
             type="button"
-            onClick={() =>
+            onClick={() => {
+              if (formInstanceId) {
+                navigate(`/forms/instances/${formInstanceId}`)
+                return
+              }
               navigate(`/forms/${formKey}`, {
                 state: { prefill: values, taskRunId: run?.id },
               })
-            }
+            }}
             className="flex min-h-12 items-center gap-2 rounded-xl border-2 border-line px-4 text-base text-muted"
           >
             <ExternalLink className="h-4 w-4" />

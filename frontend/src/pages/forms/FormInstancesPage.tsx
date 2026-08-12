@@ -8,8 +8,8 @@ import PageHeader from '../../components/PageHeader'
 import { formsApi, type FormInstance } from '../../services/mka'
 
 const TABS = [
-  { key: 'draft', label: '草稿' },
-  { key: 'pending_review,pending_approval,changes_requested', label: '待審' },
+  { key: 'draft,changes_requested,rejected', label: '待處理' },
+  { key: 'pending_review,pending_approval', label: '待審' },
   { key: 'approved,finalized', label: '已核准' },
 ] as const
 

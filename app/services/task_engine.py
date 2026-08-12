@@ -340,7 +340,10 @@ class TaskEngine:
             prov = dict(run.provenance or {})
             prov.update(result.provenance)
             run.provenance = prov
-        self.transition(run, result.next_status)
+        # A handler can persist a partial result while keeping an already
+        # in-progress run editable.  Do not emit an invalid self-transition.
+        if result.next_status != run.status:
+            self.transition(run, result.next_status)
         self._emit(run, "executed", actor_id=user.id,
                    payload={"handler": definition.handler_key,
                             "next_status": result.next_status})
@@ -411,7 +414,7 @@ def _form_backed_handler(form_key: str) -> TaskHandler:
                 "missing_fields": missing,
                 **({"approval_id": approval_id} if approval_id else {}),
             },
-            next_status="waiting_review",
+            next_status="waiting_review" if approval_id else "in_progress",
         )
 
     return _handler
@@ -566,7 +569,7 @@ def _quote_handler(ctx: TaskRunContext) -> TaskResult:
             "missing_fields": missing,
             **({"approval_id": approval_id} if approval_id else {}),
         },
-        next_status="waiting_review",
+        next_status="waiting_review" if approval_id else "in_progress",
     )
 
 

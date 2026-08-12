@@ -1018,6 +1018,12 @@ class MKARepository:
             }
         )
         row.decision_log = log
+        self._sync_task_run_for_approval(
+            row,
+            reviewer_id=reviewer_id,
+            action=action,
+            reason=reason,
+        )
         self.db.flush()
         return row
 
@@ -1089,6 +1095,80 @@ class MKARepository:
                 tenant_id=approval.tenant_id, knowhow_id=approval.object_id
             )
             row.status = "changes_requested"
+
+    def _sync_task_run_for_approval(
+        self,
+        approval: MKAApprovalRequest,
+        *,
+        reviewer_id: UUID,
+        action: str,
+        reason: str,
+    ) -> None:
+        """Keep a task workspace aligned with the form/card it created.
+
+        Task runs retain the user-facing workflow context, while approvals own
+        the business decision.  Without this bridge a returned form left its
+        task run at ``waiting_review`` forever, so the user could neither see
+        the review feedback nor resume the same task.
+        """
+        if approval.status not in {"approved", "rejected", "changes_requested"}:
+            return
+
+        from app.models.mka import TaskRun, TaskRunEvent
+
+        reference_key = {
+            "form": "form_instance_id",
+            "knowhow": "knowhow_card_id",
+        }.get(approval.object_type)
+        if reference_key is None:
+            return
+
+        target_status = "approved" if approval.status == "approved" else "rejected"
+        object_id = str(approval.object_id)
+        # JSON containment differs between PostgreSQL and SQLite.  Filtering
+        # tenant-scoped rows in SQL and matching the small task reference in
+        # Python keeps the behaviour portable for request handling and tests.
+        candidates = self.db.query(TaskRun).filter(
+            TaskRun.tenant_id == approval.tenant_id,
+            TaskRun.status == "waiting_review",
+        ).all()
+        for run in candidates:
+            if str((run.output_refs or {}).get(reference_key, "")) != object_id:
+                continue
+
+            from_status = run.status
+            run.status = target_status
+            refs = dict(run.output_refs or {})
+            refs.update({
+                "approval_id": str(approval.id),
+                "approval_status": approval.status,
+                "form_status": approval.status if approval.object_type == "form" else refs.get("form_status"),
+            })
+            run.output_refs = refs
+            provenance = dict(run.provenance or {})
+            provenance["review"] = {
+                "approval_id": str(approval.id),
+                "status": approval.status,
+                "action": action,
+                "reason": reason,
+                "reviewer_id": str(reviewer_id),
+                "decided_at": _now().isoformat(),
+            }
+            run.provenance = provenance
+            self.db.add(TaskRunEvent(
+                tenant_id=run.tenant_id,
+                run_id=run.id,
+                event_type="approval_decided",
+                actor_id=reviewer_id,
+                payload={
+                    "approval_id": str(approval.id),
+                    "action": action,
+                    "approval_status": approval.status,
+                    "from": from_status,
+                    "to": target_status,
+                    "reason": reason,
+                },
+            ))
 
     def _approval_policy(
         self,

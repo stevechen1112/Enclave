@@ -117,7 +117,7 @@ export default function JobHomePage() {
 
   useEffect(() => {
     formsApi
-      .listInstances('draft,pending_review,pending_approval')
+      .listInstances('draft,changes_requested,rejected,pending_review,pending_approval')
       .then(rows => setDraftCount(rows.length))
       .catch(() => setDraftCount(null))
   }, [])
