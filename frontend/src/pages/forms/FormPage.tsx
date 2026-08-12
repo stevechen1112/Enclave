@@ -39,6 +39,12 @@ function fieldInputMode(type?: string) {
   return 'text' as const
 }
 
+function fieldInputType(type?: string): 'text' | 'number' | 'date' {
+  if (type === 'date') return 'date'
+  if (NUMERIC_TYPES.has(String(type))) return 'number'
+  return 'text'
+}
+
 export default function FormPage() {
   const { formKey = 'quote' } = useParams<{ formKey: string }>()
   const navigate = useNavigate()
@@ -289,7 +295,8 @@ export default function FormPage() {
               ) : (
                 <input
                   id={id}
-                  type="text"
+                  type={fieldInputType(String(f.type))}
+                  step={NUMERIC_TYPES.has(String(f.type)) ? 'any' : undefined}
                   inputMode={fieldInputMode(String(f.type))}
                   value={values[f.name] ?? ''}
                   onChange={e => setValue(f.name, e.target.value)}

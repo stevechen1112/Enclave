@@ -26,6 +26,12 @@ function newIdempotencyKey(): string {
   return `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function fieldInputType(type?: string): 'text' | 'number' | 'date' {
+  if (type === 'date') return 'date'
+  if (type === 'number' || type === 'amount') return 'number'
+  return 'text'
+}
+
 const TASK_STATUS_LABEL: Record<string, string> = {
   draft: '草稿',
   in_progress: '填寫中',
@@ -436,14 +442,31 @@ export default function TaskWorkspacePage() {
                     )}
                   </span>
                 </div>
-                <input
-                  type="text"
-                  value={value === undefined || value === null ? '' : String(value)}
-                  onChange={e => handleEditField(f.name, e.target.value)}
-                  disabled={!editable || calculated}
-                  placeholder={calculated ? '送審時由系統自動計算' : missing ? '缺少此欄位，請補上' : ''}
-                  className="mt-2 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-base disabled:opacity-60"
-                />
+                {f.type === 'select' && Array.isArray(f.options) ? (
+                  <select
+                    aria-label={f.label || f.name}
+                    value={value === undefined || value === null ? '' : String(value)}
+                    onChange={e => handleEditField(f.name, e.target.value)}
+                    disabled={!editable || calculated}
+                    className="mt-2 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-base disabled:opacity-60"
+                  >
+                    <option value="">請選擇</option>
+                    {f.options.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    aria-label={f.label || f.name}
+                    type={fieldInputType(f.type)}
+                    step={f.type === 'number' || f.type === 'amount' ? 'any' : undefined}
+                    value={value === undefined || value === null ? '' : String(value)}
+                    onChange={e => handleEditField(f.name, e.target.value)}
+                    disabled={!editable || calculated}
+                    placeholder={calculated ? '送審時由系統自動計算' : missing ? '缺少此欄位，請補上' : ''}
+                    className="mt-2 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-base disabled:opacity-60"
+                  />
+                )}
               </div>
             )
           })}
