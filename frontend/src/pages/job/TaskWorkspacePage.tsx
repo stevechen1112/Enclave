@@ -62,7 +62,14 @@ export default function TaskWorkspacePage() {
 
   const values = useMemo(() => {
     const base = (run?.input_snapshot?.values ?? {}) as Record<string, unknown>
-    return { ...base, ...draftValues }
+    // A task keeps user-entered fields in its input snapshot while deterministic
+    // results live in provenance.  Merge both so calculated amount fields stay
+    // visible for review instead of looking blank/unfinished.
+    const calculationSnapshot = (run?.provenance?.calculation_snapshot ?? {}) as {
+      calculated?: Record<string, unknown>
+    }
+    const calculated = calculationSnapshot.calculated ?? {}
+    return { ...base, ...calculated, ...draftValues }
   }, [run, draftValues])
   const sources = run?.field_sources ?? {}
   const manualEdits = useMemo(
