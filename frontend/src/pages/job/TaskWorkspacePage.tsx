@@ -72,7 +72,12 @@ export default function TaskWorkspacePage() {
   const missingRequired = useMemo(
     () =>
       fields
-        .filter(f => f.required && (values[f.name] === undefined || values[f.name] === ''))
+        .filter(
+          f =>
+            f.required &&
+            !f.calculated &&
+            (values[f.name] === undefined || values[f.name] === ''),
+        )
         .map(f => f.name),
     [fields, values],
   )
@@ -397,6 +402,7 @@ export default function TaskWorkspacePage() {
             const value = values[f.name]
             const src = sources[f.name]
             const missing = missingRequired.includes(f.name)
+            const calculated = Boolean(f.calculated)
             return (
               <div
                 key={f.name}
@@ -427,8 +433,8 @@ export default function TaskWorkspacePage() {
                   type="text"
                   value={value === undefined || value === null ? '' : String(value)}
                   onChange={e => handleEditField(f.name, e.target.value)}
-                  disabled={!editable}
-                  placeholder={missing ? '缺少此欄位，請補上' : ''}
+                  disabled={!editable || calculated}
+                  placeholder={calculated ? '送審時由系統自動計算' : missing ? '缺少此欄位，請補上' : ''}
                   className="mt-2 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-base disabled:opacity-60"
                 />
               </div>
