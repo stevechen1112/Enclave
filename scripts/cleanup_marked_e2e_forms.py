@@ -62,11 +62,16 @@ def main() -> int:
 
         for row in events:
             db.delete(row)
-        for row in approvals:
-            db.delete(row)
+        # These entities have no ORM relationships, so force the physical
+        # dependency order rather than leaving it to one unordered flush.
+        db.flush()
         for row in runs:
             db.delete(row)
+        db.flush()
         for row in forms:
+            db.delete(row)
+        db.flush()
+        for row in approvals:
             db.delete(row)
         db.commit()
         print("deleted marked E2E records")
