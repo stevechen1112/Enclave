@@ -91,7 +91,7 @@ async def transcribe_voice(
     module_key: Optional[str] = None,
     channel: str = "web",
     risk_level: str = "low",
-    confirm_fields: str = "amount,part_number,quantity,date,customer",
+    confirm_fields: str = "amount,unit_price,part_number,quantity,date,customer",
     scene_context_json: Optional[str] = None,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_verified_user),

@@ -303,6 +303,180 @@ class VoiceInteractionGateway:
 
         return fields
 
+    def extract_form_fields(
+        self,
+        text: str,
+        form_fields: List[Any],
+    ) -> List[Dict[str, Any]]:
+        """Extract values using the active task form instead of a fixed quote schema.
+
+        The voice endpoint is shared by every workspace.  A generic list such as
+        ``amount,part_number,quantity`` cannot populate incident, handover,
+        training, or daily-report forms.  This parser keeps the natural quote
+        shortcuts and also understands explicit form labels (for example
+        ``設備編號 EQ-100，異常類別設備故障``).
+        """
+        import re
+
+        from app.services.fixed_form import FieldType
+
+        usable = [field for field in form_fields if not getattr(field, "calculated", False)]
+        by_name = {field.name: field for field in usable}
+        detected: Dict[str, Dict[str, Any]] = {}
+
+        def add(field_name: str, value: Any, raw_span: str) -> None:
+            if field_name not in by_name or value in (None, ""):
+                return
+            detected[field_name] = {
+                "type": field_name,
+                "value": value,
+                "raw_span": raw_span,
+                "needs_confirm": True,
+            }
+
+        date_fields = [field.name for field in usable if field.type == FieldType.DATE]
+        semantic_targets = {
+            "amount": "amount",
+            "unit_price": "unit_price",
+            "part_number": "part_number",
+            "quantity": "quantity",
+            "customer": "customer" if "customer" in by_name else "customer_id",
+            "date": date_fields[0] if len(date_fields) == 1 else "date",
+        }
+
+        common_aliases: Dict[str, List[str]] = {
+            "customer": ["客戶", "客戶名稱"],
+            "customer_id": ["客戶", "客訴來源"],
+            "part_number": ["料號", "品號", "零件號"],
+            "quantity": ["數量", "件數", "採購數量"],
+            "unit_price": ["單價", "每件價格", "每個價格", "每台價格"],
+            "valid_until": ["報價有效期限", "有效期限"],
+            "equipment_id": ["設備編號", "設備代碼", "機台編號"],
+            "equipment_model": ["機型", "設備型號"],
+            "location": ["發生位置", "位置", "產線"],
+            "occurred_at": ["發生時間", "發生日期"],
+            "category": ["異常類別", "類別"],
+            "severity": ["嚴重程度", "嚴重度"],
+            "description": ["異常狀況描述", "異常描述", "狀況描述"],
+            "immediate_action": ["緊急處置", "立即處置", "已採取的緊急處置"],
+            "reporter": ["回報人", "報告人"],
+            "shift_date": ["班次日期", "交接日期"],
+            "shift": ["班次"],
+            "line": ["產線", "區域", "產線區域"],
+            "outgoing": ["交班人"],
+            "incoming": ["接班人"],
+            "production_summary": ["本班生產狀況", "生產狀況"],
+            "pending_issues": ["未完成事項", "待追蹤"],
+            "equipment_notes": ["設備注意事項", "設備備註"],
+            "problem": ["問題描述", "問題"],
+            "containment": ["圍堵措施", "D3"],
+            "root_cause": ["根因", "原因分析", "D4"],
+            "corrective_action": ["矯正措施", "D5"],
+            "owner": ["責任人"],
+            "due_date": ["完成期限", "期限"],
+            "trainee": ["受訓人", "學員"],
+            "job_role": ["職務", "職能"],
+            "required_docs": ["必讀文件"],
+            "quiz_score": ["情境測驗分數", "測驗分數", "分數"],
+            "common_mistakes": ["常見錯誤複習", "常見錯誤"],
+            "mentor": ["指導人", "師傅"],
+            "completed_at": ["完成日", "完成日期"],
+            "report_date": ["日報日期", "日期"],
+            "work_summary": ["今日工作內容", "工作內容"],
+            "issues": ["異常待追蹤", "異常", "待追蹤"],
+            "tomorrow_plan": ["明日計畫", "明天計畫"],
+            "fault_symptom": ["故障現象", "故障狀況"],
+            "repair_action": ["維修處置", "維修動作"],
+            "parts_used": ["更換零件", "使用零件"],
+            "technician": ["維修人員", "技師"],
+            "payment_terms": ["付款條件"],
+            "tax_rate": ["稅率"],
+        }
+
+        aliases_by_name: Dict[str, List[str]] = {}
+        for field in usable:
+            aliases: List[str] = []
+            label = re.sub(r"（[^）]*）|\([^)]*\)", "", field.label).strip()
+            for alias in [label, *re.split(r"[／/]", label), *common_aliases.get(field.name, [])]:
+                alias = alias.strip()
+                if alias and alias not in aliases:
+                    aliases.append(alias)
+            aliases_by_name[field.name] = aliases
+
+        all_aliases = sorted(
+            {alias for aliases in aliases_by_name.values() for alias in aliases},
+            key=len,
+            reverse=True,
+        )
+        if not all_aliases:
+            return list(detected.values())
+
+        def normalize(field: Any, raw: str) -> Any:
+            value = raw.strip(" \t\r\n：:，,；;。")
+            if not value:
+                return None
+            if field.type in {FieldType.NUMBER, FieldType.AMOUNT}:
+                match = re.search(r"[0-9,]+(?:\.[0-9]+)?|[零一二三四五六七八九十百千兩]+", value)
+                if not match:
+                    return None
+                normalized = _normalize_number(match.group(0))
+                if normalized is None:
+                    return None
+                return float(normalized) if "." in normalized else int(normalized)
+            if field.type == FieldType.PART_NUMBER:
+                match = re.search(r"[A-Za-z0-9][A-Za-z0-9._/-]*", value)
+                return match.group(0).upper() if match else None
+            if field.type == FieldType.SELECT:
+                compact = re.sub(r"[\s（）()]", "", value)
+                for option in field.options:
+                    option_compact = re.sub(r"[\s（）()]", "", option)
+                    if value == option or compact in option_compact or option_compact in compact:
+                        return option
+                return None
+            if field.type == FieldType.MULTI_SELECT:
+                return [option for option in field.options if option in value] or None
+            if field.type == FieldType.BOOLEAN:
+                if value in {"是", "有", "需要", "true", "True"}:
+                    return True
+                if value in {"否", "沒有", "不需要", "false", "False"}:
+                    return False
+                return None
+            return value
+
+        # Preserve the conversational shortcuts used by the quotation demo,
+        # then normalize them to the real form field's data type.
+        core = self.extract_confirm_fields(
+            text,
+            ["amount", "unit_price", "part_number", "quantity", "date", "customer"],
+        )
+        for item in core:
+            target = semantic_targets.get(str(item.get("type") or ""), "")
+            target_field = by_name.get(target)
+            if target_field is None:
+                continue
+            raw_value = str(item.get("value") or "")
+            add(target, normalize(target_field, raw_value), str(item.get("raw_span") or raw_value))
+
+        for field in usable:
+            own_aliases = aliases_by_name.get(field.name) or []
+            if not own_aliases:
+                continue
+            own = "|".join(re.escape(alias) for alias in sorted(own_aliases, key=len, reverse=True))
+            pattern = re.compile(
+                rf"(?:{own})\s*(?:是|為|[:：])?\s*(.+?)"
+                rf"(?=[，,；;。]|$)",
+                re.IGNORECASE,
+            )
+            for match in pattern.finditer(text):
+                raw_value = match.group(1)
+                normalized = normalize(field, raw_value)
+                if normalized is None:
+                    continue
+                add(field.name, normalized, raw_value.strip())
+                break
+
+        return list(detected.values())
+
 
 # ── Provider 工廠 ──
 

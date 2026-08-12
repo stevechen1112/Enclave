@@ -1,7 +1,7 @@
 """Task API — 版本化任務定義與 TaskRun（職能任務平台重構 Phase 2）。"""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -39,6 +39,9 @@ class TaskRunInputsPatch(BaseModel):
 
 class TaskRunParseText(BaseModel):
     text: str = Field(..., min_length=1, max_length=4000)
+    source: Literal["text", "voice"] = "text"
+    source_ref: Optional[str] = Field(default=None, max_length=200)
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
 
 
 def _definition_dict(row: Any) -> Dict[str, Any]:
@@ -194,9 +197,9 @@ def parse_task_run_text(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_verified_user),
 ) -> Dict[str, Any]:
-    """文字輸入 → 欄位抽取（重用 voice gateway 的欄位抽取，不需 STT）。
+    """轉寫／文字輸入 → 依任務表單抽取欄位（此端點不執行 STT）。
 
-    抽取結果自動併入 run inputs，來源標記為 text。
+    抽取結果自動併入 run inputs，並保留 text／voice 來源資訊。
     """
     run = _get_own_run(db, current_user, run_id)
     if run.status not in {"draft", "in_progress"}:
@@ -204,58 +207,44 @@ def parse_task_run_text(
             status_code=409, detail=f"狀態 {run.status} 不可編輯欄位"
         )
 
-    # 以任務綁定表單的欄位作為抽取目標；regex 抽取器支援的型別才列入
+    # 以任務綁定表單的實際欄位作為抽取目標。
     from app.models.mka import TaskDefinition
 
-    _SUPPORTED_TYPES = {"amount", "unit_price", "part_number", "quantity", "date", "customer"}
     definition = (
         db.query(TaskDefinition)
         .filter(TaskDefinition.id == run.task_definition_id)
         .first()
     )
-    # 抽取型別 → 表單實際欄位名（如 amount→unit_price、date→valid_until）
-    type_to_field: Dict[str, str] = {}
+    schema = None
     for binding in (definition.output_bindings or []) if definition else []:
         if binding.get("kind") == "form" and binding.get("form_key"):
-            from app.services.fixed_form import FieldType, get_form_registry
+            from app.services.fixed_form import get_form_registry
 
             schema = get_form_registry().get(binding["form_key"])
-            if schema is None:
-                continue
-            fields = [f for f in schema.fields if not f.calculated]
-            by_name = {f.name: f for f in fields}
-            # 同名欄位優先（customer／part_number／quantity）
-            for t in _SUPPORTED_TYPES:
-                if t in by_name and t not in type_to_field:
-                    type_to_field[t] = t
-            # 其餘依 FieldType 對應第一個非計算欄位
-            _TYPE_MAP = {
-                "amount": FieldType.AMOUNT,
-                "date": FieldType.DATE,
-                "part_number": FieldType.PART_NUMBER,
-            }
-            for t, ftype in _TYPE_MAP.items():
-                if t in type_to_field:
-                    continue
-                for f in fields:
-                    if f.type == ftype:
-                        type_to_field[t] = f.name
-                        break
-    target_fields = sorted(type_to_field) or sorted(_SUPPORTED_TYPES)
+            if schema is not None:
+                break
 
     from app.services.voice_gateway import get_voice_gateway
 
-    details = get_voice_gateway().extract_confirm_fields(body.text, target_fields)
+    gateway = get_voice_gateway()
+    if schema is not None:
+        details = gateway.extract_form_fields(body.text, schema.fields)
+    else:
+        details = gateway.extract_confirm_fields(
+            body.text,
+            ["amount", "unit_price", "part_number", "quantity", "date", "customer"],
+        )
 
-    # 併入 run inputs（source=text）；key 用表單欄位名而非抽取型別。
+    # 併入 run inputs；key 用表單欄位名而非通用抽取型別。
     # 數字／金額欄位轉成 number，避免後續 validate／execute 因 str 型別失敗。
     _NUMERIC_FIELDS = {"quantity", "unit_price", "amount", "tax_rate"}
     engine = get_task_engine(db)
     snapshot = dict(run.input_snapshot or {})
     values = dict(snapshot.get("values") or {})
     sources: Dict[str, Dict[str, Any]] = {}
+    detected_values: Dict[str, Any] = {}
     for item in details:
-        field_name = type_to_field.get(item.get("type"), item.get("type"))
+        field_name = item.get("type")
         value = item.get("value")
         if not field_name or value in (None, ""):
             continue
@@ -266,14 +255,19 @@ def parse_task_run_text(
             except (TypeError, ValueError):
                 pass
         values[field_name] = value
-        sources[field_name] = {"source": "text", "ref": None, "confidence": None}
+        detected_values[field_name] = value
+        sources[field_name] = {
+            "source": body.source,
+            "ref": body.source_ref,
+            "confidence": body.confidence,
+        }
     snapshot["values"] = values
     run.input_snapshot = snapshot
     if sources:
         engine.record_field_sources(run, sources)
     db.commit()
 
-    return {"run": _run_dict(run), "detected_fields": dict(values)}
+    return {"run": _run_dict(run), "detected_fields": detected_values}
 
 
 @router.post("/tasks/runs/{run_id}/execute")

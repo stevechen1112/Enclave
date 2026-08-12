@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, ExternalLink, Send } from 'lucide-react'
 import PushToTalk from '../../components/mka/PushToTalk'
 import { formsApi, type FormFieldSpec, type TranscribeResponse } from '../../services/mka'
-import { tasksApi, type FieldSource, type TaskDefinition, type TaskRun } from '../../services/tasks'
+import { tasksApi, type TaskDefinition, type TaskRun } from '../../services/tasks'
 
 const SOURCE_LABEL: Record<string, string> = {
   voice: '語音',
@@ -141,23 +141,24 @@ export default function TaskWorkspacePage() {
   const applyVoiceResult = useCallback(
     async (result: TranscribeResponse) => {
       if (!run || !editable) return
-      const detected = result.detected_fields || {}
-      const entries = Object.entries(detected).filter(([, v]) => v !== undefined && v !== '')
-      if (!entries.length) {
-        toast('沒有辨識到可帶入的欄位', { icon: 'ℹ️' })
-        return
-      }
       setBusy(true)
       try {
-        const updated = await tasksApi.patchInputs(run.id, {
-          values: Object.fromEntries(entries),
-          sources: Object.fromEntries(
-            entries.map(([k]) => [
-              k,
-              { source: 'voice', ref: result.session_id, confidence: result.confidence } as FieldSource,
-            ]),
-          ),
-        })
+        const { run: updated, detected_fields: detected } = await tasksApi.parseText(
+          run.id,
+          result.text,
+          {
+            source: 'voice',
+            source_ref: result.session_id,
+            confidence: result.confidence,
+          },
+        )
+        const entries = Object.entries(detected || {}).filter(
+          ([, value]) => value !== undefined && value !== '',
+        )
+        if (!entries.length) {
+          toast('沒有辨識到可帶入的欄位，請說出欄位名稱後再說內容', { icon: 'ℹ️' })
+          return
+        }
         setRun(updated)
         toast.success(`已帶入 ${entries.length} 個欄位`)
       } catch {

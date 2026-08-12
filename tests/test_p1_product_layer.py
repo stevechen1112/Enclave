@@ -109,6 +109,117 @@ class TestVoiceGateway:
         assert by_type["amount"] == "24000"
         assert by_type["unit_price"] == "120"
 
+    def test_extract_incident_fields_from_active_form_schema(self):
+        gateway = VoiceInteractionGateway()
+        schema = get_form_registry().get("incident_report")
+
+        fields = gateway.extract_form_fields(
+            "設備編號 EQ-100，發生位置 A產線，異常類別設備故障，"
+            "嚴重程度嚴重，異常狀況描述主軸有異音，緊急處置已停機，回報人李阿明",
+            schema.fields,
+        )
+
+        by_type = {field["type"]: field["value"] for field in fields}
+        assert by_type["equipment_id"] == "EQ-100"
+        assert by_type["location"] == "A產線"
+        assert by_type["category"] == "設備故障"
+        assert by_type["severity"] == "嚴重（已停機）"
+        assert by_type["description"] == "主軸有異音"
+        assert by_type["immediate_action"] == "已停機"
+        assert by_type["reporter"] == "李阿明"
+
+    def test_extract_quote_fields_use_real_form_names_and_numeric_types(self):
+        gateway = VoiceInteractionGateway()
+        schema = get_form_registry().get("quote")
+
+        fields = gateway.extract_form_fields(
+            "幫台中精機報價，料號 P-100，兩百個，單價一百二，"
+            "有效期限 2026-08-31，付款條件月結30天",
+            schema.fields,
+        )
+
+        by_type = {field["type"]: field["value"] for field in fields}
+        assert by_type["customer"] == "台中精機"
+        assert by_type["part_number"] == "P-100"
+        assert by_type["quantity"] == 200
+        assert by_type["unit_price"] == 120
+        assert by_type["valid_until"] == "2026-08-31"
+        assert by_type["payment_terms"] == "月結30天"
+
+    @pytest.mark.parametrize(
+        ("schema_name", "sentence", "expected"),
+        [
+            (
+                "shift_handover",
+                "班次日期 2026-08-12，班次早班，產線 A線，交班人王小明，"
+                "接班人李小華，本班生產狀況完成100件，未完成事項待換刀，"
+                "設備注意事項主軸溫度偏高",
+                {
+                    "shift_date": "2026-08-12",
+                    "shift": "早班",
+                    "line": "A線",
+                    "outgoing": "王小明",
+                    "incoming": "李小華",
+                    "production_summary": "完成100件",
+                    "pending_issues": "待換刀",
+                    "equipment_notes": "主軸溫度偏高",
+                },
+            ),
+            (
+                "quality_8d",
+                "客訴來源台中精機，料號 P-100，問題描述尺寸超差，"
+                "圍堵措施暫停出貨，根因刀具磨耗，矯正措施更換刀具，"
+                "責任人王主任，完成期限2026-08-31",
+                {
+                    "customer_id": "台中精機",
+                    "part_number": "P-100",
+                    "problem": "尺寸超差",
+                    "containment": "暫停出貨",
+                    "root_cause": "刀具磨耗",
+                    "corrective_action": "更換刀具",
+                    "owner": "王主任",
+                    "due_date": "2026-08-31",
+                },
+            ),
+            (
+                "training_checklist",
+                "受訓人陳小弟，職務設備操作，必讀文件安全SOP，"
+                "測驗分數九十分，常見錯誤未戴護目鏡，指導人林師傅，"
+                "完成日2026-08-12",
+                {
+                    "trainee": "陳小弟",
+                    "job_role": "設備操作",
+                    "required_docs": "安全SOP",
+                    "quiz_score": 90,
+                    "common_mistakes": "未戴護目鏡",
+                    "mentor": "林師傅",
+                    "completed_at": "2026-08-12",
+                },
+            ),
+            (
+                "daily_report",
+                "日報日期2026-08-12，班次常日班，產線 A線，"
+                "今日工作內容完成設備點檢，異常主軸溫度偏高，"
+                "明日計畫更換軸承",
+                {
+                    "report_date": "2026-08-12",
+                    "shift": "常日班",
+                    "line": "A線",
+                    "work_summary": "完成設備點檢",
+                    "issues": "主軸溫度偏高",
+                    "tomorrow_plan": "更換軸承",
+                },
+            ),
+        ],
+    )
+    def test_extract_every_task_form_schema(self, schema_name, sentence, expected):
+        gateway = VoiceInteractionGateway()
+        schema = get_form_registry().get(schema_name)
+
+        fields = gateway.extract_form_fields(sentence, schema.fields)
+
+        assert {field["type"]: field["value"] for field in fields} == expected
+
     def test_transcribe_requires_authz(self):
         gateway = VoiceInteractionGateway()
         with pytest.raises(ValueError, match="AuthorizationContext"):

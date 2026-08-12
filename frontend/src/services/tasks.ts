@@ -82,8 +82,12 @@ export const tasksApi = {
     return res.data
   },
 
-  parseText: async (runId: string, text: string): Promise<{ run: TaskRun; detected_fields: Record<string, unknown> }> => {
-    const res = await api.post(`/tasks/runs/${runId}/parse-text`, { text })
+  parseText: async (
+    runId: string,
+    text: string,
+    opts?: { source?: 'text' | 'voice'; source_ref?: string; confidence?: number },
+  ): Promise<{ run: TaskRun; detected_fields: Record<string, unknown> }> => {
+    const res = await api.post(`/tasks/runs/${runId}/parse-text`, { text, ...opts })
     return res.data
   },
 
