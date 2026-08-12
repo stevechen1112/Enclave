@@ -50,6 +50,22 @@ def _capabilities_for(user: User) -> List[str]:
     return caps
 
 
+def _filter_task_workspace_entries(
+    entries: List[Dict[str, Any]], accessible_task_keys: set[str]
+) -> List[Dict[str, Any]]:
+    """Remove task links that the current user cannot start at runtime."""
+    filtered: List[Dict[str, Any]] = []
+    prefix = "/job/tasks/"
+    for entry in entries:
+        path = str(entry.get("path") or "")
+        if path.startswith(prefix):
+            task_key = path[len(prefix):].split("?", 1)[0].split("/", 1)[0]
+            if task_key not in accessible_task_keys:
+                continue
+        filtered.append(entry)
+    return filtered
+
+
 def _inference_boundary(db: Session) -> Dict[str, Any]:
     """Honest data-boundary signal for UI (local vs external model)."""
     try:
@@ -178,6 +194,15 @@ def experience_bootstrap(
             authz = AuthorizationContext.from_user(current_user)
             module_keys = job_ctx.active_module_keys or None
             workspace_entries = get_module_router(db=db).workspace_entries(authz, module_keys)
+            from app.services.task_engine import get_task_engine
+
+            accessible_task_keys = {
+                definition.task_key
+                for definition in get_task_engine(db).list_accessible_definitions(current_user)
+            }
+            workspace_entries = _filter_task_workspace_entries(
+                workspace_entries, accessible_task_keys
+            )
         if job_modules:
             first_key = job_modules[0].get("module_key", "")
             default_job_home = f"module:{first_key}"

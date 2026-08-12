@@ -128,6 +128,39 @@ class TaskEngine:
 
         return max(candidates, key=_ver_key)
 
+    def list_accessible_definitions(self, user: Any) -> List[Any]:
+        """Return only effective task definitions the user can actually start.
+
+        Task discovery and workspace navigation share this method so the UI
+        cannot advertise an entry that the runtime will reject.
+        """
+        from app.models.mka import TaskDefinition
+
+        rows = (
+            self.db.query(TaskDefinition)
+            .filter(
+                TaskDefinition.status == "enabled",
+                (TaskDefinition.tenant_id == user.tenant_id)
+                | (TaskDefinition.tenant_id.is_(None)),
+            )
+            .all()
+        )
+        resolved: Dict[str, Any] = {}
+        for row in rows:
+            effective = self.resolve_definition(user.tenant_id, row.task_key)
+            if effective is not None:
+                resolved[row.task_key] = effective
+
+        job_ctx = build_effective_job_context(self.db, user)
+        accessible: List[Any] = []
+        for definition in resolved.values():
+            try:
+                self._assert_task_access(definition, user, job_ctx)
+            except TaskAccessDenied:
+                continue
+            accessible.append(definition)
+        return accessible
+
     # ── 存取檢查 ──
 
     def _assert_task_access(

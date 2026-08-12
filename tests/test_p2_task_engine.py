@@ -412,6 +412,46 @@ class TestExpandedHandlers:
         db.commit()
         return tenant, user
 
+    @pytest.mark.parametrize(
+        ("task_key", "module_key", "forms"),
+        [
+            ("quote", "sales_quote", ["quote"]),
+            ("incident", "incident_handover", ["incident_report"]),
+            ("handover", "incident_handover", ["shift_handover"]),
+            ("daily_report", "incident_handover", ["daily_report"]),
+            ("quality_8d", "quality_8d", ["quality_8d"]),
+            ("training", "training_knowhow", ["training_checklist"]),
+            ("interview", "training_knowhow", []),
+        ],
+    )
+    def test_supervisor_can_start_cross_functional_workspace_tasks(
+        self, db, task_key, module_key, forms
+    ):
+        _, user = self._setup_role_module(
+            db, role_key="supervisor", module_key=module_key, forms=forms,
+        )
+        run, created = TaskEngine(db).start_run(
+            user=user,
+            task_key=task_key,
+            idempotency_key=f"supervisor-{task_key}-0001",
+        )
+        assert created is True
+        assert run.task_key == task_key
+
+    def test_newcomer_discovery_hides_interview_task(self, db):
+        _, user = self._setup_role_module(
+            db,
+            role_key="newcomer",
+            module_key="training_knowhow",
+            forms=["training_checklist"],
+        )
+        keys = {
+            definition.task_key
+            for definition in TaskEngine(db).list_accessible_definitions(user)
+        }
+        assert "training" in keys
+        assert "interview" not in keys
+
     def test_training_handler_creates_checklist(self, db):
         tenant, user = self._setup_role_module(
             db, role_key="newcomer", module_key="training_knowhow",

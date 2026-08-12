@@ -93,24 +93,11 @@ def list_tasks(
     current_user: User = Depends(deps.get_current_verified_user),
 ) -> List[Dict[str, Any]]:
     """列出目前租戶可用的任務定義（全域 + 租戶覆寫的最新 enabled 版本）。"""
-    from app.models.mka import TaskDefinition
-
-    rows = (
-        db.query(TaskDefinition)
-        .filter(
-            TaskDefinition.status == "enabled",
-            (TaskDefinition.tenant_id == current_user.tenant_id)
-            | (TaskDefinition.tenant_id.is_(None)),
-        )
-        .all()
-    )
     engine = get_task_engine(db)
-    seen: Dict[str, Any] = {}
-    for row in rows:
-        resolved = engine.resolve_definition(current_user.tenant_id, row.task_key)
-        if resolved and resolved.id == row.id:
-            seen[row.task_key] = row
-    return [_definition_dict(r) for r in seen.values()]
+    return [
+        _definition_dict(row)
+        for row in engine.list_accessible_definitions(current_user)
+    ]
 
 
 @router.post("/tasks/{task_key}/runs", status_code=201)

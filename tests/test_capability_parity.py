@@ -80,6 +80,21 @@ def test_superuser_elevation_caps_exist_in_union():
     assert {"system_ops", "governance", "admin_home"} <= caps
 
 
+def test_workspace_task_entries_are_filtered_by_runtime_access():
+    from app.api.v1.endpoints.experience import _filter_task_workspace_entries
+
+    entries = [
+        {"label": "新人訓練", "path": "/job/tasks/training"},
+        {"label": "訪談建卡", "path": "/job/tasks/interview"},
+        {"label": "師傅經驗", "path": "/knowhow"},
+        {"label": "設備維修", "path": "/forms/equipment_repair"},
+    ]
+
+    assert _filter_task_workspace_entries(entries, {"training"}) == [
+        entries[0], entries[2], entries[3]
+    ]
+
+
 def test_bootstrap_response_contract_keys():
     """bootstrap 回應頂層鍵快照 — 重構時不得誤刪前端依賴的區塊。"""
     from unittest.mock import MagicMock, patch
