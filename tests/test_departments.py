@@ -47,6 +47,29 @@ async def test_list_departments(client: AsyncClient, superuser_headers: dict):
 
 
 @pytest.mark.asyncio
+async def test_employee_can_list_minimal_department_options(
+    client: AsyncClient, superuser_headers: dict
+):
+    """知識瀏覽者可取得同租戶的最小部門篩選資料，但不能進入管理 API。"""
+    tenant, owner_headers = await _owner_setup(client, superuser_headers, "opt")
+    created = await client.post(
+        "/api/v1/departments/", headers=owner_headers, json={"name": "現場部"}
+    )
+    await create_user(client, superuser_headers, {
+        "email": "emp@deptopt.com", "password": "Emp123!",
+        "full_name": "Emp", "role": "employee", "tenant_id": tenant["id"],
+    })
+    employee_headers = await login_user(client, "emp@deptopt.com", "Emp123!")
+
+    options = await client.get("/api/v1/departments/options", headers=employee_headers)
+    management = await client.get("/api/v1/departments/", headers=employee_headers)
+
+    assert options.status_code == 200
+    assert options.json() == [{"id": created.json()["id"], "name": "現場部"}]
+    assert management.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_department_tree(client: AsyncClient, superuser_headers: dict):
     """可以取得部門樹狀結構"""
     _, h = await _owner_setup(client, superuser_headers, "tr")

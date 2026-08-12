@@ -97,7 +97,7 @@ export default function DocumentsPage() {
 
   // Load departments for filter
   useEffect(() => {
-    api.get<{ id: string; name: string }[]>('/departments/')
+    api.get<{ id: string; name: string }[]>('/departments/options')
       .then(r => setDepartments(r.data))
       .catch((err) => {
         toast.error(formatErrorWithTrace(parseApiError(err, '無法載入部門篩選')))

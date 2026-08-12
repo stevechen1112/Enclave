@@ -31,6 +31,22 @@ router = APIRouter()
 #  部門 CRUD 端點
 # ═══════════════════════════════════════════
 
+@router.get("/options")
+def list_department_options(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> List[dict[str, str]]:
+    """供租戶內文件篩選使用的最小唯讀部門清單。
+
+    部門管理 API 維持 governance 權限；一般知識瀏覽者只會取得目前
+    租戶的啟用部門 id 與名稱，不會取得權限設定或管理能力。
+    """
+    departments = crud_permission.get_departments_by_tenant(
+        db, tenant_id=current_user.tenant_id, include_inactive=False
+    )
+    return [{"id": str(department.id), "name": department.name} for department in departments]
+
+
 @router.get("/", response_model=List[Department])
 def list_departments(
     include_inactive: bool = False,
