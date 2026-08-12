@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import {
@@ -29,7 +29,6 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const userMenuRef = useRef<HTMLDivElement>(null)
 
   const nav = usePrimaryNav()
   const home = useDefaultHomePath()
@@ -46,7 +45,8 @@ export default function Layout() {
       if (e.key === 'Escape') setUserMenuOpen(false)
     }
     const onPointerDown = (e: PointerEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      const target = e.target
+      if (!(target instanceof Element) || !target.closest('[data-user-menu]')) {
         setUserMenuOpen(false)
       }
     }
@@ -120,7 +120,7 @@ export default function Layout() {
       </nav>
 
       <div className="border-t border-sidebar-line p-3">
-        <div className="relative" ref={userMenuRef}>
+        <div className="relative" data-user-menu>
           <button
             type="button"
             onClick={() => setUserMenuOpen(v => !v)}
