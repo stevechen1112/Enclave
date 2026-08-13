@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.models.chat import Conversation, Message, RetrievalTrace
 from app.models.feedback import ChatFeedback
+from app.models.kb_maintenance import KnowledgeGap
 
 
 def get_conversation(db: Session, conversation_id: UUID) -> Optional[Conversation]:
@@ -86,7 +87,28 @@ def delete_conversation(db: Session, conversation_id: UUID) -> bool:
     conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
     if conv:
         # 刪除相關訊息
-        db.query(Message).filter(Message.conversation_id == conversation_id).delete()
+        # Delete every dependent row before its message/conversation. These
+        # tables intentionally use restrictive foreign keys, so relying only on
+        # Conversation.messages' ORM cascade leaves retrieval traces behind.
+        message_ids = [
+            row[0]
+            for row in db.query(Message.id)
+            .filter(Message.conversation_id == conversation_id)
+            .all()
+        ]
+        if message_ids:
+            db.query(ChatFeedback).filter(ChatFeedback.message_id.in_(message_ids)).delete(
+                synchronize_session=False
+            )
+            db.query(RetrievalTrace).filter(RetrievalTrace.message_id.in_(message_ids)).delete(
+                synchronize_session=False
+            )
+        db.query(KnowledgeGap).filter(
+            KnowledgeGap.conversation_id == conversation_id
+        ).delete(synchronize_session=False)
+        db.query(Message).filter(Message.conversation_id == conversation_id).delete(
+            synchronize_session=False
+        )
         db.delete(conv)
         db.commit()
         return True

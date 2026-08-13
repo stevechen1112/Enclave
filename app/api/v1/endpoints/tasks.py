@@ -15,6 +15,7 @@ from app.services.task_engine import (
     TaskEngine,
     TaskEngineError,
     TaskHandlerNotImplemented,
+    TaskInvalidTransition,
     get_task_engine,
 )
 
@@ -85,6 +86,8 @@ def _raise_engine(exc: Exception) -> None:
         raise HTTPException(status_code=403, detail=str(exc))
     if isinstance(exc, TaskHandlerNotImplemented):
         raise HTTPException(status_code=501, detail=str(exc))
+    if isinstance(exc, TaskInvalidTransition):
+        raise HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, TaskEngineError):
         raise HTTPException(status_code=400, detail=str(exc))
     raise HTTPException(status_code=500, detail=str(exc))

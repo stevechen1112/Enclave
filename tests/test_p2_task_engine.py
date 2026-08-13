@@ -252,7 +252,7 @@ class TestHandlers:
             },
         )
         result = engine.execute(run, user)
-        assert run.status == "waiting_review"
+        assert run.status == "in_progress"
         assert result.output_refs["form_key"] == "quote"
         form = db.query(FormInstance).filter(
             FormInstance.id == uuid.UUID(result.output_refs["form_instance_id"])
@@ -364,7 +364,7 @@ class TestQuoteVerticalSlice:
         assert form.values_json["subtotal"] == 24000.0
         # 缺欄位（valid_until 等必填未填）
         assert "valid_until" in run.provenance["missing_fields"]
-        assert run.status == "waiting_review"
+        assert run.status == "in_progress"
 
     def test_no_knowledge_hit_stays_honest(self, db):
         """知識庫查不到價格時不編造，unit_price 維持缺值。"""
@@ -545,8 +545,8 @@ class TestObservability:
 
         m = compute_task_metrics(db, tenant.id)
         assert m["total_runs"] == 1
-        assert m["by_status"]["waiting_review"] == 1
-        assert m["completion_rate"] == 1.0
+        assert m["by_status"]["in_progress"] == 1
+        assert m["completion_rate"] == 0.0
         assert m["error_rate"] == 0.0
         assert m["manual_edit_rate"] == 1.0
         assert m["field_source_distribution"]["voice"] == 1

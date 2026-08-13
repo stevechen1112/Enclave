@@ -234,7 +234,13 @@ export default function FormPage() {
     return null
   }
 
-  const calc = (instance?.calculation_snapshot || {}) as Record<string, unknown>
+  const calculationSnapshot = (instance?.calculation_snapshot || {}) as Record<string, unknown>
+  const nestedCalculated = calculationSnapshot.calculated
+  const calc = (
+    nestedCalculated && typeof nestedCalculated === 'object' && !Array.isArray(nestedCalculated)
+      ? nestedCalculated
+      : calculationSnapshot
+  ) as Record<string, unknown>
   const readOnly = state === 'submitted'
   const approved = instance?.status === 'approved'
 

@@ -53,6 +53,10 @@ class TaskHandlerNotImplemented(TaskEngineError):
 
 # ── Handler 契約 ─────────────────────────────────────────────────────────────
 
+class TaskInvalidTransition(TaskEngineError):
+    """The requested task state transition conflicts with the current state."""
+
+
 @dataclass
 class TaskRunContext:
     db: Session
@@ -257,7 +261,7 @@ class TaskEngine:
     def transition(self, run: Any, to_status: str, *, error: Optional[Dict[str, Any]] = None) -> None:
         allowed = TASK_STATUS_TRANSITIONS.get(run.status, set())
         if to_status not in allowed:
-            raise TaskEngineError(
+            raise TaskInvalidTransition(
                 f"非法狀態轉換：{run.status} → {to_status}"
             )
         from_status = run.status

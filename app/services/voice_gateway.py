@@ -61,6 +61,33 @@ def _normalize_number(raw: str) -> Optional[str]:
     return raw.replace(",", "")
 
 
+_STT_SIMPLIFIED_TO_TRADITIONAL = str.maketrans({
+    "报": "報", "价": "價", "号": "號", "单": "單", "个": "個",
+    "帮": "幫", "户": "戶", "为": "為", "设": "設", "备": "備",
+    "异": "異", "类": "類", "别": "別", "严": "嚴", "处": "處",
+    "线": "線", "产": "產", "发": "發", "现": "現", "时": "時",
+    "间": "間", "问": "問", "题": "題", "务": "務", "员": "員",
+    "导": "導", "计": "計", "划": "畫", "换": "換", "检": "檢",
+    "机": "機", "厂": "廠", "区": "區", "额": "額", "总": "總",
+    "数": "數", "进": "進", "维": "維", "责": "責", "决": "決",
+})
+
+
+def _normalize_stt_text(text: str) -> str:
+    """Normalize common STT script variants before deterministic extraction.
+
+    Chinese speech providers may return Simplified Chinese even when the user
+    speaks zh-TW.  The product's field labels and deterministic parser are
+    Traditional Chinese, so normalizing common manufacturing vocabulary keeps
+    a successful transcript from turning into an empty field set.
+    """
+    import unicodedata
+
+    return unicodedata.normalize("NFKC", text or "").translate(
+        _STT_SIMPLIFIED_TO_TRADITIONAL
+    )
+
+
 class STTProvider(Protocol):
     """語音轉文字 provider 介面。"""
 
@@ -250,6 +277,8 @@ class VoiceInteractionGateway:
         """
         import re
 
+        text = _normalize_stt_text(text)
+
         # 阿拉伯數字或中文數字（一百二／兩百／三千五）
         num = r'([0-9,]+(?:\.[0-9]+)?|[零一二三四五六七八九十百千兩]+)'
         fields = []
@@ -263,7 +292,10 @@ class VoiceInteractionGateway:
                 r'(?:單價|每件|每個|每台|一個|一件|一台)\s*[：:是為]?\s*'
                 + num + r'\s*(?:元|塊)?'
             ),
-            "part_number": r'(?:料號|零件號|品號|型號)\s*[：:是]?\s*([A-Z0-9\-]+)',
+            "part_number": (
+                r'(?:料號|零件號|品號|型號)\s*[：:是]?\s*'
+                r'([A-Z0-9]+(?:[\s._/-]+[A-Z0-9]+)*)'
+            ),
             # 關鍵字前綴，或直接「兩百個／200 件」這類單位錨定說法
             "quantity": (
                 r'(?:數量|件數)\s*[：:是為]?\s*' + num + r'\s*(?:個|件|台|批)?'
@@ -274,7 +306,7 @@ class VoiceInteractionGateway:
             "customer": (
                 r'(?:客戶|客戶名稱|公司|對方)\s*[：:是]?\s*'
                 r'([\u4e00-\u9fff]+(?:公司|股份有限公司|有限公司)?)'
-                r'|(?:幫|給|向|跟|和)\s*([\u4e00-\u9fff]{2,8}?)'
+                r'|(?:幫|邦|給|向|跟|和)\s*([\u4e00-\u9fff]{2,8}?)'
                 r'\s*(?:報價|估價|開報價單|開單|下單)'
             ),
         }
@@ -294,6 +326,8 @@ class VoiceInteractionGateway:
                     value = _normalize_number(value)
                     if value is None:
                         continue
+                elif field_type == "part_number":
+                    value = re.sub(r"\s+", "", str(value)).upper()
                 fields.append({
                     "type": field_type,
                     "value": value,
@@ -320,6 +354,7 @@ class VoiceInteractionGateway:
 
         from app.services.fixed_form import FieldType
 
+        text = _normalize_stt_text(text)
         usable = [field for field in form_fields if not getattr(field, "calculated", False)]
         by_name = {field.name: field for field in usable}
         detected: Dict[str, Dict[str, Any]] = {}

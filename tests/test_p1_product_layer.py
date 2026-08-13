@@ -79,6 +79,21 @@ class TestVoiceGateway:
         assert by_type["quantity"] == "200"
         assert by_type["unit_price"] == "120"
 
+    def test_extracts_fields_from_simplified_stt_transcript(self):
+        """Production STT may return Simplified Chinese for zh-TW audio."""
+        gateway = VoiceInteractionGateway()
+        fields = gateway.extract_confirm_fields(
+            "邦祥展科技报价，料号P 200、300个，单价120元。",
+            ["unit_price", "part_number", "quantity", "customer"],
+        )
+        by_type = {field["type"]: field["value"] for field in fields}
+        assert by_type == {
+            "customer": "祥展科技",
+            "part_number": "P200",
+            "quantity": "300",
+            "unit_price": "120",
+        }
+
     def test_extract_chinese_numeral_variants(self):
         gateway = VoiceInteractionGateway()
         fields = gateway.extract_confirm_fields(
