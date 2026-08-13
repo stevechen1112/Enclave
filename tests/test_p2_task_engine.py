@@ -33,6 +33,7 @@ from app.services.task_engine import (
     TaskEngine,
     TaskEngineError,
     TaskHandlerNotImplemented,
+    TaskInvalidTransition,
 )
 
 
@@ -260,6 +261,34 @@ class TestHandlers:
         assert form.values_json["customer"] == "台中精機"
         assert run.field_sources["customer"]["source"] == "voice"
         assert run.provenance["handler"] == "quote"
+
+    def test_completed_form_handler_rejects_duplicate_execute_before_side_effects(self, db):
+        tenant, user, _ = _sales_user(db)
+        engine = TaskEngine(db)
+        run, _ = engine.start_run(
+            user=user,
+            task_key="quote",
+            idempotency_key="idem-00000020-duplicate",
+            inputs={
+                "values": {
+                    "customer": "台中精機",
+                    "part_number": "P-100",
+                    "quantity": 1,
+                    "unit_price": 120,
+                    "valid_until": "2026-08-31",
+                    "payment_terms": "月結30天",
+                    "tax_rate": 5,
+                }
+            },
+        )
+        engine.execute(run, user)
+        assert run.status == "waiting_review"
+        form_count = db.query(FormInstance).count()
+
+        with pytest.raises(TaskInvalidTransition, match="不可重複執行"):
+            engine.execute(run, user)
+
+        assert db.query(FormInstance).count() == form_count
 
     def test_interview_handler_creates_knowhow_draft(self, db):
         tenant, user = _user(db, role="owner")

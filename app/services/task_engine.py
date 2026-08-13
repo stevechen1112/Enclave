@@ -307,6 +307,12 @@ class TaskEngine:
         """執行 run 對應的 typed handler。"""
         from app.models.mka import TaskDefinition
 
+        # Validate before invoking the handler.  Form/knowhow handlers persist
+        # side effects, so checking only the eventual state transition is too
+        # late and allows a repeated request to create duplicate records.
+        if run.status not in {"draft", "in_progress"}:
+            raise TaskInvalidTransition(f"任務狀態 {run.status} 不可重複執行")
+
         definition = (
             self.db.query(TaskDefinition)
             .filter(TaskDefinition.id == run.task_definition_id)
