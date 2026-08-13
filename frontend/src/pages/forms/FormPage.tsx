@@ -300,6 +300,9 @@ export default function FormPage() {
                   inputMode={fieldInputMode(String(f.type))}
                   value={values[f.name] ?? ''}
                   onChange={e => setValue(f.name, e.target.value)}
+                  onInput={e => {
+                    if (f.type === 'date') setValue(f.name, e.currentTarget.value)
+                  }}
                   disabled={readOnly}
                   placeholder={typeof f.description === 'string' ? f.description : ''}
                   className={common}

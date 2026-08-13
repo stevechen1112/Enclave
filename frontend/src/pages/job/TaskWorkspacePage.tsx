@@ -462,6 +462,9 @@ export default function TaskWorkspacePage() {
                     step={f.type === 'number' || f.type === 'amount' ? 'any' : undefined}
                     value={value === undefined || value === null ? '' : String(value)}
                     onChange={e => handleEditField(f.name, e.target.value)}
+                    onInput={e => {
+                      if (f.type === 'date') handleEditField(f.name, e.currentTarget.value)
+                    }}
                     disabled={!editable || calculated}
                     placeholder={calculated ? '送審時由系統自動計算' : missing ? '缺少此欄位，請補上' : ''}
                     className="mt-2 min-h-10 w-full rounded-lg border border-line bg-surface px-3 text-base disabled:opacity-60"
