@@ -22,6 +22,12 @@ const SOURCE_LABEL: Record<string, string> = {
   default: '預設',
 }
 
+const TASK_INPUT_LABEL: Record<string, string> = {
+  title: '訪談主題',
+  summary: '經驗摘要',
+  steps: '操作步驟（每行一步）',
+}
+
 function newIdempotencyKey(): string {
   return `ws-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
@@ -143,6 +149,21 @@ export default function TaskWorkspacePage() {
           } catch {
             // 表單 schema 不可用時仍可進行對話式收集
           }
+        } else {
+          const inputSchema = def.input_schema as {
+            properties?: Record<string, { type?: string }>
+            required?: string[]
+          }
+          const required = new Set(inputSchema.required ?? [])
+          const taskFields = Object.entries(inputSchema.properties ?? {}).map(
+            ([name, spec]) => ({
+              name,
+              label: TASK_INPUT_LABEL[name] ?? name,
+              type: spec.type === 'number' ? 'number' : 'text',
+              required: required.has(name),
+            }),
+          )
+          if (!cancelled) setFields(taskFields)
         }
 
         const runs = await tasksApi.listRuns({

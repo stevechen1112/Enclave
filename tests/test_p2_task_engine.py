@@ -299,7 +299,8 @@ class TestHandlers:
             KnowhowCardModel.id == uuid.UUID(result.output_refs["knowhow_card_id"])
         ).one()
         assert card.title == "換模技巧"
-        assert card.status == "draft"
+        assert card.status == "pending_review"
+        assert result.output_refs["approval_id"]
 
     def test_unimplemented_handler_fails_loudly(self, db):
         tenant, user, _ = _sales_user(db)

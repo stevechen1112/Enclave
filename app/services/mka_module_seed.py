@@ -178,6 +178,7 @@ CANONICAL_TASKS: List[Dict[str, Any]] = [
         "output_bindings": [{"kind": "knowhow"}],
         "input_schema": {
             "type": "object",
+            "required": ["title", "summary", "steps"],
             "properties": {
                 "title": {"type": "string"},
                 "summary": {"type": "string"},
