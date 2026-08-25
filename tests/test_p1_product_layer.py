@@ -162,6 +162,36 @@ class TestVoiceGateway:
         assert by_type["payment_terms"] == "月結30天"
 
     @pytest.mark.parametrize(
+        ("sentence", "expected_customer"),
+        [
+            (
+                "幫合成示範客戶報價，料號 DEMO-P-100，數量 200，單價 120",
+                "合成示範客戶",
+            ),
+            (
+                "客戶名稱合成測試公司，料號 DEMO-P-100，數量 200，單價 120",
+                "合成測試公司",
+            ),
+            (
+                "幫客戶台中精機報價，料號 P-100，數量 200，單價 120",
+                "台中精機",
+            ),
+        ],
+    )
+    def test_quote_customer_does_not_get_overwritten_by_action_word(
+        self,
+        sentence,
+        expected_customer,
+    ):
+        gateway = VoiceInteractionGateway()
+        schema = get_form_registry().get("quote")
+
+        fields = gateway.extract_form_fields(sentence, schema.fields)
+        by_type = {field["type"]: field["value"] for field in fields}
+
+        assert by_type["customer"] == expected_customer
+
+    @pytest.mark.parametrize(
         ("schema_name", "sentence", "expected"),
         [
             (

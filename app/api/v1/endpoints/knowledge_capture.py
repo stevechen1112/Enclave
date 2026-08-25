@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api import deps
+from app.api.deps_permissions import require_knowhow_author
 from app.models.mka import (
     KnowledgeCaptureChunk,
     KnowledgeCaptureSession,
@@ -102,7 +103,7 @@ def _session_to_dict(row: KnowledgeCaptureSession, *, include_transcript: bool =
 def create_capture(
     body: CreateCaptureBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     if not body.consent:
         raise HTTPException(status_code=400, detail="consent is required before recording")
@@ -145,7 +146,7 @@ async def upload_chunk(
     duration_ms: int = Form(..., ge=1, le=90 * 1000),
     sha256: str = Form(..., min_length=64, max_length=64),
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     from app.config import settings
 
@@ -294,7 +295,7 @@ def complete_capture(
     session_id: UUID,
     body: CompleteCaptureBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     row = _session_or_404(db, current_user, session_id)
     if row.status in {"queued", "transcribing", "ready_for_review"}:
@@ -345,7 +346,7 @@ def complete_capture(
 def retry_capture(
     session_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     row = _session_or_404(db, current_user, session_id)
     if row.status not in {"queued", "failed"}:
@@ -366,7 +367,7 @@ def retry_capture(
 def get_capture(
     session_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     row = _session_or_404(db, current_user, session_id)
     return _session_to_dict(row, include_transcript=True)
@@ -376,7 +377,7 @@ def get_capture(
 def get_capture_transcript(
     session_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     row = _session_or_404(db, current_user, session_id)
     segments = (
@@ -415,7 +416,7 @@ def correct_capture_transcript_segment(
     segment_id: UUID,
     body: CorrectSegmentBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     row = _session_or_404(db, current_user, session_id)
     if row.status != "ready_for_review":

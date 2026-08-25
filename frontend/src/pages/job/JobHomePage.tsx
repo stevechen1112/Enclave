@@ -49,6 +49,11 @@ const FALLBACK_ENTRIES: WorkspaceEntry[] = [
   { label: '師傅經驗庫', path: '/knowhow', description: '知識卡與訪談' },
 ]
 
+const DEMO_VIEWER_ENTRIES: WorkspaceEntry[] = [
+  { label: '查看知識文件', path: '/knowledge/documents', description: '只看合成展示文件與正式發布內容' },
+  { label: '查看師傅經驗', path: '/knowhow', description: '只看已核准的做法與注意事項' },
+]
+
 export default function JobHomePage() {
   const { user, experience, refreshExperience } = useAuth()
   const navigate = useNavigate()
@@ -59,6 +64,7 @@ export default function JobHomePage() {
   const [draftCount, setDraftCount] = useState<number | null>(null)
 
   const canReview = user?.is_superuser || user?.role === 'owner' || user?.role === 'admin'
+  const demoViewer = Boolean(experience?.demo_mode && user?.role === 'viewer')
 
   const needsJobRoleAssignment = Boolean(
     (experience as { needs_job_role_assignment?: boolean } | null)
@@ -88,13 +94,13 @@ export default function JobHomePage() {
 
   const entries = useMemo(() => {
     // 無職能指派 → 空態，禁止回退成全部功能（FALLBACK 僅供 bootstrap 尚未載入）
-    if (needsJobRoleAssignment) return []
+    if (needsJobRoleAssignment) return demoViewer ? DEMO_VIEWER_ENTRIES : []
     if (!workspaceFromBootstrap.length) return FALLBACK_ENTRIES
     if (!activeAssignment?.default_module_keys?.length) return workspaceFromBootstrap
     const allow = new Set(activeAssignment.default_module_keys)
     const filtered = workspaceFromBootstrap.filter(e => !e.module_key || allow.has(e.module_key))
     return filtered.length ? filtered : workspaceFromBootstrap
-  }, [workspaceFromBootstrap, activeAssignment, needsJobRoleAssignment])
+  }, [workspaceFromBootstrap, activeAssignment, needsJobRoleAssignment, demoViewer])
 
   const handleSwitchRole = async (assignmentId: string) => {
     const target = assignments.find(a => a.id === assignmentId)
@@ -162,7 +168,9 @@ export default function JobHomePage() {
           {user?.full_name || '師傅'}，今天要做什麼？
         </h1>
         <p className="mt-1 text-lg text-muted">
-          {activeAssignment?.name
+          {demoViewer
+            ? '主管檢視模式：只看合成知識與問答，不會修改資料。'
+            : activeAssignment?.name
             ? `目前職能：${activeAssignment.name}。說話或掃碼就能開始。`
             : '說話或掃碼就能開始，不用打字。'}
         </p>
@@ -201,7 +209,7 @@ export default function JobHomePage() {
         </button>
       )}
 
-      {draftCount !== null && draftCount > 0 && (
+      {!demoViewer && draftCount !== null && (
         <button
           type="button"
           onClick={() => navigate('/forms/mine')}
@@ -209,9 +217,11 @@ export default function JobHomePage() {
         >
           <span className="flex items-center gap-3 text-lg font-bold text-ink">
             <FileText className="h-6 w-6 text-accent" aria-hidden />
-            我的草稿／待審：{draftCount} 張
+            我的表單
           </span>
-          <span className="text-muted">查看 →</span>
+          <span className="text-muted">
+            {draftCount > 0 ? `${draftCount} 張待處理 · ` : ''}查看 →
+          </span>
         </button>
       )}
 
@@ -248,7 +258,7 @@ export default function JobHomePage() {
         onError={msg => toast.error(msg, { duration: 5000 })}
       />
 
-      {needsJobRoleAssignment && (
+      {needsJobRoleAssignment && !demoViewer && (
         <section
           aria-label="等待指派職能"
           className="rounded-2xl border-2 border-dashed border-line bg-surface p-6 text-center"

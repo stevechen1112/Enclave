@@ -29,9 +29,28 @@ const PENDING = {
   reviewers: ['owner'],
   decision_log: [],
   immutable_snapshot: {
+    form_key: 'quote',
     values: { customer: '台中精機', part_number: 'P-100', quantity: 200, unit_price: 120 },
   },
   created_at: '2026-08-06T01:00:00+00:00',
+}
+
+const PENDING_KNOWHOW = {
+  ...PENDING,
+  id: 'b1b2c3d4-0000-0000-0000-000000000001',
+  object_type: 'knowhow',
+  immutable_snapshot: {
+    id: 'internal-card-id',
+    tenant_id: 'internal-tenant-id',
+    owner_id: 'internal-owner-id',
+    title: '[合成驗收] 感測器接頭檢查',
+    summary: '示範接頭檢查方法',
+    status: 'draft',
+    risk_level: 'medium',
+    version: 2,
+    steps: ['停機上鎖', '確認接頭'],
+    cautions: ['不得短接安全迴路'],
+  },
 }
 
 function renderPage() {
@@ -51,15 +70,15 @@ describe('ApprovalsPage', () => {
 
   it('載入待審核清單並顯示快照摘要', async () => {
     renderPage()
-    expect(await screen.findByText('表單')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /表單/ }))
+    expect(await screen.findByText('報價單')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /報價單/ }))
     expect(await screen.findByText('台中精機')).toBeInTheDocument()
     expect(screen.getByText('P-100')).toBeInTheDocument()
   })
 
   it('核准需二次確認，確認後帶 record_version 送出', async () => {
     renderPage()
-    await userEvent.click(await screen.findByRole('button', { name: /表單/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /報價單/ }))
     await userEvent.click(screen.getByRole('button', { name: '核准' }))
     // 二次確認面板出現
     expect(screen.getByText(/核准後就不能再修改內容/)).toBeInTheDocument()
@@ -71,7 +90,7 @@ describe('ApprovalsPage', () => {
 
   it('駁回未填原因時阻擋並提示', async () => {
     renderPage()
-    await userEvent.click(await screen.findByRole('button', { name: /表單/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /報價單/ }))
     await userEvent.click(screen.getByRole('button', { name: /駁回/ }))
     expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('原因'))
     expect(decideMock).not.toHaveBeenCalled()
@@ -81,5 +100,21 @@ describe('ApprovalsPage', () => {
     inboxMock.mockResolvedValue([])
     renderPage()
     expect(await screen.findByText('目前沒有待審核的單據')).toBeInTheDocument()
+  })
+
+  it('師傅經驗審核只顯示中文業務內容，不暴露系統識別碼', async () => {
+    inboxMock.mockResolvedValue([PENDING_KNOWHOW])
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /師傅經驗卡/ }))
+
+    expect(screen.getByText('[合成驗收] 感測器接頭檢查')).toBeInTheDocument()
+    expect(screen.getByText('做法步驟')).toBeInTheDocument()
+    expect(screen.getByText(/1\. 停機上鎖/)).toBeInTheDocument()
+    expect(screen.getByText('中風險')).toBeInTheDocument()
+    expect(screen.queryByText('tenant_id')).not.toBeInTheDocument()
+    expect(screen.queryByText('internal-tenant-id')).not.toBeInTheDocument()
+    expect(screen.queryByText('owner_id')).not.toBeInTheDocument()
+    expect(screen.queryByText('status')).not.toBeInTheDocument()
+    expect(screen.queryByText('version')).not.toBeInTheDocument()
   })
 })

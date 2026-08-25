@@ -208,6 +208,25 @@ class TestSOPConflict:
         exclusion = [c for c in conflicts if c.conflict_type == "mutual_exclusion"]
         assert len(exclusion) >= 1
 
+    def test_two_prohibition_statements_are_not_mutually_exclusive(self):
+        checker = SOPConflictChecker()
+        card = MagicMock()
+        card.steps = []
+        card.recommended_actions = []
+        card.equipment_ids = []
+        card.cautions = ["不得在設備運轉時拔除接頭"]
+        sop_docs = [{
+            "title": "安全 SOP",
+            "steps": [],
+            "applicable_equipment": [],
+            "cautions": ["不得直接短接安全迴路"],
+        }]
+
+        conflicts = checker.check_conflicts(card, sop_docs)
+
+        exclusion = [c for c in conflicts if c.conflict_type == "mutual_exclusion"]
+        assert exclusion == []
+
     def test_resolve_sop_wins(self):
         conflict = ConflictRecord(
             conflict_type="step_mismatch",

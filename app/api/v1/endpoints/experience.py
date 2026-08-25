@@ -152,6 +152,7 @@ def experience_bootstrap(
     }
     default_job_home = "job"
     needs_job_role_assignment = False
+    is_demo_tenant = False
     try:
         from app.services.job_context import build_effective_job_context
         from app.services.module_registry import get_module_registry
@@ -173,6 +174,7 @@ def experience_bootstrap(
         from app.demo.manifest import DEMO_TENANT_ID
 
         if tenant is not None and tenant.is_demo and tenant.id == DEMO_TENANT_ID:
+            is_demo_tenant = True
             ensure_tenant_module_bindings(db, current_user.tenant_id)
         seed_default_job_roles(db, current_user.tenant_id)
         try:
@@ -260,6 +262,7 @@ def experience_bootstrap(
             "google_drive_certified": False,
             "review_queue_enabled": os.getenv("REVIEW_QUEUE_ENABLED", "true").lower() == "true",
         },
+        "demo_mode": is_demo_tenant,
         # MKA §5.4: job modules + interaction capabilities
         "job_modules": job_modules,
         "workspace_entries": workspace_entries,

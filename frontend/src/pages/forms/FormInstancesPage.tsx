@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import PageHeader from '../../components/PageHeader'
 import { formsApi, type FormInstance } from '../../services/mka'
+import { FORM_STATUS_LABELS, FORM_TYPE_LABELS } from './formPresentation'
 
 const TABS = [
   { key: 'draft,changes_requested,rejected', label: '待處理' },
@@ -61,10 +62,9 @@ export default function FormInstancesPage() {
                   className="flex items-center justify-between rounded-xl border border-line bg-surface px-4 py-3 hover:border-accent"
                 >
                   <span>
-                    <span className="block font-semibold text-ink">{row.form_key || '表單'}</span>
+                    <span className="block font-semibold text-ink">{FORM_TYPE_LABELS[row.form_key || ''] || '表單'}</span>
                     <span className="block text-sm text-muted">
-                      {row.status} · v{row.record_version}
-                      {row.module_key ? ` · ${row.module_key}` : ''}
+                      {FORM_STATUS_LABELS[row.status] || '處理中'} · 第 {row.record_version} 版
                     </span>
                   </span>
                   <span className="text-sm text-accent">詳情 →</span>

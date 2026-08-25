@@ -103,6 +103,7 @@ export default function ModulesPage() {
   }
 
   const packs = experience?.packs || {}
+  const demoMode = Boolean(experience?.demo_mode)
   const packEntries = Object.entries(packs).filter(([k]) => k !== 'certified_connectors')
   const certified = packs.certified_connectors
 
@@ -118,6 +119,12 @@ export default function ModulesPage() {
               : '核心永遠可用；可選包關閉時入口會隱藏，不會假裝功能正常。'
           }
         />
+
+        {demoMode && (
+          <p className="rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-base font-medium text-amber-900">
+            目前是合成展示環境：可以查看功能狀態，但不能變更啟用設定。
+          </p>
+        )}
 
         <h2 className="text-lg font-semibold text-ink">產品能力包</h2>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -196,7 +203,8 @@ export default function ModulesPage() {
             <h2 className="text-lg font-semibold text-ink">職能模組</h2>
             <button
               type="button"
-              className="text-sm text-accent underline"
+              disabled={demoMode}
+              className="text-sm text-accent underline disabled:cursor-not-allowed disabled:text-muted disabled:no-underline"
               onClick={async () => {
                 try {
                   await api.post('/job-roles/seed')
@@ -225,14 +233,16 @@ export default function ModulesPage() {
                   <div className="flex gap-2">
                     <button
                       type="button"
-                      className="rounded-lg border border-line px-3 py-1.5 text-sm"
+                      disabled={demoMode}
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => toggleModule(m.module_key, true)}
                     >
                       啟用
                     </button>
                     <button
                       type="button"
-                      className="rounded-lg border border-line px-3 py-1.5 text-sm"
+                      disabled={demoMode}
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => toggleModule(m.module_key, false)}
                     >
                       停用

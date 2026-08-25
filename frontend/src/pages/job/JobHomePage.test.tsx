@@ -7,11 +7,14 @@ vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }))
 
-const mockAuth: { user: { role: string; is_superuser: boolean; full_name?: string } | null } = {
+const mockAuth: {
+  user: { role: string; is_superuser: boolean; full_name?: string } | null
+  experience?: Record<string, unknown>
+} = {
   user: { role: 'employee', is_superuser: false, full_name: '阿明' },
 }
 vi.mock('../../auth', () => ({
-  useAuth: () => ({ user: mockAuth.user }),
+  useAuth: () => ({ user: mockAuth.user, experience: mockAuth.experience }),
 }))
 
 const inboxMock = vi.fn()
@@ -36,6 +39,7 @@ describe('JobHomePage', () => {
     vi.clearAllMocks()
     inboxMock.mockResolvedValue([])
     listInstancesMock.mockResolvedValue([])
+    mockAuth.experience = undefined
   })
 
   it('顯示語音、掃碼、所有常用工作入口', async () => {
@@ -63,6 +67,31 @@ describe('JobHomePage', () => {
     inboxMock.mockResolvedValue([{ id: 'a1' }, { id: 'a2' }])
     renderPage()
     expect(await screen.findByText(/2 張單據等你審核/)).toBeInTheDocument()
+    mockAuth.user = { role: 'employee', is_superuser: false, full_name: '阿明' }
+  })
+
+  it('沒有待處理單據時仍可進入我的表單查看已核准文件', async () => {
+    renderPage()
+    expect(await screen.findByRole('button', { name: /我的表單/ })).toBeInTheDocument()
+    expect(screen.queryByText(/張待處理/)).not.toBeInTheDocument()
+  })
+
+  it('Demo 主管唯讀顯示可用的檢視入口，不誤稱等待職能指派', async () => {
+    mockAuth.user = { role: 'viewer', is_superuser: false, full_name: '主管唯讀展示' }
+    mockAuth.experience = {
+      demo_mode: true,
+      needs_job_role_assignment: true,
+      workspace_entries: [],
+      job_role_assignments: [],
+    }
+
+    renderPage()
+
+    expect(await screen.findByText(/主管檢視模式/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /查看知識文件/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /查看師傅經驗/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /我的表單/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('尚未指派職能')).not.toBeInTheDocument()
     mockAuth.user = { role: 'employee', is_superuser: false, full_name: '阿明' }
   })
 })

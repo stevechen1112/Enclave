@@ -7,6 +7,7 @@ import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
 import { formsApi, type FormInstance } from '../../services/mka'
+import { FORM_STATUS_LABELS, FORM_TYPE_LABELS, presentableEntries } from './formPresentation'
 
 export default function FormInstanceDetailPage() {
   const { instanceId = '' } = useParams()
@@ -59,14 +60,17 @@ export default function FormInstanceDetailPage() {
   const values = (row.values_json || row.values || {}) as Record<string, unknown>
   const provenance = (row.provenance_json || row.provenance || {}) as Record<string, unknown>
   const approved = ['approved', 'finalized'].includes(row.status)
+  const entries = presentableEntries(values)
+  const formTitle = FORM_TYPE_LABELS[row.form_key || ''] || '表單詳情'
+  const statusLabel = FORM_STATUS_LABELS[row.status] || '處理中'
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-6">
       <div className="mx-auto max-w-3xl space-y-4">
         <PageHeader
           variant="section"
-          title={row.form_key || '表單詳情'}
-          subtitle={`狀態 ${row.status} · 版本 ${row.record_version}`}
+          title={formTitle}
+          subtitle={`${statusLabel} · 第 ${row.record_version} 版`}
         />
         <div className="flex flex-wrap gap-2">
           <Link to={`/forms/${row.form_key}`} className="rounded-lg border border-line px-3 py-2 text-sm">
@@ -89,27 +93,18 @@ export default function FormInstanceDetailPage() {
         <section className="rounded-xl border border-line bg-surface p-4">
           <h2 className="mb-2 font-semibold">欄位</h2>
           <dl className="grid gap-2 sm:grid-cols-2">
-            {Object.entries(values).map(([k, v]) => (
-              <div key={k}>
-                <dt className="text-sm text-muted">{k}</dt>
-                <dd className="font-medium text-ink">{String(v ?? '')}</dd>
+            {entries.map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-sm text-muted">{label}</dt>
+                <dd className="whitespace-pre-line font-medium text-ink">{value}</dd>
               </div>
             ))}
           </dl>
         </section>
-        <section className="rounded-xl border border-line bg-surface p-4">
-          <h2 className="mb-2 font-semibold">來源／場景</h2>
-          <pre className="overflow-x-auto text-xs text-muted">
-            {JSON.stringify({ provenance, scene: row.scene_context }, null, 2)}
-          </pre>
-        </section>
-        {row.immutable_snapshot && (
-          <section className="rounded-xl border border-line bg-surface p-4">
-            <h2 className="mb-2 font-semibold">核准快照</h2>
-            <pre className="overflow-x-auto text-xs text-muted">
-              {JSON.stringify(row.immutable_snapshot, null, 2)}
-            </pre>
-          </section>
+        {Object.keys(provenance).length > 0 && (
+          <p className="rounded-xl border border-line bg-wash p-4 text-sm text-muted">
+            系統已保留這張單的資料來源與核准紀錄，供公司管理者日後稽核。
+          </p>
         )}
       </div>
     </div>

@@ -304,9 +304,11 @@ class VoiceInteractionGateway:
             "date": r'(?:日期|時間|期限|截止)\s*[：:是]?\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日)',
             # 關鍵字前綴，或「幫台中精機報價／給某某公司開單」這類動詞框架
             "customer": (
-                r'(?:客戶|客戶名稱|公司|對方)\s*[：:是]?\s*'
-                r'([\u4e00-\u9fff]+(?:公司|股份有限公司|有限公司)?)'
-                r'|(?:幫|邦|給|向|跟|和)\s*([\u4e00-\u9fff]{2,8}?)'
+                r'(?<![\w\u4e00-\u9fff])(?:客戶名稱|客戶|公司|對方)\s*[：:是]?\s*'
+                r'([\u4e00-\u9fff]{2,30}?)'
+                r'(?=\s*(?:報價|估價|開報價單|開單|下單|[，,；;。]|$))'
+                r'|(?:幫|邦|給|向|跟|和)\s*(?:客戶|公司)?\s*'
+                r'([\u4e00-\u9fff]{2,30}?)'
                 r'\s*(?:報價|估價|開報價單|開單|下單)'
             ),
         }
@@ -361,6 +363,12 @@ class VoiceInteractionGateway:
 
         def add(field_name: str, value: Any, raw_span: str) -> None:
             if field_name not in by_name or value in (None, ""):
+                return
+            # The semantic quote shortcuts run first and understand verb
+            # frames such as「幫合成示範客戶報價」.  A later generic label
+            # match for the embedded word「客戶」must not replace that value
+            # with the following action word「報價」.
+            if field_name in detected:
                 return
             detected[field_name] = {
                 "type": field_name,

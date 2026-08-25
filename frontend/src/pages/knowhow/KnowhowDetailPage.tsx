@@ -20,10 +20,16 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { knowhowApi, type KnowhowCard } from '../../services/mka'
+import {
+  useCanAdministerKnowhow,
+  useCanAuthorKnowhow,
+} from '../../navigation/useKnowhowPermissions'
 
 export default function KnowhowDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const canAuthor = useCanAuthorKnowhow()
+  const canAdminister = useCanAdministerKnowhow()
   const [card, setCard] = useState<KnowhowCard | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -85,8 +91,24 @@ export default function KnowhowDetailPage() {
       toast.success('已送出審核，核准後大家就查得到了')
       setCard({ ...card, status: 'pending_review' })
     } catch (err) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      toast.error(status === 409 ? '卡片已被更新，請重新整理後再送' : '送出失敗，請再試一次')
+      const response = (err as {
+        response?: {
+          status?: number
+          data?: { detail?: { code?: string } | string }
+        }
+      })?.response
+      const detail = response?.data?.detail
+      if (response?.status === 409 && typeof detail === 'object'
+          && detail?.code === 'unresolved_sop_conflicts') {
+        try {
+          setCard(await knowhowApi.get(card.id))
+        } catch {
+          // The conflict message still remains accurate if refresh fails.
+        }
+        toast.error('內容與正式 SOP 有差異，請先查看下方差異並修正')
+      } else {
+        toast.error(response?.status === 409 ? '卡片已被更新，請重新整理後再送' : '送出失敗，請再試一次')
+      }
     } finally {
       setSubmitting(false)
     }
@@ -154,7 +176,7 @@ export default function KnowhowDetailPage() {
             card.title
           )}
         </h1>
-        {!editing && card.status === 'draft' && (
+        {!editing && canAuthor && card.status === 'draft' && (
           <button
             type="button"
             onClick={startEditing}
@@ -164,7 +186,7 @@ export default function KnowhowDetailPage() {
             <Pencil className="h-6 w-6" aria-hidden />
           </button>
         )}
-        {!editing && card.status === 'approved' && (
+        {!editing && canAdminister && card.status === 'approved' && (
           <button
             type="button"
             onClick={handleRetire}
@@ -289,7 +311,39 @@ export default function KnowhowDetailPage() {
         </section>
       )}
 
-      {card.status === 'draft' && (
+      {(card.conflict_report || []).some(conflict => !conflict.resolved) && (
+        <section
+          aria-label="正式 SOP 差異"
+          className="rounded-2xl border-2 border-danger/50 bg-red-50 p-5"
+        >
+          <h2 className="flex items-center gap-2 text-xl font-bold text-danger">
+            <AlertTriangle className="h-6 w-6" aria-hidden />
+            內容與正式 SOP 有差異，暫時不能送審
+          </h2>
+          <p className="mt-2 text-base leading-relaxed text-ink">
+            正式 SOP 優先。請按上方「編輯」修正經驗內容，再重新送審；系統會重新比對。
+          </p>
+          <div className="mt-4 space-y-3">
+            {(card.conflict_report || []).filter(conflict => !conflict.resolved).map((conflict, index) => (
+              <article key={`${conflict.conflict_type || 'conflict'}-${index}`} className="rounded-xl bg-white p-4">
+                <p className="font-bold text-ink">{conflict.description || '待確認差異'}</p>
+                {conflict.knowhow_value && (
+                  <p className="mt-2 text-base text-ink">
+                    <span className="font-semibold">目前經驗：</span>{conflict.knowhow_value}
+                  </p>
+                )}
+                {conflict.sop_value && (
+                  <p className="mt-2 whitespace-pre-line text-base text-ink">
+                    <span className="font-semibold">正式 SOP：</span>{conflict.sop_value}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {canAuthor && card.status === 'draft' && (
         <button
           type="button"
           onClick={handleSubmit}

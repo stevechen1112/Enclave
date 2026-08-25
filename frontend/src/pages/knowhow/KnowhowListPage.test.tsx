@@ -9,6 +9,13 @@ vi.mock('react-hot-toast', () => ({
 }))
 
 const listMock = vi.fn()
+const authState = vi.hoisted(() => ({ roleKey: 'master', securityRole: 'employee' }))
+vi.mock('../../auth', () => ({
+  useAuth: () => ({
+    user: { role: authState.securityRole, is_superuser: false },
+    experience: { active_job_role: { role_key: authState.roleKey } },
+  }),
+}))
 vi.mock('../../services/mka', () => ({
   knowhowApi: {
     list: (...args: unknown[]) => listMock(...args),
@@ -46,6 +53,8 @@ function renderPage() {
 describe('KnowhowListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    authState.roleKey = 'master'
+    authState.securityRole = 'employee'
   })
 
   it('列出卡片並以中文徽章顯示狀態與風險', async () => {
@@ -80,5 +89,15 @@ describe('KnowhowListPage', () => {
     await user.click(screen.getByRole('button', { name: /開始師傅訪談/ }))
 
     expect(screen.getByText('長時間訪談頁')).toBeInTheDocument()
+  })
+
+  it('新人只讀卡片，不顯示訪談或手動建立入口', async () => {
+    authState.roleKey = 'newcomer'
+    listMock.mockResolvedValue([CARD])
+    renderPage()
+
+    expect(await screen.findByText('CNC 車床換刀校正')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /開始師傅訪談/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /手動建立經驗卡/ })).not.toBeInTheDocument()
   })
 })

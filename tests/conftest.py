@@ -57,6 +57,13 @@ async def client(test_engine):
     # Import all models so Base.metadata knows every table
     import app.models  # noqa: F401
 
+    # Integration requests share one ASGI client IP. Never let a developer's
+    # persistent Redis abuse counters make test order or repeated runs flaky.
+    # Rate-limit behaviour has dedicated unit tests; this fixture validates the
+    # application contracts behind the middleware.
+    original_rate_limit_enabled = settings.RATE_LIMIT_ENABLED
+    settings.RATE_LIMIT_ENABLED = False
+
     TestSession = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
     # Wipe schema using direct psycopg2 connection (not SQLAlchemy pool)
@@ -123,6 +130,7 @@ async def client(test_engine):
 
     # Teardown: clear overrides only; leave DB data for idempotent reruns
     fastapi_app.dependency_overrides.clear()
+    settings.RATE_LIMIT_ENABLED = original_rate_limit_enabled
 
 
 @pytest.fixture(scope="session")

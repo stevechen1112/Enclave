@@ -78,8 +78,12 @@ explicit threat review and reset-coverage test.
 1. Seed.
 2. Verify and require `ok=true`.
 3. Set `DEMO_TENANT_ID` to the canonical UUID.
-4. Enable `DEMO_LOGIN_ENABLED=true` only on the public Demo deployment.
-5. Exercise all six doors.
+4. Set `FIXED_FORM_ENABLED=true`, `KNOWHOW_CARD_ENABLED=true`, and keep
+   `MODULE_ROUTER_ENABLED=true`. Startup now fails closed if a passwordless Demo
+   is enabled without this complete capability set, instead of displaying doors
+   whose forms cannot load.
+5. Enable `DEMO_LOGIN_ENABLED=true` only on the public Demo deployment.
+6. Exercise all six doors.
 
 Ordinary production/customer deployments keep `DEMO_LOGIN_ENABLED=false`.
 

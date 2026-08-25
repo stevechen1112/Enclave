@@ -155,6 +155,16 @@ export interface KnowhowCard {
   cautions: string[]
   recommended_actions: string[]
   source_quotes: string[]
+  conflict_report?: Array<{
+    conflict_type?: string
+    description?: string
+    sop_field?: string
+    sop_value?: string
+    knowhow_field?: string
+    knowhow_value?: string
+    resolved?: boolean
+    resolution?: string
+  }>
   version: number
   reviewed_at: string | null
   retired_at: string | null

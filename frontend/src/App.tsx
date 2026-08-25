@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth'
 import Layout from './components/Layout'
 import type { Capability } from './navigation/capabilities'
 import { useDefaultHomePath, useHasCapability } from './navigation/useCapabilities'
+import { useCanAuthorKnowhow } from './navigation/useKnowhowPermissions'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -76,6 +77,11 @@ function CapGuard({
     return <Navigate to={home} replace />
   }
   return <>{children}</>
+}
+
+function KnowhowAuthorGuard({ children }: { children: React.ReactNode }) {
+  const allowed = useCanAuthorKnowhow()
+  return allowed ? <>{children}</> : <Navigate to="/knowhow" replace />
 }
 
 function LegacyReportDetailRedirect() {
@@ -200,7 +206,7 @@ function AppRoutes() {
           />
           <Route
             path="knowhow/interview"
-            element={<CapGuard capability="field_work"><InterviewPage /></CapGuard>}
+            element={<CapGuard capability="field_work"><KnowhowAuthorGuard><InterviewPage /></KnowhowAuthorGuard></CapGuard>}
           />
           <Route
             path="knowhow/:id"

@@ -8,7 +8,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.api.deps_permissions import allow_all_authenticated, require_admin
+from app.api.deps_permissions import (
+    allow_all_authenticated,
+    require_admin,
+    require_knowhow_author,
+)
 from app.models.user import User
 from app.services.mka_persistence import (
     MKAConflictError,
@@ -80,7 +84,7 @@ def _raise_mka(exc: Exception) -> None:
 def create_knowhow(
     request: KnowhowCreateRequest,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(allow_all_authenticated),
+    current_user: User = Depends(require_knowhow_author),
 ):
     payload = request.dict()
     title = payload.pop("title")
@@ -146,7 +150,7 @@ def patch_knowhow(
     knowhow_id: UUID,
     request: KnowhowPatchRequest,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(allow_all_authenticated),
+    current_user: User = Depends(require_knowhow_author),
 ):
     try:
         row = MKARepository(db).update_knowhow(
@@ -171,7 +175,7 @@ def submit_knowhow(
     knowhow_id: UUID,
     request: KnowhowSubmitRequest,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(allow_all_authenticated),
+    current_user: User = Depends(require_knowhow_author),
 ):
     try:
         row, approval = MKARepository(db).submit_knowhow(
@@ -203,6 +207,15 @@ def submit_knowhow(
                 db.commit()
             except Exception:
                 db.rollback()
+        if report is not None:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "unresolved_sop_conflicts",
+                    "message": str(exc),
+                    "conflicts": report,
+                },
+            )
         raise HTTPException(status_code=409, detail=str(exc))
     except Exception as exc:
         db.rollback()

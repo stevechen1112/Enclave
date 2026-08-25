@@ -83,7 +83,7 @@ const DEMO_DOORS: DemoDoor[] = [
     number: '05',
     role: '主管檢視',
     person: '主管唯讀展示',
-    description: '查看知識、問答與工作紀錄，不修改現場資料',
+    description: '查看合成知識、師傅經驗與問答，不修改資料',
     hint: '只看不修改',
     icon: Eye,
     marker: 'bg-[#716b63]',

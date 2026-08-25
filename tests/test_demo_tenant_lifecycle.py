@@ -150,6 +150,7 @@ async def test_all_six_seeded_doors_login_and_bootstrap(
             bootstrap = await client.get("/api/v1/experience/bootstrap", headers=headers)
             assert bootstrap.status_code == 200, (persona, bootstrap.text)
             body = bootstrap.json()
+            assert body["demo_mode"] is True
             assert body["user"]["tenant_id"] == str(DEMO_TENANT_ID)
             assert body["user"]["is_superuser"] is False
             active_role = body.get("active_job_role")

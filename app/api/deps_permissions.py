@@ -52,6 +52,29 @@ require_employee = PermissionChecker(["owner", "admin", "hr", "employee"])
 allow_all_authenticated = PermissionChecker(["owner", "admin", "hr", "employee", "viewer"])
 
 
+def require_knowhow_author(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_verified_user),
+) -> User:
+    """Allow know-how capture only to masters or tenant administrators.
+
+    Reading approved cards remains available to other assigned roles.  This is
+    an API boundary, not merely a hidden frontend button.
+    """
+    if current_user.is_superuser or current_user.role in {"owner", "admin"}:
+        return current_user
+
+    from app.services.job_context import build_effective_job_context
+
+    context = build_effective_job_context(db, current_user)
+    if "master" not in context.active_job_role_keys:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="目前職能只能查看已核准的師傅經驗，不能建立或修改草稿",
+        )
+    return current_user
+
+
 def check_document_permission(user: User, action: str) -> None:
     """
     檢查文件操作權限

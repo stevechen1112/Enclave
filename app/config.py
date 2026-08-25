@@ -348,6 +348,20 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "DEMO_ADMIN_EMAIL must identify the canonical internal Demo admin"
                 )
+            missing_demo_capabilities = [
+                name
+                for name, enabled in (
+                    ("FIXED_FORM_ENABLED", self.FIXED_FORM_ENABLED),
+                    ("KNOWHOW_CARD_ENABLED", self.KNOWHOW_CARD_ENABLED),
+                    ("MODULE_ROUTER_ENABLED", self.MODULE_ROUTER_ENABLED),
+                )
+                if not enabled
+            ]
+            if missing_demo_capabilities:
+                raise ValueError(
+                    "DEMO_LOGIN_ENABLED requires the complete supervised Demo "
+                    "capability set: " + ", ".join(missing_demo_capabilities)
+                )
         if self.APP_ENV in ("production", "staging"):
             # ── SECRET_KEY ──
             if self.SECRET_KEY in _INSECURE_KEYS or len(self.SECRET_KEY) < 32:

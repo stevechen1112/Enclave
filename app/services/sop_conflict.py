@@ -358,13 +358,19 @@ class SOPConflictChecker:
     def _is_mutual_exclusion(self, text1: str, text2: str) -> bool:
         """檢查兩段文字是否互斥。"""
         # 簡易檢查：一方含「禁止/不可/不得」，另一方含「可以/允許/應該」
+        import re
+
         prohibit_keywords = ["禁止", "不可", "不得", "嚴禁", "切勿"]
         allow_keywords = ["可以", "允許", "應該", "可", "得"]
 
         t1_prohibit = any(k in text1 for k in prohibit_keywords)
-        t2_allow = any(k in text2 for k in allow_keywords)
-        t1_allow = any(k in text1 for k in allow_keywords)
         t2_prohibit = any(k in text2 for k in prohibit_keywords)
+        # 「不可」包含「可」、「不得」包含「得」；先移除完整禁止詞，
+        # 否則兩句同為安全禁令時會被誤判成互斥。
+        t1_without_prohibition = re.sub("|".join(prohibit_keywords), "", text1)
+        t2_without_prohibition = re.sub("|".join(prohibit_keywords), "", text2)
+        t1_allow = any(k in t1_without_prohibition for k in allow_keywords)
+        t2_allow = any(k in t2_without_prohibition for k in allow_keywords)
 
         return (t1_prohibit and t2_allow) or (t1_allow and t2_prohibit)
 

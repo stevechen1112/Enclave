@@ -20,6 +20,7 @@ import {
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { approvalsApi, type ApprovalItem } from '../../services/mka'
+import { FORM_TYPE_LABELS, presentableEntries } from '../forms/formPresentation'
 
 const OBJECT_TYPE_LABELS: Record<string, string> = {
   form: '表單',
@@ -27,24 +28,10 @@ const OBJECT_TYPE_LABELS: Record<string, string> = {
   knowhow: '師傅經驗卡',
 }
 
-const SNAPSHOT_FIELD_LABELS: Record<string, string> = {
-  customer: '客戶',
-  part_number: '料號',
-  quantity: '數量',
-  unit_price: '單價',
-  tax_rate: '稅率%',
-  valid_until: '有效期限',
-  payment_terms: '付款條件',
-  title: '標題',
-  summary: '摘要',
-  form_key: '表單種類',
-}
-
-function snapshotEntries(snapshot: Record<string, unknown>): Array<[string, string]> {
-  const values = (snapshot.values as Record<string, unknown>) || snapshot
-  return Object.entries(values)
-    .filter(([, v]) => v !== null && v !== undefined && v !== '' && typeof v !== 'object')
-    .map(([k, v]) => [SNAPSHOT_FIELD_LABELS[k] || k, String(v)])
+function approvalTitle(item: ApprovalItem): string {
+  if (item.object_type === 'knowhow') return OBJECT_TYPE_LABELS.knowhow
+  const formKey = String(item.immutable_snapshot?.form_key || '')
+  return FORM_TYPE_LABELS[formKey] || OBJECT_TYPE_LABELS[item.object_type] || '待審內容'
 }
 
 export default function ApprovalsPage() {
@@ -128,7 +115,10 @@ export default function ApprovalsPage() {
 
       {items?.map(item => {
         const expanded = expandedId === item.id
-        const entries = snapshotEntries(item.immutable_snapshot || {})
+        const snapshot = item.immutable_snapshot || {}
+        const entries = presentableEntries(
+          (snapshot.values as Record<string, unknown>) || snapshot,
+        )
         const busy = acting === item.id
         return (
           <article
@@ -147,7 +137,7 @@ export default function ApprovalsPage() {
             >
               <div>
                 <p className="text-xl font-bold text-ink">
-                  {OBJECT_TYPE_LABELS[item.object_type] || item.object_type}
+                  {approvalTitle(item)}
                   <span className="ml-2 font-mono text-base font-normal text-muted">
                     #{item.id.slice(0, 8)}
                   </span>
@@ -170,7 +160,7 @@ export default function ApprovalsPage() {
                     {entries.map(([label, value]) => (
                       <div key={label} className="flex justify-between gap-4 text-lg">
                         <dt className="shrink-0 text-muted">{label}</dt>
-                        <dd className="break-all text-right font-semibold text-ink">{value}</dd>
+                        <dd className="whitespace-pre-line break-words text-right font-semibold text-ink">{value}</dd>
                       </div>
                     ))}
                   </dl>

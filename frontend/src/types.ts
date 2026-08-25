@@ -79,6 +79,7 @@ export interface ExperienceBootstrap {
     message: string
   }
   features: Record<string, boolean>
+  demo_mode?: boolean
   job_modules?: Array<Record<string, unknown>>
   workspace_entries?: Array<{
     module_key?: string

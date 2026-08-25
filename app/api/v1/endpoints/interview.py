@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api import deps
+from app.api.deps_permissions import require_knowhow_author
 from app.models.mka import KnowledgeCaptureSession, KnowhowCardModel
 from app.models.user import User
 from app.services.knowhow_lifecycle import get_knowhow_lifecycle_manager
@@ -64,7 +65,7 @@ def _extract_structure(text: str) -> Dict[str, Any]:
 def extract_interview(
     body: ExtractBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
+    current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     if not body.consent:
         raise HTTPException(status_code=400, detail="consent required for interview capture")
