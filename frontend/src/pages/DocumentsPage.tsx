@@ -292,7 +292,7 @@ export default function DocumentsPage() {
                         {doc.filename}
                       </Link>
                       <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        <LifecycleBadge status={doc.status} />
+                        <LifecycleBadge status={doc.status} answerReady={doc.answer_ready} />
                         <span className="chip-neutral">{doc.file_type || '檔案'} · {formatFileSize(doc.file_size)}</span>
                         <span className="chip-neutral">{documentSourceLabel(doc)}</span>
                         {doc.is_new && <span className="chip-accent">新</span>}
@@ -371,7 +371,7 @@ export default function DocumentsPage() {
                       <td className="px-4 py-3.5 text-sm text-muted">{documentSourceLabel(doc)}</td>
                       <td className="px-4 py-3.5 text-sm text-muted">{deptName || '—'}</td>
                       <td className="px-4 py-3.5">
-                        <LifecycleBadge status={doc.status} />
+                        <LifecycleBadge status={doc.status} answerReady={doc.answer_ready} />
                       </td>
                       <td className="px-4 py-3.5 text-sm text-muted">{versionLabelOf(doc)}</td>
                       <td className="px-4 py-3.5 text-sm text-muted">

@@ -30,7 +30,7 @@
 
 | 平面 | 現況 | 證據 |
 |------|------|------|
-| 部署意圖 | 單客戶地端（Compose）；本機 Pilot 單一 Demo Tenant | ADR-003；`README.md` §6.3 |
+| 部署意圖 | 單客戶地端（Compose）；展示資料使用獨立合成租戶 | ADR-003；`README.md` §6.3 |
 | 資料平面 | PostgreSQL + pgvector、Redis、本機 `UPLOAD_DIR` | `app/config.py`；`docker-compose*.yml` |
 | 應用多租戶 | `tenant_id` 全覆蓋 + Resource PEP + 部門 ACL | `resource_policy.py`；ADR-003／004 |
 | DB 硬隔離 | **無 PostgreSQL RLS** | ADR-003 明文；全庫無 `ENABLE ROW LEVEL SECURITY` |

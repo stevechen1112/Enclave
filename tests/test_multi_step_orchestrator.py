@@ -81,7 +81,7 @@ class TestMultiStep:
 
         with patch(
             "app.services.retrieval_facade.get_retrieval_facade", return_value=facade
-        ):
+        ), patch("app.services.kb_scope_policy.resolve_kb_revision_scope", return_value={}):
             out = asyncio.run(
                 MultiStepOrchestrator().run(
                     authz=authz,
@@ -116,7 +116,7 @@ class TestMultiStep:
         authz.tenant_id = uuid4()
         with patch(
             "app.services.retrieval_facade.get_retrieval_facade", return_value=facade
-        ):
+        ), patch("app.services.kb_scope_policy.resolve_kb_revision_scope", return_value={}):
             out = asyncio.run(
                 MultiStepOrchestrator().run(
                     authz=authz,
@@ -153,7 +153,7 @@ class TestMultiStep:
         authz.tenant_id = uuid4()
         with patch(
             "app.services.retrieval_facade.get_retrieval_facade", return_value=facade
-        ):
+        ), patch("app.services.kb_scope_policy.resolve_kb_revision_scope", return_value={}):
             out = asyncio.run(
                 MultiStepOrchestrator().run(
                     authz=authz,
@@ -195,7 +195,7 @@ class TestMultiStep:
         authz.tenant_id = uuid4()
         with patch(
             "app.services.retrieval_facade.get_retrieval_facade", return_value=facade
-        ):
+        ), patch("app.services.kb_scope_policy.resolve_kb_revision_scope", return_value={}):
             out = asyncio.run(
                 MultiStepOrchestrator().run(
                     authz=authz,

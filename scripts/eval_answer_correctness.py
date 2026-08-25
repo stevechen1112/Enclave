@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import re
 import sys
@@ -82,7 +83,7 @@ def login(client: httpx.Client) -> None:
     for user in ("admin@enclave.local", "admin@example.com"):
         r = client.post(
             "/api/v1/auth/login/access-token",
-            data={"username": user, "password": "admin123"},
+            data={"username": user, "password": os.environ["EVAL_ADMIN_PASSWORD"]},
         )
         last = r
         if r.status_code == 200:

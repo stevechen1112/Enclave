@@ -15,6 +15,9 @@ type Props = {
 export default function EvidenceCard({ source, index, className }: Props) {
   const title = source.title || '未命名文件'
   const accessible = source.accessible !== false
+  const transcriptTime = source.transcript_start_ms != null
+    ? `${Math.floor(source.transcript_start_ms / 60000)}:${String(Math.floor((source.transcript_start_ms % 60000) / 1000)).padStart(2, '0')}`
+    : null
   return (
     <article
       className={clsx(
@@ -40,13 +43,24 @@ export default function EvidenceCard({ source, index, className }: Props) {
               <span>版本 {String(source.document_revision)}</span>
             )}
             {source.page != null && <span>第 {source.page} 頁</span>}
+            {source.section && <span>章節：{source.section}</span>}
+            {source.worksheet && <span>工作表：{source.worksheet}</span>}
+            {source.row_number != null && <span>第 {source.row_number} 列</span>}
+            {source.field_name && <span>欄位：{source.field_name}</span>}
+            {transcriptTime && <span>逐字稿 {transcriptTime}</span>}
             {source.chunk_index != null && <span>片段 {source.chunk_index}</span>}
             {source.provider && <span>{source.provider}</span>}
             {source.updated_at && (
               <span>更新 {new Date(source.updated_at).toLocaleDateString()}</span>
             )}
+            {source.effective_at && (
+              <span>生效 {new Date(source.effective_at).toLocaleDateString()}</span>
+            )}
             {source.score != null && <span>相關 {(source.score * 100).toFixed(0)}%</span>}
           </div>
+          {source.applicable_scope && (
+            <p className="mt-1 text-xs text-muted">適用範圍：{source.applicable_scope}</p>
+          )}
           {source.snippet && (
             <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted">{source.snippet}</p>
           )}

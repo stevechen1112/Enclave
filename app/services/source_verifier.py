@@ -23,6 +23,32 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+_NUMERIC_TOKEN = re.compile(r"(?<![\w])[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:%|％|元|萬|億|kg|公斤|台|件|天|日|小時))?")
+_DATE_TOKEN = re.compile(r"(?:19|20)\d{2}[-/.年]\d{1,2}(?:[-/.月]\d{1,2}日?)?")
+
+
+def deterministic_claim_validation(answer: str, evidence_quotes: List[str]) -> Dict[str, Any]:
+    """Validate critical literal values before an LLM verifier is consulted.
+
+    Numeric/date tokens in an answer must occur in at least one evidence quote.
+    This intentionally fails closed and returns the unsupported tokens so the
+    caller can regenerate or downgrade to a partial answer.
+    """
+    normalized_evidence = [_normalize(q) for q in evidence_quotes if q]
+    unsupported = []
+    for kind, pattern in (("numeric", _NUMERIC_TOKEN), ("date", _DATE_TOKEN)):
+        for token in pattern.findall(answer or ""):
+            normalized = _normalize(token)
+            if normalized and not any(normalized in source for source in normalized_evidence):
+                unsupported.append({"type": kind, "value": token})
+    unique = []
+    seen = set()
+    for item in unsupported:
+        key = (item["type"], item["value"])
+        if key not in seen:
+            unique.append(item); seen.add(key)
+    return {"verified": not unique, "unsupported": unique}
+
 _SYSTEM = (
     "你是嚴謹的文件問答稽核員。給你一份「回答草稿」與若干「文件片段」，"
     "你的任務是把草稿拆解成獨立的事實論點，並為每條論點附上逐字節錄自文件片段的原文佐證。"

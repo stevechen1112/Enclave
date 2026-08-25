@@ -414,7 +414,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Enclave E2E Test")
     parser.add_argument("--base-url", default="http://localhost:8001", help="API base URL")
     parser.add_argument("--username", default="admin@example.com", help="Login username")
-    parser.add_argument("--password", default="admin123", help="Login password")
+    parser.add_argument("--password", required=True, help="Injected login password")
     parser.add_argument("--keep", action="store_true", help="Don't cleanup test documents")
     args = parser.parse_args()
 

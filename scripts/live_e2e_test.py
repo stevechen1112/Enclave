@@ -16,7 +16,7 @@ import sys
 
 BASE_URL = os.getenv("AIHR_BASE_URL", "http://api.172-237-5-254.sslip.io")
 SUPERUSER_EMAIL = os.getenv("AIHR_SUPERUSER_EMAIL", "admin@example.com")
-SUPERUSER_PASSWORD = os.getenv("AIHR_SUPERUSER_PASS", "admin123")
+SUPERUSER_PASSWORD = os.environ["E2E_SUPERUSER_PASSWORD"]
 HR_EMAIL = os.getenv("AIHR_HR_EMAIL", "hr@taiyutech.com")
 HR_PASS = os.getenv("AIHR_HR_PASS", "Test1234!")
 TIMEOUT = 30

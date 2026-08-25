@@ -482,7 +482,7 @@ def main():
     parser = argparse.ArgumentParser(description="Enclave Flow 2 — RAG 對話全流程測試")
     parser.add_argument("--base-url", default="http://localhost:8001")
     parser.add_argument("--user", default="admin@example.com")
-    parser.add_argument("--password", default="admin123")
+    parser.add_argument("--password", required=True)
     parser.add_argument("--keep", action="store_true", help="保留測試資料不刪除")
     args = parser.parse_args()
 

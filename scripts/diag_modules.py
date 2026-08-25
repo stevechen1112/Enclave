@@ -1,5 +1,6 @@
 """診斷模組 allowlist 與單一使用者可用模組。"""
 import sys
+from app.demo.manifest import DEMO_PERSONAS
 
 from app.db.session import SessionLocal
 from app.models.mka import JobModule
@@ -9,7 +10,7 @@ from app.services.module_registry import get_module_registry
 
 
 def main() -> None:
-    email = sys.argv[1] if len(sys.argv) > 1 else "sales@demo.mka"
+    email = sys.argv[1] if len(sys.argv) > 1 else str(DEMO_PERSONAS["sales"]["email"])
     db = SessionLocal()
     try:
         print("=== JobModule 全量 ===")

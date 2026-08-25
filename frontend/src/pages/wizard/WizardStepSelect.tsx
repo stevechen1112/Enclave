@@ -17,6 +17,10 @@ export default function WizardStepSelect({
   addedFolders, setAddedFolders, totalFiles, scanError, onScan, onClose, supportedExtsReady,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const directoryProps = { webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement> & {
+    webkitdirectory: string
+    directory: string
+  }
 
   const handleAddFolder = (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -37,7 +41,7 @@ export default function WizardStepSelect({
         <input
           ref={fileInputRef} type="file" multiple className="hidden"
           onChange={e => { handleAddFolder(e.target.files); e.currentTarget.value = '' }}
-          {...({ webkitdirectory: '', directory: '' } as any)}
+          {...directoryProps}
         />
 
         <button

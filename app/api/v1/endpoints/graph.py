@@ -9,7 +9,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.api.v1.product_surface import GRAPH_PRODUCT_STATUS, apply_product_status_headers
+from app.api.v1.product_surface import (
+    GRAPH_PRODUCT_STATUS,
+    apply_product_status_headers,
+    with_runtime_status,
+)
 from app.core.authorization import AuthorizationContext
 from app.models.user import User
 from app.services.graph_service import GraphService
@@ -22,7 +26,7 @@ _graph = GraphService()
 
 
 def _graph_headers(response: Response) -> None:
-    apply_product_status_headers(response, GRAPH_PRODUCT_STATUS)
+    apply_product_status_headers(response, with_runtime_status(GRAPH_PRODUCT_STATUS))
 
 
 class GraphTraverseRequest(BaseModel):
@@ -38,8 +42,9 @@ def graph_product_status(
 ) -> Dict[str, Any]:
     """Honest product surface notice — no Web UI, no production write path."""
     _ = current_user
-    _graph_headers(response)
-    return dict(GRAPH_PRODUCT_STATUS)
+    status = with_runtime_status(GRAPH_PRODUCT_STATUS)
+    apply_product_status_headers(response, status)
+    return status
 
 
 @router.get("/search")

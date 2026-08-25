@@ -58,3 +58,6 @@ export PIPESHUB_IMAGE=pipeshubai/pipeshub-ai:0.4.5@sha256:...
 ```
 
 產品能力包與本機埠說明見根目錄 `README.md`。
+
+公開六角色展示只能使用合成租戶；建立、驗證與重置程序見
+`docs/runbooks/SYNTHETIC_DEMO_TENANT.md`。一般客戶環境不得啟用 Demo login。

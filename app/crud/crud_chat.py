@@ -153,6 +153,7 @@ def upsert_feedback(
     rating: int,
     category: str = None,
     comment: str = None,
+    owner_id: UUID = None,
 ) -> ChatFeedback:
     """新增或更新回饋（同一使用者同一訊息只能一筆）。"""
     existing = db.query(ChatFeedback).filter(
@@ -164,6 +165,11 @@ def upsert_feedback(
         existing.rating = rating
         existing.category = category
         existing.comment = comment
+        if owner_id is not None:
+            existing.owner_id = owner_id
+        history = list(existing.processing_history or [])
+        history.append({"status": existing.status or "open", "actor_id": str(user_id), "action": "feedback_updated"})
+        existing.processing_history = history
         db.commit()
         db.refresh(existing)
         return existing
@@ -175,6 +181,9 @@ def upsert_feedback(
         rating=rating,
         category=category,
         comment=comment,
+        owner_id=owner_id or user_id,
+        status="open",
+        processing_history=[{"status": "open", "actor_id": str(user_id)}],
     )
     db.add(db_obj)
     db.commit()

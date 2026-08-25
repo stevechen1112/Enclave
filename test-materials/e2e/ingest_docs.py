@@ -1,4 +1,4 @@
-"""批次入庫 test-materials 文件至 Demo Tenant。
+"""批次入庫 test-materials 文件至獨立、需驗證的 staging 驗收租戶。
 
 用法：cd Enclave && python test-materials/e2e/ingest_docs.py
 產出：test-materials/e2e/ingest_report.json
@@ -22,7 +22,7 @@ for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines():
 
 BASE = os.getenv("E2E_API_BASE", "http://127.0.0.1:8005/api/v1")
 ADMIN_EMAIL = os.getenv("E2E_ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASSWORD = os.getenv("E2E_ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.environ["E2E_ADMIN_PASSWORD"]
 TM = ROOT / "test-materials"
 REPORT = Path(__file__).parent / "ingest_report.json"
 

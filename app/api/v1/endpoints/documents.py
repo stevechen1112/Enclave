@@ -1,24 +1,34 @@
+import logging
 import os
 import uuid
-import logging
-import aiofiles
 from typing import Any, Dict, List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+
+import aiofiles
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.api.deps_permissions import check_document_permission, can_access_document_by_department
-from app.crud import crud_document
-from app.models.user import User
-from app.models.document import Document as DocumentModel
-from app.schemas.document import Document, DocumentCreate
+from app.api.deps_permissions import (
+    can_access_document_by_department,
+    check_document_permission,
+)
 from app.config import settings
-from app.crud import crud_tenant  # top-level import
-from app.tasks.document_tasks import process_document_task
+from app.core.authorization import AuthorizationContext
+from app.crud import crud_document, crud_tenant
+from app.models.document import Document as DocumentModel
+from app.models.user import User
+from app.schemas.document import Document, DocumentCreate
+from app.services.document_readiness import (
+    apply_answer_ready_filter,
+    load_document_answer_states,
+    serialize_document,
+)
 from app.services.document_parser import SUPPORTED_FORMATS
+from app.services.document_visibility import apply_document_visibility
+from app.services.kb_scope_policy import resolve_kb_revision_scope
+from app.tasks.document_tasks import process_document_task
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -53,51 +63,41 @@ def list_documents(
     """
     獲取當前租戶的文件列表，可依部門篩選
     """
+    authz = AuthorizationContext.from_user(current_user)
+    if department_id and not can_access_document_by_department(current_user, department_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="無權限存取此部門的文件",
+        )
+    query = apply_document_visibility(
+        db.query(DocumentModel), authz=authz, db=db, require_completed=False
+    )
     if department_id:
-        if not can_access_document_by_department(current_user, department_id):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="無權限存取此部門的文件",
-            )
-        documents = (
-            db.query(DocumentModel)
-            .filter(
-                DocumentModel.tenant_id == current_user.tenant_id,
-                DocumentModel.department_id == department_id,
-                DocumentModel.tombstoned_at.is_(None),
-            )
-            .order_by(DocumentModel.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
+        query = query.filter(DocumentModel.department_id == department_id)
+    can_manage = current_user.is_superuser or current_user.role in {"owner", "admin", "hr"}
+    allowed_revision_ids = None
+    if not can_manage:
+        scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
+        allowed_revision_ids = [UUID(value) for value in scope["kb_revision_ids"]]
+        query = apply_answer_ready_filter(
+            query,
+            tenant_id=current_user.tenant_id,
+            db=db,
+            kb_revision_ids=allowed_revision_ids,
         )
-    else:
-        # 與 kb_retrieval / Agent DocumentList 同一 PEP（含祖先；僅 kb_admin/superuser bypass）
-        from app.core.authorization import AuthorizationContext
-        authz = AuthorizationContext.from_user(current_user)
-        q = db.query(DocumentModel).filter(
-            DocumentModel.tenant_id == current_user.tenant_id,
-            DocumentModel.tombstoned_at.is_(None),
-        )
-        dept_ids = authz.department_filter_ids()
-        if dept_ids is None:
-            pass  # kb_admin / superuser：全租戶
-        elif dept_ids:
-            q = q.filter(
-                or_(
-                    DocumentModel.department_id.is_(None),
-                    DocumentModel.department_id.in_(dept_ids),
-                )
-            )
-        else:
-            q = q.filter(DocumentModel.department_id.is_(None))
-        documents = (
-            q.order_by(DocumentModel.created_at.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
-    return documents
+    documents = (
+        query.order_by(DocumentModel.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    states = load_document_answer_states(
+        db,
+        tenant_id=current_user.tenant_id,
+        documents=documents,
+        kb_revision_ids=allowed_revision_ids,
+    )
+    return [serialize_document(document, states[document.id]) for document in documents]
 
 
 @router.post("/upload", response_model=Document)
@@ -347,29 +347,34 @@ def get_document(
     """
     獲取文件詳情
     """
-    document = crud_document.get(db, document_id=document_id)
-    
-    if not document or document.tombstoned_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="文件不存在"
+    authz = AuthorizationContext.from_user(current_user)
+    query = apply_document_visibility(
+        db.query(DocumentModel).filter(DocumentModel.id == document_id),
+        authz=authz,
+        db=db,
+        require_completed=False,
+    )
+    can_manage = current_user.is_superuser or current_user.role in {"owner", "admin", "hr"}
+    allowed_revision_ids = None
+    if not can_manage:
+        scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
+        allowed_revision_ids = [UUID(value) for value in scope["kb_revision_ids"]]
+        query = apply_answer_ready_filter(
+            query,
+            tenant_id=current_user.tenant_id,
+            db=db,
+            kb_revision_ids=allowed_revision_ids,
         )
-    
-    # 租戶隔離
-    if not current_user.is_superuser and document.tenant_id != current_user.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="無權限訪問此文件"
-        )
-
-    # 部門 ACL
-    if not can_access_document_by_department(current_user, document.department_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="無權限存取此部門的文件",
-        )
-    
-    return document
+    document = query.first()
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="文件不存在")
+    state = load_document_answer_states(
+        db,
+        tenant_id=current_user.tenant_id,
+        documents=[document],
+        kb_revision_ids=allowed_revision_ids,
+    )[document.id]
+    return serialize_document(document, state)
 
 
 @router.delete("/{document_id}")
@@ -424,5 +429,3 @@ def delete_document(
             detail="文件不存在或已刪除",
         )
     return {"message": "文件已刪除", "document_id": str(document_id), "deny_first": True}
-
-

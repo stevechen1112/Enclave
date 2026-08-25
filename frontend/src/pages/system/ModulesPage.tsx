@@ -31,11 +31,21 @@ type JobModuleRow = {
   form_definition_ids?: string[]
 }
 
+type GatewayHealth = {
+  gateway?: string
+  packs?: Record<string, {
+    enabled?: boolean
+    available?: boolean
+    state?: string
+  }>
+}
+
 export default function ModulesPage() {
   const { experience, refreshExperience } = useAuth()
   const [wiki, setWiki] = useState<SurfaceStatus | null>(null)
   const [graph, setGraph] = useState<SurfaceStatus | null>(null)
   const [jobModules, setJobModules] = useState<JobModuleRow[]>([])
+  const [gatewayHealth, setGatewayHealth] = useState<GatewayHealth | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,10 +54,11 @@ export default function ModulesPage() {
       setLoading(true)
       try {
         await refreshExperience()
-        const [w, g, jm] = await Promise.allSettled([
+        const [w, g, jm, gh] = await Promise.allSettled([
           api.get<SurfaceStatus>('/wiki/product-status'),
           api.get<SurfaceStatus>('/graph/product-status'),
           api.get<JobModuleRow[]>('/job-modules'),
+          api.get<GatewayHealth>('/gateway/health'),
         ])
         if (cancelled) return
         if (w.status === 'fulfilled') setWiki(w.value.data)
@@ -59,6 +70,7 @@ export default function ModulesPage() {
           const fromBootstrap = (experience?.job_modules || []) as JobModuleRow[]
           setJobModules(fromBootstrap)
         }
+        if (gh.status === 'fulfilled') setGatewayHealth(gh.value.data)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -110,13 +122,26 @@ export default function ModulesPage() {
         <h2 className="text-lg font-semibold text-ink">產品能力包</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {packEntries.map(([key, pack]) => {
-            const status: ModuleStatusKind = pack.enabled ? 'enabled' : 'disabled'
+            const verified = gatewayHealth?.packs?.[key]
+            const rawState = verified?.state || pack.state || (pack.enabled ? 'unavailable' : 'disabled')
+            const status: ModuleStatusKind = (
+              ['enabled', 'disabled', 'degraded', 'unavailable'].includes(rawState)
+                ? rawState
+                : 'unavailable'
+            ) as ModuleStatusKind
             return (
               <ModuleStatus
                 key={key}
                 label={pack.label || key}
                 code={key}
                 status={status}
+                detail={
+                  verified?.state === 'enabled'
+                    ? '執行服務已通過即時健康探測'
+                    : verified?.enabled
+                      ? '已設定，但執行服務目前不可用或降級'
+                      : pack.message
+                }
               />
             )
           })}

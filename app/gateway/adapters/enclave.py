@@ -41,7 +41,28 @@ class EnclaveCanonicalAdapter(BaseAdapter):
         }
 
     async def health(self) -> Dict[str, Any]:
-        return {"status": "healthy", "provider": self.provider, "version": self.version}
+        def probe_database() -> None:
+            from sqlalchemy import text
+
+            from app.db.session import SessionLocal
+
+            db = SessionLocal()
+            try:
+                db.execute(text("SELECT 1"))
+            finally:
+                db.close()
+
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, probe_database)
+            return {"status": "healthy", "provider": self.provider, "version": self.version}
+        except Exception as exc:
+            return {
+                "status": "unhealthy",
+                "provider": self.provider,
+                "version": self.version,
+                "error": str(exc),
+            }
 
     async def search(
         self,

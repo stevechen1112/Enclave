@@ -17,7 +17,14 @@ export default function SourcePanel({ sources, defaultOpen = true }: Props) {
   if (!sources || sources.length === 0) return null
 
   const copyCite = async (source: ChatSource, index: number) => {
-    const text = `「${source.title}」${source.snippet ? `：${source.snippet.slice(0, 200)}` : ''}`
+    const locator = [
+      source.document_revision != null ? `版本 ${source.document_revision}` : '',
+      source.page != null ? `第 ${source.page} 頁` : '',
+      source.worksheet ? `工作表 ${source.worksheet}` : '',
+      source.row_number != null ? `第 ${source.row_number} 列` : '',
+      source.section || '',
+    ].filter(Boolean).join('，')
+    const text = `「${source.title}」${locator ? `（${locator}）` : ''}${source.snippet ? `：${source.snippet.slice(0, 200)}` : ''}`
     try {
       await navigator.clipboard.writeText(text)
       setCopiedIdx(index)

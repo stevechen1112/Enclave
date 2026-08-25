@@ -8,14 +8,21 @@ Phase 0 — Event Sourcing & Consistency Infrastructure
   - DeadLetterEvent：失敗事件不丟失
 """
 import uuid
+
 from sqlalchemy import (
-    Column, String, Integer, DateTime, ForeignKey, func,
-    Text, JSON, Index,
+    JSON,
+    Column,
+    DateTime,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from app.db.base_class import Base
 
+from app.db.base_class import Base
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  OutboxEvent
@@ -40,7 +47,7 @@ class OutboxEvent(Base):
     event_type = Column(String, nullable=False)                   # created | updated | deleted | revoked
     revision = Column(Integer, nullable=False)                    # monotonic revision number
     payload = Column(JSON, nullable=False, default=dict)          # event payload
-    idempotency_key = Column(String, nullable=False, unique=True, index=True)
+    idempotency_key = Column(String, nullable=False)
     status = Column(String, default="pending")  # pending | processing | completed | failed
     attempts = Column(Integer, default=0)
     next_retry_at = Column(DateTime(timezone=True), nullable=True)
@@ -48,6 +55,11 @@ class OutboxEvent(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_outbox_idempotency"),
+        Index("ix_outbox_status", "status"),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -82,11 +94,13 @@ class ProjectionStatus(Base):
     __table_args__ = (
         # NULLS NOT DISTINCT enforced in migration p1_dd_m04
         Index(
-            "ix_projection_status_resource_provider",
+            "uq_projection_status_resource_provider",
             "resource_type",
             "resource_id",
             "provider",
             "provider_instance_id",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
         ),
     )
 
@@ -106,7 +120,7 @@ class SyncCursor(Base):
     __tablename__ = "sync_cursors"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    connector_instance_id = Column(String, nullable=False, unique=True, index=True)
+    connector_instance_id = Column(String, nullable=False)
     connector_type = Column(String, nullable=False)  # google_drive | sharepoint | nas_smb | ...
     cursor = Column(Text, nullable=True)  # opaque cursor from source system
     watermark = Column(DateTime(timezone=True), nullable=True)  # last synced event timestamp
@@ -115,6 +129,10 @@ class SyncCursor(Base):
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("connector_instance_id", name="uq_sync_cursor_instance"),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

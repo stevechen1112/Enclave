@@ -24,7 +24,12 @@ type AgentStatus = {
   pending_review_count?: number
 }
 
-type DocRow = { status: string; tombstoned_at?: string | null; updated_at?: string | null }
+type DocRow = {
+  status: string
+  answer_ready: boolean
+  tombstoned_at?: string | null
+  updated_at?: string | null
+}
 
 type TodoCard = {
   id: string
@@ -76,6 +81,8 @@ export default function OverviewPage() {
     failed: number
     pending: number
     total: number
+    ready: number
+    notReady: number
   } | null>(null)
 
   const load = useCallback(async () => {
@@ -109,6 +116,10 @@ export default function OverviewPage() {
       if (!docsFailed) {
         setDocStats({
           total: allDocs.length,
+          ready: allDocs.filter(d => d.answer_ready).length,
+          notReady: allDocs.filter(d =>
+            !d.answer_ready && ['completed', 'indexed', 'searchable'].includes(d.status),
+          ).length,
           failed: allDocs.filter(d => d.status === 'failed').length,
           pending: allDocs.filter(d =>
             ['pending_review', 'pending', 'uploading', 'parsing', 'embedding', 'processing'].includes(d.status),
@@ -129,7 +140,7 @@ export default function OverviewPage() {
   useEffect(() => { load() }, [load])
 
   const todos: TodoCard[] = []
-  const pendingReview = agent?.pending_review_count ?? 0
+  const pendingReview = Math.max(agent?.pending_review_count ?? 0, docStats?.pending ?? 0)
 
   if (docStats && docStats.total === 0) {
     todos.push({
@@ -151,6 +162,17 @@ export default function OverviewPage() {
       tone: 'warning',
       to: '/knowledge/review',
       actionLabel: '去確認',
+    })
+  }
+  if (docStats && docStats.notReady > 0) {
+    todos.push({
+      id: 'not-ready',
+      icon: Inbox,
+      title: `${docStats.notReady} 份已處理文件尚未正式開放查詢`,
+      description: '這些文件還缺品質檢查、搜尋內容或正式版本發布，不能顯示成員工已經問得到。',
+      tone: 'warning',
+      to: '/knowledge/documents',
+      actionLabel: '查看狀態',
     })
   }
   if (docStats && docStats.failed > 0) {
@@ -205,8 +227,8 @@ export default function OverviewPage() {
         <div className="flex flex-wrap gap-4" aria-label="知識庫數字">
           <StatCard
             label="員工可查的文件"
-            value={loading ? '—' : (docStats?.total ?? '—')}
-            hint="這些文件，員工提問時系統找得到"
+            value={loading ? '—' : (docStats?.ready ?? '—')}
+            hint="只計算已通過品質檢查且已正式發布的文件"
           />
           <StatCard
             label="等您確認"
@@ -232,7 +254,7 @@ export default function OverviewPage() {
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl font-bold text-emerald-950">目前一切正常</h2>
                   <p className="mt-1.5 text-base leading-relaxed text-emerald-900/80">
-                    沒有需要您處理的事。員工問問題時，系統都能從公司資料找到答案。
+                    已發布文件的處理與索引狀態正常；實際回答仍會依問題與證據是否充足決定完整回答、部分回答或說明查不到。
                   </p>
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Link

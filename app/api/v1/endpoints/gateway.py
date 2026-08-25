@@ -13,12 +13,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.models.user import User
+from app.api.deps_permissions import require_superuser
 from app.core.authorization import AuthorizationContext
+from app.gateway.contracts import SearchDomain
+from app.gateway.health import GatewayHealthChecker
 from app.gateway.router import GatewayRouter
 from app.gateway.runtime import get_configured_gateway_router
-from app.gateway.health import GatewayHealthChecker
-from app.gateway.contracts import SearchDomain
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +122,12 @@ async def gateway_search(
 
 
 @router.get("/health")
-async def gateway_health() -> Dict[str, Any]:
-    gateway = _get_gateway()
-    return await _health_checker.check_adapters(gateway._adapters)
+async def gateway_health(
+    current_user: User = Depends(require_superuser),
+) -> Dict[str, Any]:
+    from app.gateway.runtime import get_configured_health_adapters
+    from app.gateway.runtime_health import set_runtime_health_snapshot
+
+    report = await _health_checker.check_adapters(get_configured_health_adapters())
+    set_runtime_health_snapshot(report)
+    return report

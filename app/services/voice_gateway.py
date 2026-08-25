@@ -646,6 +646,69 @@ class OpenAISTTProvider:
         )
 
 
+def transcribe_long_interview_chunk(
+    audio_data: bytes,
+    *,
+    filename: str,
+    content_type: str,
+    language: str = "zh",
+) -> TranscriptionResult:
+    """Transcribe one independently playable interview segment with speakers."""
+    import io
+
+    from app.config import settings
+
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise RuntimeError("openai package not installed") from exc
+    if not settings.OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY is not configured")
+
+    fname, mime = _sniff_audio_identity(audio_data, filename, content_type)
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    result = client.audio.transcriptions.create(
+        model=settings.LONG_INTERVIEW_STT_MODEL,
+        file=(fname, io.BytesIO(audio_data), mime),
+        language=language,
+        response_format="diarized_json",
+        chunking_strategy="auto",
+    )
+    segments: List[Dict[str, Any]] = []
+    for segment in getattr(result, "segments", None) or []:
+        if isinstance(segment, dict):
+            item = segment
+        elif hasattr(segment, "model_dump"):
+            item = segment.model_dump()
+        else:
+            item = {
+                "start": getattr(segment, "start", 0),
+                "end": getattr(segment, "end", 0),
+                "text": getattr(segment, "text", ""),
+                "speaker": getattr(segment, "speaker", None),
+            }
+        segments.append({
+            "start": item.get("start", 0),
+            "end": item.get("end", 0),
+            "text": item.get("text", ""),
+            "speaker": item.get("speaker"),
+        })
+    text = getattr(result, "text", "") or " ".join(
+        str(segment.get("text") or "").strip() for segment in segments
+    ).strip()
+    duration = max(
+        [float(segment.get("end") or 0) for segment in segments] or [0.0]
+    )
+    return TranscriptionResult(
+        text=text,
+        language=language,
+        segments=segments,
+        duration_seconds=duration,
+        confidence=0.0,
+        provider="openai",
+    )
+
+
 class OpenAITTSProvider:
     """OpenAI TTS (gpt-4o-mini-tts). 2026 latest."""
 

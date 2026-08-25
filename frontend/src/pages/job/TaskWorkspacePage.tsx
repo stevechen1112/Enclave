@@ -9,6 +9,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { ArrowLeft, ExternalLink, Plus, RotateCcw, Send } from 'lucide-react'
 import PushToTalk from '../../components/mka/PushToTalk'
+import RealtimeQuoteAssistant from '../../components/mka/RealtimeQuoteAssistant'
 import { formsApi, type FormFieldSpec, type TranscribeResponse } from '../../services/mka'
 import { tasksApi, type TaskDefinition, type TaskRun } from '../../services/tasks'
 
@@ -380,7 +381,7 @@ export default function TaskWorkspacePage() {
         <div>
           <h1 className="text-2xl font-bold text-ink">{definition.name}</h1>
           <p className="text-base text-muted">
-            狀態：{TASK_STATUS_LABEL[run?.status ?? ''] ?? run?.status ?? '—'}　版本：{definition.version}
+            狀態：{TASK_STATUS_LABEL[run?.status ?? ''] ?? run?.status ?? '—'} · 版本：{definition.version}
           </p>
         </div>
       </header>
@@ -392,12 +393,22 @@ export default function TaskWorkspacePage() {
           className="flex flex-col gap-3 rounded-2xl border-2 border-line bg-surface p-5"
         >
           <h2 className="text-lg font-bold text-ink">用說的或打字</h2>
-          <PushToTalk
-            moduleKey={definition.module_key ?? undefined}
-            onResult={applyVoiceResult}
-            onError={msg => toast.error(msg, { duration: 5000 })}
-            disabled={busy || !editable}
-          />
+          {taskKey === 'quote' && run ? (
+            <RealtimeQuoteAssistant
+              run={run}
+              fields={fields}
+              onRunUpdated={setRun}
+              onError={msg => toast.error(msg, { duration: 5000 })}
+              disabled={busy || !editable}
+            />
+          ) : (
+            <PushToTalk
+              moduleKey={definition.module_key ?? undefined}
+              onResult={applyVoiceResult}
+              onError={msg => toast.error(msg, { duration: 5000 })}
+              disabled={busy || !editable}
+            />
+          )}
           <div className="flex gap-2">
             <input
               type="text"

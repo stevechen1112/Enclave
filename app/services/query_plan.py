@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from app.gateway.fusion_policy import classify_query_domain
 
@@ -67,6 +67,57 @@ _BARE_FILENAME = re.compile(
     r"([^\s「」『』《》\"']{1,80}\.(?:pdf|docx?|xlsx?|pptx?|PDF|DOCX?))",
 )
 
+_DATE_TOKEN = re.compile(r"(?:19|20)\d{2}(?:[-/.年]\d{1,2})?(?:[-/.月]\d{1,2}日?)?|民國\s*\d{2,3}年?(?:\d{1,2}月)?")
+_NUMBER_TOKEN = re.compile(r"(?<![A-Za-z])[-+]?\d[\d,]*(?:\.\d+)?\s*(?:元|萬|億|%|％|台|件|個|公斤|kg|天|日|小時)?")
+_NEGATIONS = ("不要", "不含", "不是", "不得", "未", "無", "排除", "否")
+
+
+def _query_spec_fields(query: str, intent: str, mentioned: List[str]) -> Dict[str, Any]:
+    q = query or ""
+    operators = []
+    for token, op in (("合計", "sum"), ("總計", "sum"), ("最高", "max"), ("最低", "min"),
+                      ("平均", "average"), ("差異", "difference"), ("全部", "exhaustive"),
+                      ("分別", "per_entity"), ("各自", "per_entity")):
+        if token in q and op not in operators:
+            operators.append(op)
+    operation = {"inventory": "list", "compare": "compare", "translate": "explain",
+                 "multi_hop": "list", "unanswerable": "verify"}.get(intent, "lookup")
+    if any(op in operators for op in ("sum", "max", "min", "average")):
+        operation = "aggregate"
+    requested = []
+    for token, slot in (("單價", "unit_price"), ("總價", "total_price"), ("金額", "amount"),
+                        ("日期", "date"), ("交期", "delivery_date"), ("數量", "quantity"),
+                        ("狀態", "status"), ("步驟", "steps"), ("流程", "procedure"),
+                        ("負責", "actor"), ("版本", "revision")):
+        if token in q and slot not in requested:
+            requested.append(slot)
+    dates = _DATE_TOKEN.findall(q)
+    numbers = [n.strip() for n in _NUMBER_TOKEN.findall(q)]
+    negations = [n for n in _NEGATIONS if n in q]
+    return {
+        "operation": operation,
+        "target_types": ["document"] if mentioned else [],
+        "entities": [{"type": "document", "value": m} for m in mentioned],
+        "requested_slots": requested,
+        "operators": operators,
+        "temporal_scope": {"mentions": dates} if dates else {},
+        "expected_cardinality": None,
+        "completeness_mode": "exhaustive" if any(t in q for t in ("全部", "完整", "所有", "分別", "各自")) else "best_effort",
+        "ambiguity": [],
+        "risk_class": "safety_critical" if any(t in q for t in ("工安", "安全", "危險", "停機", "品質放行")) else "normal",
+        "confidence": 1.0 if mentioned or requested or operation != "lookup" else 0.8,
+        "preserved_tokens": {"dates": dates, "numbers": numbers, "negations": negations},
+    }
+
+
+def _apply_query_spec(plan: QueryPlan, query: str) -> QueryPlan:
+    values = _query_spec_fields(query, plan.intent, plan.mentioned_documents)
+    preserved = values.pop("preserved_tokens")
+    for key, value in values.items():
+        setattr(plan, key, value)
+    plan.preserved_tokens = preserved
+    return plan
+
 
 def extract_mentioned_documents(query: str) -> List[str]:
     """擷取查詢中明確點名的文件名（用於檔名導向檢索 scope）。
@@ -112,6 +163,20 @@ class QueryPlan:
     mentioned_documents: List[str] = field(default_factory=list)
     notes: str = ""
     plan_version: str = QUERY_PLAN_VERSION
+    operation: str = "lookup"
+    target_types: List[str] = field(default_factory=list)
+    entities: List[Dict[str, str]] = field(default_factory=list)
+    requested_slots: List[str] = field(default_factory=list)
+    operators: List[str] = field(default_factory=list)
+    temporal_scope: Dict[str, Any] = field(default_factory=dict)
+    knowledge_base_scope: List[str] = field(default_factory=list)
+    authority_constraints: List[str] = field(default_factory=list)
+    expected_cardinality: Optional[int] = None
+    completeness_mode: str = "best_effort"
+    ambiguity: List[str] = field(default_factory=list)
+    risk_class: str = "normal"
+    confidence: float = 1.0
+    preserved_tokens: Dict[str, List[str]] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -206,57 +271,57 @@ def build_query_plan(query: str) -> QueryPlan:
     # 明確指定檔名（《...》）時不做不可答短路：這是證據範圍內的問題，
     # 應由 scoped 檢索取證後讓 LLM 依證據決定回答或拒答
     if _looks_unanswerable(q) and not mentioned:
-        return QueryPlan(
+        return _apply_query_spec(QueryPlan(
             intent="unanswerable",
             arms=[],
             domain=domain,
             mentioned_documents=mentioned,
             notes="out-of-corpus probe → structured refusal",
-        )
+        ), q)
 
     if _looks_translate(q):
-        return QueryPlan(
+        return _apply_query_spec(QueryPlan(
             intent="translate",
             arms=["chunk", "compiled"],
             domain=domain,
             mentioned_documents=mentioned,
             notes="cross-language / clause-gloss intent",
-        )
+        ), q)
 
     if _looks_compare(q):
         subs = _split_compare(q)
-        return QueryPlan(
+        return _apply_query_spec(QueryPlan(
             intent="compare",
             arms=["chunk", "catalog"],
             domain=domain,
             sub_queries=subs,
             mentioned_documents=mentioned,
             notes="compare intent — dual evidence preferred",
-        )
+        ), q)
 
     if is_inventory_query(q):
         subs = _split_composite(q)
         if subs:
-            return QueryPlan(
+            return _apply_query_spec(QueryPlan(
                 intent="multi_hop",
                 arms=["catalog", "chunk"],
                 domain=domain,
                 sub_queries=subs,
                 mentioned_documents=mentioned,
                 notes="composite inventory → split sub_queries",
-            )
-        return QueryPlan(
+            ), q)
+        return _apply_query_spec(QueryPlan(
             intent="inventory",
             arms=["catalog", "chunk"],
             domain=domain,
             mentioned_documents=mentioned,
             notes="inventory → catalog arm required",
-        )
+        ), q)
 
-    return QueryPlan(
+    return _apply_query_spec(QueryPlan(
         intent="fact",
         arms=["chunk"],
         domain=domain,
         mentioned_documents=mentioned,
         notes="default fact retrieval",
-    )
+    ), q)

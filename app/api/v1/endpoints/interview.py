@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.models.mka import KnowhowCardModel
+from app.models.mka import KnowledgeCaptureSession, KnowhowCardModel
 from app.models.user import User
 from app.services.knowhow_lifecycle import get_knowhow_lifecycle_manager
 
@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 class ExtractBody(BaseModel):
-    transcript: str
+    transcript: str = ""
     title: Optional[str] = None
     equipment_id: Optional[str] = None
     consent: bool = False
@@ -68,24 +68,47 @@ def extract_interview(
 ) -> Dict[str, Any]:
     if not body.consent:
         raise HTTPException(status_code=400, detail="consent required for interview capture")
-    if not (body.transcript or "").strip():
+    transcript = (body.transcript or "").strip()
+    capture_audio_uri = body.audio_uri
+    if not transcript and body.session_id:
+        capture = (
+            db.query(KnowledgeCaptureSession)
+            .filter(
+                KnowledgeCaptureSession.id == body.session_id,
+                KnowledgeCaptureSession.tenant_id == current_user.tenant_id,
+                KnowledgeCaptureSession.owner_id == current_user.id,
+            )
+            .first()
+        )
+        if capture is None:
+            raise HTTPException(status_code=404, detail="knowledge capture session not found")
+        if capture.status != "ready_for_review":
+            raise HTTPException(status_code=409, detail="knowledge capture transcript is not ready")
+        transcript = (capture.transcript or "").strip()
+        if not capture_audio_uri:
+            capture_audio_uri = f"capture://{capture.id}"
+        if not body.title:
+            body.title = capture.title
+        if not body.equipment_id:
+            body.equipment_id = capture.equipment_id
+    if not transcript:
         raise HTTPException(status_code=400, detail="transcript required")
 
-    extracted = _extract_structure(body.transcript)
+    extracted = _extract_structure(transcript)
     title = body.title or (extracted["steps"][0][:40] if extracted["steps"] else "訪談草稿")
     card = KnowhowCardModel(
         tenant_id=current_user.tenant_id,
         owner_id=current_user.id,
         card_id=f"kh-{uuid4().hex[:12]}",
         title=title,
-        summary=(body.transcript or "")[:240],
+        summary=transcript[:240],
         status="draft",
         steps=extracted["steps"],
         risks=extracted["risks"],
         cautions=extracted["conditions"] + extracted["exceptions"],
         equipment_ids=[body.equipment_id] if body.equipment_id else [],
-        source_type="audio" if body.audio_uri else "manual",
-        source_audio_uri=body.audio_uri,
+        source_type="audio" if capture_audio_uri else "manual",
+        source_audio_uri=capture_audio_uri,
         transcript_id=str(body.session_id) if body.session_id else None,
         interviewer=str(current_user.id),
     )
@@ -95,7 +118,7 @@ def extract_interview(
     lifecycle = get_knowhow_lifecycle_manager(db=db, tenant_id=current_user.tenant_id)
     lifecycle.record_lineage(
         card_id=card.id,
-        audio_uri=body.audio_uri or "",
+        audio_uri=capture_audio_uri or "",
         transcript_id=str(body.session_id or ""),
         recorded_by=current_user.id,
         consent_obtained=True,

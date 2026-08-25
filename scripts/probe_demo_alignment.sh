@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 BASE="https://kachu.tw"
-TOKEN=$(curl -s -X POST "$BASE/api/v1/auth/login/access-token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=sales@demo.mka&password=Demo12345" | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+TOKEN=$(curl -s -X POST "$BASE/api/v1/auth/login/demo" \
+  -H "Content-Type: application/json" \
+  -d '{"persona":"sales"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 AUTH="Authorization: Bearer $TOKEN"
 
 curl -s "$BASE/api/v1/experience/bootstrap" -H "$AUTH" > /tmp/boot.json

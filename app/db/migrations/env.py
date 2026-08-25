@@ -1,15 +1,16 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
 # Import your models
 from app.config import settings
 from app.db.base_class import Base
+from app.db.migration_compare import collect_index_signatures, make_include_object
+
 # Ensure all models are imported here so they are registered with Base.metadata
-from app.models import * 
+from app.models import *
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -70,8 +71,16 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        reflected, declared, primary_keys = collect_index_signatures(connection, target_metadata)
+        # SQLAlchemy 2 inspector calls autobegin a transaction.  End that
+        # read-only inspection transaction before Alembic opens the migration
+        # transaction; otherwise successful DDL is rolled back on connection
+        # close while the command misleadingly exits zero.
+        connection.rollback()
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=make_include_object(reflected, declared, primary_keys),
         )
 
         with context.begin_transaction():

@@ -1,6 +1,7 @@
 """快速冒煙：登入 + 問 3 題，確認 deps RLS wiring 與 storage 抽象不影響正常問答。"""
 import io
 import json
+import os
 import sys
 import time
 
@@ -45,7 +46,8 @@ def stream_answer(client, question, timeout=300):
 def main():
     client = httpx.Client(base_url=BASE, timeout=320.0)
     r = client.post("/api/v1/auth/login/access-token",
-                    data={"username": "admin@example.com", "password": "admin123"})
+                    data={"username": os.environ["EVAL_ADMIN_EMAIL"],
+                          "password": os.environ["EVAL_ADMIN_PASSWORD"]})
     r.raise_for_status()
     client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
     print("login ok")

@@ -10,6 +10,7 @@ import sys
 import types
 import unittest
 import uuid
+from typing import ClassVar
 from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, ".")
@@ -116,6 +117,7 @@ class TestRouterScopeInjection(unittest.TestCase):
 
     def test_injects_binding_kb_into_scope(self):
         import asyncio
+
         from app.gateway.router import GatewayRouter
 
         router = GatewayRouter.__new__(GatewayRouter)
@@ -155,7 +157,7 @@ class TestControlPlaneEnvScan(unittest.TestCase):
     _PATTERNS = ('os.getenv("RAGFLOW_DATASET_ID"', "os.getenv('RAGFLOW_DATASET_ID'",
                  'os.getenv("WEKNORA_KB_ID"', "os.getenv('WEKNORA_KB_ID'",
                  'os.getenv("WEKNORA_DEFAULT_KB_ID"', "os.getenv('WEKNORA_DEFAULT_KB_ID'")
-    _ALLOWED = {
+    _ALLOWED: ClassVar[set[str]] = {
         os.path.join("app", "services", "sidecar_binding.py"),
         os.path.join("app", "services", "parse_pipeline.py"),
     }
@@ -188,13 +190,13 @@ PG_DSN = os.environ.get(
 
 
 def _pg_available() -> bool:
-    try:
-        import psycopg2
+    import psycopg2
 
+    try:
         conn = psycopg2.connect(PG_DSN, connect_timeout=3)
         conn.close()
         return True
-    except Exception:
+    except psycopg2.Error:
         return False
 
 
@@ -217,28 +219,40 @@ class TestLiveBindingSeed(unittest.TestCase):
         conn.close()
         self.assertEqual(missing, 0, "有租戶缺 sidecar binding（隔離破口）")
 
-    def test_demo_tenant_has_deployment_ids(self):
-        """本部署的生產租戶（Demo Tenant）必須帶部署級 sidecar 歸屬。
+    def test_synthetic_demo_has_no_external_sidecar_ids(self):
+        """公開合成 Demo 不得繼承舊租戶的外部 sidecar 歸屬。"""
+        from sqlalchemy import create_engine, inspect
+        from sqlalchemy.orm import Session
 
-        其他租戶（多為測試產生）的 pack 欄位 NULL 是合法狀態（未啟用），
-        不在此不變量範圍內。
-        """
-        import psycopg2
+        from app.demo.manifest import DEMO_TENANT_ID
+        from app.services.demo_tenant import reset_demo_tenant
 
-        conn = psycopg2.connect(PG_DSN)
-        cur = conn.cursor()
-        cur.execute(
-            """
-            SELECT b.ragflow_dataset_id, b.weknora_kb_id
-            FROM tenants t JOIN tenant_sidecar_bindings b ON b.tenant_id = t.id
-            WHERE t.name = 'Demo Tenant'
-            """
-        )
-        row = cur.fetchone()
-        conn.close()
-        self.assertIsNotNone(row, "Demo Tenant 缺 binding")
-        self.assertTrue(row[0], "Demo Tenant 缺 RAGFlow dataset 歸屬")
-        self.assertTrue(row[1], "Demo Tenant 缺 WeKnora KB 歸屬")
+        engine = create_engine(PG_DSN)
+        columns = {column["name"] for column in inspect(engine).get_columns("tenants")}
+        if "is_demo" not in columns:
+            engine.dispose()
+            self.skipTest("live PostgreSQL has not applied the Demo isolation migration")
+        connection = engine.connect()
+        transaction = connection.begin()
+        db = Session(bind=connection)
+        try:
+            reset_demo_tenant(db)
+            row = connection.exec_driver_sql(
+                """
+                SELECT b.ragflow_dataset_id, b.weknora_kb_id
+                FROM tenants t JOIN tenant_sidecar_bindings b ON b.tenant_id = t.id
+                WHERE t.id = %s
+                """,
+                (str(DEMO_TENANT_ID),),
+            ).fetchone()
+        finally:
+            db.close()
+            transaction.rollback()
+            connection.close()
+            engine.dispose()
+        self.assertIsNotNone(row, "合成 Demo 缺隔離 binding")
+        self.assertIsNone(row[0], "合成 Demo 不得綁 RAGFlow dataset")
+        self.assertIsNone(row[1], "合成 Demo 不得綁 WeKnora KB")
 
 
 if __name__ == "__main__":

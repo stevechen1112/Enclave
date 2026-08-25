@@ -21,7 +21,7 @@ type TimelineStep = {
 }
 
 function buildTimeline(doc: Document): TimelineStep[] {
-  const life = toLifecycle(doc.status, doc.tombstoned_at)
+  const life = toLifecycle(doc.status, doc.tombstoned_at, doc.answer_ready)
   const order = ['uploading', 'pending_review', 'processing', 'searchable', 'revoked'] as const
   const labels: Record<string, string> = {
     uploading: '上傳／發現',
@@ -44,6 +44,20 @@ function buildTimeline(doc: Document): TimelineStep[] {
     ]
   }
 
+  if (life === 'not_searchable') {
+    return [
+      { key: 'uploading', label: '上傳／發現', done: true, current: false },
+      { key: 'processing', label: '內容處理', done: true, current: false },
+      {
+        key: 'not_searchable',
+        label: '尚不可查',
+        done: false,
+        current: true,
+        detail: '文件尚未同時通過品質檢查、建立搜尋分段並進入正式知識版本。',
+      },
+    ]
+  }
+
   const currentIdx = order.indexOf(life === 'unknown' ? 'processing' : life)
   return order.map((key, i) => ({
     key,
@@ -54,7 +68,7 @@ function buildTimeline(doc: Document): TimelineStep[] {
       key === 'pending_review' && life === 'pending_review'
         ? '審核前暫不可被問到'
         : key === 'searchable' && life === 'searchable'
-          ? `可被問答引用${doc.chunk_count != null ? ` · 已切成 ${doc.chunk_count} 段供搜尋` : ''}`
+            ? `可被問答引用 · 正式版本 ${doc.published_revision ?? '—'} · ${doc.published_chunk_count} 段可搜尋內容`
           : key === 'revoked' && life === 'revoked'
             ? '問答已立即拒絕引用此文件'
             : undefined,
@@ -109,7 +123,7 @@ export default function DocumentDetailPage() {
 
   useEffect(() => {
     if (!doc) return
-    const life = toLifecycle(doc.status, doc.tombstoned_at)
+    const life = toLifecycle(doc.status, doc.tombstoned_at, doc.answer_ready)
     if (!['uploading', 'processing', 'pending_review'].includes(life)) return
     const t = setInterval(load, 3000)
     return () => clearInterval(t)
@@ -131,7 +145,7 @@ export default function DocumentDetailPage() {
   }
 
   const timeline = doc ? buildTimeline(doc) : []
-  const life = doc ? toLifecycle(doc.status, doc.tombstoned_at) : 'unknown'
+  const life = doc ? toLifecycle(doc.status, doc.tombstoned_at, doc.answer_ready) : 'unknown'
 
   return (
     <div className="h-full overflow-y-auto">
@@ -156,7 +170,7 @@ export default function DocumentDetailPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <FileText className="h-5 w-5 text-accent" aria-hidden />
                   <h1 className="truncate font-display text-xl font-semibold text-ink">{doc.filename}</h1>
-                  <LifecycleBadge status={doc.status} tombstoned={doc.tombstoned_at} />
+                  <LifecycleBadge status={doc.status} tombstoned={doc.tombstoned_at} answerReady={doc.answer_ready} />
                 </div>
                 <p className="mt-1 text-sm text-muted">
                   {doc.file_type || '檔案'}
@@ -204,13 +218,13 @@ export default function DocumentDetailPage() {
               <div className="card p-4 text-sm">
                 <p className="text-sm text-muted">搜尋分段</p>
                 <p className="mt-1 text-lg font-semibold text-ink">
-                  {doc.chunk_count != null ? `已切成 ${doc.chunk_count} 段供搜尋` : '—'}
+                  {doc.answer_ready ? `${doc.published_chunk_count} 段正式可查內容` : '尚無正式可查內容'}
                 </p>
               </div>
               <div className="card p-4 text-sm">
                 <p className="text-sm text-muted">目前能否被問到</p>
                 <p className="mt-1 text-lg font-semibold text-ink">
-                  {life === 'searchable' ? '可以' : life === 'revoked' ? '已撤銷' : '尚不可'}
+                  {doc.answer_ready ? '可以' : life === 'revoked' ? '已撤銷' : '尚不可'}
                 </p>
               </div>
             </section>
@@ -240,7 +254,7 @@ export default function DocumentDetailPage() {
             )}
 
             <div className="flex flex-wrap gap-2">
-              {life === 'searchable' && (
+              {doc.answer_ready && (
                 <Link
                   to={`/ask?q=${encodeURIComponent(`請根據「${doc.filename}」說明重點`)}`}
                   className="btn-primary"

@@ -21,7 +21,7 @@
 | 真語音端到端（麥克風 → STT → 欄位帶入） | 正式語音 provider 金鑰與額度；本機測試曾遇 provider error | 在 staging 設定正式 provider，用三支 demo 劇本各錄一次真實語音，確認 `detected_fields` 帶入與信心分數顯示 |
 | Hold-out 語音集 | 標註過的真實現場語音樣本 | 收集 ≥ 20 段現場錄音，跑 STT 字錯率與欄位抽取準確率，門檻訂入 gate |
 | 真人 UX 驗收 | 真實使用者（業務／現場／品保各 1 人） | 依 `docs/baselines/BASELINE_2026-08-07.md` 三劇本操作 TaskWorkspace，記錄完成率與手動修改率（對照 `/tasks/metrics/summary`） |
-| 漸進上線 | 正式環境發佈窗口 | 依 `docs/runbooks/STAGING_AND_ROLLBACK.md`：先單一租戶（Demo Tenant）啟用模組 binding，觀察指標一週後再開第二租戶 |
+| 漸進上線 | 正式環境發佈窗口 | 依 `docs/runbooks/STAGING_AND_ROLLBACK.md`：先用獨立 staging 租戶啟用模組 binding，觀察指標一週後再開正式客戶租戶；公開合成 Demo 不作 sidecar canary |
 
 ## 上線前檢查
 

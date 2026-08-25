@@ -16,6 +16,7 @@ from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.ip_whitelist import AdminIPWhitelistMiddleware
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.metrics import PrometheusMiddleware, metrics_endpoint, set_app_info
+from app.middleware.demo_access import DemoAccessMiddleware
 from app.logging_config import setup_logging
 
 # ── Initialize structured logging ──
@@ -32,6 +33,15 @@ init_sentry("enclave-api")
 async def lifespan(app: FastAPI):
     """啟動 / 關閉鉤子：管理 File Watcher 和排程器生命週期。"""
     # ── Startup ──
+    # Enabled sidecars must be safely addressable.  A bad production URL is a
+    # configuration error; an unavailable optional sidecar degrades capability
+    # truthfully without taking down the canonical Enclave data plane.
+    from app.gateway.runtime_health import probe_gateway_runtime
+    from app.gateway.sidecar_config import validate_enabled_sidecars
+
+    validate_enabled_sidecars(app_env=settings.APP_ENV)
+    await probe_gateway_runtime()
+
     try:
         from app.services.telemetry import init_telemetry
         init_telemetry("enclave")
@@ -97,6 +107,9 @@ app.add_middleware(
 # Trust boundary: strip forged X-Enclave-* / X-Service-* from clients
 from app.middleware.trust_boundary import TrustBoundaryMiddleware
 app.add_middleware(TrustBoundaryMiddleware)
+
+# Passwordless demo administrator sessions may inspect, but never mutate, data.
+app.add_middleware(DemoAccessMiddleware)
 
 # API versioning middleware
 app.add_middleware(APIVersionMiddleware)

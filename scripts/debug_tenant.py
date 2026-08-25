@@ -1,40 +1,43 @@
 #!/usr/bin/env python3
-"""直接在伺服器上看完整錯誤"""
-import paramiko
+"""Read-only local tenant diagnostic.
 
-HOST = "172.237.5.254"
-USER = "root"
-KEY_FILE = "C:/Users/User/.ssh/id_rsa_linode"
+Remote host access and direct SQL mutations were deliberately removed. Run this
+inside the target application container so it uses that deployment's normal
+DATABASE_URL and ORM model.
+"""
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(HOST, username=USER, key_filename=KEY_FILE, timeout=30)
-print("Connected")
+from __future__ import annotations
 
-# 先看 Tenant 模型有哪些 NOT NULL column
-cmd = "docker exec aihr-web python -c \"from app.models.tenant import Tenant; import inspect; print(inspect.getsource(Tenant))\""
-stdin, stdout, stderr = ssh.exec_command(cmd, timeout=30)
-out = stdout.read().decode(); err = stderr.read().decode()
-print("=== Tenant Model ===")
-print(out if out else err[:1000])
+import json
+import sys
+from pathlib import Path
 
-# 查看 tenants 表結構
-cmd2 = "docker exec aihr-db psql -U postgres -d aihr_prod -c \"\\d tenants\""
-stdin, stdout, stderr = ssh.exec_command(cmd2, timeout=30)
-out = stdout.read().decode(); err = stderr.read().decode()
-print("\n=== tenants table ===")
-print(out if out else err[:500])
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
-# 測試最簡版本 — 直接 SQL 插入
-cmd3 = '''docker exec aihr-db psql -U postgres -d aihr_prod -c "
-INSERT INTO tenants (id, name, plan, status, region)
-VALUES (gen_random_uuid(), 'Demo Tenant', 'enterprise', 'active', 'ap')
-ON CONFLICT DO NOTHING
-RETURNING id, name;
-"'''
-stdin, stdout, stderr = ssh.exec_command(cmd3, timeout=30)
-out = stdout.read().decode(); err = stderr.read().decode()
-print("\n=== Insert Tenant SQL ===")
-print(out if out else err[:500])
+from app.db.session import SessionLocal
+from app.models.tenant import Tenant
 
-ssh.close()
+
+def main() -> int:
+    db = SessionLocal()
+    try:
+        rows = db.query(Tenant).order_by(Tenant.name.asc()).all()
+        result = [
+            {
+                "id": str(tenant.id),
+                "name": tenant.name,
+                "status": tenant.status,
+                "is_demo": bool(tenant.is_demo),
+            }
+            for tenant in rows
+        ]
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    finally:
+        db.close()
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

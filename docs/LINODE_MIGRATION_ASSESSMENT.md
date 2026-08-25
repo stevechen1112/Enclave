@@ -175,7 +175,7 @@ bash scripts/verify_deployment.sh
 - 新增 `nginx/gateway-ssl.conf`（HTTP→HTTPS 301、HSTS、TLSv1.2/1.3），compose 以 `GATEWAY_CONF` 切換
 - **https://kachu.tw 正式上線**，HTTPS 全量驗證 15/15 通過
 
-**DEMO 環境（2026-08-06 就緒）**：5 個測試帳號（sales/field/master/newcomer/viewer@demo.mka，密碼 Demo12345）、5 個職能模組、T01–T03 公司版型、EQ-100 場景、21 份測試文件已入庫；業務劇本 A2 實測 16.8s 正確命中版本差異錨點。語音（OpenAI STT/TTS）實測可用。
+**歷史 DEMO 環境（2026-08-06）**：當時以共用測試帳號與既有測試文件驗收，現已廢止。正式對外 Demo 必須使用固定的合成展示租戶、六道免密碼入口、五份可重建的虛構文件與受限 mutation scope；操作與重置方式以 `docs/runbooks/SYNTHETIC_DEMO_TENANT.md` 為準。
 
 **上線後追加修復**（皆已回寫 repo）：生產 env 未寫入 OpenAI/Gemini key（example 註解行未被替換）；`config.py` 缺 `METRICS_INTERNAL_ONLY`（/metrics 500）；限流器與 embedding 快取連 Redis 未帶密碼（NOAUTH 退化）；uploads volume 擁有者 root 導致上傳 500（chown 999）；ollama-embed 加 `OLLAMA_KEEP_ALIVE=-1`（bge-m3 冷載 119s 會拖垮檢索）；gateway chat 逾時 120s→300s。
 

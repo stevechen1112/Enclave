@@ -4,8 +4,10 @@ Phase 1 — Gateway Resource Registry
 Object-level ID mapping between Enclave canonical resources and downstream providers.
 """
 import uuid
-from sqlalchemy import Column, String, Integer, DateTime, func, Index, UniqueConstraint
+
+from sqlalchemy import Column, DateTime, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
+
 from app.db.base_class import Base
 
 
@@ -31,12 +33,14 @@ class GatewayResource(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_gateway_resource_mapping_nulls",
             "enclave_resource_type",
             "enclave_resource_id",
             "provider",
             "provider_instance_id",
-            name="uq_gateway_resource_mapping",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
         ),
         Index("ix_gateway_resources_provider", "provider", "provider_resource_id"),
     )

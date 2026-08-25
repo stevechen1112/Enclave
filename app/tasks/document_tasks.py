@@ -2,7 +2,7 @@ import os
 import hashlib
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 from uuid import UUID
@@ -201,12 +201,14 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         existing_hashes = {
             row.chunk_hash
             for row in db.query(DChunk.chunk_hash).filter(
-                DChunk.document_id == UUID(document_id)
+                DChunk.document_id == UUID(document_id),
+                DChunk.document_revision == int(doc.version or 1),
             ).all()
         }
 
         inserted = 0
         skipped = 0
+        inserted_chunks = []
         for idx, (chunk, embedding) in enumerate(zip(chunks, all_embeddings)):
             chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:16]
             vector_id = f"{document_id}-chunk-{idx}"
@@ -222,6 +224,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             db_chunk = DChunk(
                 document_id=UUID(document_id),
                 tenant_id=UUID(tenant_id),
+                document_revision=int(doc.version or 1),
                 chunk_index=idx,
                 text=chunk_with_prefix,
                 chunk_hash=chunk_hash,
@@ -237,8 +240,11 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 }
             )
             db.add(db_chunk)
+            inserted_chunks.append(db_chunk)
             inserted += 1
-        
+        db.flush()
+        from app.services.lexical_index import upsert_chunks as upsert_lexical_chunks
+        upsert_lexical_chunks(db, inserted_chunks, doc)
         db.commit()
         
         if skipped:
@@ -255,6 +261,17 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             tag_document(doc, content_sample=text_content[:2000])
         except Exception as genre_exc:
             logger.warning("genre tagging failed (non-blocking): %s", genre_exc)
+        # K1: processing success is not the same as answer readiness.  Profile
+        # creation is part of the completion transaction and therefore cannot
+        # silently fail for an active document.
+        from app.services.document_profile import upsert_document_profile
+        profile_row = upsert_document_profile(db, doc, text_content, metadata)
+        if doc.file_type in {"csv", "xlsx", "xls"}:
+            from app.services.structured_projection import upsert_structured_projection
+            upsert_structured_projection(db, doc, text_content)
+        if (profile_row.capability_readiness or {}).get("procedure"):
+            from app.services.procedure_projection import project_procedure
+            project_procedure(db, doc, text_content)
         # F4：跨語條款投影（非阻塞；失敗不影響 completed）
         try:
             from app.services.clause_projection import needs_clause_projection
@@ -487,11 +504,13 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         existing_hashes = {
             row.chunk_hash
             for row in db.query(DChunk.chunk_hash).filter(
-                DChunk.document_id == UUID(document_id)
+                DChunk.document_id == UUID(document_id),
+                DChunk.document_revision == int(doc.version or 1),
             ).all()
         }
 
         inserted = 0
+        inserted_chunks = []
         for idx, (chunk, embedding) in enumerate(zip(chunks, all_embeddings)):
             chunk_hash = hashlib.sha256(chunk.encode()).hexdigest()[:16]
 
@@ -502,6 +521,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             db_chunk = DChunk(
                 document_id=UUID(document_id),
                 tenant_id=UUID(tenant_id),
+                document_revision=int(doc.version or 1),
                 chunk_index=idx,
                 text=chunk,
                 chunk_hash=chunk_hash,
@@ -515,8 +535,11 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
                 },
             )
             db.add(db_chunk)
+            inserted_chunks.append(db_chunk)
             inserted += 1
-
+        db.flush()
+        from app.services.lexical_index import upsert_chunks as upsert_lexical_chunks
+        upsert_lexical_chunks(db, inserted_chunks, doc)
         db.commit()
 
         # completed + document_processed 同一交易（與 process_document_task 對齊）
@@ -524,6 +547,13 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         doc.status = "completed"
         doc.chunk_count = inserted
         doc.quality_report = metadata
+        from app.services.document_profile import upsert_document_profile
+        upsert_document_profile(
+            db,
+            doc,
+            text_content,
+            {**(metadata or {}), "parse_engine": "trafilatura", "ocr_used": False},
+        )
         db.add(doc)
         publish_event(
             db,
@@ -609,7 +639,7 @@ def watcher_ingest_file_task(
         filename = path.name
         ext = path.suffix.lower().lstrip(".") or "bin"
         file_size = path.stat().st_size
-        file_mtime = datetime.utcfromtimestamp(path.stat().st_mtime)
+        file_mtime = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc)
 
         # 查詢是否已有此路徑的 Document 記錄
         existing = (
@@ -642,11 +672,9 @@ def watcher_ingest_file_task(
             from app.agent.classifier import get_classifier
             from app.agent.review_queue import ReviewQueueManager
 
-            # 既有可搜尋文件：先清 chunks／標記 pending_review，避免審核前繼續命中過期內容
+            # 既有可搜尋文件標記 pending_review；保留舊 revision chunks 供
+            # 已發布 KB revision 稽核與重建，status 會阻止它們進一般檢索。
             if existing and existing.tombstoned_at is None:
-                db.query(DocumentChunk).filter(
-                    DocumentChunk.document_id == existing.id
-                ).delete(synchronize_session=False)
                 existing.status = "pending_review"
                 existing.error_message = "awaiting_review"
                 existing.chunk_count = 0
@@ -675,7 +703,7 @@ def watcher_ingest_file_task(
             }
 
         if existing:
-            # 修改／撤銷後重入庫：清除 tombstone + 舊 chunks，重新索引
+            # 修改／撤銷後重入庫：建立新 revision，舊 chunks 不可原地刪除。
             if existing.tombstoned_at is not None:
                 existing.tombstoned_at = None
                 try:
@@ -683,9 +711,7 @@ def watcher_ingest_file_task(
                     get_gateway_authorizer().clear_resource_deny(str(existing.id))
                 except Exception as exc:
                     logger.warning("[WatcherTask] clear deny after restore failed: %s", exc)
-            db.query(DocumentChunk).filter(
-                DocumentChunk.document_id == existing.id
-            ).delete(synchronize_session=False)
+            existing.version = int(existing.version or 1) + 1
             existing.status = "uploading"
             existing.error_message = None
             existing.chunk_count = None
@@ -783,4 +809,3 @@ def watcher_delete_file_task(self, file_path: str, tenant_id: str):
 
     finally:
         db.close()
-

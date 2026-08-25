@@ -8,7 +8,6 @@ import uuid
 from app.config import settings
 from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.services.kb_retrieval import KnowledgeBaseRetriever
-from app.services.structured_answers import try_structured_answer
 from app.gateway.contracts import SearchDomain
 from app.gateway.runtime import get_configured_gateway_router
 from app.services.unified_retriever import UnifiedRetriever
@@ -334,6 +333,18 @@ class ChatOrchestrator:
                     "provider": r.get("source") or r.get("provider") or cite0.get("provider"),
                     "updated_at": meta.get("updated_at") or r.get("updated_at"),
                     "page": page,
+                    "section": meta.get("section") or meta.get("heading"),
+                    "worksheet": meta.get("worksheet") or meta.get("sheet"),
+                    "row_number": meta.get("row_number") or meta.get("row"),
+                    "field_name": meta.get("field_name") or meta.get("column"),
+                    "transcript_start_ms": meta.get("transcript_start_ms") or meta.get("start_ms"),
+                    "transcript_end_ms": meta.get("transcript_end_ms") or meta.get("end_ms"),
+                    "applicable_scope": (
+                        json.dumps(meta.get("applicable_scope") or meta.get("scope"), ensure_ascii=False, sort_keys=True)
+                        if isinstance(meta.get("applicable_scope") or meta.get("scope"), (dict, list))
+                        else meta.get("applicable_scope") or meta.get("scope")
+                    ),
+                    "effective_at": meta.get("effective_at") or meta.get("effective_from"),
                     "accessible": True,
                 })
             for i, r in enumerate(top_results, 1):
@@ -365,6 +376,15 @@ class ChatOrchestrator:
                     "accessible": True,
                 })
         qp = company_policy.get("query_plan") or {}
+        from app.services.retrieval_coverage import assess_retrieval_coverage
+        context["evidence_contract"] = assess_retrieval_coverage(qp, [*top_results, *catalog_hits])
+        context["retrieval"]["evidence_contract"] = context["evidence_contract"]
+        if context["evidence_contract"].get("decision") == "abstain" and qp.get("requested_slots"):
+            # A canonical row/procedure contract can explicitly refuse even
+            # when narrative chunks exist.  Do not let those chunks reopen the
+            # generation path and reconstruct an ambiguous answer.
+            context["has_policy"] = False
+            context["retrieval"]["label"] = "必要欄位或流程條件不足，拒絕臆測"
         context["retrieval"]["arms"] = list(
             qp.get("arms") or (["catalog", "chunk"] if catalog_hits else ["chunk"])
         )
@@ -438,7 +458,7 @@ class ChatOrchestrator:
             yield refusal.get("message") or self._fallback_answer(context)
             return
 
-        mode = str(getattr(settings, "SOURCE_VERIFY_MODE", "off") or "off").lower()
+        mode = str(getattr(settings, "SOURCE_VERIFY_MODE", "off") or "off").strip().lower()
 
         if mode == "enforce":
             async for chunk in self._stream_answer_enforce(
@@ -527,7 +547,27 @@ class ChatOrchestrator:
     ):
         """呼叫逐字溯源稽核；任何失敗都回傳 None 或未通過結果，絕不拋例外。"""
         try:
-            from app.services.source_verifier import verify_answer
+            from app.services.source_verifier import (
+                SourceVerifyResult,
+                deterministic_claim_validation,
+                verify_answer,
+            )
+
+            literal = deterministic_claim_validation(
+                answer,
+                context.get("context_parts") or [],
+            )
+            if not literal["verified"]:
+                return SourceVerifyResult(
+                    verified=False,
+                    total_claims=len(literal["unsupported"]),
+                    unsupported_claims=[
+                        f"{item['type']}:{item['value']}"
+                        for item in literal["unsupported"]
+                    ],
+                    reason="deterministic_literal_mismatch",
+                    mode=mode,
+                )
 
             client = self._openai_async
             model = self._llm_model
@@ -710,7 +750,10 @@ class ChatOrchestrator:
         Phase 0: 接受 AuthorizationContext 做 ACL 過濾。
         filter_dict / question_hint：職能模組與 SceneContext 的檢索範圍（與串流路徑一致）。
         """
-        structured = try_structured_answer(tenant_id, question, history=history)
+        structured = None
+        if settings.HR_COMPATIBILITY_PACK_ENABLED:
+            from app.knowledge_packs.hr_compatibility import resolve as resolve_hr_compatibility
+            structured = resolve_hr_compatibility(tenant_id, question, history=history)
         if structured:
             return {
                 "request_id": str(uuid.uuid4()),
@@ -805,6 +848,14 @@ class ChatOrchestrator:
         history_summary = self._format_history_summary(history)
         calc_guidance = self._build_calc_guidance(question)
         user_content = f"問題：{question}\n\n參考資料：\n{context_text}\n\n請根據上述參考資料回答問題。"
+        evidence_contract = context.get("evidence_contract") or {}
+        if evidence_contract.get("decision") in {"partial", "abstain"}:
+            missing = "、".join(evidence_contract.get("missing_labels") or evidence_contract.get("missing_slots") or [])
+            user_content += (
+                "\n\n證據完整性限制：只能回答證據已涵蓋的部分；"
+                f"缺少的必要欄位為「{missing or '核准且適用的來源'}」。"
+                "請明確列出缺少項目，不得推測補齊。"
+            )
         if history_summary:
             user_content = f"對話歷史摘要：\n{history_summary}\n\n" + user_content
         if calc_guidance:
@@ -878,41 +929,14 @@ class ChatOrchestrator:
 
     @staticmethod
     def _build_calc_guidance(question: str) -> str:
-        today = date.today()
-        today_str = f"{today.year}年{today.month}月{today.day}日"
         hints: List[str] = []
-        if "特休" in question or "特別休假" in question:
-            hints.append("特休天數依勞基法第38條，按『實際到職日』計算年資，而非問題敘述中的概算。")
-            hints.append("年資區間：未滿6個月=0天，6個月以上未滿1年=3天，1年=7天，2年=10天，3年=14天，5年=15天，10年以上每年+1天(最多30天)。")
-            hints.append(f"若問題含有具體到職日期，請計算到今天（{today_str}）的正確年資後再查對照表。")
-        if "資遣費" in question:
-            hints.append("資遣費公式：年資(年) × 0.5 × 月平均工資。不要把月薪除以30。")
-            hints.append("年資若含月份，需換算為年並可四捨五入到 0.5 年再計算。")
-        if "加班" in question:
-            hints.append("時薪計算：時薪 = 月薪 / 30 / 8（勞基法基準）。")
-            hints.append("平日加班費：前 2 小時每小時 × 1.34 倍，第 3 小時起每小時 × 1.67 倍。")
-            hints.append("休息日加班費：前 2 小時每小時 × 1.34 倍，第 3-8 小時每小時 × 1.67 倍，第 9 小時起 × 2.67 倍。")
-            hints.append("計算時必須分段計算，不可把全部時數都乘同一倍率。例如：平日加班 4 小時 = 前 2 小時 × 1.34 + 後 2 小時 × 1.67。")
-        if "平均" in question and ("薪" in question or "月薪" in question):
+        if settings.HR_COMPATIBILITY_PACK_ENABLED:
+            from app.knowledge_packs.hr_compatibility import calculation_guidance
+            hints.extend(calculation_guidance(question))
+        if "平均" in question:
             hints.append("平均值需使用所有符合條件的資料列，不要只取前幾筆。")
         if "占比" in question or "比例" in question:
             hints.append("統計題請逐一計數並核對總數後再計算比例。")
-        if "年資最深" in question or ("最深" in question and "年資" in question):
-            hints.append("最深年資需比對完整名冊後再下結論。")
-        if "加班" in question and ("合法" in question or "合法嗎" in question):
-            hints.append("若題目只給單一倍數（如 1.5 倍），視為前 2 小時標準；可判定合法，但提醒超過 2 小時需 1.67 倍。")
-        if "勞保" in question:
-            hints.append("若薪資條已列出勞保自付金額，直接引用該數值。")
-        if "颱風" in question or "停班停課" in question:
-            hints.append("颱風停班停課屬行政建議性質，雇主可視需要出勤，但不得不利處分；若出勤需依規定給付。")
-        if "責任制" in question:
-            hints.append("一般工程師通常不適用責任制，仍應依工時規定與加班費規定。")
-        if "年終獎金" in question and "工資" in question:
-            hints.append("年終獎金是否屬工資需視是否為經常性/固定性給付與契約約定，通常需個案判斷。")
-        if "離職" in question and "資遣費" in question:
-            hints.append("自請離職無資遣費；資遣費僅適用雇主依法資遣情況。")
-        if "喪假" in question and "配偶" in question and "祖父母" in question:
-            hints.append("配偶的祖父母喪假法定 3 天；如公司內規給更高天數可視為優於法令。")
         if not hints:
             return ""
         return "\n".join(f"- {h}" for h in hints)
@@ -942,10 +966,16 @@ class ChatOrchestrator:
 
         has_policy = context.get("has_policy", False)
         if has_policy:
+            contract = context.get("evidence_contract") or {}
+            missing = contract.get("missing_labels") or contract.get("missing_slots") or []
+            if contract.get("decision") == "abstain":
+                return "目前找到的資料不足以安全回答。" + (f"缺少：{'、'.join(missing)}。" if missing else "缺少核准且適用的來源。")
             raw = context.get("company_policy_raw") or {}
             policy_content = (raw.get("content") or "")[:500]
+            missing_note = f"\n\n⚠️ **仍缺少**：{'、'.join(missing)}，以下只提供已找到的部分。" if missing else ""
             return f"""📋 **知識庫相關內容**：
 {policy_content}
+{missing_note}
 
 💡 **提醒**：以上為知識庫中最相關的段落，AI 生成回答目前暫時無法使用。"""
 

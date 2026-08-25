@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import sys
 import time
@@ -58,7 +59,10 @@ CASES = [
 def login(client: httpx.Client) -> None:
     r = client.post(
         "/api/v1/auth/login/access-token",
-        data={"username": "admin@example.com", "password": "admin123"},
+        data={
+            "username": os.environ["EVAL_ADMIN_EMAIL"],
+            "password": os.environ["EVAL_ADMIN_PASSWORD"],
+        },
     )
     r.raise_for_status()
     client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"

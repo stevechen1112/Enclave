@@ -1,6 +1,7 @@
 """Focused MKA DB persistence contract tests (no process-memory substitutes)."""
 import uuid
 import inspect
+from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy import create_engine
@@ -88,8 +89,8 @@ def _valid_quote():
 
 
 def test_tenant_filtering_and_draft_isolation(db):
-    tenant_a, _ = _identity(db)
-    tenant_b, _ = _identity(db)
+    tenant_a, reviewer_a = _identity(db)
+    tenant_b, reviewer_b = _identity(db)
     repo = MKARepository(db)
     approved = repo.create_knowhow(
         tenant_id=tenant_a.id, title="approved", steps=["a"]
@@ -97,7 +98,11 @@ def test_tenant_filtering_and_draft_isolation(db):
     draft = repo.create_knowhow(tenant_id=tenant_a.id, title="draft", steps=["b"])
     other = repo.create_knowhow(tenant_id=tenant_b.id, title="other", steps=["c"])
     approved.status = "approved"
+    approved.reviewer = reviewer_a.id
+    approved.reviewed_at = datetime.now(timezone.utc)
     other.status = "approved"
+    other.reviewer = reviewer_b.id
+    other.reviewed_at = datetime.now(timezone.utc)
     db.flush()
 
     assert {row.id for row in repo.list_knowhow(tenant_id=tenant_a.id)} == {
@@ -111,7 +116,7 @@ def test_tenant_filtering_and_draft_isolation(db):
 
 def test_retrieval_facade_injects_only_tenant_approved_db_cards(db, monkeypatch):
     tenant_a, user_a = _identity(db)
-    tenant_b, _ = _identity(db)
+    tenant_b, user_b = _identity(db)
     repo = MKARepository(db)
     approved = repo.create_knowhow(
         tenant_id=tenant_a.id,
@@ -132,7 +137,11 @@ def test_retrieval_facade_injects_only_tenant_approved_db_cards(db, monkeypatch)
         data={"source_document_id": "legacy-c"},
     )
     approved.status = "approved"
+    approved.reviewer = user_a.id
+    approved.reviewed_at = datetime.now(timezone.utc)
     other.status = "approved"
+    other.reviewer = user_b.id
+    other.reviewed_at = datetime.now(timezone.utc)
     db.flush()
 
     from app.config import settings
@@ -512,6 +521,7 @@ async def test_chat_call_chain_forwards_request_db_to_retrieval(db, monkeypatch)
     from app.services.chat_orchestrator import ChatOrchestrator
 
     monkeypatch.setattr(retrieval_module, "get_retrieval_facade", lambda: FakeFacade())
+    monkeypatch.setattr("app.services.kb_scope_policy.resolve_kb_revision_scope", lambda **_kwargs: {})
     orchestrator = object.__new__(ChatOrchestrator)
     await orchestrator.retrieve_context(
         tenant_id=tenant.id,
@@ -651,6 +661,8 @@ def test_knowhow_list_queries_are_bounded(db):
             tenant_id=tenant.id, title=f"card-{i}", steps=["s"]
         )
         card.status = "approved"
+        card.reviewer = user.id
+        card.reviewed_at = datetime.now(timezone.utc)
     db.flush()
     assert len(repo.list_knowhow(tenant_id=tenant.id)) == 5
     assert len(repo.list_knowhow(tenant_id=tenant.id, limit=3)) == 3

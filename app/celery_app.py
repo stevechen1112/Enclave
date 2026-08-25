@@ -63,4 +63,13 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.purge_mka_retention",
         "schedule": 86400.0,  # 每日硬刪過期轉寫（§12.1）
     },
+    "detect-knowledge-gaps": {
+        "task": "tasks.detect_knowledge_gaps",
+        "schedule": 86400.0,
+        "kwargs": {"days": 7},
+    },
+    "refresh-knowledge-freshness": {
+        "task": "tasks.refresh_knowledge_freshness",
+        "schedule": 86400.0,
+    },
 }

@@ -11,7 +11,7 @@ const auth = vi.hoisted(() => ({
 vi.mock('../auth', () => ({
   useAuth: () => ({
     user: {
-      email: 'field@demo.mka',
+      email: 'field-door@demo.enclave.invalid',
       full_name: '現場測試 李阿明',
       role: 'employee',
       is_superuser: false,

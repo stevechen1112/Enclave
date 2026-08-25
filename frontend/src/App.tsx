@@ -6,6 +6,7 @@ import type { Capability } from './navigation/capabilities'
 import { useDefaultHomePath, useHasCapability } from './navigation/useCapabilities'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
 const OverviewPage = lazy(() => import('./pages/OverviewPage'))
 const ChatPage = lazy(() => import('./pages/ChatPage'))
 const DocumentsPage = lazy(() => import('./pages/DocumentsPage'))
@@ -77,13 +78,6 @@ function CapGuard({
   return <>{children}</>
 }
 
-function HomeRedirect() {
-  const { user, loading } = useAuth()
-  const home = useDefaultHomePath()
-  if (loading || !user) return <PageLoader />
-  return <Navigate to={home} replace />
-}
-
 function LegacyReportDetailRedirect() {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={`/create/reports/${id}`} replace />
@@ -96,6 +90,17 @@ function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/demo"
+          element={
+            token
+              ? (loading || !user
+                ? <PageLoader />
+                : <Navigate to={home} replace />)
+              : <LoginPage />
+          }
+        />
         <Route
           path="/login"
           element={
@@ -107,8 +112,7 @@ function AppRoutes() {
           }
         />
 
-        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-          <Route index element={<HomeRedirect />} />
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="ask" element={<ChatPage />} />
           <Route
             path="overview"

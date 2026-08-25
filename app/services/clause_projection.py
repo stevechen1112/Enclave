@@ -255,24 +255,52 @@ def load_clause_projections_for_query(
     tenant_id: UUID,
     query: str,
     limit: int = 3,
+    authz=None,
+    scope: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     """translate 意圖：撈出相關文件的條款投影供 context 注入。"""
     from app.models.document import Document
     from app.models.knowledge_base import DocumentArtifact
 
     q = (query or "").casefold()
-    arts = (
+    if authz is None:
+        return []
+    from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
+    from app.services.document_readiness import ready_revision_pairs
+    from app.services.document_visibility import apply_document_visibility, deny_set_allows
+
+    arts_query = (
         db.query(DocumentArtifact, Document)
         .join(Document, Document.id == DocumentArtifact.document_id)
         .filter(
-            Document.tenant_id == tenant_id,
-            Document.status == "completed",
-            Document.tombstoned_at.is_(None),
             DocumentArtifact.artifact_type == ARTIFACT_TYPE,
             DocumentArtifact.status == "active",
         )
-        .all()
     )
+    raw_revision_ids = (scope or {}).get("kb_revision_ids") or []
+    revision_scoped = bool(raw_revision_ids) or "kb_revision_ids" in (scope or {})
+    arts_query = apply_document_visibility(
+        arts_query, authz=authz, db=db, require_completed=not revision_scoped
+    )
+    if raw_revision_ids or "kb_revision_ids" in (scope or {}):
+        revision_ids = [UUID(str(value)) for value in raw_revision_ids]
+        arts_query = arts_query.join(
+            KnowledgeBaseRevisionDocument,
+            (KnowledgeBaseRevisionDocument.document_id == DocumentArtifact.document_id)
+            & (KnowledgeBaseRevisionDocument.document_revision == DocumentArtifact.revision),
+        ).filter(KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids))
+        ready_pairs = ready_revision_pairs(
+            db, tenant_id=tenant_id, kb_revision_ids=revision_ids
+        )
+    else:
+        arts_query = arts_query.filter(DocumentArtifact.revision == Document.version)
+        ready_pairs = None
+    arts = [
+        pair
+        for pair in arts_query.all()
+        if deny_set_allows(pair[1].id, authz=authz)
+        and (ready_pairs is None or (pair[1].id, pair[0].revision) in ready_pairs)
+    ]
     scored: List[tuple[float, Dict[str, Any]]] = []
     for art, doc in arts:
         name = (doc.filename or "").casefold()
@@ -292,6 +320,7 @@ def load_clause_projections_for_query(
                 score,
                 {
                     "document_id": str(doc.id),
+                    "document_revision": art.revision,
                     "filename": doc.filename,
                     "clauses": clauses,
                 },

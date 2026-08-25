@@ -34,11 +34,11 @@ from locust.runners import MasterRunner
 # 設定
 # ---------------------------------------------------------------------------
 ADMIN_EMAIL = os.getenv("LOAD_TEST_ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASSWORD = os.getenv("LOAD_TEST_ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.environ["LOAD_TEST_ADMIN_PASSWORD"]
 USER_EMAIL = os.getenv("LOAD_TEST_USER_EMAIL", "user@example.com")
-USER_PASSWORD = os.getenv("LOAD_TEST_USER_PASSWORD", "user123")
+USER_PASSWORD = os.environ["LOAD_TEST_USER_PASSWORD"]
 SUPERUSER_EMAIL = os.getenv("LOAD_TEST_SUPERUSER_EMAIL", "superadmin@example.com")
-SUPERUSER_PASSWORD = os.getenv("LOAD_TEST_SUPERUSER_PASSWORD", "superadmin123")
+SUPERUSER_PASSWORD = os.environ["LOAD_TEST_SUPERUSER_PASSWORD"]
 
 
 # ---------------------------------------------------------------------------

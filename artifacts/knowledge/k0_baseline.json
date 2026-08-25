@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "gate": "KB-BL-01",
+  "generated_at": "2026-08-24T18:14:12.740095+00:00",
+  "privacy": "counts_and_digests_only",
+  "construction_source": {
+    "commit": "c1069198f0d8d6d31db082c6ee4647da12ccab86",
+    "branch": "codex/production-baseline-20260812",
+    "dirty_file_count": 123,
+    "dirty_manifest_hash": "d2e909c46ff72b7be2daae96cc0949af4c85f4013c8a39e65aa5dee0d9577573",
+    "tracked_manifest_hash": "902fc72bb0d4c5599d7ffd06f56734385734aa478df160fa77655f7c790561a3",
+    "deployment_manifest_hash": "12d582ba5f6b212981c2ae75dd54cd0407b70598405269853240a6b2618ce58b",
+    "deployment_file_count": 438,
+    "evaluation_manifest_hash": "4d7f277655e2c6f5eaed4bf18b0432813e05ab8123e7364d6177679f81a2eb25",
+    "evaluation_file_count": 102,
+    "image_digest": "unavailable",
+    "model": "configured-at-runtime",
+    "prompt_version": "repository",
+    "feature_flag_names": []
+  },
+  "implementation_source": {
+    "commit": "c1069198f0d8d6d31db082c6ee4647da12ccab86",
+    "branch": "codex/production-baseline-20260812",
+    "dirty_file_count": 207,
+    "dirty_manifest_hash": "0932b0fe91495fcdf9d7c200b6dd7ed29c82fbb5b5b8b4e31d997c0f0af3ff2e",
+    "tracked_manifest_hash": "902fc72bb0d4c5599d7ffd06f56734385734aa478df160fa77655f7c790561a3",
+    "deployment_manifest_hash": "12d582ba5f6b212981c2ae75dd54cd0407b70598405269853240a6b2618ce58b",
+    "deployment_file_count": 438,
+    "evaluation_manifest_hash": "4d7f277655e2c6f5eaed4bf18b0432813e05ab8123e7364d6177679f81a2eb25",
+    "evaluation_file_count": 102,
+    "image_digest": "unavailable",
+    "model": "configured-at-runtime",
+    "prompt_version": "repository",
+    "feature_flag_names": []
+  },
+  "source": {
+    "deployment": "production",
+    "image_digest": "sha256:5f0b0ad1e6aa5707146080c4288472589444ea92c3b12a77cd5786fc30632fb0",
+    "runtime_manifest_hash": "503bc3f3941a99d03655851815975ca7b37013864ea0059af85aacb4bb8e540b"
+  },
+  "corpus": {
+    "acl_policy_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "active_document_digest": "27c2405f636473fcb6c06c9d969c549941990101c75c819f2af61ad303b15afa",
+    "active_documents": 22,
+    "counts": {
+      "connector_instances": 0,
+      "connector_resources": 0,
+      "documentchunks": 132,
+      "documents": 24,
+      "documentversions": 0,
+      "external_principals": 0,
+      "knowhow_cards": 2,
+      "knowledge_base_members": 0,
+      "knowledge_base_revisions": 0,
+      "knowledge_bases": 0,
+      "retrievaltraces": 10,
+      "source_acl_entries": 0,
+      "users": 6
+    },
+    "database_tables_present": [
+      "connector_instances",
+      "connector_resources",
+      "documentchunks",
+      "documents",
+      "documentversions",
+      "external_principals",
+      "knowhow_cards",
+      "knowledge_base_members",
+      "knowledge_base_revisions",
+      "knowledge_bases",
+      "retrievaltraces",
+      "source_acl_entries",
+      "users"
+    ],
+    "document_status_counts": {
+      "completed": 21,
+      "deleted": 2,
+      "failed": 1
+    },
+    "privacy": "counts_and_digests_only",
+    "tenant_count_with_documents": 1,
+    "tenant_set_digest": "45c4bdb347b2a2b3ea5f7561b9724e7376d1cc83cf24e912831e4f3faa04b485",
+    "transaction_read_only": true
+  },
+  "production_corpus_manifest_id": "pcm-c44a76b497a92b050402da89",
+  "production_runtime": {
+    "backend_image_digest": "sha256:5f0b0ad1e6aa5707146080c4288472589444ea92c3b12a77cd5786fc30632fb0",
+    "frontend_image_digest": "sha256:840c751fa0bdc2890fd4a481858ea25a0cad4764dfefec5e0a9e9d6864ed0136",
+    "prompt_hash": "e787145bb3e9f304e96c42367b1365662b73a707ba0cff17e09857372dbf03a9",
+    "runtime": {
+      "DEMO_LOGIN_ENABLED": true,
+      "EMBEDDING_DIMENSION": 1024,
+      "EMBEDDING_PROVIDER": "ollama",
+      "HR_COMPATIBILITY_PACK_ENABLED": null,
+      "OLLAMA_EMBED_MODEL": "bge-m3",
+      "OPENAI_MODEL": "gpt-5.6-luna",
+      "PAGEINDEX_ENABLED": false,
+      "RETRIEVAL_MODE": "hybrid",
+      "RETRIEVAL_RERANK": true,
+      "RLS_ENFORCEMENT_ENABLED": false,
+      "SOURCE_VERIFY_MODE": "off",
+      "VOYAGE_MODEL": "voyage-4-lite"
+    }
+  }
+}

@@ -674,7 +674,13 @@ async def submit_feedback(
     """提交聊天回饋（👍/👎）"""
     # 驗證 message 存在
     msg = crud_chat.get_message_by_id(db, message_id=feedback.message_id)
-    if not msg:
+    conversation = getattr(msg, "conversation", None) if msg else None
+    if (
+        not msg
+        or conversation is None
+        or conversation.tenant_id != current_user.tenant_id
+        or conversation.user_id != current_user.id
+    ):
         raise HTTPException(status_code=404, detail="訊息不存在")
 
     result = crud_chat.upsert_feedback(
@@ -685,6 +691,17 @@ async def submit_feedback(
         rating=feedback.rating,
         category=feedback.category,
         comment=feedback.comment,
+        owner_id=(
+            db.query(User.id)
+            .filter(
+                User.tenant_id == current_user.tenant_id,
+                User.role.in_(["owner", "admin"]),
+                User.status == "active",
+            )
+            .order_by(User.role.desc(), User.created_at.asc())
+            .scalar()
+            or current_user.id
+        ),
     )
     return result
 

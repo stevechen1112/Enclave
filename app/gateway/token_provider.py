@@ -143,7 +143,9 @@ class WeKnoraTokenProvider(ServiceTokenProvider):
 
 def build_pipeshub_token_provider() -> ServiceTokenProvider:
     """Prefer credential-based auto-refresh; fall back to the static env JWT."""
-    base = os.getenv("PIPESHUB_BASE_URL", "http://localhost:8012")
+    from app.gateway.sidecar_config import resolve_sidecar_url
+
+    base = resolve_sidecar_url("pipeshub")
     email = os.getenv("PIPESHUB_ADMIN_EMAIL", "")
     password = os.getenv("PIPESHUB_ADMIN_PASSWORD", "")
     if email and password:
@@ -155,7 +157,9 @@ def build_pipeshub_token_provider() -> ServiceTokenProvider:
 
 
 def build_weknora_token_provider() -> ServiceTokenProvider:
-    base = os.getenv("WEKNORA_BASE_URL", "http://localhost:8081")
+    from app.gateway.sidecar_config import resolve_sidecar_url
+
+    base = resolve_sidecar_url("weknora")
     # A4: a long-lived sk- tenant API key is the preferred machine credential —
     # it never expires, so no refresh login is needed.
     static = os.getenv("WEKNORA_API_KEY", "")

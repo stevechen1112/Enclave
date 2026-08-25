@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Layers, Plus, Search } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Database, Layers, Plus, RotateCcw, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { kbApi, parseApiError, type ApiErrorInfo } from '../../api'
+import { kbApi, knowledgeControlApi, parseApiError, type ApiErrorInfo, type KnowledgeControlOverview } from '../../api'
 import AsyncState from '../../components/AsyncState'
 import PageHeader from '../../components/PageHeader'
 
@@ -22,23 +22,36 @@ interface Category {
 }
 
 export default function QualityPage() {
+  const releaseStatus: Record<string, string> = {
+    candidate: '候選版本', shadow: '唯讀試跑中', active: '正式使用中', retired: '歷史版本', rejected: '未通過',
+  }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [gaps, setGaps] = useState<KnowledgeGap[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [control, setControl] = useState<KnowledgeControlOverview | null>(null)
+  const [releaseBusy, setReleaseBusy] = useState(false)
+  const [feedback, setFeedback] = useState<Array<{ id: string; category: string | null; comment: string | null; status: string }>>([])
+  const [freshness, setFreshness] = useState<Array<{ id: string; document_id: string; state: string; reasons: string[] }>>([])
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const [g, c] = await Promise.all([
+      const [g, c, k, f, s] = await Promise.all([
         kbApi.listGaps('open'),
         kbApi.listCategories(true),
+        knowledgeControlApi.overview(),
+        knowledgeControlApi.feedback('open'),
+        knowledgeControlApi.freshness(),
       ])
       setGaps(g)
       setCategories(c)
+      setControl(k)
+      setFeedback(f)
+      setFreshness(s.filter(row => row.state !== 'current'))
     } catch (err) {
       setError(parseApiError(err, '無法載入知識品質資料'))
     } finally {
@@ -55,6 +68,19 @@ export default function QualityPage() {
       setTimeout(load, 2000)
     } catch (err) {
       toast.error(parseApiError(err, '排程失敗').message)
+    }
+  }
+
+  const runReleaseAction = async (action: () => Promise<unknown>, success: string) => {
+    setReleaseBusy(true)
+    try {
+      await action()
+      toast.success(success)
+      await load()
+    } catch (err) {
+      toast.error(parseApiError(err, '版本操作失敗').message)
+    } finally {
+      setReleaseBusy(false)
     }
   }
 
@@ -94,6 +120,77 @@ export default function QualityPage() {
 
         <AsyncState loading={loading} error={error} onRetry={load}>
           <>
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-ink">知識保鮮與使用者回饋</h2>
+                  <p className="mt-1 text-sm text-muted">過期、撤權或同步異常的資料需要先處理；使用者回饋會留下負責人與處理紀錄，不會直接改寫答案。</p>
+                </div>
+                <button type="button" className="btn-outline" onClick={async () => {
+                  try {
+                    await knowledgeControlApi.scanFreshness()
+                    toast.success('保鮮檢查已排程')
+                  } catch {
+                    toast.error('保鮮檢查排程失敗，請稍後再試')
+                  }
+                }}>重新檢查</button>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="card p-4">
+                  <p className="font-medium text-ink">待處理資料 {freshness.length}</p>
+                  {freshness.length === 0 ? <p className="mt-2 text-sm text-muted">目前沒有過期或撤權資料</p> : (
+                    <ul className="mt-2 space-y-2 text-sm text-muted">{freshness.slice(0, 8).map(row => <li key={row.id}>文件 {row.document_id.slice(0, 8)} · {row.state} · {row.reasons.join('、')}</li>)}</ul>
+                  )}
+                </div>
+                <div className="card p-4">
+                  <p className="font-medium text-ink">待處理回饋 {feedback.length}</p>
+                  {feedback.length === 0 ? <p className="mt-2 text-sm text-muted">目前沒有待處理回饋</p> : (
+                    <ul className="mt-2 space-y-3">{feedback.slice(0, 8).map(row => <li key={row.id} className="text-sm"><p className="text-ink">{row.category ?? '其他'}{row.comment ? `：${row.comment}` : ''}</p><button type="button" className="mt-1 text-sm text-accent hover:underline" onClick={async () => { await knowledgeControlApi.processFeedback(row.id, 'resolved', '管理員已檢視並完成處理'); await load() }}>標記完成</button></li>)}</ul>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-ink">目前正式知識版本</h2>
+                  <p className="mt-1 text-sm text-muted">先確認文件是否可回答，再把候選版本送去測試；正式版可回到上一個已驗收版本。</p>
+                </div>
+                <button type="button" disabled={releaseBusy} className="btn-primary" onClick={() => runReleaseAction(knowledgeControlApi.createCandidate, '候選知識版本已建立')}>
+                  <Database className="h-4 w-4" aria-hidden /> 建立候選版本
+                </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="card p-4"><p className="text-sm text-muted">可回答</p><p className="mt-1 text-2xl font-semibold text-success">{control?.readiness.ready ?? 0}</p></div>
+                <div className="card p-4"><p className="text-sm text-muted">部分可用</p><p className="mt-1 text-2xl font-semibold text-highlight">{control?.readiness.partial ?? 0}</p></div>
+                <div className="card p-4"><p className="text-sm text-muted">需處理</p><p className="mt-1 text-2xl font-semibold text-danger">{control?.readiness.needs_attention ?? 0}</p></div>
+              </div>
+              {(control?.knowledge_bases ?? []).map(kb => (
+                <div key={kb.id} className="card overflow-hidden">
+                  <div className="border-b border-line/70 px-4 py-3"><p className="font-medium text-ink">{kb.name}</p><p className="text-sm text-muted">目前正式使用 R{kb.active_revision || '—'}</p></div>
+                  {kb.revisions.length === 0 ? <p className="p-4 text-sm text-muted">尚未建立知識版本</p> : (
+                    <ul className="divide-y divide-line/70">
+                      {kb.revisions.map(rev => (
+                        <li key={rev.id} className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm">
+                          <span className="font-medium text-ink">R{rev.revision}</span><span className="rounded bg-surface px-2 py-1 text-muted">{releaseStatus[rev.status] ?? rev.status}</span>
+                          <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted">{rev.manifest_hash?.slice(0, 12) ?? '尚無 manifest'}</span>
+                          {rev.status === 'shadow' && (
+                            <span className={rev.promotion_ready ? 'text-success' : 'text-highlight'}>
+                              驗收 {rev.passed_gates.length}/{rev.required_gate_count}
+                            </span>
+                          )}
+                          {rev.status === 'candidate' && <button disabled={releaseBusy} className="btn-outline px-3" onClick={() => runReleaseAction(() => knowledgeControlApi.transition(rev.id, 'shadow'), '已進入唯讀試跑')}>開始試跑</button>}
+                          {rev.status === 'shadow' && <button disabled={releaseBusy || !rev.manifest_hash || !rev.promotion_ready} title={rev.promotion_ready ? undefined : '所有資料、問答、角色操作與正式試跑驗收通過後才能設為正式'} className="btn-primary px-3" onClick={() => runReleaseAction(() => knowledgeControlApi.promote(rev.id, rev.manifest_hash!), '已切換為正式知識版本')}>設為正式</button>}
+                          {rev.status === 'retired' && <button disabled={releaseBusy} className="btn-outline px-3" onClick={() => runReleaseAction(() => knowledgeControlApi.rollback(rev.id), '已回復此知識版本')}><RotateCcw className="h-4 w-4" aria-hidden /> 回復</button>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </section>
+
             <section className="space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

@@ -1,5 +1,6 @@
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any, Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,15 +8,16 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api import deps
+from app.config import settings
 from app.core import security
 from app.core.security import (
     SCOPE_MFA_ENROLL,
     SCOPE_MFA_PENDING,
 )
 from app.crud import crud_user
+from app.demo.manifest import DEMO_PERSONAS
+from app.models.tenant import Tenant
 from app.models.user import User
-from app.schemas.token import Token
-from app.config import settings
 from app.services import totp
 from app.services.emailer import (
     parse_verification_token,
@@ -23,6 +25,108 @@ from app.services.emailer import (
 )
 
 router = APIRouter()
+
+
+DemoPersona = Literal["sales", "field", "master", "newcomer", "viewer", "admin"]
+
+class DemoLoginRequest(BaseModel):
+    persona: DemoPersona
+
+
+def _resolve_demo_user(db: Session, persona: DemoPersona) -> tuple[User, dict[str, Any]]:
+    """Resolve an allowlisted demo identity and fail closed on configuration drift."""
+    from app.models.mka import JobRole, UserJobRoleAssignment
+    from app.services.rls import apply_rls_bypass
+
+    spec = DEMO_PERSONAS[persona]
+    apply_rls_bypass(db)
+    try:
+        demo_tenant_id = UUID(settings.DEMO_TENANT_ID)
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo tenant is not configured",
+        ) from exc
+    tenant = db.query(Tenant).filter(
+        Tenant.id == demo_tenant_id,
+        Tenant.is_demo.is_(True),
+        Tenant.status == "active",
+    ).first()
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo tenant is not available",
+        )
+
+    preferred_email = settings.DEMO_ADMIN_EMAIL if persona == "admin" else spec["email"]
+    user = db.query(User).filter(
+        User.email == preferred_email,
+        User.tenant_id == tenant.id,
+    ).first()
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo role is not available",
+        )
+    if user.role != spec["security_role"]:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo role configuration mismatch",
+        )
+    # Company management is tenant ownership, never platform superuser access.
+    if user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Demo role configuration mismatch",
+        )
+
+    expected_job_role = spec.get("job_role")
+    if expected_job_role:
+        assignment = (
+            db.query(UserJobRoleAssignment)
+            .join(JobRole, JobRole.id == UserJobRoleAssignment.job_role_id)
+            .filter(
+                UserJobRoleAssignment.user_id == user.id,
+                UserJobRoleAssignment.tenant_id == user.tenant_id,
+                UserJobRoleAssignment.active.is_(True),
+                JobRole.role_key == expected_job_role,
+                JobRole.active.is_(True),
+            )
+            .first()
+        )
+        if assignment is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Demo job role is not assigned",
+            )
+    return user, spec
+
+
+@router.post("/login/demo")
+def demo_login(body: DemoLoginRequest, db: Session = Depends(deps.get_db)) -> dict[str, Any]:
+    """Issue a short-lived token for one of the explicitly allowlisted demo doors."""
+    if not settings.DEMO_LOGIN_ENABLED:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    user, spec = _resolve_demo_user(db, body.persona)
+    expires = timedelta(minutes=settings.DEMO_ACCESS_TOKEN_EXPIRE_MINUTES)
+    return {
+        "access_token": security.create_access_token(
+            user.email,
+            expires_delta=expires,
+            tenant_id=user.tenant_id,
+            additional_claims={
+                "demo_mode": True,
+                "demo_persona": body.persona,
+                "demo_read_only": bool(spec["read_only"]),
+                "demo_mutation_scope": spec["mutation_scope"],
+            },
+        ),
+        "token_type": "bearer",
+        "persona": body.persona,
+        "read_only": bool(spec["read_only"]),
+        "expires_in": int(expires.total_seconds()),
+    }
 
 
 def _issue_full_token(user: User) -> dict:
@@ -126,8 +230,8 @@ def _user_from_partial(db: Session, partial_token: str, allowed_scopes: tuple[st
 @router.post("/mfa/setup", response_model=MFASetupResponse)
 def mfa_setup(
     db: Session = Depends(deps.get_db),
-    partial_token: Optional[str] = None,
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+    partial_token: str | None = None,
+    current_user: User | None = Depends(deps.get_current_user_optional),
 ) -> Any:
     """產生 TOTP secret（尚未啟用，需 /mfa/enable 確認）。
 
@@ -157,11 +261,11 @@ def mfa_setup(
 def mfa_enable(
     body: MFACodeRequest,
     db: Session = Depends(deps.get_db),
-    partial_token: Optional[str] = None,
-    current_user: Optional[User] = Depends(deps.get_current_user_optional),
+    partial_token: str | None = None,
+    current_user: User | None = Depends(deps.get_current_user_optional),
 ) -> Any:
     """以 TOTP 碼確認並啟用 MFA。mfa_enroll 流程成功後直接核發完整 token。"""
-    enroll_user: Optional[User] = None
+    enroll_user: User | None = None
     if current_user is not None:
         user = current_user
     elif partial_token:

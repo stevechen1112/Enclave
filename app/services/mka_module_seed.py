@@ -1,12 +1,12 @@
 """Seed first-party MKA job modules + default job roles."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-CANONICAL_MODULES: List[Dict[str, Any]] = [
+CANONICAL_MODULES: list[dict[str, Any]] = [
     {
         "module_key": "spec_sop",
         "name": "規格與 SOP",
@@ -106,7 +106,7 @@ CANONICAL_MODULES: List[Dict[str, Any]] = [
 ]
 
 
-def canonical_default_config(module_key: str) -> Dict[str, Any]:
+def canonical_default_config(module_key: str) -> dict[str, Any]:
     """正式模組的預設 config（版本化 merge 的 base）。"""
     for spec in CANONICAL_MODULES:
         if spec["module_key"] == module_key:
@@ -116,7 +116,7 @@ def canonical_default_config(module_key: str) -> Dict[str, Any]:
 
 # ── 正式任務定義（Phase 2：版本化 TaskDefinition 的全域種子）──────────────────
 
-CANONICAL_TASKS: List[Dict[str, Any]] = [
+CANONICAL_TASKS: list[dict[str, Any]] = [
     {
         "task_key": "quote",
         "name": "開報價單",
@@ -247,7 +247,7 @@ def seed_canonical_task_definitions(db: Session) -> int:
     db.flush()
     return count
 
-DEFAULT_JOB_ROLES: List[Dict[str, Any]] = [
+DEFAULT_JOB_ROLES: list[dict[str, Any]] = [
     {
         "role_key": "sales",
         "name": "業務",
@@ -267,6 +267,12 @@ DEFAULT_JOB_ROLES: List[Dict[str, Any]] = [
         "default_module_keys": ["quality_8d", "spec_sop"],
     },
     {
+        "role_key": "master",
+        "name": "班長／師傅",
+        "description": "現場經驗、異常協助與新人傳承",
+        "default_module_keys": ["training_knowhow", "incident_handover", "spec_sop"],
+    },
+    {
         "role_key": "supervisor",
         "name": "主管",
         "description": "審核與跨職能工作台",
@@ -283,7 +289,7 @@ DEFAULT_JOB_ROLES: List[Dict[str, Any]] = [
 ]
 
 
-def seed_canonical_modules(db: Session, tenant_id: Optional[UUID] = None) -> int:
+def seed_canonical_modules(db: Session, tenant_id: UUID | None = None) -> int:
     """Upsert 五個正式模組（tenant_id=None 為全租戶定義）。"""
     from app.models.mka import JobModule
 

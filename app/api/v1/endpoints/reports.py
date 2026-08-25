@@ -13,7 +13,7 @@ from typing import Optional, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
@@ -31,8 +31,8 @@ class ReportCreate(BaseModel):
     prompt: str
     context_query: Optional[str] = None
     content: str
-    sources: List[dict] = []
-    document_ids: List[str] = []
+    sources: List[dict] = Field(default_factory=list)
+    document_ids: List[str] = Field(default_factory=list)
 
 
 class ReportUpdate(BaseModel):
@@ -42,6 +42,7 @@ class ReportUpdate(BaseModel):
 
 
 class ReportSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     title: str
     template: str
@@ -50,11 +51,8 @@ class ReportSummary(BaseModel):
     is_pinned: bool
     created_at: str
 
-    class Config:
-        from_attributes = True
-
-
 class ReportDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     title: str
     template: str
@@ -67,10 +65,6 @@ class ReportDetail(BaseModel):
     is_pinned: bool
     created_at: str
     updated_at: Optional[str]
-
-    class Config:
-        from_attributes = True
-
 
 class ReportListResponse(BaseModel):
     reports: List[ReportSummary]

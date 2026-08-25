@@ -206,8 +206,9 @@ function FolderImportWizard({
         }
       }))
       setStep('confirm')
-    } catch (e: any) {
-      setScanError(e?.response?.data?.detail || 'AI 掃描失敗，請確認 Ollama 是否已啟動（http://localhost:11434）')
+    } catch (e: unknown) {
+      const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setScanError(detail || 'AI 掃描失敗，請確認 Ollama 是否已啟動（http://localhost:11434）')
       setStep('select')
     }
   }
@@ -231,9 +232,10 @@ function FolderImportWizard({
         try {
           await docApi.upload(file)
           succeeded++
-        } catch (err: any) {
-          const status = err?.response?.status ?? ''
-          const detail = err?.response?.data?.detail
+        } catch (err: unknown) {
+          const response = (err as { response?: { status?: number; data?: { detail?: string | { message?: string } } } })?.response
+          const status = response?.status ?? ''
+          const detail = response?.data?.detail
           const msg = typeof detail === 'string' ? detail : (detail?.message ?? '')
           failedFiles.push({ name: file.name, reason: status ? `${status} ${msg}`.trim() : '網路錯誤' })
         }
@@ -823,4 +825,3 @@ export default function AgentPage() {
     </div>
   )
 }
-

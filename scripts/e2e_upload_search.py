@@ -19,7 +19,7 @@ for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines():
 
 BASE = os.getenv("E2E_API_BASE", "http://localhost:8000/api/v1")
 EMAIL = os.getenv("E2E_ADMIN_EMAIL", "admin@example.com")
-PASSWORD = os.getenv("E2E_ADMIN_PASSWORD", os.getenv("FIRST_SUPERUSER_PASSWORD", "admin123"))
+PASSWORD = os.environ["E2E_ADMIN_PASSWORD"]
 SAMPLE = ROOT / "tests" / "fixtures" / "sample.txt"
 
 

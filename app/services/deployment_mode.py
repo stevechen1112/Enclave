@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+import logging
+from typing import Any
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db.session import SessionLocal
 from app.models.feature_flag import FeatureFlag
 
-
 DEPLOYMENT_MODE_FLAG_KEY = "deployment_mode"
 DEPLOYMENT_MODE_GPU = "gpu"
 DEPLOYMENT_MODE_NOGPU = "nogpu"
 _VALID_MODES = {DEPLOYMENT_MODE_GPU, DEPLOYMENT_MODE_NOGPU}
+logger = logging.getLogger(__name__)
 
 
 def _model_for_provider(provider: str, role: str) -> str:
@@ -77,9 +79,7 @@ def set_deployment_mode(db: Session, mode: str) -> str:
     return normalized
 
 
-def resolve_runtime_profiles(db: Session) -> Dict[str, Any]:
-    mode = get_deployment_mode(db)
-
+def _runtime_profiles_for_mode(mode: str) -> dict[str, Any]:
     if mode == DEPLOYMENT_MODE_GPU:
         return {
             "mode": mode,
@@ -133,9 +133,19 @@ def resolve_runtime_profiles(db: Session) -> Dict[str, Any]:
     }
 
 
-def resolve_runtime_profiles_no_db() -> Dict[str, Any]:
+def resolve_runtime_profiles(db: Session) -> dict[str, Any]:
+    return _runtime_profiles_for_mode(get_deployment_mode(db))
+
+
+def resolve_runtime_profiles_no_db() -> dict[str, Any]:
     db = SessionLocal()
     try:
         return resolve_runtime_profiles(db)
+    except SQLAlchemyError:
+        logger.warning(
+            "Deployment mode database lookup failed; using fail-safe nogpu runtime profile",
+            exc_info=True,
+        )
+        return _runtime_profiles_for_mode(DEPLOYMENT_MODE_NOGPU)
     finally:
         db.close()

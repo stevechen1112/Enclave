@@ -175,6 +175,7 @@ function RolesSection() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload()
   }, [reload])
 
@@ -432,7 +433,7 @@ function TasksSection() {
                 適用職能：{shown.applicable_job_role_keys.length
                   ? shown.applicable_job_role_keys.join('、')
                   : '不限'}
-                　風險：{shown.risk_level}
+                {'　'}風險：{shown.risk_level}
               </p>
             </li>
           )
@@ -457,6 +458,7 @@ function ModulesSection() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload()
   }, [reload])
 
@@ -602,6 +604,7 @@ function ApprovalsSection() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload()
   }, [reload])
 

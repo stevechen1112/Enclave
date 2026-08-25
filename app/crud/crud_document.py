@@ -110,9 +110,12 @@ def create_chunk(
     vector_id: str = None
 ) -> DocumentChunk:
     chunk_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
+    document = db.query(Document).filter(Document.id == document_id).first()
+    revision = int(getattr(document, "version", 1) or 1)
     db_obj = DocumentChunk(
         document_id=document_id,
         tenant_id=tenant_id,
+        document_revision=revision,
         chunk_index=chunk_index,
         text=content,
         chunk_hash=chunk_hash,

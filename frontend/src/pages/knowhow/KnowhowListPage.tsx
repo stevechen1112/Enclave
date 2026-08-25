@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, BookOpen, ChevronRight, Loader2, Plus } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronRight, Loader2, Mic, PenLine } from 'lucide-react'
 import clsx from 'clsx'
 import toast from 'react-hot-toast'
 import { knowhowApi, type KnowhowCard } from '../../services/mka'
@@ -69,6 +69,20 @@ export default function KnowhowListPage() {
         </div>
       </header>
 
+      <button
+        type="button"
+        onClick={() => navigate('/knowhow/interview')}
+        className="flex min-h-20 items-center gap-3 rounded-2xl bg-accent px-5 text-left text-white shadow-sm hover:bg-accent-hover active:scale-[0.99]"
+      >
+        <Mic className="h-8 w-8 shrink-0" aria-hidden />
+        <span>
+          <span className="block text-xl font-bold">開始師傅訪談</span>
+          <span className="mt-1 block text-base text-white/85">
+            手機直接錄音，系統分段保存、轉成逐字稿，再整理成知識草稿
+          </span>
+        </span>
+      </button>
+
       {creating ? (
         <div className="flex flex-col gap-3 rounded-2xl border-2 border-accent bg-surface p-5">
           <label htmlFor="new-card-title" className="text-lg font-semibold text-ink">
@@ -103,10 +117,10 @@ export default function KnowhowListPage() {
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="flex min-h-16 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-accent/60 text-xl font-bold text-accent hover:bg-accent/5 active:scale-[0.99]"
+          className="flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line text-lg font-bold text-muted hover:border-accent hover:bg-accent/5 hover:text-accent active:scale-[0.99]"
         >
-          <Plus className="h-7 w-7" aria-hidden />
-          記下一筆經驗
+          <PenLine className="h-6 w-6" aria-hidden />
+          手動建立經驗卡
         </button>
       )}
 
@@ -120,7 +134,7 @@ export default function KnowhowListPage() {
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <BookOpen className="h-16 w-16 text-line" aria-hidden />
           <p className="text-xl font-bold text-ink">還沒有經驗卡片</p>
-          <p className="text-lg text-muted">點上面「記下一筆經驗」開始累積師傅的做法。</p>
+          <p className="text-lg text-muted">可直接開始師傅訪談，或手動建立一張經驗卡。</p>
         </div>
       )}
 

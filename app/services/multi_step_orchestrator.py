@@ -39,9 +39,11 @@ class MultiStepOrchestrator:
         from app.services.retrieval_facade import get_retrieval_facade
 
         facade = get_retrieval_facade()
-        self._filter_dict = filter_dict or {}
+        from app.services.kb_scope_policy import resolve_kb_revision_scope
+        self._filter_dict = resolve_kb_revision_scope(authz=authz, requested=filter_dict, db=db)
         plan = plan or build_query_plan(question)
         arms = arms_for_plan(plan)
+        plan.arms = list(arms)
         # unanswerable 仍做一次輕量 chunk 確認，避免假拒答
         if plan.intent == "unanswerable" and "chunk" not in arms:
             arms = ["chunk"]
@@ -101,12 +103,16 @@ class MultiStepOrchestrator:
                 fusion_meta.update({k: v for k, v in meta.items() if k != "providers_called"})
             elif arm == "compiled":
                 await self._run_compiled(
-                    authz, question, clause_projections, trace
+                    authz, question, clause_projections, trace, db=db
                 )
             elif arm == "pageindex":
                 # P2-4：PageIndex 長文件臂（feature-flagged）
                 await self._run_pageindex(
-                    authz, question, chunk_results, trace
+                    authz, question, chunk_results, trace, db=db
+                )
+            elif arm in {"structured", "procedure"}:
+                await self._run_projection(
+                    arm, authz, question, plan, chunk_results, trace, db=db
                 )
 
         refusal = None
@@ -133,7 +139,7 @@ class MultiStepOrchestrator:
         elif has_evidence and amount_question_lacks_numeric_evidence(question, chunk_results):
             # 已命中檔名／文件時，金額常在非 top-k chunk（表尾總價）→ 先擴文件頭再判定
             chunk_results = await self._expand_chunks_for_amount(
-                facade, authz, chunk_results, catalog_hits
+                facade, authz, chunk_results, catalog_hits, db=db
             )
             if amount_question_lacks_numeric_evidence(question, chunk_results):
                 refusal = build_refusal(
@@ -201,6 +207,34 @@ class MultiStepOrchestrator:
             **fusion_meta,
         }
 
+    async def _run_projection(self, arm, authz, question, plan, out, trace, *, db=None) -> None:
+        from app.db.session import SessionLocal
+        from app.services.projection_retrieval import load_procedure_evidence, load_structured_evidence
+
+        session = db or SessionLocal()
+        try:
+            loader = load_structured_evidence if arm == "structured" else load_procedure_evidence
+            rows = loader(
+                db=session,
+                authz=authz,
+                question=question,
+                plan=plan,
+                scope=getattr(self, "_filter_dict", None) or {},
+            )
+            out[0:0] = rows
+            trace.add_step(
+                arm=arm,
+                query=question,
+                hit_count=len(rows),
+                hit_titles=[row.get("filename") or arm for row in rows],
+            )
+        except Exception as exc:
+            logger.warning("%s projection step failed: %s", arm, exc)
+            trace.add_step(arm=arm, query=question, hit_count=0, error=str(exc))
+        finally:
+            if db is None:
+                session.close()
+
     async def _expand_chunks_for_amount(
         self,
         facade,
@@ -209,6 +243,7 @@ class MultiStepOrchestrator:
         catalog_hits: List[Dict[str, Any]],
         *,
         n: int = 8,
+        db=None,
     ) -> List[Dict[str, Any]]:
         """金額題：對已命中檔名補文件前段 chunks，避免總價在尾段被拒答誤殺。"""
         filenames: List[str] = []
@@ -233,7 +268,13 @@ class MultiStepOrchestrator:
             try:
                 head = await loop.run_in_executor(
                     None,
-                    lambda f=fn: facade.get_document_head(authz=authz, filename=f, n=n),
+                    lambda f=fn: facade.get_document_head(
+                        authz=authz,
+                        filename=f,
+                        n=n,
+                        scope=getattr(self, "_filter_dict", None),
+                        db=db,
+                    ),
                 )
             except Exception as exc:
                 logger.warning("amount expand head failed for %s: %s", fn, exc)
@@ -257,8 +298,7 @@ class MultiStepOrchestrator:
                 )
         return out
 
-    @staticmethod
-    def _catalog_index_hit(authz, tokens: List[str], db) -> bool:
+    def _catalog_index_hit(self, authz, tokens: List[str], db) -> bool:
         """檔名 token 實際命中 catalog 索引才掛 catalog 臂；任何失敗一律不掛。"""
         try:
             from app.services.catalog_retrieval import get_catalog_retriever
@@ -266,8 +306,15 @@ class MultiStepOrchestrator:
             tenant_id = getattr(authz, "tenant_id", None)
             if tenant_id is None:
                 return False
+            scope = getattr(self, "_filter_dict", None) or {}
+            revision_ids = [UUID(str(value)) for value in (scope.get("kb_revision_ids") or [])]
             return get_catalog_retriever().filename_token_hit(
-                tenant_id=tenant_id, tokens=tokens, db=db
+                tenant_id=tenant_id,
+                tokens=tokens,
+                kb_revision_id=scope.get("kb_revision_id"),
+                kb_revision_ids=revision_ids if "kb_revision_ids" in scope else None,
+                authz=authz,
+                db=db,
             )
         except Exception as exc:
             logger.debug("catalog index pre-check skipped: %s", exc)
@@ -280,7 +327,12 @@ class MultiStepOrchestrator:
             try:
                 hits = await loop.run_in_executor(
                     None,
-                    lambda qq=q: facade.search_catalog(authz=authz, query=qq, db=db),
+                    lambda qq=q: facade.search_catalog(
+                        authz=authz,
+                        query=qq,
+                        filters=getattr(self, "_filter_dict", None),
+                        db=db,
+                    ),
                 )
                 titles = []
                 for h in hits:
@@ -485,7 +537,7 @@ class MultiStepOrchestrator:
                     retrieved = await loop.run_in_executor(
                         None,
                         lambda qq=q: facade.search(
-                            authz=authz, query=qq, top_k=top_k, db=db
+                            authz=authz, query=qq, top_k=top_k, db=db, scope=scope
                         ),
                     )
                     titles = []
@@ -529,6 +581,7 @@ class MultiStepOrchestrator:
                 import unicodedata as _ud
 
                 resolved_fn = fn
+                base_scope = dict(getattr(self, "_filter_dict", None) or {})
                 # 先嘗試以提及字串直接 scope；失敗再用檔名包含／尾碼軟匹配解析真實檔名
                 retrieved = await loop.run_in_executor(
                     None,
@@ -537,7 +590,7 @@ class MultiStepOrchestrator:
                         # hybrid：scoped 內仍需 BM25 關鍵字訊號，否則
                         # 「單價/MOQ」這類詞在純語意下贏不了產品概述 chunk
                         # （2026-08-06 線上報價問答根因）
-                        mode="hybrid", scope={"filename": f}, db=db,
+                        mode="hybrid", scope={**base_scope, "filename": f}, db=db,
                     ),
                 )
                 hits = [
@@ -553,6 +606,7 @@ class MultiStepOrchestrator:
                             authz=authz,
                             query=fn,
                             top_k=max(top_k * 4, 20),
+                            scope=base_scope,
                             db=db,
                         ),
                     )
@@ -586,7 +640,7 @@ class MultiStepOrchestrator:
                             None,
                             lambda f=matched_name: facade.search(
                                 authz=authz, query=clean_query, top_k=scoped_k,
-                                mode="semantic", scope={"filename": f}, db=db,
+                                mode="semantic", scope={**base_scope, "filename": f}, db=db,
                             ),
                         )
                         hits = [
@@ -605,7 +659,13 @@ class MultiStepOrchestrator:
                 # 文件開頭，語意排名不一定進 top-k（2026-08-03 E073 根因）
                 head = await loop.run_in_executor(
                     None,
-                    lambda f=resolved_fn: facade.get_document_head(authz=authz, filename=f, n=2),
+                    lambda f=resolved_fn: facade.get_document_head(
+                        authz=authz,
+                        filename=f,
+                        n=2,
+                        scope=getattr(self, "_filter_dict", None),
+                        db=db,
+                    ),
                 )
                 head_new = []
                 for h in head:
@@ -644,20 +704,23 @@ class MultiStepOrchestrator:
                 logger.warning("scoped chunk step failed for %s: %s", fn, exc)
                 trace.add_step(arm="chunk_scoped", query=f"《{fn}》", hit_count=0, error=str(exc))
 
-    async def _run_compiled(self, authz, question, out, trace) -> None:
+    async def _run_compiled(self, authz, question, out, trace, *, db=None) -> None:
         try:
             from app.db.session import SessionLocal
             from app.services.clause_projection import load_clause_projections_for_query
 
-            session = SessionLocal()
+            session = db or SessionLocal()
             try:
                 projs = load_clause_projections_for_query(
                     db=session,
                     tenant_id=authz.tenant_id,
                     query=question,
+                    authz=authz,
+                    scope=getattr(self, "_filter_dict", None),
                 )
             finally:
-                session.close()
+                if db is None:
+                    session.close()
             out.extend(projs)
             titles = [p.get("filename") or "clause_projection" for p in projs]
             trace.add_step(
@@ -670,7 +733,7 @@ class MultiStepOrchestrator:
             logger.warning("compiled step failed: %s", exc)
             trace.add_step(arm="compiled", query=question, hit_count=0, error=str(exc))
 
-    async def _run_pageindex(self, authz, question, out, trace) -> None:
+    async def _run_pageindex(self, authz, question, out, trace, *, db=None) -> None:
         """P2-4：PageIndex 長文件臂（feature-flagged）。"""
         from app.config import settings
         if not settings.PAGEINDEX_ENABLED:
@@ -680,17 +743,51 @@ class MultiStepOrchestrator:
             from app.models.knowledge_base import DocumentArtifact
             from app.services.pageindex import get_pageindex_retriever
 
-            session = SessionLocal()
+            session = db or SessionLocal()
             try:
+                from app.models.document import Document
+                from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
+                from app.services.document_visibility import apply_document_visibility, deny_set_allows
                 # 查詢所有 pageindex_tree artifacts
-                artifacts = (
-                    session.query(DocumentArtifact)
-                    .filter(
+                artifact_query = session.query(DocumentArtifact).join(
+                    Document, Document.id == DocumentArtifact.document_id
+                ).filter(
                         DocumentArtifact.artifact_type == "pageindex_tree",
                         DocumentArtifact.status == "active",
-                    )
-                    .all()
                 )
+                scope = getattr(self, "_filter_dict", None) or {}
+                raw_revision_ids = scope.get("kb_revision_ids") or []
+                revision_scoped = bool(raw_revision_ids) or "kb_revision_ids" in scope
+                artifact_query = apply_document_visibility(
+                    artifact_query, authz=authz, db=session,
+                    require_completed=not revision_scoped,
+                )
+                if raw_revision_ids or "kb_revision_ids" in scope:
+                    revision_ids = [UUID(str(value)) for value in raw_revision_ids]
+                    from app.services.document_readiness import ready_revision_pairs
+
+                    artifact_query = artifact_query.join(
+                        KnowledgeBaseRevisionDocument,
+                        (KnowledgeBaseRevisionDocument.document_id == DocumentArtifact.document_id)
+                        & (KnowledgeBaseRevisionDocument.document_revision == DocumentArtifact.revision),
+                    ).filter(KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids))
+                    ready_pairs = ready_revision_pairs(
+                        session,
+                        tenant_id=authz.tenant_id,
+                        kb_revision_ids=revision_ids,
+                    )
+                else:
+                    artifact_query = artifact_query.filter(DocumentArtifact.revision == Document.version)
+                    ready_pairs = None
+                artifacts = [
+                    artifact
+                    for artifact in artifact_query.all()
+                    if deny_set_allows(artifact.document_id, authz=authz)
+                    and (
+                        ready_pairs is None
+                        or (artifact.document_id, artifact.revision) in ready_pairs
+                    )
+                ]
                 if not artifacts:
                     return
 
@@ -716,7 +813,8 @@ class MultiStepOrchestrator:
                             hit_titles=[f"pages {pages[0]}-{pages[-1]}"],
                         )
             finally:
-                session.close()
+                if db is None:
+                    session.close()
         except Exception as exc:
             logger.warning("pageindex step failed: %s", exc)
             trace.add_step(arm="pageindex", query=question, hit_count=0, error=str(exc))

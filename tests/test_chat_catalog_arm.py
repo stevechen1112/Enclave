@@ -67,6 +67,9 @@ def _run_retrieve(question: str, *, catalog_hits, catalog_raises=None, chunk_res
 
     with patch(
         "app.services.retrieval_facade.get_retrieval_facade", return_value=facade
+    ), patch(
+        "app.services.kb_scope_policy.resolve_kb_revision_scope",
+        return_value={},
     ):
         ctx = asyncio.run(
             orch.retrieve_context(tenant_id=uuid4(), question=question, authz=authz)

@@ -5,13 +5,14 @@ import logging
 import threading
 from typing import Optional
 
-from app.gateway.adapter_factory import build_gateway_adapters
+from app.gateway.adapter_factory import build_gateway_adapters, build_health_adapters
 from app.gateway.authorization import get_gateway_authorizer
 from app.gateway.router import GatewayRouter
 
 logger = logging.getLogger(__name__)
 
 _gateway_router: Optional[GatewayRouter] = None
+_health_adapters = None
 _gateway_lock = threading.Lock()
 
 
@@ -39,3 +40,13 @@ def get_configured_gateway_router() -> GatewayRouter:
         logger.info("GatewayRouter initialized with adapters: %s", list(adapters.keys()))
         _gateway_router = router
         return _gateway_router
+
+
+def get_configured_health_adapters():
+    """Singleton set used by startup and operator health probes."""
+    global _health_adapters
+    if _health_adapters is None:
+        with _gateway_lock:
+            if _health_adapters is None:
+                _health_adapters = build_health_adapters()
+    return _health_adapters

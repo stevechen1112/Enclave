@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -20,6 +20,9 @@ from app.services.job_context import (
     assert_module_access,
     build_effective_job_context,
 )
+
+if TYPE_CHECKING:
+    from app.models.mka import TaskRun
 
 logger = logging.getLogger(__name__)
 

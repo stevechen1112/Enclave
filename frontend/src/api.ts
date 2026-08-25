@@ -9,6 +9,8 @@ import { parseApiError } from './lib/apiError'
 
 const api = axios.create({ baseURL: '/api/v1' })
 
+export type DemoPersona = 'sales' | 'field' | 'master' | 'newcomer' | 'viewer' | 'admin'
+
 // ─── Request interceptor: attach JWT ───
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
@@ -41,6 +43,16 @@ export const authApi = {
     const { data } = await api.post<{ access_token: string }>('/auth/login/access-token', params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
+    return data
+  },
+  demoLogin: async (persona: DemoPersona) => {
+    const { data } = await api.post<{
+      access_token: string
+      token_type: string
+      persona: DemoPersona
+      read_only: boolean
+      expires_in: number
+    }>('/auth/login/demo', { persona })
     return data
   },
   me: () => api.get<User>('/users/me').then(r => r.data),
@@ -291,6 +303,45 @@ export const kbApi = {
   // P13-8: Usage report
   usageReport: (days?: number) =>
     api.get('/kb-maintenance/kb/usage-report', { params: days ? { days } : {} }).then(r => r.data),
+}
+
+export interface KnowledgeControlOverview {
+  readiness: { ready: number; partial: number; needs_attention: number }
+  profiled_documents: number
+  knowledge_bases: Array<{
+    id: string
+    name: string
+    active_revision: number
+    revisions: Array<{ id: string; revision: number; status: string; manifest_hash: string | null
+      passed_gates: string[]; required_gate_count: number; promotion_ready: boolean }>
+  }>
+}
+
+export const knowledgeControlApi = {
+  overview: () => api.get<KnowledgeControlOverview>('/knowledge-control/overview').then(r => r.data),
+  documents: () => api.get<Array<{
+    document_id: string; revision: number; format: string; support_level: string
+    profile_answer_ready: boolean; answer_ready: boolean; published_revision: number | null
+    readiness_reasons: string[]; capabilities: Record<string, boolean>; warnings: Array<{ code: string; action: string }>
+  }>>('/knowledge-control/documents').then(r => r.data),
+  createCandidate: () => api.post('/knowledge-control/revisions/candidate', { versions: {} }).then(r => r.data),
+  transition: (id: string, target: 'shadow' | 'rejected') =>
+    api.post(`/knowledge-control/revisions/${id}/transition`, { target }).then(r => r.data),
+  promote: (id: string, expectedManifestHash: string) => api.post(`/knowledge-control/revisions/${id}/promote`, {
+    expected_manifest_hash: expectedManifestHash,
+  }).then(r => r.data),
+  rollback: (id: string) => api.post(`/knowledge-control/revisions/${id}/rollback`).then(r => r.data),
+  feedback: (status?: string) => api.get<Array<{
+    id: string; message_id: string; rating: number; category: string | null; comment: string | null
+    status: string; owner_id: string; processing_history: Array<Record<string, string>>; created_at: string
+  }>>('/knowledge-control/feedback', { params: status ? { status } : {} }).then(r => r.data),
+  processFeedback: (id: string, status: 'open' | 'acknowledged' | 'resolved', note: string) =>
+    api.patch(`/knowledge-control/feedback/${id}`, { status, note }).then(r => r.data),
+  freshness: () => api.get<Array<{
+    id: string; document_id: string; state: string; reasons: string[]; owner_id: string | null
+    review_due_at: string | null; last_reviewed_at: string | null; upstream_sync_at: string | null
+  }>>('/knowledge-control/freshness').then(r => r.data),
+  scanFreshness: () => api.post('/knowledge-control/freshness/scan').then(r => r.data),
 }
 
 // ─── Phase 10: Agent ───

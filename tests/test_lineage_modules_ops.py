@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import uuid
+import hashlib
 from datetime import datetime, timezone
 
 import pytest
@@ -95,6 +96,17 @@ class TestCitationLineage:
         cites = CitationBuilder().build(results, acl_revision=1)
         assert cites[0].content_hash
         assert CitationBuilder().completeness(cites)["rate"] == 1.0
+
+    def test_opaque_document_revision_is_deterministic(self):
+        """Opaque connector revisions must survive process restarts unchanged."""
+        opaque_revision = "sharepoint-etag:W/\"7f2c-2026-08-25\""
+        expected = (
+            int.from_bytes(hashlib.sha256(opaque_revision.encode("utf-8")).digest()[:4], "big")
+            % 2_000_000_000
+        ) + 1
+
+        assert CitationBuilder._coerce_revision(opaque_revision) == expected
+        assert CitationBuilder._coerce_revision(opaque_revision) == expected
 
 
 class TestModuleGating:

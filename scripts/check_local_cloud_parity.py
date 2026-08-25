@@ -3,16 +3,17 @@
 
 Usage examples:
   python scripts/check_local_cloud_parity.py
-  python scripts/check_local_cloud_parity.py --host 172.237.5.254 --user root --key C:/Users/User/.ssh/id_rsa_linode
-  python scripts/check_local_cloud_parity.py --remote-env /opt/aihr/.env.production
+  python scripts/check_local_cloud_parity.py --host <deployment-host> --user <operator> --key <key-path>
+  python scripts/check_local_cloud_parity.py --remote-env /opt/enclave/.env.production
 """
 
 from __future__ import annotations
 
 import argparse
 import re
+import shlex
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Dict, Iterable, Tuple
 
 PLACEHOLDER_PATTERNS = [
     r"^$",
@@ -36,8 +37,8 @@ SENSITIVE_KEYS = {
 }
 
 
-def parse_env_file(path: Path) -> Dict[str, str]:
-    env: Dict[str, str] = {}
+def parse_env_file(path: Path) -> dict[str, str]:
+    env: dict[str, str] = {}
     if not path.exists():
         return env
 
@@ -69,7 +70,7 @@ def safe_view(key: str, value: str) -> str:
     return value
 
 
-def print_coverage(title: str, base: Dict[str, str], target: Dict[str, str]) -> None:
+def print_coverage(title: str, base: dict[str, str], target: dict[str, str]) -> None:
     missing = sorted(k for k in base if k not in target)
     print(f"\n=== {title} ===")
     print(f"missing keys: {len(missing)}")
@@ -77,7 +78,12 @@ def print_coverage(title: str, base: Dict[str, str], target: Dict[str, str]) -> 
         print("sample missing:", ", ".join(missing[:12]))
 
 
-def print_required(required: Iterable[str], local_prod: Dict[str, str], local_dev: Dict[str, str], remote: Dict[str, str]) -> None:
+def print_required(
+    required: Iterable[str],
+    local_prod: dict[str, str],
+    local_dev: dict[str, str],
+    remote: dict[str, str] | None,
+) -> None:
     print("\n=== Required key sanity ===")
     for key in required:
         prod_v = local_prod.get(key, "")
@@ -94,17 +100,20 @@ def print_required(required: Iterable[str], local_prod: Dict[str, str], local_de
         print(" | ".join(line))
 
 
-def fetch_remote_env(host: str, user: str, key_file: str, remote_env: str) -> Dict[str, str]:
+def fetch_remote_env(
+    host: str, user: str, key_file: str, remote_env: str
+) -> dict[str, str]:
     try:
         import paramiko
-    except Exception as exc:
+    except ImportError as exc:
         raise RuntimeError("paramiko is required for remote checks. Install with: pip install paramiko") from exc
 
     ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, username=user, key_filename=key_file, timeout=20)
+    ssh.load_system_host_keys()
+    ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
     try:
-        cmd = f"cat {remote_env}"
+        ssh.connect(host, username=user, key_filename=key_file, timeout=20)
+        cmd = f"cat -- {shlex.quote(remote_env)}"
         _, stdout, stderr = ssh.exec_command(cmd, timeout=20)
         out = stdout.read().decode("utf-8", errors="replace")
         err = stderr.read().decode("utf-8", errors="replace").strip()
@@ -112,7 +121,7 @@ def fetch_remote_env(host: str, user: str, key_file: str, remote_env: str) -> Di
         if rc != 0:
             raise RuntimeError(f"failed to read remote env: {err}")
 
-        env: Dict[str, str] = {}
+        env: dict[str, str] = {}
         for raw in out.splitlines():
             line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
@@ -120,6 +129,8 @@ def fetch_remote_env(host: str, user: str, key_file: str, remote_env: str) -> Di
             key, value = line.split("=", 1)
             env[key.strip()] = value.strip()
         return env
+    except (OSError, paramiko.SSHException) as exc:
+        raise RuntimeError("remote environment check failed") from exc
     finally:
         ssh.close()
 
@@ -129,7 +140,7 @@ def main() -> int:
     parser.add_argument("--host", help="Remote host (optional)")
     parser.add_argument("--user", default="root", help="Remote SSH user")
     parser.add_argument("--key", dest="key_file", help="SSH private key path")
-    parser.add_argument("--remote-env", default="/opt/aihr/.env.production", help="Remote env file path")
+    parser.add_argument("--remote-env", default="/opt/enclave/.env.production", help="Remote env file path")
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parents[1]
@@ -147,7 +158,7 @@ def main() -> int:
         try:
             remote_env = fetch_remote_env(args.host, args.user, args.key_file, args.remote_env)
             print_coverage("Cloud parity (.env.production.example vs remote .env.production)", env_prod_example, remote_env)
-        except Exception as exc:
+        except RuntimeError as exc:
             print(f"\n[WARN] remote parity check skipped: {exc}")
 
     required = [

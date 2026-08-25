@@ -1,11 +1,10 @@
 import logging
-import os
 
-from app.db.session import SessionLocal
-from app.crud import crud_user, crud_tenant
-from app.schemas.user import UserCreate
-from app.schemas.tenant import TenantCreate
 from app.config import settings
+from app.crud import crud_tenant, crud_user
+from app.db.session import SessionLocal
+from app.schemas.tenant import TenantCreate
+from app.schemas.user import UserCreate
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,18 +21,20 @@ def init_db() -> None:
             "⚠️  Using default superuser email 'admin@example.com'. "
             "Set FIRST_SUPERUSER_EMAIL in .env for production."
         )
-    if superuser_password == "admin123":
-        logger.warning(
-            "⚠️  Using default superuser password. "
-            "Set FIRST_SUPERUSER_PASSWORD in .env for production."
+    if len(superuser_password) < 16:
+        raise RuntimeError(
+            "FIRST_SUPERUSER_PASSWORD must be an injected high-entropy value "
+            "with at least 16 characters."
         )
 
-    # Check if tenant exists
-    tenant = crud_tenant.get_by_name(db, name="Demo Tenant")
+    # Initial administrator belongs to the configured real organization.  The
+    # passwordless public Demo is created separately by scripts/demo_tenant.py.
+    organization_name = settings.ORGANIZATION_NAME.strip() or "My Organization"
+    tenant = crud_tenant.get_by_name(db, name=organization_name)
     if not tenant:
-        logger.info("Creating demo tenant")
+        logger.info("Creating organization tenant: %s", organization_name)
         tenant_in = TenantCreate(
-            name="Demo Tenant",
+            name=organization_name,
             plan="enterprise",
             status="active",
         )

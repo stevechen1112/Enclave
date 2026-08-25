@@ -79,7 +79,11 @@ FEEDBACK_CATEGORIES = (
 class FeedbackCreate(BaseModel):
     message_id: UUID
     rating: Literal[1, 2] = Field(..., description="1 = 👎 negative, 2 = 👍 positive")
-    category: Optional[Literal["wrong_answer", "incomplete", "outdated", "hallucination", "other"]] = None
+    category: Optional[Literal[
+        "wrong_answer", "wrong_entity", "wrong_number", "wrong_version",
+        "wrong_source", "incomplete", "unclear", "should_abstain",
+        "false_abstain", "permission", "outdated", "hallucination", "other",
+    ]] = None
     comment: Optional[str] = None
 
 

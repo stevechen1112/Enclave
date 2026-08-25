@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.api.deps_permissions import require_admin, require_employee
-from app.api.v1.product_surface import WIKI_PRODUCT_STATUS, apply_product_status_headers
+from app.api.v1.product_surface import (
+    WIKI_PRODUCT_STATUS,
+    apply_product_status_headers,
+    with_runtime_status,
+)
 from app.core.authorization import AuthorizationContext
 from app.models.user import User
 from app.models.wiki import WikiPage, WikiRevision
@@ -27,7 +31,7 @@ _compiler = WikiCompiler()
 
 
 def _wiki_headers(response: Response) -> None:
-    apply_product_status_headers(response, WIKI_PRODUCT_STATUS)
+    apply_product_status_headers(response, with_runtime_status(WIKI_PRODUCT_STATUS))
 
 
 @router.get("/product-status")
@@ -37,8 +41,9 @@ def wiki_product_status(
 ) -> Dict[str, Any]:
     """Honest product surface notice — no Web UI yet."""
     _ = current_user
-    _wiki_headers(response)
-    return dict(WIKI_PRODUCT_STATUS)
+    status = with_runtime_status(WIKI_PRODUCT_STATUS)
+    apply_product_status_headers(response, status)
+    return status
 
 class WikiCompileRequest(BaseModel):
     kb_id: UUID

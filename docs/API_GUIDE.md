@@ -75,7 +75,7 @@ GET /api/v1/tenants/
 [
   {
     "id": "37667944-327d-4df2-af72-012d4ee52e51",
-    "name": "Demo Tenant",
+    "name": "Example Organization",
     "plan": "free",
     "status": "active",
     "created_at": "2026-02-06T07:10:23.700125Z",
@@ -173,7 +173,7 @@ print(tenants)
 - **Email**: admin@example.com
 - **Password**: admin
 - **權限**: Superuser
-- **租戶**: Demo Tenant
+- **租戶**: Example Organization
 
 ## 權限說明
 

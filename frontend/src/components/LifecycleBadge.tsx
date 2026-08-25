@@ -7,6 +7,7 @@ export type LifecycleState =
   | 'pending_review'
   | 'processing'
   | 'searchable'
+  | 'not_searchable'
   | 'failed'
   | 'revoked'
   | 'unknown'
@@ -37,6 +38,11 @@ const CONFIG: Record<
     className: 'bg-emerald-50 text-emerald-800',
     Icon: CheckCircle,
   },
+  not_searchable: {
+    label: '尚不可查',
+    className: 'bg-amber-50 text-amber-800',
+    Icon: AlertCircle,
+  },
   failed: {
     label: '失敗',
     className: 'bg-red-50 text-red-800',
@@ -55,16 +61,19 @@ const CONFIG: Record<
 }
 
 /** Map backend document.status (+ tombstone) to UI lifecycle */
+// eslint-disable-next-line react-refresh/only-export-components
 export function toLifecycle(
   status: string | null | undefined,
   tombstoned?: boolean | string | null,
+  answerReady = false,
 ): LifecycleState {
   if (tombstoned) return 'revoked'
   const s = (status || '').toLowerCase()
+  if (answerReady) return 'searchable'
   if (s === 'uploading') return 'uploading'
   if (s === 'pending_review' || s === 'pending') return 'pending_review'
   if (s === 'parsing' || s === 'embedding' || s === 'processing') return 'processing'
-  if (s === 'completed' || s === 'indexed' || s === 'searchable') return 'searchable'
+  if (s === 'completed' || s === 'indexed' || s === 'searchable') return 'not_searchable'
   if (s === 'failed') return 'failed'
   if (s === 'revoked' || s === 'tombstoned') return 'revoked'
   return 'unknown'
@@ -73,11 +82,13 @@ export function toLifecycle(
 export default function LifecycleBadge({
   status,
   tombstoned,
+  answerReady,
 }: {
   status?: string | null
   tombstoned?: boolean | string | null
+  answerReady?: boolean
 }) {
-  const state = toLifecycle(status, tombstoned)
+  const state = toLifecycle(status, tombstoned, answerReady)
   const { label, className, Icon, spin } = CONFIG[state]
   return (
     <span

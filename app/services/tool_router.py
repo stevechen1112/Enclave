@@ -18,9 +18,13 @@ _INTENT_ARMS = {
 
 def arms_for_plan(plan: QueryPlan) -> List[str]:
     """回傳本計劃應執行的臂（保留 plan.arms 若已明示）。"""
-    if plan.arms:
-        return list(plan.arms)
-    return list(_INTENT_ARMS.get(plan.intent, ["chunk"]))
+    arms = list(plan.arms) if plan.arms else list(_INTENT_ARMS.get(plan.intent, ["chunk"]))
+    slots = set(plan.requested_slots or [])
+    if slots & {"unit_price", "total_price", "amount", "date", "delivery_date", "quantity", "status", "revision"}:
+        arms.insert(0, "structured")
+    if slots & {"steps", "procedure", "actor"}:
+        arms.insert(0, "procedure")
+    return list(dict.fromkeys(arms))
 
 
 def queries_for_arm(plan: QueryPlan, arm: str, original: str) -> List[str]:

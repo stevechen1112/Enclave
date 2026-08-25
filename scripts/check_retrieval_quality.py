@@ -2,11 +2,15 @@
 檢索品質驗證腳本
 針對 101 個上傳文件進行多類型問題測試，驗證 RAG 系統的回答品質
 """
-import requests, json, time
+import json
+import os
+import time
+
+import requests
 
 BASE_URL = "http://localhost:8001"
 USER = "admin@example.com"
-PASS = "admin123"
+PASS = os.environ["EVAL_ADMIN_PASSWORD"]
 
 def login():
     r = requests.post(f"{BASE_URL}/api/v1/auth/login/access-token",

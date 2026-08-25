@@ -13,7 +13,11 @@ import { test, expect, type Page } from '@playwright/test'
 // ── Credentials ─────────────────────────────────────────────────────────────
 
 const ADMIN_EMAIL = process.env.E2E_USER || 'admin@example.com'
-const ADMIN_PASS = process.env.E2E_PASS || 'admin123'
+const ADMIN_PASS = process.env.E2E_PASS ?? ''
+
+if (!ADMIN_PASS) {
+  throw new Error('E2E_PASS must be injected for authenticated browser tests')
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

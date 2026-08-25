@@ -45,6 +45,9 @@ from app.api.v1.endpoints import (
     enterprise,
     mka_metrics,
     interview,
+    knowledge_capture,
+    realtime_voice,
+    knowledge_control,
 )
 
 api_router = APIRouter()
@@ -109,3 +112,6 @@ api_router.include_router(form_templates.router, tags=["form-templates"])
 api_router.include_router(enterprise.router, tags=["enterprise"])
 api_router.include_router(mka_metrics.router, tags=["mka-metrics"])
 api_router.include_router(interview.router, tags=["interview"])
+api_router.include_router(knowledge_capture.router, tags=["knowledge-captures"])
+api_router.include_router(realtime_voice.router, tags=["voice-realtime"])
+api_router.include_router(knowledge_control.router, tags=["knowledge-control"])

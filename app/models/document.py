@@ -1,9 +1,22 @@
 import uuid
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, func, Text, JSON, Index
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from pgvector.sqlalchemy import Vector
+
 from app.db.base_class import Base
+
 
 class Document(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
@@ -41,12 +54,18 @@ class Document(Base):
     artifacts = relationship("DocumentArtifact", back_populates="document", cascade="all, delete-orphan")
 
     __table_args__ = (
-        # Partial unique enforced in migration p1_dd_m04 (active connector records)
+        # One active row per external record; tombstoned history may coexist.
         Index(
-            "ix_documents_tenant_source_record",
+            "uq_documents_tenant_source_record_active",
             "tenant_id",
             "source_system",
             "source_record_id",
+            unique=True,
+            postgresql_where=(
+                source_system.isnot(None)
+                & source_record_id.isnot(None)
+                & tombstoned_at.is_(None)
+            ),
         ),
     )
 
@@ -54,6 +73,9 @@ class DocumentChunk(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
     document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False, index=True)
+    # Immutable document revision this chunk was produced from.  Old chunks are
+    # retained so a KB revision never reads a newer live projection.
+    document_revision = Column(Integer, nullable=False, default=1)
     
     chunk_index = Column(Integer, nullable=False)
     text = Column(Text, nullable=False)
@@ -85,6 +107,7 @@ class DocumentChunk(Base):
     )
 
     __table_args__ = (
+        Index("ix_documentchunks_document_revision", "document_id", "document_revision"),
         # HNSW index for fast cosine similarity search
         Index(
             'ix_documentchunks_embedding_cosine',
@@ -96,12 +119,14 @@ class DocumentChunk(Base):
         Index(
             "uq_documentchunks_document_index",
             "document_id",
+            "document_revision",
             "chunk_index",
             unique=True,
         ),
         Index(
             "uq_documentchunks_document_hash",
             "document_id",
+            "document_revision",
             "chunk_hash",
             unique=True,
             postgresql_where=(chunk_hash.isnot(None)),

@@ -25,7 +25,7 @@ MODULE_ENV_MAP = {
 def enabled_modules() -> Set[str]:
     enabled = {ProductModule.BASE.value}
     for module, env_key in MODULE_ENV_MAP.items():
-        if os.getenv(env_key, "").lower() == "true":
+        if os.getenv(env_key, "").strip().lower() == "true":
             enabled.add(module.value)
     return enabled
 
@@ -34,7 +34,7 @@ def is_module_enabled(module: ProductModule) -> bool:
     if module == ProductModule.BASE:
         return True
     env_key = MODULE_ENV_MAP.get(module)
-    return env_key and os.getenv(env_key, "").lower() == "true"
+    return bool(env_key and os.getenv(env_key, "").strip().lower() == "true")
 
 
 def module_status() -> Dict[str, bool]:

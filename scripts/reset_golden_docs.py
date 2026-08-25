@@ -1,14 +1,21 @@
 """One-off: tombstone ALL golden scan docs (any status) to clear duplicates
 before a clean re-ingest. Usage: python scripts/reset_golden_docs.py
 """
+import os
+
 import httpx
 
 GOLDEN_PREFIXES = ("000_", "001_", "002_", "003_", "005_", "006_",
                    "007_", "008_", "009_", "010_", "014_", "023_")
 
 c = httpx.Client(base_url="http://localhost:8001", timeout=30)
-r = c.post("/api/v1/auth/login/access-token",
-           data={"username": "admin@example.com", "password": "admin123"})
+r = c.post(
+    "/api/v1/auth/login/access-token",
+    data={
+        "username": os.environ["EVAL_ADMIN_EMAIL"],
+        "password": os.environ["EVAL_ADMIN_PASSWORD"],
+    },
+)
 r.raise_for_status()
 c.headers["Authorization"] = "Bearer " + r.json()["access_token"]
 

@@ -11,6 +11,22 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import { ROLE_LABELS } from '../navigation/capabilities'
 
 type Tab = 'dashboard' | 'users'
+type CompanyDashboard = {
+  user_count: number
+  document_count: number
+  conversation_count: number
+  monthly_queries: number
+  monthly_cost?: number
+  quota_status?: unknown
+}
+type CompanyUser = {
+  id: string
+  email: string
+  full_name?: string
+  role: string
+  status?: string
+  created_at?: string
+}
 
 // ─── Shared ───
 function Loader() {
@@ -40,7 +56,7 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
 
 // ═══ Dashboard Tab ═══
 function DashboardTab() {
-  const [data, setData] = useState<any>(null)
+  const [data, setData] = useState<CompanyDashboard | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -62,7 +78,7 @@ function DashboardTab() {
       </div>
 
       {/* 地端版授權資訊 */}
-      {qs && (
+      {Boolean(qs) && (
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <div className="flex items-center gap-2 mb-2">
             <Building2 className="h-4 w-4 text-blue-600" />
@@ -78,7 +94,7 @@ function DashboardTab() {
 
 // ═══ Users Tab ═══
 function UsersTab() {
-  const [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<CompanyUser[]>([])
   const [loading, setLoading] = useState(true)
   const [showInvite, setShowInvite] = useState(false)
   const [inviteForm, setInviteForm] = useState({ email: '', full_name: '', role: 'employee', password: '' })
@@ -105,8 +121,9 @@ function UsersTab() {
       setShowInvite(false)
       setMsg('已邀請使用者')
       load()
-    } catch (err: any) {
-      setMsg(err.response?.data?.detail || '邀請失敗')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setMsg(detail || '邀請失敗')
     }
     finally { setSubmitting(false) }
   }
@@ -217,7 +234,7 @@ function UsersTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {users.map((u: any) => (
+              {users.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 text-sm text-gray-900">{u.email}</td>
                   <td className="px-5 py-3 text-sm text-gray-600">{u.full_name || '—'}</td>

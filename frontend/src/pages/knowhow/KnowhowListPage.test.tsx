@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import KnowhowListPage from './KnowhowListPage'
 
@@ -60,6 +61,24 @@ describe('KnowhowListPage', () => {
     listMock.mockResolvedValue([])
     renderPage()
     expect(await screen.findByText('還沒有經驗卡片')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /記下一筆經驗/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /開始師傅訪談/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /手動建立經驗卡/ })).toBeInTheDocument()
+  })
+
+  it('主要入口直接前往長時間訪談頁', async () => {
+    listMock.mockResolvedValue([])
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/knowhow']}>
+        <Routes>
+          <Route path="/knowhow" element={<KnowhowListPage />} />
+          <Route path="/knowhow/interview" element={<div>長時間訪談頁</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: /開始師傅訪談/ }))
+
+    expect(screen.getByText('長時間訪談頁')).toBeInTheDocument()
   })
 })

@@ -36,7 +36,10 @@ def main() -> int:
     base = "http://localhost:8000/api/v1"
     login = httpx.post(
         f"{base}/auth/login/access-token",
-        data={"username": "admin@example.com", "password": "admin123"},
+        data={
+            "username": os.environ["E2E_ADMIN_EMAIL"],
+            "password": os.environ["E2E_ADMIN_PASSWORD"],
+        },
         timeout=30,
     )
     if login.status_code != 200:

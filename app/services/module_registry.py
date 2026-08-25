@@ -100,7 +100,7 @@ class ModuleRegistry:
         bound_keys = {b.module_key for b in bindings}
 
         # 新租戶 opt-in：無任何啟用 binding 的租戶看不到全域模組。
-        # Demo Tenant 由 bootstrap 自動 seed binding；其他租戶須管理員明確啟用。
+        # 合成 Demo 的 binding 由受控 seeder 建立；其他租戶須管理員明確啟用。
         if not bound_keys:
             return []
 

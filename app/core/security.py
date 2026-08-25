@@ -1,24 +1,5 @@
-from datetime import datetime, timedelta, UTC
-from typing import Any, Optional, Union
-
-from jose import jwt
-from passlib.context import CryptContext
-
-from app.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-
-from datetime import datetime, timedelta, UTC
-from typing import Any, Optional, Union
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 from jose import jwt
@@ -38,9 +19,10 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(
-    subject: Union[str, Any],
-    expires_delta: Optional[timedelta] = None,
-    tenant_id: Optional[Union[UUID, str]] = None,
+    subject: Any,
+    expires_delta: timedelta | None = None,
+    tenant_id: UUID | str | None = None,
+    additional_claims: dict[str, Any] | None = None,
 ) -> str:
     """Create a signed JWT.
 
@@ -59,6 +41,11 @@ def create_access_token(
     to_encode: dict[str, Any] = {"exp": expire, "sub": str(subject)}
     if tenant_id is not None:
         to_encode["tenant_id"] = str(tenant_id)
+    if additional_claims:
+        reserved = {"exp", "sub", "tenant_id"}.intersection(additional_claims)
+        if reserved:
+            raise ValueError(f"additional claims contain reserved keys: {sorted(reserved)}")
+        to_encode.update(additional_claims)
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -69,11 +56,11 @@ SCOPE_MFA_ENROLL = "mfa_enroll"    # 強制開通流程中、僅可呼叫 MFA se
 
 
 def create_partial_token(
-    subject: Union[str, Any],
+    subject: Any,
     *,
     scope: str,
-    tenant_id: Optional[Union[UUID, str]] = None,
-    expires_delta: Optional[timedelta] = None,
+    tenant_id: UUID | str | None = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """MFA 局部 token：帶 scope claim，get_current_user 一律拒絕（不可繞過挑戰）。
 
@@ -90,7 +77,9 @@ def create_partial_token(
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
-def decode_partial_token(token: str, *, expected_scope: Optional[str] = None) -> Optional[dict]:
+def decode_partial_token(
+    token: str, *, expected_scope: str | None = None
+) -> dict[str, Any] | None:
     """解碼並驗證局部 token；scope 不符或驗證失敗回傳 None。"""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])

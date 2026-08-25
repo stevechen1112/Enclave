@@ -7,7 +7,7 @@
  *   3. 知識缺口 — 未答覆問題 + 每日趨勢 (原 QueryAnalyticsPage tabs)
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '../api'
 import { chatApi } from '../api'
 import {
@@ -86,6 +86,7 @@ function OverviewTab({ days }: { days: number }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     chatApi.ragDashboard(days)
       .then(setData)
@@ -336,7 +337,7 @@ export default function QueryAnalyticsPage() {
   const [unanswered, setUnanswered] = useState<UnansweredQuery[]>([])
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     try {
       const [summaryRes, trendRes, topRes, unansweredRes] = await Promise.all([
@@ -351,9 +352,11 @@ export default function QueryAnalyticsPage() {
       setUnanswered(unansweredRes.data)
     } catch { /* ignore */ }
     finally { setLoading(false) }
-  }
+  }, [days])
 
-  useEffect(() => { load() }, [days])
+  useEffect(() => {
+    load()
+  }, [load])
 
   const tabItems: { key: ActiveTab; label: string; icon: typeof BarChart2; badge?: number }[] = [
     { key: 'overview', label: '概覽', icon: TrendingUp },

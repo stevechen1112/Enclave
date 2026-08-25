@@ -637,7 +637,7 @@ def run_tests(api: ApiClient, keep: bool, target_files: int):
                 str(BULK_TEST_DIR)
             )
         else:
-            ok="T5-21 測試目錄已不存在"
+            ok("T5-21 測試目錄已不存在")
 
     # ── T5-22: 結果摘要存檔 ─────────────
     section("Phase 9: 結果摘要")
@@ -662,7 +662,7 @@ def main():
     parser = argparse.ArgumentParser(description="Enclave Flow 5 — 50+ 檔案大量 Agent 全流程測試")
     parser.add_argument("--base-url", default="http://localhost:8001")
     parser.add_argument("--user", default="admin@example.com")
-    parser.add_argument("--password", default="admin123")
+    parser.add_argument("--password", required=True)
     parser.add_argument("--keep", action="store_true", help="保留測試資料不刪除")
     parser.add_argument("--files", type=int, default=50, help="目標測試檔案數（預設 50）")
     args = parser.parse_args()

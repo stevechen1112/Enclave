@@ -1,7 +1,19 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, func, Text, SmallInteger, UniqueConstraint
+
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+
 from app.db.base_class import Base
 
 
@@ -16,9 +28,13 @@ class ChatFeedback(Base):
     rating = Column(SmallInteger, nullable=False)  # 1=👎, 2=👍
     category = Column(String(50), nullable=True)  # wrong_answer / incomplete / outdated / hallucination / other
     comment = Column(Text, nullable=True)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    status = Column(String(24), nullable=False, default="open")
+    processing_history = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # 同一使用者對同一則訊息僅允許 1 筆回饋（可更新）
     __table_args__ = (
         UniqueConstraint("user_id", "message_id", name="uq_feedback_user_message"),
+        Index("ix_chat_feedbacks_owner_id", "owner_id"),
     )

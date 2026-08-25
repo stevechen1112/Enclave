@@ -10,7 +10,7 @@ import json
 import os
 import sys
 import uuid
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
@@ -20,13 +20,12 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 BASE = os.getenv("DEMO_API_BASE", "https://kachu.tw/api/v1")
 REPORT = Path(__file__).resolve().parents[1] / "artifacts" / "demo_v3_walkthrough_last_run.json"
 
-SALES = ("sales@demo.mka", "Demo12345")
-FIELD = ("field@demo.mka", "Demo12345")
-MASTER = ("master@demo.mka", "Demo12345")
-NEWCOMER = ("newcomer@demo.mka", "Demo12345")
-VIEWER = ("viewer@demo.mka", "Demo12345")
-ADMIN = (os.getenv("DEMO_ADMIN_EMAIL", "admin@kachu.tw"),
-         os.getenv("DEMO_ADMIN_PASSWORD", "ecMp2TZNJQjcZY-7jE_9EQ"))
+SALES = "sales"
+FIELD = "field"
+MASTER = "master"
+NEWCOMER = "newcomer"
+VIEWER = "viewer"
+ADMIN = "admin"
 
 RESULTS: list[dict] = []
 
@@ -37,8 +36,9 @@ def step(name: str, ok: bool, detail: str = "") -> bool:
     return ok
 
 
-def login(client: httpx.Client, creds: tuple[str, str]) -> dict:
-    r = client.post("/auth/login/access-token", data={"username": creds[0], "password": creds[1]})
+def login(client: httpx.Client, persona: str) -> dict:
+    """Enter one of the six public Demo doors without handling credentials."""
+    r = client.post("/auth/login/demo", json={"persona": persona})
     r.raise_for_status()
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
@@ -78,6 +78,13 @@ def main() -> None:
             "0.1 業務『開報價單』指向 /job/tasks/quote",
             quote_ep is not None and (quote_ep.get("path") or "").startswith("/job/tasks/quote"),
             f"path={quote_ep.get('path') if quote_ep else None}",
+        )
+        r = client.get("/experience/bootstrap", headers=newcomer)
+        newcomer_boot = r.json() if r.status_code == 200 else {}
+        step(
+            "0.2 新人門可進入專屬工作台",
+            r.status_code == 200 and bool(newcomer_boot.get("workspace_entries")),
+            f"entries={len(newcomer_boot.get('workspace_entries') or [])}",
         )
 
         # ── Demo A ──
@@ -126,7 +133,9 @@ def main() -> None:
             step("A3.2 parse-text 抽出四欄", ok_extract, f"values={vals}")
 
             # 補齊 regex 未覆蓋的必填
-            valid_until = (date.today() + timedelta(days=30)).isoformat()
+            valid_until = (
+                datetime.now(timezone.utc).date() + timedelta(days=30)
+            ).isoformat()
             r = client.patch(
                 f"/tasks/runs/{run_id}/inputs",
                 headers=sales,
@@ -235,7 +244,7 @@ def main() -> None:
                     "values": {
                         "equipment_id": "EQ-100-01",
                         "location": "二廠 A 產線",
-                        "occurred_at": date.today().isoformat(),
+                        "occurred_at": datetime.now(timezone.utc).date().isoformat(),
                         "category": "設備故障",
                         "severity": "嚴重（已停機）",
                         "description": "EQ-100 跳 E-07，張力飄移，已停機待設備課。",
@@ -267,7 +276,7 @@ def main() -> None:
                 headers=field,
                 json={
                     "values": {
-                        "shift_date": date.today().isoformat(),
+                        "shift_date": datetime.now(timezone.utc).date().isoformat(),
                         "shift": "晚班",
                         "line": "二廠 A 產線",
                         "outgoing": "現場測試",

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "gate": "KB-BL-LEGACY-EVAL",
+  "frozen_at": "2026-08-24T18:29:41.504673+00:00",
+  "classification": "opened_holdouts_regression_only",
+  "privacy": "paths_and_sha256_only",
+  "files": {
+    "testdata/golden/z3_blind_questions.yaml": "4f1d719c4fa1aae120565657419d432918cc54a6ade72761c2aebdf81bb7074a",
+    "testdata/golden/z4_blind_questions.yaml": "218acb276c0f715dae3fef620143131a52c04f8b3442f197789180861505b4cc",
+    "artifacts/blind_z3/eval_z3_run.json": "2c642032b959aaa91cda2290fd62901589e024aab621f20233d5e6da6297ac71",
+    "artifacts/blind_z4/eval_z4_run.json": "0934ed28dfbdefecfca50ffda8df330a59cd770cafe4054c16e49c68ce12da3c"
+  }
+}

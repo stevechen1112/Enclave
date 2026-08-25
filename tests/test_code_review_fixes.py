@@ -48,18 +48,19 @@ class TestResourceWideDeny:
         assert "add_deny_entry" not in src
 
 
-class TestWatcherReviewClearsStale:
-    def test_watcher_clears_chunks_before_review_enqueue(self):
+class TestWatcherReviewPreservesRevisionHistory:
+    def test_watcher_hides_live_document_without_deleting_historical_chunks(self):
         from app.tasks import document_tasks as dt
 
-        src = inspect.getsource(dt.watcher_ingest_file_task)
+        src = inspect.getsource(dt.watcher_ingest_file_task.run)
         assert "pending_review" in src
         assert "awaiting_review" in src
         assert "stale_index_cleared" in src
-        clear_idx = src.find("DocumentChunk")
+        assert "DocumentChunk).filter" not in src
+        assert "existing.version = int(existing.version or 1) + 1" in src
         enqueue_idx = src.find(".enqueue(")
-        assert clear_idx != -1 and enqueue_idx != -1
-        assert clear_idx < enqueue_idx
+        status_idx = src.find('existing.status = "pending_review"')
+        assert status_idx != -1 and enqueue_idx != -1 and status_idx < enqueue_idx
 
 
 class TestSsoCallbackTenantFilter:

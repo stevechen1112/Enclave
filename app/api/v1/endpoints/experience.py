@@ -91,6 +91,10 @@ def _inference_boundary(db: Session) -> Dict[str, Any]:
 
 def _pack_states() -> Dict[str, Dict[str, Any]]:
     status = module_status()
+    from app.gateway.runtime_health import get_runtime_health_snapshot
+
+    runtime = get_runtime_health_snapshot() or {}
+    runtime_packs = runtime.get("packs") or {}
     labels = {
         ProductModule.BASE.value: "核心控制面",
         ProductModule.DOCUMENT_INTELLIGENCE.value: "文件增強解析",
@@ -100,10 +104,22 @@ def _pack_states() -> Dict[str, Dict[str, Any]]:
     }
     out: Dict[str, Dict[str, Any]] = {}
     for key, enabled in status.items():
+        verified = runtime_packs.get(key) or {}
+        state = verified.get("state")
+        if not state:
+            state = "disabled" if not enabled else "unavailable"
         out[key] = {
             "enabled": enabled,
-            "state": "enabled" if enabled else "disabled",
+            "available": bool(verified.get("available", False)),
+            "state": state,
             "label": labels.get(key, key),
+            "message": (
+                "已通過執行環境健康探測"
+                if state == "enabled"
+                else "已設定但執行服務目前不可用"
+                if enabled
+                else "未啟用"
+            ),
         }
     # Certified connectors honesty
     out["certified_connectors"] = {
@@ -149,12 +165,14 @@ def experience_bootstrap(
 
         seed_canonical_modules(db)
         seed_canonical_task_definitions(db)
-        # 新租戶模組改為 opt-in：只有 Demo Tenant 自動啟用全部正式模組，
+        # 新租戶模組改為 opt-in：只有明確標記的合成 Demo 租戶自動補 binding，
         # 其他租戶由管理員在設定中心逐個啟用（避免新租戶工作台全攤平）。
         from app.models.tenant import Tenant
 
         tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
-        if tenant is not None and tenant.name == "Demo Tenant":
+        from app.demo.manifest import DEMO_TENANT_ID
+
+        if tenant is not None and tenant.is_demo and tenant.id == DEMO_TENANT_ID:
             ensure_tenant_module_bindings(db, current_user.tenant_id)
         seed_default_job_roles(db, current_user.tenant_id)
         try:

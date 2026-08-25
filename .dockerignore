@@ -27,6 +27,18 @@ uploads/*
 docs/
 scripts/
 tests/
+artifacts/
+artifacts_eval/
+test-agent-watch/
+test-data/
+test-materials/
+test-results/
+test-uploads/
+testdata/
+.benchmarks/
+.cache/
+.cursor/
+var/
 backups/
 htmlcov/
 coverage.xml
@@ -35,3 +47,18 @@ coverage.xml
 .DS_Store
 .vscode/
 .idea/
+
+# Strict backend build allowlist. Docker evaluates the last matching rule,
+# so only production runtime inputs below may reach `COPY . .`.
+*
+!.dockerignore
+!Dockerfile
+!requirements.txt
+!alembic.ini
+!celery_worker.py
+!app/
+!app/**
+!docker/
+!docker/**
+!configs/
+!configs/**

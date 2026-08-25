@@ -36,6 +36,10 @@ export interface Document {
   version?: number | null
   external_version?: string | null
   tombstoned_at?: string | null
+  answer_ready: boolean
+  published_revision: number | null
+  published_chunk_count: number
+  readiness_reasons: string[]
   created_at: string | null
   updated_at: string | null
   /** P10-3: true 若文件於 7 天內新增或重新索引 */
@@ -61,8 +65,10 @@ export interface ExperienceBootstrap {
   default_home: string
   packs: Record<string, {
     enabled?: boolean
+    available?: boolean
     state?: string
     label?: string
+    message?: string
     items?: string[]
     not_certified?: string[]
   }>
@@ -158,6 +164,14 @@ export interface ChatSource {
   score?: number
   chunk_index?: number
   page?: number | null
+  section?: string | null
+  worksheet?: string | null
+  row_number?: number | null
+  field_name?: string | null
+  transcript_start_ms?: number | null
+  transcript_end_ms?: number | null
+  applicable_scope?: string | null
+  effective_at?: string | null
   accessible?: boolean
 }
 

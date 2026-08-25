@@ -19,9 +19,19 @@ logger = logging.getLogger(__name__)
 # Always project to enclave; optional packs added only when enabled
 PROJECTION_PROVIDERS = ("enclave", "ragflow", "weknora", "pipeshub")
 
-DEFAULT_RAGFLOW_URL = "http://ragflow:9380"
-DEFAULT_PIPESHUB_URL = "http://pipeshub-api:3000"
-DEFAULT_WEKNORA_URL = "http://weknora:8080"
+def _sidecar_url(key: str) -> str:
+    from app.gateway.sidecar_config import resolve_sidecar_url
+
+    return resolve_sidecar_url(key)
+
+
+def _build_ragflow_adapter() -> BaseAdapter:
+    from app.gateway.adapters.ragflow_http import RAGFlowHTTPAdapter
+
+    return RAGFlowHTTPAdapter(
+        base_url=_sidecar_url("ragflow"),
+        api_key=os.getenv("RAGFLOW_API_KEY", ""),
+    )
 
 
 def build_document_search_adapter() -> BaseAdapter:
@@ -39,7 +49,7 @@ def build_gateway_adapters() -> Dict[str, BaseAdapter]:
         from app.gateway.adapters.pipeshub_http import PipesHubHTTPAdapter
         from app.gateway.token_provider import build_pipeshub_token_provider
         adapters["connector"] = PipesHubHTTPAdapter(
-            base_url=os.getenv("PIPESHUB_BASE_URL", DEFAULT_PIPESHUB_URL),
+            base_url=_sidecar_url("pipeshub"),
             api_key=os.getenv("PIPESHUB_API_KEY", ""),
             token_provider=build_pipeshub_token_provider(),
         )
@@ -48,7 +58,7 @@ def build_gateway_adapters() -> Dict[str, BaseAdapter]:
         from app.gateway.adapters.weknora_http import WeKnoraHTTPAdapter
         from app.gateway.token_provider import build_weknora_token_provider
         wek = WeKnoraHTTPAdapter(
-            base_url=os.getenv("WEKNORA_BASE_URL", DEFAULT_WEKNORA_URL),
+            base_url=_sidecar_url("weknora"),
             api_key=os.getenv("WEKNORA_API_KEY", ""),
             token_provider=build_weknora_token_provider(),
         )
@@ -68,17 +78,13 @@ def build_projection_adapters() -> Dict[str, BaseAdapter]:
     }
 
     if is_module_enabled(ProductModule.DOCUMENT_INTELLIGENCE):
-        from app.gateway.adapters.ragflow_http import RAGFlowHTTPAdapter
-        adapters["ragflow"] = RAGFlowHTTPAdapter(
-            base_url=os.getenv("RAGFLOW_BASE_URL", DEFAULT_RAGFLOW_URL),
-            api_key=os.getenv("RAGFLOW_API_KEY", ""),
-        )
+        adapters["ragflow"] = _build_ragflow_adapter()
 
     if is_module_enabled(ProductModule.ENTERPRISE_CONNECT):
         from app.gateway.adapters.pipeshub_http import PipesHubHTTPAdapter
         from app.gateway.token_provider import build_pipeshub_token_provider
         adapters["pipeshub"] = PipesHubHTTPAdapter(
-            base_url=os.getenv("PIPESHUB_BASE_URL", DEFAULT_PIPESHUB_URL),
+            base_url=_sidecar_url("pipeshub"),
             api_key=os.getenv("PIPESHUB_API_KEY", ""),
             token_provider=build_pipeshub_token_provider(),
         )
@@ -87,7 +93,7 @@ def build_projection_adapters() -> Dict[str, BaseAdapter]:
         from app.gateway.adapters.weknora_http import WeKnoraHTTPAdapter
         from app.gateway.token_provider import build_weknora_token_provider
         adapters["weknora"] = WeKnoraHTTPAdapter(
-            base_url=os.getenv("WEKNORA_BASE_URL", DEFAULT_WEKNORA_URL),
+            base_url=_sidecar_url("weknora"),
             api_key=os.getenv("WEKNORA_API_KEY", ""),
             token_provider=build_weknora_token_provider(),
         )
@@ -99,3 +105,11 @@ def build_projection_adapters() -> Dict[str, BaseAdapter]:
 def active_projection_providers() -> tuple[str, ...]:
     """Providers that will actually be dispatched."""
     return tuple(build_projection_adapters().keys())
+
+
+def build_health_adapters() -> Dict[str, BaseAdapter]:
+    """All enabled runtime dependencies, including projection-only RAGFlow."""
+    adapters = build_gateway_adapters()
+    if is_module_enabled(ProductModule.DOCUMENT_INTELLIGENCE):
+        adapters["ragflow"] = _build_ragflow_adapter()
+    return adapters

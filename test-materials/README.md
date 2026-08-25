@@ -16,22 +16,17 @@
 - **保持 `enclave-worker-1` 容器停止**（`docker stop enclave-worker-1`），否則它會搶任務且必敗。
 - `.env` 已修正：`RAGFLOW_FORCE_PARSE=false`、`PARSER_CANARY=`（原設定是盲測專用，會把 .md 全送去 RAGFlow 導致入庫失敗）。盲測腳本需要時會自行設定。
 
-## 測試帳號（Demo Tenant，密碼皆為 `Demo12345`）
+## 六道門測試角色
 
-| 帳號 | 系統角色 | 職能（JobRole） | 對應劇本 |
-|------|----------|----------------|----------|
-| admin@example.com | owner（superuser，密碼 admin123） | — | 主管審核／管理 |
-| sales@demo.mka | employee | sales 業務 | 劇本 A |
-| field@demo.mka | employee | equipment 設備 | 劇本 B |
-| master@demo.mka | employee | supervisor 班長 | 劇本 C（師傅） |
-| newcomer@demo.mka | employee | newcomer 新人 | 劇本 C（新人） |
-| viewer@demo.mka | viewer | — | 權限邊界測試 |
+程式化 E2E 使用 `sales`、`field`、`master`、`newcomer`、`viewer`、`admin`
+六個 persona，透過 `/auth/login/demo` 免密碼進入固定合成租戶。沒有共用密碼，
+也不得把正式管理員憑證放進測試資料或腳本。
 
 ## 程式化 E2E（已通過 26/26，2026-08-06）
 
 ```bash
 cd Enclave
-python test-materials/e2e/setup_test_env.py   # 建帳號/職能/場景/版型（一次性）
+python test-materials/e2e/setup_test_env.py   # 建立並驗證固定合成租戶
 python test-materials/e2e/ingest_docs.py      # 批次入庫 22 份文件
 python test-materials/e2e/e2e_walkthrough.py  # 三劇本走查 → e2e_report.json
 ```

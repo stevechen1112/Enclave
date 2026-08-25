@@ -80,6 +80,7 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
         chunks_q = db.query(
             DocumentChunk.id,
             DocumentChunk.document_id,
+            DocumentChunk.document_revision,
             DocumentChunk.chunk_index,
             DocumentChunk.text,
             DocumentChunk.chunk_hash,
@@ -93,6 +94,7 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
             chunk_records.append({
                 "id": str(c.id),
                 "document_id": str(c.document_id),
+                "document_revision": c.document_revision,
                 "chunk_index": c.chunk_index,
                 "text": c.text,
                 "chunk_hash": c.chunk_hash,
@@ -244,6 +246,7 @@ def kb_restore_task(self, backup_id: str):
                     id=chunk_id,
                     document_id=chunk_doc_id,
                     tenant_id=chunk_tenant_id,
+                    document_revision=int(cr.get("document_revision") or 1),
                     chunk_index=cr["chunk_index"],
                     text=cr["text"],
                     chunk_hash=cr.get("chunk_hash"),
@@ -389,9 +392,6 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
         gap_count = 0
         for trace in q.all():
             sources = trace.sources_json or []
-            if not sources:
-                continue
-
             # Compute average confidence from sources
             scores = []
             for src in sources:
@@ -399,10 +399,7 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
                 if score is not None:
                     scores.append(float(score))
 
-            if not scores:
-                continue
-
-            avg_score = sum(scores) / len(scores)
+            avg_score = sum(scores) / len(scores) if scores else 0.0
             if avg_score >= GAP_CONFIDENCE_THRESHOLD:
                 continue
 
@@ -427,7 +424,24 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
                 KnowledgeGap.status == "open",
             ).first()
             if existing:
+                existing.occurrence_count = int(existing.occurrence_count or 1) + 1
+                existing.last_seen_at = datetime.now(timezone.utc)
                 continue
+
+            from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
+            from app.models.user import User
+            active_revision = (
+                db.query(KnowledgeBaseRevision)
+                .join(KnowledgeBase, KnowledgeBaseRevision.kb_id == KnowledgeBase.id)
+                .filter(KnowledgeBase.tenant_id == trace.tenant_id, KnowledgeBaseRevision.status == "active")
+                .order_by(KnowledgeBaseRevision.activated_at.desc())
+                .first()
+            )
+            owner = db.query(User).filter(
+                User.tenant_id == trace.tenant_id,
+                User.is_active.is_(True),
+                User.role.in_(["owner", "admin"]),
+            ).order_by(User.is_superuser.desc(), User.created_at.asc()).first()
 
             gap = KnowledgeGap(
                 tenant_id=trace.tenant_id,
@@ -435,6 +449,11 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
                 confidence_score=round(avg_score, 4),
                 conversation_id=trace.conversation_id,
                 message_id=trace.message_id,
+                knowledge_base_revision_id=active_revision.id if active_revision else None,
+                owner_id=owner.id if owner else None,
+                gap_type="no_evidence" if not sources else "low_confidence",
+                occurrence_count=1,
+                last_seen_at=datetime.now(timezone.utc),
             )
             db.add(gap)
             gap_count += 1
@@ -446,6 +465,54 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
     except Exception as exc:
         db.rollback()
         logger.exception("Knowledge gap detection failed")
+        raise
+    finally:
+        db.close()
+
+
+@celery_app.task(name="tasks.refresh_knowledge_freshness", bind=True, max_retries=0)
+def refresh_knowledge_freshness_task(self, tenant_id: str | None = None):
+    """Refresh actionable document freshness without changing answer content."""
+    from app.models.document import Document
+    from app.models.knowledge_engine import KnowledgeFreshnessState
+
+    db: Session = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        query = db.query(Document)
+        if tenant_id:
+            query = query.filter(Document.tenant_id == uuid.UUID(tenant_id))
+        changed = 0
+        for document in query.all():
+            row = db.query(KnowledgeFreshnessState).filter(
+                KnowledgeFreshnessState.document_id == document.id,
+            ).first()
+            if row is None:
+                row = KnowledgeFreshnessState(
+                    tenant_id=document.tenant_id,
+                    document_id=document.id,
+                    owner_id=document.uploaded_by,
+                )
+                db.add(row)
+            reasons = []
+            state = "current"
+            if document.tombstoned_at is not None:
+                state = "revoked"; reasons.append("source_tombstoned")
+            elif document.status == "failed":
+                state = "failed"; reasons.append("processing_failed")
+            elif row.review_due_at is not None and row.review_due_at <= now:
+                state = "review_overdue"; reasons.append("review_due_at_passed")
+            elif document.source_system and document.updated_at and document.updated_at <= now - timedelta(days=2):
+                state = "sync_stale"; reasons.append("connector_not_updated_for_48h")
+            row.state = state
+            row.reasons = reasons
+            row.upstream_sync_at = document.updated_at if document.source_system else row.upstream_sync_at
+            changed += 1
+        db.commit()
+        return changed
+    except Exception:
+        db.rollback()
+        logger.exception("Knowledge freshness refresh failed")
         raise
     finally:
         db.close()

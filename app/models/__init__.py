@@ -12,6 +12,15 @@ from app.models.knowledge_base import (
     KnowledgeBase, KnowledgeBaseMember,
     KnowledgeBaseRevision, DocumentArtifact,
 )
+from app.models.knowledge_engine import (
+    KnowledgeBaseRevisionDocument, PolicySnapshot, IndexArtifactRevision,
+    RuntimeRelease, DocumentProfile, StructuredTable, StructuredRow,
+    StructuredField, ProcedureGraph, ProcedurePhase, EntityRegistry,
+    EntityAlias, KnowledgeRelease, RollbackPoint,
+    EvaluationRun, EvaluationCaseResult, EvaluationHumanReview,
+    KnowledgeFreshnessState,
+    LexicalIndexEntry,
+)
 # Phase 0: Event sourcing & consistency
 from app.models.outbox import (
     OutboxEvent, ProjectionStatus, SyncCursor, DeadLetterEvent,
@@ -46,4 +55,5 @@ from app.models.mka import (
     MKAAudioPolicy, MKATaskCost, SceneRegistry, JobRole,
     UserJobRoleAssignment, FormTemplate, MKAWriteRequest,
     MKAWriteAudit, MKAEvent, KnowhowLineage, MKAReviewReminder,
+    KnowledgeCaptureSession, KnowledgeCaptureChunk, KnowledgeCaptureTranscriptSegment,
 )

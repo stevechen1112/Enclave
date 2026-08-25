@@ -14,13 +14,24 @@ MKA — 製造業知識助理領域模型。
 - KnowhowCard（§4.10）
 """
 import uuid
+
 from sqlalchemy import (
-    Column, String, Integer, DateTime, ForeignKey, func,
-    Text, JSON, Boolean, UniqueConstraint, Index, Float,
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
 )
 from sqlalchemy.dialects.postgresql import UUID
-from app.db.base_class import Base
 
+from app.db.base_class import Base
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  JobModule（§4.1）— 職能模組定義
@@ -189,7 +200,15 @@ class FormInstance(Base):
     validation_result = Column(JSON, default=dict)
     source_document_ids = Column(JSON, default=list)
     scene_context = Column(JSON, default=dict)
-    approval_request_id = Column(UUID(as_uuid=True), ForeignKey("mka_approval_requests.id"), nullable=True)
+    approval_request_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "mka_approval_requests.id",
+            name="fk_form_instance_approval_request",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
     immutable_snapshot = Column(JSON, default=dict)
     export_artifacts = Column(JSON, default=list)
     approved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
@@ -317,6 +336,7 @@ class KnowhowCardModel(Base):
     version = Column(Integer, default=1)
     effective_from = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
+    review_due_at = Column(DateTime(timezone=True), nullable=True)
     retired_at = Column(DateTime(timezone=True), nullable=True)
     superseded_by_id = Column(UUID(as_uuid=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -325,6 +345,88 @@ class KnowhowCardModel(Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "card_id", name="uq_knowhow_card_tenant_card"),
         Index("ix_knowhow_tenant_status", "tenant_id", "status"),
+    )
+
+
+# Long-form interview capture ------------------------------------------------
+# These records are deliberately separate from InteractionSession.  The latter
+# represents a short, confirmable voice command; a capture session has durable
+# audio chunks, a resumable upload lifecycle, and a later transcription job.
+class KnowledgeCaptureSession(Base):
+    __tablename__ = "mka_knowledge_capture_sessions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    equipment_id = Column(String, nullable=True)
+    interviewee = Column(String, nullable=True)
+    interviewer = Column(String, nullable=True)
+    status = Column(String, nullable=False, default="recording", index=True)
+    # recording | uploading | queued | transcribing | ready_for_review | failed | aborted
+    consent_version = Column(String, nullable=False, default="long-interview-v1")
+    consented_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    audio_policy_snapshot = Column(JSON, default=dict)
+    transcript_policy_snapshot = Column(JSON, default=dict)
+    expected_chunks = Column(Integer, nullable=True)
+    received_chunks = Column(Integer, nullable=False, default=0)
+    total_duration_ms = Column(Integer, nullable=False, default=0)
+    transcript = Column(Text, nullable=True)
+    transcript_metadata = Column(JSON, default=dict)
+    error = Column(JSON, default=dict)
+    audio_expires_at = Column(DateTime(timezone=True), nullable=True)
+    transcript_expires_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        Index("ix_mka_capture_tenant_owner_status", "tenant_id", "owner_id", "status"),
+    )
+
+
+class KnowledgeCaptureChunk(Base):
+    __tablename__ = "mka_knowledge_capture_chunks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("mka_knowledge_capture_sessions.id"), nullable=False, index=True)
+    sequence = Column(Integer, nullable=False)
+    offset_ms = Column(Integer, nullable=False, default=0)
+    duration_ms = Column(Integer, nullable=False, default=0)
+    storage_key = Column(String, nullable=False)
+    mime_type = Column(String, nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    transcription_state = Column(String, nullable=False, default="pending")
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "session_id", "sequence", name="uq_mka_capture_chunk_sequence"),
+        Index("ix_mka_capture_chunk_session_state", "session_id", "transcription_state"),
+    )
+
+
+class KnowledgeCaptureTranscriptSegment(Base):
+    __tablename__ = "mka_knowledge_capture_transcript_segments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True)
+    session_id = Column(UUID(as_uuid=True), ForeignKey("mka_knowledge_capture_sessions.id"), nullable=False, index=True)
+    chunk_id = Column(UUID(as_uuid=True), ForeignKey("mka_knowledge_capture_chunks.id"), nullable=True, index=True)
+    sequence = Column(Integer, nullable=False)
+    speaker = Column(String, nullable=True)
+    start_ms = Column(Integer, nullable=False)
+    end_ms = Column(Integer, nullable=False)
+    raw_text = Column(Text, nullable=False)
+    corrected_text = Column(Text, nullable=True)
+    corrected_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    corrected_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        Index("ix_mka_capture_segment_session_sequence", "session_id", "sequence"),
     )
 
 
@@ -539,7 +641,7 @@ class FormTemplate(Base):
     storage_key = Column(String, nullable=False)
     placeholders = Column(JSON, default=list)
     field_mapping = Column(JSON, default=dict)
-    status = Column(String, default="draft")  # draft | active | superseded | retired
+    status = Column(String, default="draft", nullable=False)  # draft | active | superseded | retired
     effective_from = Column(DateTime(timezone=True), nullable=True)
     supersedes_id = Column(UUID(as_uuid=True), nullable=True)
     created_by = Column(UUID(as_uuid=True), nullable=True)
@@ -567,7 +669,7 @@ class MKAWriteRequest(Base):
     payload_hash = Column(String, nullable=False)
     approval_token = Column(String, nullable=True)
     approval_required = Column(Boolean, default=True)
-    status = Column(String, default="pending")
+    status = Column(String, default="pending", nullable=False)
     result = Column(JSON, default=dict)
     error = Column(Text, nullable=True)
     retry_count = Column(Integer, default=0)

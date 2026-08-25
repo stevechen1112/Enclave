@@ -226,7 +226,7 @@ def main():
     parser = argparse.ArgumentParser(description="Enclave 全流程測試主控腳本")
     parser.add_argument("--base-url", default="http://localhost:8001", help="API 基礎 URL")
     parser.add_argument("--user", default="admin@example.com")
-    parser.add_argument("--password", default="admin123")
+    parser.add_argument("--password", required=True)
     parser.add_argument("--keep", action="store_true", help="保留所有測試資料不刪除")
     parser.add_argument("--skip", nargs="*", default=[], choices=SUITES.keys(),
                         help="跳過特定套件（如: --skip infra flow3）")

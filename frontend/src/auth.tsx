@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { authApi } from './api'
+import type { DemoPersona } from './api'
 import type { ExperienceBootstrap, User } from './types'
 
 interface AuthState {
@@ -8,6 +9,7 @@ interface AuthState {
   token: string | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
+  demoLogin: (persona: DemoPersona) => Promise<void>
   logout: () => void
   refreshExperience: () => Promise<void>
 }
@@ -66,6 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(access_token)
   }
 
+  const demoLogin = async (persona: DemoPersona) => {
+    const { access_token } = await authApi.demoLogin(persona)
+    setLoading(true)
+    setUser(null)
+    setExperience(null)
+    localStorage.setItem('token', access_token)
+    setToken(access_token)
+  }
+
   const logout = () => {
     localStorage.removeItem('token')
     setToken(null)
@@ -75,13 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, experience, token, loading, login, logout, refreshExperience }}
+      value={{ user, experience, token, loading, login, demoLogin, logout, refreshExperience }}
     >
       {children}
     </AuthContext.Provider>
   )
 }
 
+// AuthProvider and its hook intentionally share this context module.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')

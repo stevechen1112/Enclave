@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -18,7 +19,7 @@ def main() -> None:
     for user in ("admin@enclave.local", "admin@example.com"):
         r = client.post(
             "/api/v1/auth/login/access-token",
-            data={"username": user, "password": "admin123"},
+            data={"username": user, "password": os.environ["BLIND_EVAL_PASSWORD"]},
         )
         if r.status_code == 200:
             client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"

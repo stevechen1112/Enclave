@@ -16,7 +16,7 @@ if sys.platform == "win32":
 # ── Configuration ──
 HOST = os.getenv("API_HOST", "http://localhost:8001")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASS = os.getenv("ADMIN_PASS", "admin123")
+ADMIN_PASS = os.environ["ADMIN_PASS"]
 USERS = int(os.getenv("STRESS_USERS", "10"))
 SPAWN_RATE = int(os.getenv("STRESS_SPAWN_RATE", "5"))
 DURATION_SEC = int(os.getenv("STRESS_DURATION", "30"))

@@ -4,6 +4,7 @@
 """
 import io
 import json
+import os
 import sys
 import time
 
@@ -48,7 +49,8 @@ def main():
     # 與 scripts/eval_answer_correctness.py 相同的測試帳號
     client = httpx.Client(base_url=BASE, timeout=320.0)
     r = client.post("/api/v1/auth/login/access-token",
-                    data={"username": "admin@example.com", "password": "admin123"})
+                    data={"username": os.environ["EVAL_ADMIN_EMAIL"],
+                          "password": os.environ["EVAL_ADMIN_PASSWORD"]})
     r.raise_for_status()
     client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
 

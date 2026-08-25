@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 from datetime import datetime, timedelta, timezone
-from pydantic import BaseModel, computed_field, ConfigDict
+from pydantic import BaseModel, computed_field, ConfigDict, Field
 
 
 class DocumentBase(BaseModel):
@@ -38,6 +38,10 @@ class DocumentInDBBase(DocumentBase):
     tombstoned_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    answer_ready: bool = False
+    published_revision: Optional[int] = None
+    published_chunk_count: int = 0
+    readiness_reasons: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 

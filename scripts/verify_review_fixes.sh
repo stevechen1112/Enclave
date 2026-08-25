@@ -1,9 +1,9 @@
 #!/bin/bash
 # 生產冒煙驗證：code review 四項修正
 BASE="https://kachu.tw"
-TOKEN=$(curl -s -X POST "$BASE/api/v1/auth/login/access-token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=sales@demo.mka&password=Demo12345" | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+TOKEN=$(curl -s -X POST "$BASE/api/v1/auth/login/demo" \
+  -H "Content-Type: application/json" \
+  -d '{"persona":"sales"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 AUTH="Authorization: Bearer $TOKEN"
 
 echo "=== 1. SSE stream chat（high 修正：generator 用獨立 session）==="

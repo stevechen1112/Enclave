@@ -38,6 +38,7 @@ class RetrievalHit:
     score: float
     content_or_summary: str
     citation_ok: bool
+    document_revision: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -50,6 +51,7 @@ class RetrievalHit:
             "score": self.score,
             "content": self.content_or_summary,
             "citation_ok": self.citation_ok,
+            "document_revision": self.document_revision,
         }
 
 
@@ -123,6 +125,9 @@ class CatalogRetriever:
         query: str,
         top_k: int = 50,
         genre_filter: Optional[set[str]] = None,
+        kb_revision_id: Optional[UUID] = None,
+        kb_revision_ids: Optional[List[UUID]] = None,
+        authz=None,
         db=None,
     ) -> List[RetrievalHit]:
         from app.db.session import SessionLocal
@@ -131,15 +136,40 @@ class CatalogRetriever:
         own_session = db is None
         session = db or SessionLocal()
         try:
-            docs = (
-                session.query(Document)
-                .filter(
-                    Document.tenant_id == tenant_id,
-                    Document.status == "completed",
-                    Document.tombstoned_at.is_(None),
-                )
-                .all()
+            from app.services.document_visibility import apply_document_visibility
+
+            revision_ids = list(kb_revision_ids or ([] if kb_revision_id is None else [kb_revision_id]))
+            revision_scoped = bool(revision_ids) or kb_revision_ids is not None
+            docs_query = session.query(Document, Document.version.label("visible_revision"))
+            if authz is None:
+                raise ValueError("AuthorizationContext is required for catalog retrieval")
+            docs_query = apply_document_visibility(
+                docs_query, authz=authz, db=session, require_completed=not revision_scoped
             )
+            if revision_ids or kb_revision_ids is not None:
+                from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
+                from app.services.document_readiness import ready_revision_pairs
+                if not revision_ids:
+                    docs_query = docs_query.filter(False)
+                docs_query = docs_query.join(
+                    KnowledgeBaseRevisionDocument,
+                    KnowledgeBaseRevisionDocument.document_id == Document.id,
+                ).filter(
+                    KnowledgeBaseRevisionDocument.tenant_id == tenant_id,
+                    KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids),
+                )
+                docs_query = docs_query.with_entities(
+                    Document, KnowledgeBaseRevisionDocument.document_revision.label("visible_revision")
+                )
+                ready_pairs = ready_revision_pairs(
+                    session, tenant_id=tenant_id, kb_revision_ids=revision_ids
+                )
+            else:
+                ready_pairs = None
+            docs = [
+                row for row in docs_query.all()
+                if ready_pairs is None or (row[0].id, int(row[1])) in ready_pairs
+            ]
         finally:
             if own_session:
                 session.close()
@@ -148,7 +178,10 @@ class CatalogRetriever:
         tokens = _filename_tokens(query)
 
         hits: List[RetrievalHit] = []
-        for d in docs:
+        from app.services.document_visibility import deny_set_allows
+        for d, visible_revision in docs:
+            if not deny_set_allows(d.id, authz=authz):
+                continue
             name = (d.filename or "").casefold()
             genre_hit = bool(hinted_genres) and (d.genre in hinted_genres)
             token_hits = [t for t in tokens if t in name]
@@ -172,6 +205,7 @@ class CatalogRetriever:
                     "狀態：已完成入庫）"
                 ),
                 citation_ok=True,
+                document_revision=int(visible_revision),
             ))
 
         hits.sort(key=lambda h: h.score, reverse=True)
@@ -182,6 +216,9 @@ class CatalogRetriever:
         *,
         tenant_id: UUID,
         tokens: List[str],
+        kb_revision_id: Optional[UUID] = None,
+        kb_revision_ids: Optional[List[UUID]] = None,
+        authz=None,
         db=None,
     ) -> bool:
         """任一 token 命中租戶已完成文件的檔名即回 True。
@@ -205,18 +242,34 @@ class CatalogRetriever:
         own_session = db is None
         session = db or SessionLocal()
         try:
-            return (
-                session.query(Document.id)
-                .filter(
-                    Document.tenant_id == tenant_id,
-                    Document.status == "completed",
-                    Document.tombstoned_at.is_(None),
-                    or_(*clauses),
+            from app.services.document_visibility import apply_document_visibility, deny_set_allows
+            if authz is None:
+                return False
+            revision_ids = list(kb_revision_ids or ([] if kb_revision_id is None else [kb_revision_id]))
+            revision_scoped = bool(revision_ids) or kb_revision_ids is not None
+            query_obj = apply_document_visibility(
+                session.query(Document.id), authz=authz, db=session,
+                require_completed=not revision_scoped,
+            ).filter(or_(*clauses))
+            if revision_ids or kb_revision_ids is not None:
+                from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
+                from app.services.document_readiness import apply_answer_ready_filter
+                if not revision_ids:
+                    query_obj = query_obj.filter(False)
+                query_obj = apply_answer_ready_filter(
+                    query_obj,
+                    tenant_id=tenant_id,
+                    db=session,
+                    kb_revision_ids=revision_ids,
                 )
-                .limit(1)
-                .first()
-                is not None
-            )
+                query_obj = query_obj.join(
+                    KnowledgeBaseRevisionDocument,
+                    KnowledgeBaseRevisionDocument.document_id == Document.id,
+                ).filter(
+                    KnowledgeBaseRevisionDocument.tenant_id == tenant_id,
+                    KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids),
+                )
+            return any(deny_set_allows(row[0], authz=authz) for row in query_obj.limit(100).all())
         finally:
             if own_session:
                 session.close()

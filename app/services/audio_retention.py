@@ -22,7 +22,14 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models.mka import InteractionSession, MKAAudioPolicy, MKATaskCost
+from app.models.mka import (
+    InteractionSession,
+    KnowledgeCaptureChunk,
+    KnowledgeCaptureSession,
+    KnowledgeCaptureTranscriptSegment,
+    MKAAudioPolicy,
+    MKATaskCost,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -326,3 +333,71 @@ def purge_expired_transcripts(
     db.flush()
     logger.info("MKA retention purge: deleted=%d tenants=%d", deleted, len(tenant_ids))
     return {"deleted_sessions": deleted, "tenants_scanned": len(tenant_ids), "per_tenant": per_tenant}
+
+
+def purge_expired_knowledge_captures(
+    db: Session, *, now: Optional[datetime] = None
+) -> Dict[str, int]:
+    """Delete expired long-interview originals and persisted transcripts.
+
+    Storage deletion is best-effort per object, but database state is not marked
+    deleted until the object delete succeeds.  This lets the next daily run retry
+    a transient object-store failure instead of silently claiming a purge.
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+    elif now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+
+    from app.services.storage import get_storage_backend
+
+    storage = get_storage_backend()
+    audio_deleted = 0
+    transcript_deleted = 0
+    sessions = (
+        db.query(KnowledgeCaptureSession)
+        .filter(
+            KnowledgeCaptureSession.audio_expires_at.is_not(None),
+            KnowledgeCaptureSession.audio_expires_at < now,
+        )
+        .all()
+    )
+    for session in sessions:
+        chunks = (
+            db.query(KnowledgeCaptureChunk)
+            .filter(
+                KnowledgeCaptureChunk.session_id == session.id,
+                KnowledgeCaptureChunk.deleted_at.is_(None),
+            )
+            .all()
+        )
+        for chunk in chunks:
+            try:
+                storage.delete(chunk.storage_key)
+            except Exception:
+                logger.exception("Unable to purge interview audio: session=%s chunk=%s", session.id, chunk.id)
+                continue
+            chunk.deleted_at = now
+            audio_deleted += 1
+
+    expired_transcripts = (
+        db.query(KnowledgeCaptureSession)
+        .filter(
+            KnowledgeCaptureSession.transcript_expires_at.is_not(None),
+            KnowledgeCaptureSession.transcript_expires_at < now,
+            KnowledgeCaptureSession.transcript.is_not(None),
+        )
+        .all()
+    )
+    for session in expired_transcripts:
+        session.transcript = None
+        metadata = dict(session.transcript_metadata or {})
+        metadata["transcript_redacted"] = True
+        metadata["purged_at"] = now.isoformat()
+        session.transcript_metadata = metadata
+        db.query(KnowledgeCaptureTranscriptSegment).filter(
+            KnowledgeCaptureTranscriptSegment.session_id == session.id
+        ).delete(synchronize_session=False)
+        transcript_deleted += 1
+    db.flush()
+    return {"deleted_audio_chunks": audio_deleted, "deleted_capture_transcripts": transcript_deleted}

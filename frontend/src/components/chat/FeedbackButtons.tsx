@@ -10,9 +10,15 @@ interface Props {
 }
 
 const DOWN_CATEGORIES = [
-  { id: 'stale_source', label: '來源已過期' },
-  { id: 'wrong_answer', label: '答案不正確' },
-  { id: 'missing_evidence', label: '證據不足' },
+  { id: 'wrong_entity', label: '對象不對' },
+  { id: 'wrong_number', label: '數字不對' },
+  { id: 'wrong_version', label: '版本不對' },
+  { id: 'wrong_source', label: '來源不對' },
+  { id: 'incomplete', label: '回答不完整' },
+  { id: 'unclear', label: '看不懂' },
+  { id: 'should_abstain', label: '不該回答' },
+  { id: 'false_abstain', label: '有資料卻沒回答' },
+  { id: 'permission', label: '權限問題' },
   { id: 'other', label: '其他' },
 ]
 

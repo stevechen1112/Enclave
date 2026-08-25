@@ -103,6 +103,11 @@ class KnowledgeGapOut(BaseModel):
     confidence_score: float
     suggested_topic: Optional[str] = None
     category_name: Optional[str] = None
+    gap_type: str = "low_confidence"
+    occurrence_count: int = 1
+    owner_id: Optional[UUID] = None
+    knowledge_base_revision_id: Optional[UUID] = None
+    last_seen_at: Optional[datetime] = None
     status: str
     created_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None

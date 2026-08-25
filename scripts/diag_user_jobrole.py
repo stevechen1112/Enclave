@@ -1,5 +1,6 @@
 """診斷單一使用者的職能指派與模組可見性。"""
 import sys
+from app.demo.manifest import DEMO_PERSONAS
 
 from app.db.session import SessionLocal
 from app.models.mka import JobRole, UserJobRoleAssignment
@@ -7,7 +8,7 @@ from app.models.user import User
 
 
 def main() -> None:
-    email = sys.argv[1] if len(sys.argv) > 1 else "sales@demo.mka"
+    email = sys.argv[1] if len(sys.argv) > 1 else str(DEMO_PERSONAS["sales"]["email"])
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.email == email).first()

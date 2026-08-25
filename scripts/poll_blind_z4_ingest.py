@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -19,7 +20,8 @@ def main(wait: bool = True, timeout_s: int = 900) -> int:
     client = httpx.Client(base_url=BASE, timeout=60.0)
     r = client.post(
         "/api/v1/auth/login/access-token",
-        data={"username": "admin@enclave.local", "password": "admin123"},
+        data={"username": os.environ["BLIND_EVAL_EMAIL"],
+              "password": os.environ["BLIND_EVAL_PASSWORD"]},
     )
     r.raise_for_status()
     client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"

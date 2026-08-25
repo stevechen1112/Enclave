@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -11,7 +12,7 @@ BASE = "http://localhost:8001"
 MANIFEST = Path(__file__).resolve().parents[1] / "artifacts" / "blind_z3" / "corpus_manifest.json"
 OUT = Path(__file__).resolve().parents[1] / "artifacts" / "blind_z3" / "upload_result.json"
 EMAIL = "admin@enclave.local"
-PASSWORD = "admin123"
+PASSWORD = os.environ["BLIND_EVAL_PASSWORD"]
 
 
 def main() -> None:

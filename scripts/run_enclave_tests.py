@@ -40,7 +40,7 @@ from typing import Optional
 # ─────────────────────────── 全域設定 ──────────────────────────────────────────
 BASE_URL = "http://localhost:8001"
 ADMIN_EMAIL = "admin@example.com"
-ADMIN_PASSWORD = "admin123"
+ADMIN_PASSWORD = os.environ["E2E_ADMIN_PASSWORD"]
 
 # 測試用帳號（會在 P0 自動建立）
 HR_EMAIL = "hr_test@enclave.local"

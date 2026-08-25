@@ -1294,12 +1294,21 @@ class MKARepository:
     def list_approved_knowhow(
         self, *, tenant_id: UUID, limit: int = 500
     ) -> List[KnowhowCardModel]:
-        # 檢索熱路徑使用：必須有上限，避免卡片成長後拖垮每次查詢
+        # 檢索熱路徑使用：只有已核准、已生效、未到期且未逾複查日的
+        # 卡片可進一般回答。review_due_at 為 NULL 代表核准時未設定定期複查。
+        # reviewer/reviewed_at 是可稽核核准鏈，不能只相信 status 字串。
+        from sqlalchemy import or_, func
+
         return (
             self.db.query(KnowhowCardModel)
             .filter(
                 KnowhowCardModel.tenant_id == tenant_id,
                 KnowhowCardModel.status == "approved",
+                KnowhowCardModel.reviewer.isnot(None),
+                KnowhowCardModel.reviewed_at.isnot(None),
+                or_(KnowhowCardModel.effective_from.is_(None), KnowhowCardModel.effective_from <= func.now()),
+                or_(KnowhowCardModel.expires_at.is_(None), KnowhowCardModel.expires_at > func.now()),
+                or_(KnowhowCardModel.review_due_at.is_(None), KnowhowCardModel.review_due_at > func.now()),
             )
             .order_by(
                 KnowhowCardModel.updated_at.desc(),

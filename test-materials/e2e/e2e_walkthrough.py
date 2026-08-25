@@ -33,12 +33,12 @@ BASE = os.getenv("E2E_API_BASE", "http://127.0.0.1:8005/api/v1")
 TM = ROOT / "test-materials"
 REPORT = Path(__file__).parent / "e2e_report.json"
 
-ADMIN = (os.getenv("E2E_ADMIN_EMAIL", "admin@example.com"), os.getenv("E2E_ADMIN_PASSWORD", "admin123"))
-SALES = ("sales@demo.mka", "Demo12345")
-FIELD = ("field@demo.mka", "Demo12345")
-MASTER = ("master@demo.mka", "Demo12345")
-NEWCOMER = ("newcomer@demo.mka", "Demo12345")
-VIEWER = ("viewer@demo.mka", "Demo12345")
+ADMIN = "admin"
+SALES = "sales"
+FIELD = "field"
+MASTER = "master"
+NEWCOMER = "newcomer"
+VIEWER = "viewer"
 
 RESULTS: list[dict] = []
 
@@ -49,8 +49,8 @@ def step(name: str, ok: bool, detail: str = "") -> bool:
     return ok
 
 
-def login(client: httpx.Client, creds: tuple[str, str]) -> dict:
-    r = client.post("/auth/login/access-token", data={"username": creds[0], "password": creds[1]})
+def login(client: httpx.Client, persona: str) -> dict:
+    r = client.post("/auth/login/demo", json={"persona": persona})
     r.raise_for_status()
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 

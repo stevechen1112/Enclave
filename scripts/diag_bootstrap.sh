@@ -1,8 +1,8 @@
 #!/bin/bash
 # 診斷 bootstrap 是否 500 及 web log
-TOKEN=$(curl -s -X POST 'https://kachu.tw/api/v1/auth/login/access-token' \
-  -H 'Content-Type: application/x-www-form-urlencoded' \
-  -d 'username=sales@demo.mka&password=Demo12345' | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+TOKEN=$(curl -s -X POST 'https://kachu.tw/api/v1/auth/login/demo' \
+  -H 'Content-Type: application/json' \
+  -d '{"persona":"sales"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 echo "bootstrap_status:"
 curl -s -o /tmp/boot.json -w '%{http_code}\n' 'https://kachu.tw/api/v1/experience/bootstrap' -H "Authorization: Bearer $TOKEN"
 echo "--- bootstrap body (first 400) ---"

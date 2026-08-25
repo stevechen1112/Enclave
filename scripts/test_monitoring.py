@@ -19,7 +19,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = os.getenv("API_BASE", "http://localhost:8001")
 API = f"{BASE}/api/v1"
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASS = os.getenv("ADMIN_PASS", "admin123")
+ADMIN_PASS = os.environ["ADMIN_PASS"]
 TIMEOUT = 10
 
 passed = 0

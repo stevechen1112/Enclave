@@ -40,7 +40,12 @@ interface ReportDetail {
   context_query: string | null
   content: string
   word_count: number | null
-  sources: any[] | null
+  sources: Array<{
+    filename?: string
+    title?: string
+    score?: number
+    chunk_text?: string
+  }> | null
   document_ids: string[] | null
   is_pinned: boolean
   created_at: string

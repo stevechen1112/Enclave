@@ -4,6 +4,7 @@ Permission & Role-Based Access Control Tests
 """
 import pytest
 from httpx import AsyncClient
+
 from tests.conftest import create_tenant, create_user, login_user
 
 CHAT_URL = "/api/v1/chat/chat"
@@ -175,9 +176,11 @@ async def test_viewer_read_only_access(client: AsyncClient, superuser_headers: d
 
     h_viewer = await login_user(client, "viewer@vt.com", "Viewer123!")
 
-    # 讀取 → 成功
-    assert (await client.get("/api/v1/documents/", headers=h_viewer)).status_code == 200
-    assert (await client.get(f"/api/v1/documents/{doc_id}", headers=h_viewer)).status_code == 200
+    # 尚未進入正式知識版本，不得把上傳完成誤當成可查詢文件
+    listed = await client.get("/api/v1/documents/", headers=h_viewer)
+    assert listed.status_code == 200
+    assert all(row["id"] != doc_id for row in listed.json())
+    assert (await client.get(f"/api/v1/documents/{doc_id}", headers=h_viewer)).status_code == 404
 
     # 上傳 → 小會殷回權限檢查，在 Celery 任務之前就會拒絕
     r = await client.post(

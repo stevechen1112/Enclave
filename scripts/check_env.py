@@ -95,8 +95,8 @@ ADMIN_PWD = os.getenv("FIRST_SUPERUSER_PASSWORD", "")
 check("FIRST_SUPERUSER_EMAIL", bool(ADMIN_EMAIL) and "@" in ADMIN_EMAIL, "未設定管理員 Email")
 check(
     "FIRST_SUPERUSER_PASSWORD",
-    len(ADMIN_PWD) >= 8 and ADMIN_PWD not in ("請立即修改此密碼", "admin123"),
-    "管理員密碼未設定或過於簡單（至少 8 字元）"
+    len(ADMIN_PWD) >= 16 and ADMIN_PWD != "請立即修改此密碼",
+    "管理員密碼未設定或過於簡單（至少 16 字元）"
 )
 
 # ── Agent 設定（選填）──────────────────────────────

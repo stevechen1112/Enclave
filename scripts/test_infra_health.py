@@ -349,7 +349,7 @@ def main():
     parser = argparse.ArgumentParser(description="Enclave 基礎設施健康檢查")
     parser.add_argument("--base-url", default="http://localhost:8001", help="API base URL")
     parser.add_argument("--user", default="admin@example.com")
-    parser.add_argument("--password", default="admin123")
+    parser.add_argument("--password", required=True)
     args = parser.parse_args()
 
     print(f"\n{BOLD}═══════════════════════════════════════════════════")

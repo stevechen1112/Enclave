@@ -85,13 +85,19 @@ class KnowledgeBaseRevision(Base):
     revision = Column(Integer, nullable=False)
     manifest_hash = Column(String, nullable=True)  # SHA256 of all document content_hashes
     policy_revision = Column(Integer, nullable=False, default=1)
-    status = Column(String, default="active")  # active | building | superseded
+    status = Column(String, default="draft")  # draft | candidate | shadow | active | retired | rejected
     change_summary = Column(Text, nullable=True)
+    manifest_json = Column(JSON, nullable=False, default=dict)
+    index_namespace = Column(String, nullable=True)
+    activated_at = Column(DateTime(timezone=True), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     kb = relationship("KnowledgeBase", back_populates="revisions")
+    revision_documents = relationship(
+        "KnowledgeBaseRevisionDocument", cascade="all, delete-orphan", lazy="selectin"
+    )
 
     __table_args__ = (
         UniqueConstraint("kb_id", "revision", name="uq_kb_revision"),

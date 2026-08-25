@@ -1,6 +1,6 @@
-import secrets
 import warnings
-from typing import List, Union
+from uuid import UUID
+
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change_this"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     ALGORITHM: str = "HS256"
+
+    # Passwordless role selector used for supervised product demonstrations.
+    # Disabled by default so ordinary deployments keep the normal login boundary.
+    DEMO_LOGIN_ENABLED: bool = False
+    DEMO_ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    DEMO_TENANT_ID: str = ""
+    DEMO_ADMIN_EMAIL: str = "admin-door@demo.enclave.invalid"
 
     # ── First superuser (used by scripts/initial_data.py) ──
     FIRST_SUPERUSER_EMAIL: str = "admin@example.com"
@@ -129,6 +136,11 @@ class Settings(BaseSettings):
     SOURCE_VERIFY_USE_INTERNAL_LLM: bool = True  # 稽核走內部 LLM（本地 Ollama），失敗退回主 LLM
     SOURCE_VERIFY_MODEL: str = ""  # 稽核專用模型覆寫；空字串 = 沿用內部模型設定
 
+    # Legacy vertical rules live behind a compatibility-pack boundary.  Keep
+    # disabled for the domain-neutral product; explicitly enable only for
+    # tenants covered by the frozen HR regression suite.
+    HR_COMPATIBILITY_PACK_ENABLED: bool = False
+
     # ── P1：製造業產品工作層 ──
     # Voice / STT / TTS Interaction Gateway（稽核文件 §6.7、§10 P1）
     # 借鑑 WeKnora ASR 入庫 pipeline，但 Enclave 自建 voice-first Interaction Gateway
@@ -141,8 +153,19 @@ class Settings(BaseSettings):
     VOICE_TTS_VOICE: str = "alloy"            # TTS 語音（alloy/echo/fable/onyx/nova/shimmer）
     VOICE_MAX_AUDIO_SECONDS: int = 120       # 單次語音輸入上限（秒）
     VOICE_MAX_AUDIO_BYTES: int = 25 * 1024 * 1024  # 上傳位元組上限（120 秒無損 WAV 立體聲約 21MB）
+    # 長訪談採分段上傳，與上列短語音 API 分開，避免放寬短語音的攻擊面。
+    LONG_INTERVIEW_MAX_SECONDS: int = 60 * 60
+    LONG_INTERVIEW_CHUNK_MAX_BYTES: int = 8 * 1024 * 1024
+    LONG_INTERVIEW_CHUNK_MAX_SECONDS: int = 90
+    LONG_INTERVIEW_MAX_CHUNKS: int = 240
     VOICE_DRAFT_FIRST: bool = True           # 音訊轉寫先進 draft，不可直接回答（§6.8 驗收）
     VOICE_STT_COST_PER_SECOND: float = 0.0   # STT 每秒成本（依部署方案設定；§13.4 COGS）
+    VOICE_REALTIME_ENABLED: bool = False
+    VOICE_REALTIME_MODEL: str = "gpt-realtime-2.1"
+    VOICE_REALTIME_VOICE: str = "marin"
+    VOICE_REALTIME_CONNECT_TIMEOUT_SECONDS: int = 30
+    VOICE_REALTIME_MAX_SESSION_SECONDS: int = 900
+    LONG_INTERVIEW_STT_MODEL: str = "gpt-4o-transcribe-diarize"
 
     # Query embedding cache（ENGINEERING_PLAN §7.2 P0 補強）
     EMBEDDING_CACHE_ENABLED: bool = True
@@ -297,9 +320,34 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("SOURCE_VERIFY_MODE", mode="before")
+    @classmethod
+    def _normalize_source_verify_mode(cls, value: object) -> str:
+        normalized = str(value or "off").strip().lower()
+        if normalized not in {"off", "shadow", "enforce"}:
+            raise ValueError("SOURCE_VERIFY_MODE must be off, shadow, or enforce")
+        return normalized
+
     @model_validator(mode="after")
     def _validate_production_security(self) -> "Settings":
         """Block startup if critical secrets are insecure in production / staging."""
+        if self.DEMO_LOGIN_ENABLED:
+            try:
+                demo_tenant_id = UUID(self.DEMO_TENANT_ID)
+            except (TypeError, ValueError, AttributeError) as exc:
+                raise ValueError(
+                    "DEMO_TENANT_ID must be an explicit UUID when DEMO_LOGIN_ENABLED=true"
+                ) from exc
+            from app.demo.manifest import DEMO_TENANT_ID
+
+            if demo_tenant_id != DEMO_TENANT_ID:
+                raise ValueError(
+                    "DEMO_TENANT_ID must identify the canonical synthetic Demo tenant"
+                )
+            if self.DEMO_ADMIN_EMAIL.strip().lower() != "admin-door@demo.enclave.invalid":
+                raise ValueError(
+                    "DEMO_ADMIN_EMAIL must identify the canonical internal Demo admin"
+                )
         if self.APP_ENV in ("production", "staging"):
             # ── SECRET_KEY ──
             if self.SECRET_KEY in _INSECURE_KEYS or len(self.SECRET_KEY) < 32:

@@ -119,9 +119,14 @@ class CitationBuilder:
             try:
                 return max(1, int(value))
             except (TypeError, ValueError):
-                # external_version may be opaque string — hash to stable positive int
+                # External revisions may be opaque strings.  Never use Python's
+                # built-in hash here: it is intentionally salted per process,
+                # which would make the same source version produce a different
+                # citation revision after a service restart.
                 try:
-                    return (abs(hash(str(value))) % 1_000_000) + 1
+                    digest = hashlib.sha256(str(value).encode("utf-8")).digest()
+                    # Keep the public contract as a positive signed 32-bit int.
+                    return (int.from_bytes(digest[:4], byteorder="big") % 2_000_000_000) + 1
                 except Exception:
                     continue
         return 1

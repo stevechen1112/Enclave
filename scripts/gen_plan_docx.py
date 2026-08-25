@@ -407,7 +407,7 @@ add_table(
     ],
     [2.0, 4.0]
 )
-para('預設登入帳號：admin@example.com / admin123（請在生產環境立即修改）')
+para('管理員帳號與高強度密碼必須由 FIRST_SUPERUSER_EMAIL／FIRST_SUPERUSER_PASSWORD 注入；專案不提供共用預設密碼。')
 
 h2('8.3  零費用 Ollama 模式')
 para('如要完全不使用任何付費 API，在 .env 設定：')
@@ -535,7 +535,8 @@ para('''Enclave/
 ├── nginx/                           # Nginx 設定
 ├── monitoring/                      # Prometheus + Grafana
 ├── scripts/
-│   ├── initial_data.py             # 初始化 superuser + Demo Tenant
+│   ├── initial_data.py             # 初始化正式組織 superuser
+│   ├── demo_tenant.py              # 建立／驗證／重置合成展示租戶
 │   ├── batch_upload.py             # 批量上傳測試文件
 │   ├── check_retrieval_quality.py  # RAG 品質驗證（17 測試案例）
 │   ├── generate_test_data.py       # 生成 100+ 測試文件

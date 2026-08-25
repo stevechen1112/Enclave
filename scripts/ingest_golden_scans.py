@@ -7,6 +7,7 @@ Uploads each file from testdata/golden/files via /api/v1/documents/upload
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 import time
@@ -30,7 +31,8 @@ def main() -> int:
     entries = json.loads(MANIFEST.read_text(encoding="utf-8"))["entries"]
     client = httpx.Client(base_url=BASE, timeout=120.0)
     r = client.post("/api/v1/auth/login/access-token",
-                    data={"username": "admin@example.com", "password": "admin123"})
+                    data={"username": os.environ["EVAL_ADMIN_EMAIL"],
+                          "password": os.environ["EVAL_ADMIN_PASSWORD"]})
     r.raise_for_status()
     client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
 

@@ -181,6 +181,62 @@ class KnowledgeBaseRetriever:
             )
         return query_obj.filter(Document.department_id.is_(None))
 
+    @staticmethod
+    def _apply_kb_revision_scope(query_obj, filter_dict: Optional[Dict], db):
+        """Restrict reads to immutable revision membership.
+
+        This is evaluated before vector/BM25 ranking.  It must never be
+        emulated by filtering the final top-k because stale vectors could then
+        displace valid members.
+        """
+        raw_revision_ids = []
+        if (filter_dict or {}).get("kb_revision_id"):
+            raw_revision_ids.append((filter_dict or {})["kb_revision_id"])
+        raw_revision_ids.extend((filter_dict or {}).get("kb_revision_ids") or [])
+        if not raw_revision_ids and "kb_revision_ids" not in (filter_dict or {}):
+            return query_obj.filter(DocumentChunk.document_revision == Document.version)
+        from app.models.knowledge_engine import DocumentProfile, KnowledgeBaseRevisionDocument
+        try:
+            revision_uuids = [UUID(str(value)) for value in raw_revision_ids]
+        except (TypeError, ValueError):
+            return query_obj.filter(False)
+        if not revision_uuids:
+            return query_obj.filter(False)
+        member_exists = db.query(KnowledgeBaseRevisionDocument.id).filter(
+            KnowledgeBaseRevisionDocument.tenant_id == DocumentChunk.tenant_id,
+            KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_uuids),
+            KnowledgeBaseRevisionDocument.document_id == DocumentChunk.document_id,
+            KnowledgeBaseRevisionDocument.document_revision == DocumentChunk.document_revision,
+        ).correlate(DocumentChunk).exists()
+        profile_ready = db.query(DocumentProfile.id).filter(
+            DocumentProfile.tenant_id == DocumentChunk.tenant_id,
+            DocumentProfile.document_id == DocumentChunk.document_id,
+            DocumentProfile.document_revision == DocumentChunk.document_revision,
+            DocumentProfile.answer_ready.is_(True),
+        ).correlate(DocumentChunk).exists()
+        return query_obj.filter(
+            member_exists,
+            profile_ready,
+            (DocumentChunk.document_revision < Document.version)
+            | (
+                (DocumentChunk.document_revision == Document.version)
+                & (Document.status == "completed")
+            ),
+        )
+
+    @staticmethod
+    def _apply_document_lifecycle_scope(query_obj, filter_dict: Optional[Dict]):
+        """Live reads require completed; immutable revision reads use membership.
+
+        A document may be ``pending_review`` while its previously published
+        revision remains the active corpus.  Current mutable status must not
+        take that immutable revision offline.  Tombstones are still filtered
+        separately and revoke every revision immediately.
+        """
+        if "kb_revision_ids" not in (filter_dict or {}) and not (filter_dict or {}).get("kb_revision_id"):
+            return query_obj.filter(Document.status == "completed")
+        return query_obj
+
     # ─────────────────────────────────────────────
     # 公開 API（Phase 0：接受 AuthorizationContext）
     # ─────────────────────────────────────────────
@@ -232,7 +288,7 @@ class KnowledgeBaseRetriever:
 
         # 2. 執行檢索（傳遞 authz 做 ACL 過濾）
         if mode == "keyword":
-            results = self._keyword_search(effective_tenant_id, query, top_k=top_k * 2, authz=authz)
+            results = self._keyword_search(effective_tenant_id, query, top_k=top_k * 2, authz=authz, filter_dict=filter_dict)
         elif mode == "hybrid":
             semantic_query = expanded_query or query
             results = self._hybrid_search(
@@ -341,10 +397,11 @@ class KnowledgeBaseRetriever:
             if sibling_enabled:
                 window = settings.SIBLING_EXPANSION_WINDOW
                 # 收集所有需要的 (document_id, chunk_index) 範圍
-                sibling_queries: Dict[str, List[int]] = {}  # document_id → [chunk_indices]
+                sibling_queries: Dict[tuple[str, int], List[int]] = {}
                 for r in results:
                     chunk_id = str(r.get("id") or "")
                     doc_id = r.get("document_id")
+                    document_revision = int(r.get("document_revision") or 1)
                     chunk_index = r.get("chunk_index", -1)
                     if not chunk_id or not doc_id or chunk_index < 0:
                         continue
@@ -352,13 +409,13 @@ class KnowledgeBaseRetriever:
                     sibling_indices = [i for i in sibling_indices if i != chunk_index]
                     if not sibling_indices:
                         continue
-                    doc_key = str(doc_id)
+                    doc_key = (str(doc_id), document_revision)
                     if doc_key not in sibling_queries:
                         sibling_queries[doc_key] = []
                     sibling_queries[doc_key].extend(sibling_indices)
 
                 # 批次查詢每個文件的 sibling chunks
-                all_siblings_by_doc: Dict[str, List[DocumentChunk]] = {}
+                all_siblings_by_doc: Dict[tuple[str, int], List[DocumentChunk]] = {}
                 for doc_key, indices in sibling_queries.items():
                     # 去重 indices
                     unique_indices = list(set(indices))
@@ -366,7 +423,8 @@ class KnowledgeBaseRetriever:
                         db.query(DocumentChunk)
                         .filter(
                             DocumentChunk.tenant_id == tenant_id,
-                            DocumentChunk.document_id == UUID(doc_key),
+                            DocumentChunk.document_id == UUID(doc_key[0]),
+                            DocumentChunk.document_revision == doc_key[1],
                             DocumentChunk.chunk_index.in_(unique_indices),
                         )
                         .all()
@@ -380,16 +438,18 @@ class KnowledgeBaseRetriever:
                 for r in results:
                     chunk_id = str(r.get("id") or "")
                     doc_id = str(r.get("document_id") or "")
+                    document_revision = int(r.get("document_revision") or 1)
                     chunk_index = r.get("chunk_index", -1)
                     if not chunk_id or chunk_index < 0:
                         continue
-                    doc_siblings = all_siblings_by_doc.get(doc_id, [])
+                    doc_siblings = all_siblings_by_doc.get((doc_id, document_revision), [])
                     sibling_map[chunk_id] = [
                         {
                             "id": str(s.id),
                             "score": 0.0,
                             "content": s.text or "",
                             "document_id": str(s.document_id),
+                            "document_revision": s.document_revision,
                             "filename": r.get("filename", ""),
                             "chunk_index": s.chunk_index,
                             "metadata": s.metadata_json or {},
@@ -411,6 +471,7 @@ class KnowledgeBaseRetriever:
                             "score": 0.0,
                             "content": parent_chunk.text or "",
                             "document_id": str(parent_chunk.document_id),
+                            "document_revision": parent_chunk.document_revision,
                             "filename": r.get("filename", ""),
                             "chunk_index": parent_chunk.chunk_index,
                             "metadata": parent_chunk.metadata_json or {},
@@ -484,6 +545,7 @@ class KnowledgeBaseRetriever:
                 .filter(
                     DocumentChunk.tenant_id == tenant_id,
                     DocumentChunk.embedding.isnot(None),
+                    Document.status == "completed",
                 )
                 .count()
             )
@@ -537,11 +599,13 @@ class KnowledgeBaseRetriever:
                     Document.tombstoned_at.is_(None),  # Phase 0: 排除已標記刪除的文件
                 )
             )
+            query_obj = self._apply_document_lifecycle_scope(query_obj, filter_dict)
 
             # Phase 0: 部門 ACL 過濾
             if authz:
                 query_obj = self._apply_department_acl_filter(query_obj, authz)
                 query_obj = self._apply_source_acl_filter(query_obj, tenant_id, authz, db)
+            query_obj = self._apply_kb_revision_scope(query_obj, filter_dict, db)
 
             # ── filter_dict：metadata 過濾 ──
             # metadata_json 是 JSON（非 JSONB），.astext 會 AttributeError 且被
@@ -549,6 +613,8 @@ class KnowledgeBaseRetriever:
             # B02 根因）。json_extract_path_text 對 json/jsonb 都適用。
             if filter_dict:
                 for key, value in filter_dict.items():
+                    if key in {"kb_revision_id", "kb_revision_ids"}:
+                        continue
                     if isinstance(value, list):
                         query_obj = query_obj.filter(
                             func.json_extract_path_text(
@@ -581,6 +647,7 @@ class KnowledgeBaseRetriever:
                     "score": score,
                     "content": chunk.text or "",
                     "document_id": str(chunk.document_id),
+                    "document_revision": chunk.document_revision,
                     "filename": doc_map.get(chunk.document_id, ""),
                     "chunk_index": chunk.chunk_index,
                     "metadata": chunk.metadata_json or {},
@@ -605,16 +672,16 @@ class KnowledgeBaseRetriever:
         query: str,
         top_k: int = 10,
         authz: Optional[AuthorizationContext] = None,
+        filter_dict: Optional[Dict] = None,
     ) -> List[Dict[str, Any]]:
-        """使用 BM25 在 DB chunks 上做關鍵字檢索（Phase 0：ACL-aware）。"""
-        if not _HAS_BM25:
-            logger.warning("rank_bm25 未安裝，關鍵字檢索不可用")
-            return []
+        """Search the incrementally maintained lexical projection.
 
+        Query latency is bounded by the GIN candidate set; this path never
+        loads every tenant chunk or constructs an in-memory BM25 index.
+        """
         try:
             db = SessionLocal()
             try:
-                # Phase 0: JOIN Document 做 ACL 過濾
                 chunks_q = (
                     db.query(DocumentChunk)
                     .join(Document, DocumentChunk.document_id == Document.id)
@@ -623,54 +690,37 @@ class KnowledgeBaseRetriever:
                         Document.tombstoned_at.is_(None),
                     )
                 )
+                chunks_q = self._apply_document_lifecycle_scope(chunks_q, filter_dict)
                 # Phase 0: 部門 ACL 過濾
                 if authz:
                     chunks_q = self._apply_department_acl_filter(chunks_q, authz)
                     chunks_q = self._apply_source_acl_filter(chunks_q, tenant_id, authz, db)
-                chunks = chunks_q.all()
-
-                if not chunks:
+                chunks_q = self._apply_kb_revision_scope(chunks_q, filter_dict, db)
+                if filter_dict:
+                    for key, value in filter_dict.items():
+                        if key in {"kb_revision_id", "kb_revision_ids"}:
+                            continue
+                        if isinstance(value, list):
+                            chunks_q = chunks_q.filter(func.json_extract_path_text(DocumentChunk.metadata_json, key).in_([str(v) for v in value]))
+                        else:
+                            chunks_q = chunks_q.filter(func.json_extract_path_text(DocumentChunk.metadata_json, key) == str(value))
+                from app.services.lexical_index import search as search_lexical
+                ranked = search_lexical(db, tenant_id=tenant_id, query=query, top_k=top_k, base_query=chunks_q)
+                if not ranked:
                     return []
-
-                # 取得文件名映射
-                doc_ids = list({c.document_id for c in chunks})
+                doc_ids = list({c.document_id for c, _ in ranked})
                 docs = db.query(Document).filter(Document.id.in_(doc_ids)).all()
                 doc_map = {d.id: d.filename for d in docs}
+                return [{"id": str(chunk.id), "score": round(score, 4), "content": chunk.text or "",
+                    "document_id": str(chunk.document_id), "filename": doc_map.get(chunk.document_id, ""),
+                    "document_revision": chunk.document_revision,
+                    "chunk_index": chunk.chunk_index, "metadata": chunk.metadata_json or {},
+                    "parent_chunk_id": str(chunk.parent_chunk_id) if chunk.parent_chunk_id else None,
+                    "source": "keyword"} for chunk, score in ranked]
             finally:
                 db.close()
-
-            # 建立 BM25 索引
-            corpus = [self._tokenize(c.text or "") for c in chunks]
-            bm25 = BM25Okapi(corpus)
-
-            query_tokens = self._tokenize(query)
-            scores = bm25.get_scores(query_tokens)
-
-            # 取 Top-K
-            ranked = sorted(
-                enumerate(scores), key=lambda x: x[1], reverse=True
-            )[:top_k]
-
-            results = []
-            max_score = max(scores) if max(scores) > 0 else 1.0
-            for idx, score in ranked:
-                if score <= 0:
-                    continue
-                chunk = chunks[idx]
-                results.append({
-                    "id": str(chunk.id),
-                    "score": round(score / max_score, 4),  # 正規化到 0~1
-                    "content": chunk.text or "",
-                    "document_id": str(chunk.document_id),
-                    "filename": doc_map.get(chunk.document_id, ""),
-                    "chunk_index": chunk.chunk_index,
-                    "metadata": {},
-                    "parent_chunk_id": str(chunk.parent_chunk_id) if chunk.parent_chunk_id else None,
-                    "source": "keyword",
-                })
-            return results
         except Exception as e:
-            logger.error(f"BM25 關鍵字檢索錯誤: {e}")
+            logger.error(f"持久化 lexical 檢索錯誤: {e}")
             return []
 
     @staticmethod
@@ -722,7 +772,7 @@ class KnowledgeBaseRetriever:
         semantic_results = self._semantic_search(
             tenant_id, semantic_query, top_k=top_k, filter_dict=filter_dict, authz=authz,
         )
-        keyword_results = self._keyword_search(tenant_id, keyword_query, top_k=top_k, authz=authz)
+        keyword_results = self._keyword_search(tenant_id, keyword_query, top_k=top_k, authz=authz, filter_dict=filter_dict)
 
         # 如果只有一種來源有結果，直接返回
         if not keyword_results:

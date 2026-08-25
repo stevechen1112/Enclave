@@ -305,7 +305,8 @@ services:
 
   # ── Nginx Gateway ──
   gateway:
-    image: nginx:1.25-alpine
+    # nginx 1.27.3+ supports dynamic upstream DNS re-resolution in OSS.
+    image: nginx:1.27-alpine
     restart: always
     ports:
       - "${GATEWAY_HTTP_PORT:-80}:80"

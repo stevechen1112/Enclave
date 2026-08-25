@@ -64,10 +64,14 @@ export default function JobHomePage() {
     (experience as { needs_job_role_assignment?: boolean } | null)
       ?.needs_job_role_assignment,
   )
-  const assignments = (experience as { job_role_assignments?: JobRoleAssignment[] } | null)
-    ?.job_role_assignments || []
-  const workspaceFromBootstrap =
-    (experience as { workspace_entries?: WorkspaceEntry[] } | null)?.workspace_entries || []
+  const assignments = useMemo(
+    () => (experience as { job_role_assignments?: JobRoleAssignment[] } | null)?.job_role_assignments || [],
+    [experience],
+  )
+  const workspaceFromBootstrap = useMemo(
+    () => (experience as { workspace_entries?: WorkspaceEntry[] } | null)?.workspace_entries || [],
+    [experience],
+  )
 
   // active 職能以 bootstrap 為準（後端持久化 users.active_job_role_id）
   const activeAssignment = useMemo(() => {

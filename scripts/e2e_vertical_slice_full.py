@@ -37,7 +37,7 @@ os.environ.setdefault("RAGFLOW_ENABLED", "true")
 
 BASE = os.getenv("E2E_API_BASE", "http://localhost:8000/api/v1")
 EMAIL = os.getenv("E2E_ADMIN_EMAIL", "admin@example.com")
-PASSWORD = os.getenv("E2E_ADMIN_PASSWORD", os.getenv("FIRST_SUPERUSER_PASSWORD", "admin123"))
+PASSWORD = os.environ["E2E_ADMIN_PASSWORD"]
 
 NAS_DIR = ROOT / "tests" / "fixtures" / "nas_share"
 SAMPLE = NAS_DIR / "quality_manual.pdf"

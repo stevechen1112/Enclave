@@ -147,6 +147,11 @@ class KnowledgeGap(Base):
     category_name = Column(String, nullable=True)          # Which category is missing
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id"), nullable=True)
     message_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
+    knowledge_base_revision_id = Column(UUID(as_uuid=True), ForeignKey("knowledge_base_revisions.id"), nullable=True, index=True)
+    owner_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    gap_type = Column(String(40), nullable=False, default="low_confidence")
+    occurrence_count = Column(Integer, nullable=False, default=1)
+    last_seen_at = Column(DateTime(timezone=True), server_default=func.now())
 
     status = Column(String, default="open")                # open / acknowledged / resolved
     resolved_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)

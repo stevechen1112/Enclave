@@ -64,7 +64,7 @@
 ### 2.2 線上體驗（生產環境）
 
 - 入口：**https://kachu.tw**
-- 測試帳號：`sales / field / master / newcomer / viewer @demo.mka`（密碼統一 `Demo12345`），管理員帳號見主機 `/opt/enclave/.env.production`
+- 展示方式：從「六道門」選擇業務、現場、師傅、新人、主管唯讀或公司管理；免帳號密碼。正式站預設關閉，只有合成展示租戶驗證通過後才可在受控展示時開啟。
 - ** DEMO 劇本**：`docs/MKA_DEMO_QUESTION_SET.md`（**有 PDF 版**；開場白、逐字問題、預期畫面、救場備案，拿到就能上台）
 - 完整測試劇本：`docs/MKA_UX_TEST_SCRIPTS.md`（有 PDF 版；三劇本＋UIUX 觀察點＋權限邊界）
 - 功能驗收矩陣：`docs/MKA_FEATURE_INVENTORY.md` §9
@@ -267,7 +267,8 @@ cp .env.example .env
 
 docker compose up -d db redis
 python -m alembic upgrade head
-python scripts/initial_data.py          # 單一 Demo Tenant + superuser
+python scripts/initial_data.py          # 初始化正式組織 superuser
+python scripts/demo_tenant.py seed      # 另建固定合成展示租戶
 python scripts/ensure_ux_test_users.py  # Pilot 測試帳號
 
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
@@ -290,27 +291,14 @@ python scripts/ensure_ux_test_users.py
 docker exec enclave-redis-1 redis-cli FLUSHALL
 ```
 
-### 8.4 測試帳號
+### 8.4 合成展示角色
 
-**平台 Pilot 帳號（本機 `Demo Tenant`）**
+展示環境沒有共用帳號或預設密碼。六個角色由 `/auth/login/demo` 的固定
+persona allowlist 進入，內部身分不對外作為登入名稱，也沒有平台 superuser。
 
-| 帳號 | 密碼 | 角色 |
-|------|------|------|
-| `admin@example.com` | `admin123` | owner（superuser） |
-| `hr_test@enclave.local` | `hr123456` | hr |
-| `employee@example.com` | `employee123` | employee |
-
-**MKA 演示帳號（本機與生產 kachu.tw 通用）**
-
-| 帳號 | 密碼 | 職能 | 對應劇本 |
-|------|------|------|----------|
-| `sales@demo.mka` | `Demo12345` | 業務 | 劇本 A |
-| `field@demo.mka` | `Demo12345` | 設備 | 劇本 B |
-| `master@demo.mka` | `Demo12345` | 班長（師傅） | 劇本 C |
-| `newcomer@demo.mka` | `Demo12345` | 新人 | 劇本 C 後段 |
-| `viewer@demo.mka` | `Demo12345` | 唯讀 | 權限邊界 |
-
-建立方式：`python test-materials/e2e/setup_test_env.py`（細節見 `test-materials/README.md`）。
+建立與驗證方式：`python scripts/demo_tenant.py seed`、
+`python scripts/demo_tenant.py verify`；完整安全邊界與重置方式見
+`docs/runbooks/SYNTHETIC_DEMO_TENANT.md`。
 
 ### 8.5 驗證
 

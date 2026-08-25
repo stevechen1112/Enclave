@@ -54,12 +54,12 @@ k6 run tests/load/k6_load_test.js \
 
 ```bash
 export LOAD_TEST_ADMIN_EMAIL=admin@example.com
-export LOAD_TEST_ADMIN_PASSWORD=admin123
+export LOAD_TEST_ADMIN_PASSWORD=<injected-test-secret>
 export LOAD_TEST_USER_EMAIL=employee@example.com
 export LOAD_TEST_USER_PASSWORD=employee123
 # 若腳本仍讀 SUPERUSER，可與 admin 相同或使用 admin@enclave.local
 export LOAD_TEST_SUPERUSER_EMAIL=admin@example.com
-export LOAD_TEST_SUPERUSER_PASSWORD=admin123
+export LOAD_TEST_SUPERUSER_PASSWORD=<injected-test-secret>
 ```
 
 ## 結果目錄

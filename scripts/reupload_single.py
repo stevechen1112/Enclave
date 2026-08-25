@@ -3,7 +3,7 @@ import sys, requests, json, time, os
 
 BASE_URL = "http://localhost:8001"
 USERNAME = "admin@example.com"
-PASSWORD = "admin123"
+PASSWORD = os.environ["E2E_ADMIN_PASSWORD"]
 
 
 def login():

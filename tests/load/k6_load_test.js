@@ -35,9 +35,13 @@ const successfulLogins = new Counter("successful_logins");
 // ---------------------------------------------------------------------------
 const BASE_URL = __ENV.BASE_URL || "http://localhost:8000";
 const USER_EMAIL = __ENV.USER_EMAIL || "user@example.com";
-const USER_PASSWORD = __ENV.USER_PASSWORD || "user123";
+const USER_PASSWORD = __ENV.USER_PASSWORD;
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || "admin@example.com";
-const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || "admin123";
+const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD;
+
+if (!USER_PASSWORD || !ADMIN_PASSWORD) {
+  throw new Error("USER_PASSWORD and ADMIN_PASSWORD must be injected for load tests");
+}
 
 // ---------------------------------------------------------------------------
 // 測試情境（4 階段壓力測試）

@@ -236,6 +236,26 @@ class TestOrchestratorModes(unittest.IsolatedAsyncioTestCase):
         self.assertIn("source_verification", ctx)
         self.assertFalse(ctx["source_verification"]["verified"])
 
+    async def test_shadow_mode_defensively_trims_runtime_whitespace(self):
+        from app.services.source_verifier import SourceVerifyResult
+
+        orch = self._make_orchestrator()
+
+        async def fake_raw(q, c, h, i, extra_system_note=""):
+            yield "回答內容"
+
+        orch._stream_answer_raw = fake_raw
+        fake_result = SourceVerifyResult(True, total_claims=1)
+        with patch(
+            "app.services.source_verifier.verify_answer",
+            new=AsyncMock(return_value=fake_result),
+        ) as verifier:
+            answer, ctx = await self._collect(orch, " shadow ")
+
+        self.assertEqual(answer, "回答內容")
+        verifier.assert_awaited_once()
+        self.assertTrue(ctx["source_verification"]["verified"])
+
 
 if __name__ == "__main__":
     unittest.main()

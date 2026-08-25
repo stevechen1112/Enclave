@@ -32,7 +32,7 @@ def test_filename_tokens_client_name_keeps_jinzhengchang():
     assert "提案" not in toks
 
 
-def test_catalog_search_filters_by_cjk_filename_substring():
+def test_catalog_search_filters_by_cjk_filename_substring(monkeypatch):
     tenant = uuid4()
     docs = [
         SimpleNamespace(
@@ -42,6 +42,7 @@ def test_catalog_search_filters_by_cjk_filename_substring():
             tenant_id=tenant,
             status="completed",
             tombstoned_at=None,
+            version=1,
         ),
         SimpleNamespace(
             id=uuid4(),
@@ -50,6 +51,7 @@ def test_catalog_search_filters_by_cjk_filename_substring():
             tenant_id=tenant,
             status="completed",
             tombstoned_at=None,
+            version=1,
         ),
         SimpleNamespace(
             id=uuid4(),
@@ -58,6 +60,7 @@ def test_catalog_search_filters_by_cjk_filename_substring():
             tenant_id=tenant,
             status="completed",
             tombstoned_at=None,
+            version=1,
         ),
     ]
 
@@ -68,8 +71,11 @@ def test_catalog_search_filters_by_cjk_filename_substring():
         def filter(self, *a, **k):
             return self
 
+        def with_entities(self, *a, **k):
+            return self
+
         def all(self):
-            return self._rows
+            return [(row, row.version) for row in self._rows]
 
     class _Sess:
         def query(self, *_a, **_k):
@@ -78,10 +84,17 @@ def test_catalog_search_filters_by_cjk_filename_substring():
         def close(self):
             return None
 
+    monkeypatch.setattr("app.services.document_visibility.deny_set_allows", lambda *_a, **_k: True)
     hits = CatalogRetriever().search(
         tenant_id=tenant,
         query='檔名或標題明顯出現「八策」的文件有哪些？',
         top_k=50,
+        authz=SimpleNamespace(
+            tenant_id=tenant,
+            subject_id=uuid4(),
+            has_kb_admin=True,
+            department_filter_ids=lambda: None,
+        ),
         db=_Sess(),
     )
     names = {h.filename for h in hits}

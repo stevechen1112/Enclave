@@ -46,6 +46,17 @@ export type TaskRun = {
   created?: boolean
 }
 
+export type RealtimeQuoteToolResult = {
+  run_id: string
+  status: string
+  values: Record<string, unknown>
+  missing_fields: string[]
+  ready_for_user_review: boolean
+  next_action: string
+  updated_fields?: string[]
+  idempotent?: boolean
+}
+
 export const tasksApi = {
   list: async (): Promise<TaskDefinition[]> => {
     const res = await api.get('/tasks')
@@ -98,6 +109,24 @@ export const tasksApi = {
 
   transition: async (runId: string, toStatus: string): Promise<TaskRun> => {
     const res = await api.post(`/tasks/runs/${runId}/transition`, { to_status: toStatus })
+    return res.data
+  },
+
+  createQuoteRealtimeSession: async (runId: string, sdp: string): Promise<string> => {
+    const res = await api.post(`/voice/realtime/quote/session?run_id=${encodeURIComponent(runId)}`, sdp, {
+      headers: { 'Content-Type': 'application/sdp' },
+      responseType: 'text',
+    })
+    return res.data
+  },
+
+  callQuoteRealtimeTool: async (body: {
+    run_id: string
+    call_id: string
+    name: string
+    arguments: Record<string, unknown>
+  }): Promise<RealtimeQuoteToolResult> => {
+    const res = await api.post('/voice/realtime/quote/tools', body)
     return res.data
   },
 }
