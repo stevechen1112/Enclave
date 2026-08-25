@@ -45,7 +45,10 @@ def _matches_prefix(path: str, prefix: str) -> bool:
 def demo_mutation_allowed(path: str, scope: str) -> bool:
     """Allow only resettable, tenant-internal demonstration operations."""
     if scope == "approval":
-        return bool(
+        can_interact = any(
+            _matches_prefix(path, prefix) for prefix in _INTERACTION_PREFIXES
+        )
+        return can_interact or bool(
             _APPROVAL_MUTATION.fullmatch(path)
             or _KNOWHOW_APPROVAL.fullmatch(path)
         )

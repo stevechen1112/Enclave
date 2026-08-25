@@ -230,6 +230,13 @@ async def test_demo_admin_can_reach_decision_route_but_not_policy_mutation(
     )
     assert decision.status_code != 403
 
+    interaction = await client.post(
+        "/api/v1/chat/chat/stream",
+        headers=headers,
+        json={},
+    )
+    assert interaction.status_code == 422
+
     policy = await client.post(
         "/api/v1/approvals/policies",
         headers=headers,
@@ -266,6 +273,8 @@ def test_demo_mutation_scope_allowlist_is_fail_closed():
     assert demo_mutation_allowed("/api/v1/approvals/123/approve", "approval") is True
     assert demo_mutation_allowed("/api/v1/approvals/123/reject", "approval") is True
     assert demo_mutation_allowed("/api/v1/knowhow/123/approve", "approval") is True
+    assert demo_mutation_allowed("/api/v1/chat/chat/stream", "approval") is True
+    assert demo_mutation_allowed("/api/v1/voice/transcribe", "approval") is True
     assert demo_mutation_allowed("/api/v1/approvals/policies", "approval") is False
     assert demo_mutation_allowed("/api/v1/approvals/123", "approval") is False
     assert demo_mutation_allowed("/api/v1/knowhow/123/retire", "approval") is False
