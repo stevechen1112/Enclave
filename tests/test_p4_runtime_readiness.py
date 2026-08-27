@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.v1.endpoints.admin import system_health
 from app.main import health_check, metrics
 from app.services.runtime_readiness import database_readiness
 
@@ -67,3 +68,15 @@ def test_metrics_scrape_refreshes_database_state_in_serving_worker():
 
     readiness.assert_called_once_with()
     endpoint.assert_called_once_with(request)
+
+
+def test_operator_health_is_degraded_when_redis_is_unavailable():
+    db = MagicMock()
+    redis_client = MagicMock()
+    redis_client.ping.side_effect = ConnectionError("redis unavailable")
+    with patch("redis.Redis.from_url", return_value=redis_client):
+        response = system_health(db=db, current_user=MagicMock())
+
+    assert response.status == "degraded"
+    assert response.database == "healthy"
+    assert response.redis == "unavailable"

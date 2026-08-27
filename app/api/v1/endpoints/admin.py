@@ -278,7 +278,11 @@ def system_health(
     except Exception:
         redis_status = "unavailable"
 
-    overall = "healthy" if db_status == "healthy" else "degraded"
+    overall = (
+        "healthy"
+        if db_status == "healthy" and redis_status == "healthy"
+        else "degraded"
+    )
 
     return SystemHealth(
         status=overall,
