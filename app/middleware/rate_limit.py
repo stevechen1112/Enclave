@@ -186,14 +186,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = get_client_ip(request, self.trusted_proxies)
 
         try:
-            if self.limiter.record_abuse(f"ip:{client_ip}"):
-                return _rate_limit_response(
-                    600,
-                    error="abuse_detected",
-                    message="偵測到異常行為，暫時封鎖。請稍後再試。",
-                    limit=0,
-                )
-
             ip_conf = {
                 "max_requests": int(settings.RATE_LIMIT_GLOBAL_PER_IP),
                 "window_seconds": 60,
@@ -204,6 +196,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 ip_conf["window_seconds"],
             )
             if not allowed:
+                # Count only requests that already exceeded the normal limit.
+                # Counting every successful request made this fixed threshold
+                # override higher configured limits and punished shared NATs.
+                if self.limiter.record_abuse(f"ip:{client_ip}"):
+                    return _rate_limit_response(
+                        600,
+                        error="abuse_detected",
+                        message="偵測到異常行為，暫時封鎖。請稍後再試。",
+                        limit=0,
+                    )
                 return _rate_limit_response(
                     retry_after,
                     error="rate_limited",

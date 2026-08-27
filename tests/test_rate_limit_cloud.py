@@ -1,6 +1,8 @@
 """三層限流（雲端模式）單元測試。"""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
+
+from starlette.responses import Response
 
 from app.config import settings
 from app.core.security import create_access_token
@@ -45,6 +47,60 @@ class TestRateLimitMiddlewareSkip:
         mw = RateLimitMiddleware(MagicMock())
         assert mw._should_skip("/api/v1/payment/notify") is True
         assert mw._should_skip("/api/v1/sso/google/callback") is True
+
+
+def _request(path: str = "/api/v1/users/me") -> MagicMock:
+    request = MagicMock()
+    request.url.path = path
+    request.client.host = "203.0.113.8"
+    request.headers = {}
+    return request
+
+
+async def test_normal_requests_do_not_feed_abuse_counter(monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", True)
+    middleware = RateLimitMiddleware(MagicMock())
+    middleware.limiter = MagicMock()
+    middleware.limiter.is_allowed.return_value = (True, 199, 0)
+
+    response = await middleware.dispatch(
+        _request(), AsyncMock(return_value=Response(status_code=200))
+    )
+
+    assert response.status_code == 200
+    middleware.limiter.record_abuse.assert_not_called()
+
+
+async def test_over_limit_requests_feed_abuse_counter(monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", True)
+    middleware = RateLimitMiddleware(MagicMock())
+    middleware.limiter = MagicMock()
+    middleware.limiter.is_allowed.return_value = (False, 0, 17)
+    middleware.limiter.record_abuse.return_value = False
+
+    response = await middleware.dispatch(
+        _request(), AsyncMock(return_value=Response(status_code=200))
+    )
+
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "17"
+    middleware.limiter.record_abuse.assert_called_once_with("ip:203.0.113.8")
+
+
+async def test_repeated_over_limit_requests_escalate_to_abuse_block(monkeypatch):
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", True)
+    middleware = RateLimitMiddleware(MagicMock())
+    middleware.limiter = MagicMock()
+    middleware.limiter.is_allowed.return_value = (False, 0, 17)
+    middleware.limiter.record_abuse.return_value = True
+
+    response = await middleware.dispatch(
+        _request(), AsyncMock(return_value=Response(status_code=200))
+    )
+
+    assert response.status_code == 429
+    assert response.headers["retry-after"] == "600"
+    assert b'abuse_detected' in response.body
 
 
 def test_rate_limit_uses_forwarded_ip_only_from_trusted_proxy(monkeypatch):
