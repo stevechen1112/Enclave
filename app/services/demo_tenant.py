@@ -81,6 +81,7 @@ def _content_hash(text: str) -> str:
 
 
 def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict[str, int]:
+    from app.models.asset import AssetRevision, SourceAsset
     from app.models.document import Document, DocumentChunk
     from app.models.kb_maintenance import DocumentVersion
     from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
@@ -147,6 +148,65 @@ def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict
         document.tombstoned_at = None
         document.uploaded_by = owner_id
         document.department_id = None
+        db.flush()
+
+        # The public Demo must exercise the canonical asset platform used by
+        # the product UI, not only the retained legacy Document projection.
+        asset_id = _stable_id(tenant_id, "source-asset", spec["key"])
+        asset = db.query(SourceAsset).filter(SourceAsset.id == asset_id).first()
+        if asset is None:
+            asset = SourceAsset(id=asset_id, tenant_id=tenant_id)
+            db.add(asset)
+        asset.asset_kind = "document"
+        asset.title = spec["filename"]
+        asset.source_system = "upload"
+        asset.source_record_id = None
+        asset.data_classification = "internal"
+        asset.acl_reference = {
+            "visibility": "tenant",
+            "policy_revision": 1,
+            "schema_version": "1.0",
+        }
+        asset.metadata_json = {
+            "synthetic_demo": True,
+            "direct_intake": True,
+            "legacy_document_id": str(document.id),
+        }
+        asset.current_revision = 1
+        asset.status = "ready"
+        asset.created_by = owner_id
+        asset.captured_by = owner_id
+        asset.tombstoned_at = None
+        db.flush()
+
+        asset_revision_id = _stable_id(
+            tenant_id, "asset-revision", spec["key"], "1"
+        )
+        asset_revision = (
+            db.query(AssetRevision)
+            .filter(AssetRevision.id == asset_revision_id)
+            .first()
+        )
+        if asset_revision is None:
+            asset_revision = AssetRevision(
+                id=asset_revision_id,
+                tenant_id=tenant_id,
+                asset_id=asset.id,
+                revision=1,
+            )
+            db.add(asset_revision)
+        asset_revision.media_type = "text/markdown"
+        asset_revision.content_uri = document.file_path
+        asset_revision.content_hash = digest
+        asset_revision.external_version = "synthetic-v1"
+        asset_revision.byte_size = document.file_size
+        asset_revision.ingestion_status = "ready"
+        asset_revision.retention_policy = {"class": "synthetic_demo"}
+        asset_revision.metadata_json = {
+            "synthetic_demo": True,
+            "legacy_document_id": str(document.id),
+        }
+        asset_revision.created_by = owner_id
         db.flush()
 
         version_id = _stable_id(tenant_id, "document-version", spec["key"], "1")
@@ -505,6 +565,7 @@ def reset_demo_tenant(db: Session) -> dict[str, Any]:
 def verify_demo_tenant(db: Session) -> dict[str, Any]:
     """Return evidence that the public Demo contains only the expected corpus."""
     import app.models  # noqa: F401
+    from app.models.asset import AssetRevision, SourceAsset
     from app.models.connector import ConnectorInstance
     from app.models.document import Document
     from app.models.kb_maintenance import DocumentVersion
@@ -527,6 +588,16 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
     tenant = db.query(Tenant).filter(Tenant.id == DEMO_TENANT_ID).first()
     users = db.query(User).filter(User.tenant_id == DEMO_TENANT_ID).all()
     documents = db.query(Document).filter(Document.tenant_id == DEMO_TENANT_ID).all()
+    source_assets = (
+        db.query(SourceAsset)
+        .filter(SourceAsset.tenant_id == DEMO_TENANT_ID)
+        .all()
+    )
+    asset_revisions = (
+        db.query(AssetRevision)
+        .filter(AssetRevision.tenant_id == DEMO_TENANT_ID)
+        .all()
+    )
     answer_states = load_document_answer_states(
         db,
         tenant_id=DEMO_TENANT_ID,
@@ -604,6 +675,18 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
             and str(version.content_snapshot or "").startswith("[合成展示資料")
             for version in versions
         ),
+        "canonical_assets_only": len(source_assets) == len(SYNTHETIC_DOCUMENTS)
+        and len(asset_revisions) == len(SYNTHETIC_DOCUMENTS)
+        and all(
+            asset.asset_kind == "document"
+            and asset.source_system == "upload"
+            and asset.status == "ready"
+            and asset.current_revision == 1
+            and bool((asset.metadata_json or {}).get("synthetic_demo"))
+            for asset in source_assets
+        )
+        and {revision.content_hash for revision in asset_revisions} == expected_hashes
+        and all(revision.ingestion_status == "ready" for revision in asset_revisions),
         "all_documents_answer_ready": len(answer_states) == len(documents)
         and all(state.answer_ready for state in answer_states.values()),
         "one_exact_knowledge_base": len(knowledge_bases) == 1

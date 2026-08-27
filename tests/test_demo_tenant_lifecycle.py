@@ -44,6 +44,7 @@ def test_seed_verify_and_transactional_reset(test_engine, isolated_demo_catalog)
         assert first["documents"] == 5
         assert verified["ok"] is True
         assert all(verified["checks"].values())
+        assert verified["checks"]["canonical_assets_only"] is True
 
         # Idempotent seed keeps one exact corpus.
         seed_demo_tenant(db)
