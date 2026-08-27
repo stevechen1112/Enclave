@@ -18,11 +18,26 @@ from app.models.asset import AssetRevision, DerivedArtifact, EvidenceSpan, Sourc
 from app.services.sop_conflict import SOPConflictChecker
 from app.services.video_processing import _ensure_video_evidence, _upsert_artifact
 
-_PRECONDITION_TERMS = ("必須先", "先確認", "之前", "前置", "事先", "先檢查")
-_DECISION_TERMS = ("如果", "若", "當", "否則", "才能", "則", "視", "依")
-_RISK_TERMS = ("危險", "風險", "注意", "燙傷", "夾傷", "觸電", "爆炸", "漏電")
-_EXCEPTION_TERMS = ("例外", "除非", "無法", "故障", "異常時", "特殊情況")
-_PROHIBITION_TERMS = ("禁止", "不得", "不可", "嚴禁", "切勿")
+_PRECONDITION_TERMS = (
+    "必須先", "先確認", "之前", "前置", "事先", "先檢查",
+    "before", "first confirm", "prior to",
+)
+_DECISION_TERMS = (
+    "如果", "若", "當", "否則", "才能", "則", "視", "依",
+    "if", "when", "otherwise", "only after",
+)
+_RISK_TERMS = (
+    "危險", "風險", "注意", "燙傷", "夾傷", "觸電", "爆炸", "漏電",
+    "danger", "hazard", "warning", "risk",
+)
+_EXCEPTION_TERMS = (
+    "例外", "除非", "無法", "故障", "異常時", "特殊情況",
+    "except", "unless", "failure", "abnormal",
+)
+_PROHIBITION_TERMS = (
+    "禁止", "不得", "不可", "嚴禁", "切勿",
+    "do not", "must not", "prohibited", "never",
+)
 _EQUIPMENT_RE = re.compile(r"\b[A-Z]{1,5}[-_]?\d{2,}(?:[-_]\d+)?\b", re.IGNORECASE)
 
 
@@ -110,7 +125,7 @@ def build_structured_procedure(
         return [
             copy.deepcopy(item)
             for item in semantic_items
-            if any(term in item["text"] for term in terms)
+            if any(term.casefold() in item["text"].casefold() for term in terms)
         ]
 
     actions = [item for item in items if item["evidence_kind"] == "action_event"]

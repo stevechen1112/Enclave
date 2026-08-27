@@ -286,6 +286,25 @@ def test_evidence_rules_do_not_invent_speakers_and_label_candidate_methods():
     assert visual_state.attributes["measurements"][0]["unit"].lower() == "bar"
 
 
+def test_english_high_risk_terms_are_classified_for_multilingual_procedures(video_db):
+    _, _, _, revision = _video_source(video_db)
+    result = _result()
+    result.transcript_segments[0] = VideoTranscriptSegment(
+        start_ms=1_000,
+        end_ms=4_000,
+        text="Danger: force reset EQ-100 only after pressure is zero",
+        speaker="operator",
+        confidence=0.9,
+    )
+    project_video_result(video_db, revision, result)
+
+    procedure = build_structured_procedure(video_db, revision)
+
+    assert procedure is not None
+    assert procedure.payload["risks"]
+    assert procedure.payload["decision_rules"]
+
+
 def test_audio_signal_provider_emits_non_diagnostic_outlier_candidate():
     samples = array("h", [1000] * 8000 + [1000] * 8000 + [10000] * 8000)
 
