@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.connector import ConnectorInstance
@@ -59,8 +60,24 @@ class ConnectorSyncService:
             connector_type=connector.connector_type,
             sync_state={},
         )
-        db.add(cursor)
-        db.flush()
+        try:
+            # The API request and outbox worker may both observe a missing
+            # cursor immediately after connector creation. Keep a uniqueness
+            # race inside a savepoint so the request transaction remains usable.
+            with db.begin_nested():
+                db.add(cursor)
+                db.flush()
+        except IntegrityError:
+            cursor = (
+                db.query(SyncCursor)
+                .filter(
+                    SyncCursor.tenant_id == connector.tenant_id,
+                    SyncCursor.connector_instance_id == str(connector.id),
+                )
+                .first()
+            )
+            if cursor is None:
+                raise
         return cursor
 
     async def _fetch_remote_sync(

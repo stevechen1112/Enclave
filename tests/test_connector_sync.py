@@ -1,13 +1,17 @@
 """Tests for connector sync helpers and content reference."""
 import uuid
-import pytest
+
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
-from app.services.content_reference import build_content_reference, resolve_content_bytes
+from app.core.authorization import AuthorizationContext
+from app.models.tenant import Tenant
+from app.services.content_reference import (
+    build_content_reference,
+    resolve_content_bytes,
+)
 from app.services.external_principal import ExternalPrincipalService
 from app.services.graph_service import GraphService
-from app.models.tenant import Tenant
-from app.core.authorization import AuthorizationContext
 
 
 class TestContentReference:
@@ -68,3 +72,59 @@ class TestConnectorDomainServices:
             assert len(result["entities"]) >= 1
         finally:
             db.close()
+
+
+def test_sync_cursor_get_or_create_recovers_from_concurrent_insert():
+    from contextlib import nullcontext
+    from types import SimpleNamespace
+
+    from app.models.outbox import SyncCursor
+    from app.services.connector_sync import ConnectorSyncService
+
+    tenant_id = uuid.uuid4()
+    connector_id = uuid.uuid4()
+    winner = SyncCursor(
+        tenant_id=tenant_id,
+        connector_instance_id=str(connector_id),
+        connector_type="nas_smb",
+        sync_state={},
+    )
+
+    class Query:
+        def __init__(self):
+            self.calls = 0
+
+        def filter(self, *args):
+            return self
+
+        def first(self):
+            self.calls += 1
+            return None if self.calls == 1 else winner
+
+    query = Query()
+
+    class RacingSession:
+        def query(self, model):
+            assert model is SyncCursor
+            return query
+
+        def begin_nested(self):
+            return nullcontext()
+
+        def add(self, row):
+            return None
+
+        def flush(self):
+            raise IntegrityError("insert", {}, Exception("unique race"))
+
+    connector = SimpleNamespace(
+        tenant_id=tenant_id,
+        id=connector_id,
+        connector_type="nas_smb",
+    )
+    cursor = ConnectorSyncService()._get_or_create_cursor(
+        RacingSession(), connector  # type: ignore[arg-type]
+    )
+
+    assert cursor is winner
+    assert query.calls == 2
