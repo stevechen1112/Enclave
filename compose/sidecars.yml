@@ -5,7 +5,7 @@
 
 services:
   ragflow:
-    image: ${RAGFLOW_IMAGE:-infiniflow/ragflow:v0.26.4}
+    image: ${RAGFLOW_IMAGE:-infiniflow/ragflow:v0.26.4@sha256:16d24d1968ab59e2715a85d2590f1569c9539e0362344a42f3a23e8be06a655b}
     profiles: ["standard", "enterprise"]
     expose:
       - "9380"
@@ -43,7 +43,7 @@ services:
       - enclave-net
 
   pipeshub-mongo:
-    image: ${MONGO_IMAGE:-mongo:7.0.14}
+    image: ${MONGO_IMAGE:-mongo:7.0.14@sha256:0032d2ca20db5fa34926f196c8a43b74e34ed239a7f2453ff1505b6f12ba8ea6}
     profiles: ["standard", "enterprise"]
     volumes:
       - pipeshub_mongo_data:/data/db
@@ -76,7 +76,7 @@ services:
       - enclave-net
 
   neo4j:
-    image: ${NEO4J_IMAGE:-neo4j:5.26-community}
+    image: ${NEO4J_IMAGE:-neo4j:5.26-community@sha256:037cf5756f0135cbfd66b739b6df7c7c4bb100f9ce11602f6f9538e17e02c74d}
     profiles: ["standard", "enterprise"]
     expose:
       - "7474"
@@ -89,7 +89,7 @@ services:
       - enclave-net
 
   ollama:
-    image: ${OLLAMA_IMAGE:-ollama/ollama:0.9.0}
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.9.0@sha256:2ea3b768a8f2dcd4d910f838d79702bb952089414dd578146619c0a939647ac6}
     profiles: ["standard", "enterprise"]
     expose:
       - "11434"
@@ -106,7 +106,7 @@ services:
               capabilities: [gpu]
 
   langfuse:
-    image: ${LANGFUSE_IMAGE:-langfuse/langfuse:2.92.0}
+    image: ${LANGFUSE_IMAGE:-langfuse/langfuse:2.92.0@sha256:83206f4fba0c6fbf0e3f69d14be1e485b32fad64b4ff1540490c0c85bc3a66a7}
     profiles: ["standard", "enterprise"]
     ports:
       - "${LANGFUSE_PORT:-3002}:3000"

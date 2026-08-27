@@ -1,7 +1,7 @@
 # ========================================================
 # GitHub Actions CD — Deploy to Staging
 # ========================================================
-# Triggers: on push to main (after CI passes)
+# Triggers: only after CI succeeds on main
 # Deploys: auto-deploy to staging server via SSH
 # ========================================================
 
@@ -12,7 +12,9 @@ permissions:
   packages: write
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 env:
@@ -20,10 +22,12 @@ env:
   # OCI repository names must be lowercase. GitHub preserves the mixed-case
   # repository display name (Enclave), which Docker rejects as an image path.
   IMAGE_PREFIX: ghcr.io/stevechen1112/enclave
+  SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
 
 jobs:
   deploy-staging:
     name: Build release images / deploy staging when configured
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     # Only deploy if CI passed (rely on branch protection rules)
     environment: staging
@@ -34,32 +38,37 @@ jobs:
       cancel-in-progress: true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.SOURCE_SHA }}
 
       - name: Resolve release identity
         id: release
         shell: bash
         run: python scripts/release_identity.py --github-output >> "$GITHUB_OUTPUT"
+        env:
+          GITHUB_SHA: ${{ env.SOURCE_SHA }}
 
       # ── Build & Push Docker Images ──
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build & push backend image
-        uses: docker/build-push-action@v5
+        id: backend-image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/backend:staging
-            ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/backend:${{ env.SOURCE_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -72,13 +81,14 @@ jobs:
             ENCLAVE_ROUTE_CONTRACT_HASH=${{ steps.release.outputs.route_contract_hash }}
 
       - name: Build & push frontend image
-        uses: docker/build-push-action@v5
+        id: frontend-image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ./frontend
           push: true
           tags: |
             ${{ env.IMAGE_PREFIX }}/frontend:staging
-            ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}
+            ${{ env.IMAGE_PREFIX }}/frontend:${{ env.SOURCE_SHA }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -89,10 +99,54 @@ jobs:
             VITE_DEPLOYMENT_MANIFEST_ID=${{ steps.release.outputs.deployment_manifest_id }}
             VITE_SCHEMA_HEAD=${{ steps.release.outputs.schema_head }}
 
+      - name: Build & push gateway image
+        id: gateway-image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: docker/gateway.Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/gateway:staging
+            ${{ env.IMAGE_PREFIX }}/gateway:${{ env.SOURCE_SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            ENCLAVE_RELEASE_ID=${{ steps.release.outputs.release_id }}
+            ENCLAVE_SOURCE_COMMIT=${{ steps.release.outputs.source_commit }}
+            ENCLAVE_BUILD_TIME=${{ steps.release.outputs.build_time }}
+
+      - name: Generate release SBOM
+        run: python scripts/generate_sbom.py
+        env:
+          ENCLAVE_RELEASE_ID: ${{ steps.release.outputs.release_id }}
+          ENCLAVE_SOURCE_COMMIT: ${{ steps.release.outputs.source_commit }}
+          IMAGE_PREFIX: ${{ env.IMAGE_PREFIX }}
+          BACKEND_IMAGE_DIGEST: ${{ steps.backend-image.outputs.digest }}
+          FRONTEND_IMAGE_DIGEST: ${{ steps.frontend-image.outputs.digest }}
+          GATEWAY_IMAGE_DIGEST: ${{ steps.gateway-image.outputs.digest }}
+
+      - name: Freeze release deployment manifest
+        shell: bash
+        run: >-
+          python scripts/freeze_deployment_manifest.py
+          --backend-image-digest "${{ steps.backend-image.outputs.digest }}"
+          --frontend-image-digest "${{ steps.frontend-image.outputs.digest }}"
+          --gateway-image-digest "${{ steps.gateway-image.outputs.digest }}"
+
+      - name: Upload release provenance
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: enclave-release-provenance-${{ env.SOURCE_SHA }}
+          path: |
+            artifacts/sbom
+            artifacts/knowledge/deployment_manifest.json
+          retention-days: 90
+
       # ── Deploy via SSH ──
       - name: Deploy to staging server
         if: env.STAGING_CONFIGURED == 'true'
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.STAGING_HOST }}
           username: ${{ secrets.STAGING_USER }}
@@ -102,12 +156,14 @@ jobs:
             cd /opt/enclave
 
             export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
-            export IMAGE_TAG="${{ github.sha }}"
+            export IMAGE_TAG="${{ env.SOURCE_SHA }}"
 
             docker pull ${IMAGE_PREFIX}/backend:${IMAGE_TAG}
             docker pull ${IMAGE_PREFIX}/frontend:${IMAGE_TAG}
+            docker pull ${IMAGE_PREFIX}/gateway:${IMAGE_TAG}
             docker tag ${IMAGE_PREFIX}/backend:${IMAGE_TAG} ${IMAGE_PREFIX}/backend:latest
             docker tag ${IMAGE_PREFIX}/frontend:${IMAGE_TAG} ${IMAGE_PREFIX}/frontend:latest
+            docker tag ${IMAGE_PREFIX}/gateway:${IMAGE_TAG} ${IMAGE_PREFIX}/gateway:latest
 
             # 縮短舊程式與新 schema 重疊：先停 app 層，migrate，再起全栈
             docker compose -f docker-compose.prod.yml stop web worker worker-beat || true
@@ -153,7 +209,7 @@ jobs:
             PY
 
             docker image prune -f
-            echo "✅ Staging deployment complete: ${{ github.sha }}"
+            echo "✅ Staging deployment complete: ${{ env.SOURCE_SHA }}"
 
       - name: Record unavailable staging activation
         if: env.STAGING_CONFIGURED != 'true'
@@ -165,7 +221,7 @@ jobs:
       - name: Deployment summary
         run: |
           echo "## 🚀 Staging Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ env.SOURCE_SHA }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Images:** \`staging\` tag pushed to GHCR" >> $GITHUB_STEP_SUMMARY

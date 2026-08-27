@@ -76,6 +76,10 @@ artifacts/knowledge/production_*_probe.json
 artifacts/knowledge/*check*.txt
 artifacts/knowledge/worktree_status_*.txt
 artifacts/release/
+artifacts/sbom/*
+!artifacts/sbom/.gitkeep
+artifacts/security/*
+!artifacts/security/.gitkeep
 
 # ---------- 一次性診斷／探針（不得成為正式來源）----------
 scripts/_*.py

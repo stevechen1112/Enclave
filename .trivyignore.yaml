@@ -1,0 +1,11 @@
+vulnerabilities:
+  - id: GHSA-6v7p-g79w-8964
+    purls:
+      - pkg:pypi/msgpack@1.1.2
+    statement: "Owner: platform-security. False positive from the upstream Python base-image SBOM; msgpack is not present in the final filesystem. Re-verify after the next base digest refresh."
+    expired_at: 2026-10-31
+  - id: CVE-2025-47273
+    purls:
+      - pkg:pypi/setuptools@70.3.0
+    statement: "Owner: platform-security. False positive from the upstream Python base-image SBOM; the runtime venv contains setuptools 84.0.0 and the reported 70.3.0 metadata is absent."
+    expired_at: 2026-10-31

@@ -14,12 +14,11 @@ Deny precedence 公式（ADR-004）：
           AND resource_not_tombstoned
           AND policy_revision_is_current
 """
+
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
 from uuid import UUID
 
 
@@ -35,10 +34,14 @@ class AuthorizationContext:
     """
 
     tenant_id: UUID
-    subject_id: UUID                          # user ID
-    role_ids: tuple[str, ...] = field(default_factory=tuple)   # owner, admin, hr, employee, viewer
-    department_ids: tuple[UUID, ...] = field(default_factory=tuple)  # 使用者所屬部門 + 祖先部門
-    group_ids: tuple[UUID, ...] = field(default_factory=tuple)       # 外部群組映射
+    subject_id: UUID  # user ID
+    role_ids: tuple[str, ...] = field(
+        default_factory=tuple
+    )  # owner, admin, hr, employee, viewer
+    department_ids: tuple[UUID, ...] = field(
+        default_factory=tuple
+    )  # 使用者所屬部門 + 祖先部門
+    group_ids: tuple[UUID, ...] = field(default_factory=tuple)  # 外部群組映射
     is_superuser: bool = False
     policy_revision: int = 1
     policy_fingerprint: str = ""
@@ -53,7 +56,7 @@ class AuthorizationContext:
         object.__setattr__(self, "group_ids", tuple(self.group_ids or ()))
         if not self.policy_fingerprint:
             fingerprint = self._compute_fingerprint()
-            object.__setattr__(self, 'policy_fingerprint', fingerprint)
+            object.__setattr__(self, "policy_fingerprint", fingerprint)
 
     def _compute_fingerprint(self) -> str:
         """基於授權參數計算確定性指紋。"""
@@ -117,7 +120,9 @@ class AuthorizationContext:
         """
         return self.is_superuser or "kb_admin" in self.role_ids
 
-    def can_access_document(self, doc_tenant_id: UUID, doc_department_id: Optional[UUID]) -> bool:
+    def can_access_document(
+        self, doc_tenant_id: UUID, doc_department_id: UUID | None
+    ) -> bool:
         """檢查是否可存取特定文件（應用層授權檢查；含祖先部門）。"""
         if doc_tenant_id != self.tenant_id:
             return False
@@ -129,7 +134,7 @@ class AuthorizationContext:
             return False
         return doc_department_id in self.department_ids
 
-    def department_filter_ids(self) -> Optional[List[UUID]]:
+    def department_filter_ids(self) -> list[UUID] | None:
         """
         供 SQL 過濾使用。
 
@@ -147,7 +152,7 @@ class AuthorizationContext:
         cls,
         user,  # app.models.user.User
         policy_revision: int = 1,
-    ) -> "AuthorizationContext":
+    ) -> AuthorizationContext:
         """
         從 User ORM 物件建立 AuthorizationContext。
 
@@ -156,12 +161,12 @@ class AuthorizationContext:
         role_ids = [user.role] if user.role else ["viewer"]
 
         # 解析部門路徑（使用者部門 + 所有祖先）
-        department_ids: List[UUID] = []
+        department_ids: list[UUID] = []
         if user.department_id:
             department_ids.append(user.department_id)
             # 向上走訪祖先部門；深度上限防止部門樹成環時請求卡死
             current = getattr(user, "department", None)
-            seen: Set[UUID] = {user.department_id}
+            seen: set[UUID] = {user.department_id}
             max_depth = 32
             while (
                 current
@@ -176,8 +181,8 @@ class AuthorizationContext:
         return cls(
             tenant_id=user.tenant_id,
             subject_id=user.id,
-            role_ids=role_ids,
-            department_ids=department_ids,
+            role_ids=tuple(role_ids),
+            department_ids=tuple(department_ids),
             is_superuser=bool(user.is_superuser),
             policy_revision=policy_revision,
         )
@@ -191,9 +196,9 @@ class SearchScope:
     與 AuthorizationContext 分離：AuthZ 回答「誰」，Scope 回答「搜什麼」。
     """
 
-    kb_ids: Optional[List[UUID]] = None          # None = all accessible KBs
-    document_types: Optional[List[str]] = None   # pdf, docx, txt, ...
-    source_systems: Optional[List[str]] = None   # google_drive, sharepoint, ...
-    date_range: Optional[tuple] = None           # (start, end)
+    kb_ids: list[UUID] | None = None  # None = all accessible KBs
+    document_types: list[str] | None = None  # pdf, docx, txt, ...
+    source_systems: list[str] | None = None  # google_drive, sharepoint, ...
+    date_range: tuple | None = None  # (start, end)
     include_wiki: bool = True
     include_graph: bool = False

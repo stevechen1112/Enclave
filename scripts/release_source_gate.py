@@ -162,12 +162,12 @@ def evaluate_release_source(
 
     images = manifest.get("candidate_images") if isinstance(manifest.get("candidate_images"), dict) else {}
     if require_images:
-        for name in ("backend", "frontend"):
+        for name in ("backend", "frontend", "gateway"):
             image = images.get(name) if isinstance(images.get(name), dict) else {}
             if not IMAGE_ID.fullmatch(str(image.get("image_id") or "")):
                 errors.append(f"candidate_image_invalid:{name}")
 
-    expected_id = deployment_manifest_id(records, images)
+    expected_id = deployment_manifest_id(records)
     if str(manifest.get("deployment_manifest_id") or "") != expected_id:
         errors.append("deployment_manifest_id_mismatch")
     if int(manifest.get("deployment_dirty_file_count") or 0) != 0:

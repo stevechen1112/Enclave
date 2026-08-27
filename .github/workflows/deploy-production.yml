@@ -45,7 +45,7 @@ jobs:
       cancel-in-progress: false  # Never cancel production deploys
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Determine deploy tag
         id: tag
@@ -61,7 +61,7 @@ jobs:
       # ── Pre-deploy: Database Backup ──
       - name: Database backup
         if: ${{ !inputs.skip_backup }}
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
@@ -75,7 +75,7 @@ jobs:
 
       # ── Deploy ──
       - name: Deploy to production
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
@@ -93,10 +93,12 @@ jobs:
             # Pull specific tag
             docker pull ${{ env.IMAGE_PREFIX }}/backend:${TAG}
             docker pull ${{ env.IMAGE_PREFIX }}/frontend:${TAG}
+            docker pull ${{ env.IMAGE_PREFIX }}/gateway:${TAG}
 
             # Tag as 'latest' for docker-compose
             docker tag ${{ env.IMAGE_PREFIX }}/backend:${TAG} ${{ env.IMAGE_PREFIX }}/backend:latest
             docker tag ${{ env.IMAGE_PREFIX }}/frontend:${TAG} ${{ env.IMAGE_PREFIX }}/frontend:latest
+            docker tag ${{ env.IMAGE_PREFIX }}/gateway:${TAG} ${{ env.IMAGE_PREFIX }}/gateway:latest
 
             export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
             export IMAGE_TAG="$TAG"
@@ -130,7 +132,7 @@ jobs:
 
       # ── Post-deploy Smoke Test ──
       - name: Smoke test
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         with:
           host: ${{ secrets.PRODUCTION_HOST }}
           username: ${{ secrets.PRODUCTION_USER }}
@@ -185,7 +187,7 @@ jobs:
             echo "✅ All smoke tests passed"
 
       - name: Set up Node.js for authenticated browser smoke
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '22'
           cache: npm

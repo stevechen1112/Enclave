@@ -54,6 +54,7 @@ coverage.xml
 !.dockerignore
 !Dockerfile
 !requirements.txt
+!requirements.lock.txt
 !alembic.ini
 !celery_worker.py
 !app/

@@ -37,7 +37,7 @@ dnspython>=2.6.1
 email-validator
 aiofiles>=23.2.1
 boto3>=1.34.0
-pycryptodome>=3.20.0
+cryptography>=46.0.0
 sentry-sdk>=2.27.0
 langfuse>=2.0.0,<3.0.0
 python-magic>=0.4.27

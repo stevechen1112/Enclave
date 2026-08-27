@@ -1,3 +1,4 @@
+import axios from 'axios'
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
 import { authApi } from './api'
 import type { DemoPersona } from './api'
@@ -27,6 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshExperience = useCallback(async () => {
     setExperienceStatus('loading')
     try {
+      if (!user) {
+        setUser(await authApi.me())
+      }
       const exp = await authApi.experience()
       setExperience(exp)
       setExperienceStatus('ready')
@@ -34,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setExperience(null)
       setExperienceStatus('error')
     }
-  }, [])
+  }, [user])
 
   const fetchUser = useCallback(async () => {
     try {
@@ -49,12 +53,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setExperience(null)
         setExperienceStatus('error')
       }
-    } catch {
-      setToken(null)
+    } catch (error) {
       setUser(null)
       setExperience(null)
-      setExperienceStatus('idle')
-      localStorage.removeItem('token')
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        setToken(null)
+        setExperienceStatus('idle')
+        localStorage.removeItem('token')
+      } else {
+        // A transient gateway/network failure must not destroy a valid session.
+        setExperienceStatus('error')
+      }
     } finally {
       setLoading(false)
     }

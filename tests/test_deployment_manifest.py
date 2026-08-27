@@ -11,6 +11,8 @@ def test_deployment_manifest_excludes_workspace_artifacts_and_test_corpora():
     assert not any("/artifacts/" in path or "/test-materials/" in path or "/testdata/" in path for path in records)
     assert any(path.endswith("app/main.py") for path in records)
     assert any(path.endswith("frontend/src/App.tsx") for path in records)
+    assert any(path.endswith("requirements.lock.txt") for path in records)
+    assert any(path.endswith("docker/gateway.Dockerfile") for path in records)
 
 
 def test_backend_docker_context_uses_strict_runtime_allowlist():
@@ -26,6 +28,7 @@ def test_backend_docker_context_uses_strict_runtime_allowlist():
         "!.dockerignore",
         "!Dockerfile",
         "!requirements.txt",
+        "!requirements.lock.txt",
         "!alembic.ini",
         "!celery_worker.py",
         "!app/**",
@@ -34,14 +37,9 @@ def test_backend_docker_context_uses_strict_runtime_allowlist():
     } <= strict_rules
 
 
-def test_manifest_id_changes_when_built_image_changes():
+def test_manifest_id_is_stable_across_image_builds_and_changes_with_source():
     records = [{"group": "backend", "path": "app/main.py", "sha256": "a" * 64, "bytes": 10}]
-    first = deployment_manifest_id(records, {"backend": {"image_id": "sha256:" + "b" * 64}})
-    same = deployment_manifest_id(records, {"backend": {"image_id": "sha256:" + "b" * 64}})
-    rebuilt = deployment_manifest_id(records, {"backend": {"image_id": "sha256:" + "c" * 64}})
-    frontend_changed = deployment_manifest_id(records, {
-        "backend": {"image_id": "sha256:" + "b" * 64},
-        "frontend": {"image_id": "sha256:" + "d" * 64},
-    })
-    assert first == same
-    assert len({first, rebuilt, frontend_changed}) == 3
+    same = [dict(records[0])]
+    changed = [dict(records[0], sha256="b" * 64)]
+    assert deployment_manifest_id(records) == deployment_manifest_id(same)
+    assert deployment_manifest_id(records) != deployment_manifest_id(changed)

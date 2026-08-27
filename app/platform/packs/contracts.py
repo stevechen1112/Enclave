@@ -634,4 +634,6 @@ class PackRegistry:
 
     @staticmethod
     def _version_tuple(version: str) -> tuple[int, int, int]:
-        return tuple(int(part) for part in version.split("-", 1)[0].split(".")[:3])
+        parts = version.split("-", 1)[0].split(".")[:3]
+        major, minor, patch = (int(part) for part in parts)
+        return major, minor, patch

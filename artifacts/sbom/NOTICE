@@ -1,5 +1,0 @@
-Enclave includes third-party components. See enclave_sbom.cdx.json.
-GA gate: upstream images must have locked digests (no floating latest).
-- ragflow: infiniflow/ragflow:v0.26.4 (Apache-2.0)
-- pipeshub: pipeshubai/pipeshub-ai:latest (Apache-2.0)
-- weknora: wechatopenai/weknora-app:latest (Apache-2.0)

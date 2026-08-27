@@ -11,7 +11,7 @@ Configuration via environment variables:
 
 import ipaddress
 import logging
-from typing import Sequence
+from collections.abc import Sequence
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -50,18 +50,34 @@ def get_client_ip(
 ) -> str:
     """
     Extract real client IP.
-    Only trust X-Forwarded-For / X-Real-IP when the immediate peer is trusted.
+    Only trust forwarded headers when the immediate peer is trusted, then walk
+    the chain from right to left so a client-supplied leftmost value cannot
+    bypass IP controls.
     """
     direct_ip = request.client.host if request.client else ""
 
     if direct_ip and is_ip_allowed(direct_ip, trusted_proxies):
         forwarded = request.headers.get("X-Forwarded-For")
         if forwarded:
-            return forwarded.split(",")[0].strip()
+            raw_hops = [value.strip() for value in forwarded.split(",")]
+            try:
+                hops = [ipaddress.ip_address(value) for value in raw_hops]
+                direct = ipaddress.ip_address(direct_ip)
+            except ValueError:
+                logger.warning("Invalid X-Forwarded-For chain; using direct peer")
+                return direct_ip
+
+            for hop in reversed([*hops, direct]):
+                if not any(hop in network for network in trusted_proxies):
+                    return str(hop)
+            return str(hops[0]) if hops else direct_ip
 
         x_real = request.headers.get("X-Real-IP")
         if x_real:
-            return x_real.strip()
+            try:
+                return str(ipaddress.ip_address(x_real.strip()))
+            except ValueError:
+                logger.warning("Invalid X-Real-IP value; using direct peer")
 
     return direct_ip or "0.0.0.0"
 

@@ -1,5 +1,5 @@
 # ── Stage 1: Build ──
-FROM node:22-alpine AS build
+FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
 WORKDIR /app
 ARG VITE_RELEASE_ID=dev
 ARG VITE_SOURCE_COMMIT=unknown
@@ -23,7 +23,7 @@ COPY . .
 RUN npm run build
 
 # ── Stage 2: Serve ──
-FROM nginx:1.27-alpine
+FROM nginx:alpine@sha256:db35bfc6b2951e7f8a72db5db120288c127ffaeeb4a6d4b95a26fead017d5913
 
 ARG VITE_RELEASE_ID=dev
 ARG VITE_SOURCE_COMMIT=unknown
@@ -34,8 +34,8 @@ LABEL org.opencontainers.image.revision=${VITE_SOURCE_COMMIT} \
       io.enclave.release-id=${VITE_RELEASE_ID} \
       io.enclave.schema-head=${VITE_SCHEMA_HEAD}
 
-# Remove default config
-RUN rm -rf /usr/share/nginx/html/*
+# Apply available Alpine security fixes before freezing the release layer.
+RUN apk upgrade --no-cache && rm -rf /usr/share/nginx/html/*
 
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf

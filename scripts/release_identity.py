@@ -13,6 +13,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from scripts.freeze_deployment_manifest import (
+        deployment_manifest_id,
+        deployment_records,
+    )
+except ModuleNotFoundError:  # Direct execution: python scripts/release_identity.py
+    from freeze_deployment_manifest import deployment_manifest_id, deployment_records
+
 ROOT = Path(__file__).resolve().parents[1]
 VERSIONS = ROOT / "app" / "db" / "migrations" / "versions"
 ROUTE_CONTRACT = ROOT / "frontend" / "release-contract.json"
@@ -22,7 +30,7 @@ def _literal_assignment(tree: ast.Module, name: str) -> Any:
     for node in tree.body:
         if isinstance(node, ast.AnnAssign):
             if isinstance(node.target, ast.Name) and node.target.id == name:
-                return ast.literal_eval(node.value)
+                return ast.literal_eval(node.value) if node.value is not None else None
             continue
         if isinstance(node, ast.Assign) and any(
             isinstance(target, ast.Name) and target.id == name
@@ -89,7 +97,6 @@ def build_identity() -> dict[str, str]:
     build_time = os.getenv("ENCLAVE_BUILD_TIME", "").strip() or datetime.now(
         timezone.utc
     ).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    manifest_seed = "\n".join((commit, dirty, heads[0], contract_hash, release_id))
     return {
         "release_id": release_id,
         "source_commit": commit,
@@ -97,9 +104,7 @@ def build_identity() -> dict[str, str]:
         "build_time": build_time,
         "schema_head": heads[0],
         "route_contract_hash": contract_hash,
-        "deployment_manifest_id": hashlib.sha256(
-            manifest_seed.encode("utf-8")
-        ).hexdigest(),
+        "deployment_manifest_id": deployment_manifest_id(deployment_records()),
     }
 
 

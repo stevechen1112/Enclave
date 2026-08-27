@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "exceptions": [
+    {
+      "package": "pymupdf",
+      "owner": "legal-security",
+      "reason": "Temporary internal-use exception pending confirmation of the Artifex commercial licence or replacement of the PDF renderer.",
+      "ticket": "P1-LIC-001",
+      "expires_at": "2026-11-30"
+    }
+  ]
+}

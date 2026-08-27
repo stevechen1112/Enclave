@@ -1,5 +1,5 @@
 # ── Stage 1: Build dependencies ──
-FROM python:3.13-slim AS builder
+FROM python:3.13-slim@sha256:7e3a6aca9d74f93cca21a91d86a8dad8c34749afd5b4a98ee481c9c47b9f5ed4 AS builder
 
 WORKDIR /build
 
@@ -20,12 +20,12 @@ ENV PATH="/root/.cargo/bin:$PATH"
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt requirements.lock.txt ./
+RUN pip install --no-cache-dir pip==26.2.1 && \
+    pip install --no-cache-dir -r requirements.lock.txt
 
 # ── Stage 2: Production image ──
-FROM python:3.13-slim
+FROM python:3.13-slim@sha256:7e3a6aca9d74f93cca21a91d86a8dad8c34749afd5b4a98ee481c9c47b9f5ed4
 
 WORKDIR /code
 
@@ -52,6 +52,7 @@ LABEL org.opencontainers.image.revision=${ENCLAVE_SOURCE_COMMIT} \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
+    openssl \
     tesseract-ocr \
     tesseract-ocr-chi-tra \
     poppler-utils \

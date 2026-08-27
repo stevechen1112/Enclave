@@ -10,19 +10,10 @@ import urllib.parse
 import uuid
 from binascii import hexlify, unhexlify
 
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
 from app.config import settings
-
-
-def _aes_mods():
-    """Lazy import so API can boot even if pycryptodome is missing in an old image."""
-    try:
-        from Crypto.Cipher import AES
-        from Crypto.Util.Padding import pad, unpad
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError(
-            "pycryptodome is required for NewebPay AES; pip install pycryptodome"
-        ) from exc
-    return AES, pad, unpad
 from app.services.payment_provider import (
     CheckoutRequest,
     CheckoutResult,
@@ -43,16 +34,22 @@ def _get_mpg_url() -> str:
 
 
 def _aes_encrypt(data: str, key: str, iv: str) -> str:
-    AES, pad, _unpad = _aes_mods()
-    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, iv.encode("utf-8"))
-    encrypted = cipher.encrypt(pad(data.encode("utf-8"), AES.block_size))
+    padder = padding.PKCS7(algorithms.AES.block_size).padder()
+    padded = padder.update(data.encode("utf-8")) + padder.finalize()
+    encryptor = Cipher(
+        algorithms.AES(key.encode("utf-8")), modes.CBC(iv.encode("utf-8"))
+    ).encryptor()
+    encrypted = encryptor.update(padded) + encryptor.finalize()
     return hexlify(encrypted).decode("utf-8")
 
 
 def _aes_decrypt(hex_data: str, key: str, iv: str) -> str:
-    AES, _pad, unpad = _aes_mods()
-    cipher = AES.new(key.encode("utf-8"), AES.MODE_CBC, iv.encode("utf-8"))
-    decrypted = unpad(cipher.decrypt(unhexlify(hex_data)), AES.block_size)
+    decryptor = Cipher(
+        algorithms.AES(key.encode("utf-8")), modes.CBC(iv.encode("utf-8"))
+    ).decryptor()
+    padded = decryptor.update(unhexlify(hex_data)) + decryptor.finalize()
+    unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+    decrypted = unpadder.update(padded) + unpadder.finalize()
     return decrypted.decode("utf-8")
 
 
@@ -150,7 +147,9 @@ class NewebPayProvider(PaymentProvider):
             comment_data = {}
 
         trade_status = trade_info.get("Status") or status_code
-        event_type = "payment.success" if trade_status == "SUCCESS" else "payment.failed"
+        event_type = (
+            "payment.success" if trade_status == "SUCCESS" else "payment.failed"
+        )
 
         logger.info(
             "NewebPay notify: type=%s trade_no=%s tenant=%s",

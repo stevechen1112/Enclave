@@ -80,7 +80,7 @@ services:
 
   # ── Database (pgvector) ──
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -114,7 +114,7 @@ services:
 
   # ── Redis ──
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
     restart: always
     command: >
       redis-server
@@ -248,7 +248,7 @@ services:
   # 啟用方式：docker compose ... --profile embed up -d
   # 首次啟動後需拉模型：docker compose ... exec ollama-embed ollama pull bge-m3
   ollama-embed:
-    image: ollama/ollama:0.9.0
+    image: ollama/ollama:0.9.0@sha256:2ea3b768a8f2dcd4d910f838d79702bb952089414dd578146619c0a939647ac6
     profiles: ["embed"]
     restart: always
     environment:
@@ -305,8 +305,11 @@ services:
 
   # ── Nginx Gateway ──
   gateway:
-    # nginx 1.27.3+ supports dynamic upstream DNS re-resolution in OSS.
-    image: nginx:1.27-alpine
+    # First-party gateway image applies OS security fixes and is scanned with the release.
+    image: ${IMAGE_PREFIX:-ghcr.io/enclave}/gateway:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: docker/gateway.Dockerfile
     restart: always
     ports:
       - "${GATEWAY_HTTP_PORT:-80}:80"
@@ -343,7 +346,7 @@ services:
 
   # ── Prometheus (T4-11) ──
   prometheus:
-    image: prom/prometheus:v2.51.0
+    image: prom/prometheus:v2.51.0@sha256:5ccad477d0057e62a7cd1981ffcc43785ac10c5a35522dc207466ff7e7ec845f
     restart: always
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -366,7 +369,7 @@ services:
 
   # ── Grafana (T4-11) ──
   grafana:
-    image: grafana/grafana:10.4.0
+    image: grafana/grafana:10.4.0@sha256:f9811e4e687ffecf1a43adb9b64096c50bc0d7a782f8608530f478b6542de7d5
     restart: always
     volumes:
       - grafana_data:/var/lib/grafana

@@ -35,10 +35,8 @@ def evaluate_rollback_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
         or backup.get("isolated_environment") is not True
     ):
         errors.append("isolated backup restore drill has not passed")
-    if (
-        not isinstance(backup.get("restore_rto_seconds"), int)
-        or backup.get("restore_rto_seconds") <= 0
-    ):
+    restore_rto_seconds = backup.get("restore_rto_seconds")
+    if not isinstance(restore_rto_seconds, int) or restore_rto_seconds <= 0:
         errors.append("restore RTO is missing")
 
     downgrade = evidence.get("database_downgrade") or {}

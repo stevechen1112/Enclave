@@ -7,21 +7,23 @@
 
 Redis 不可用時自動放行，不阻擋正常使用。
 """
+
 from __future__ import annotations
 
 import logging
 import os
 import time
-from typing import Optional, Tuple
+from typing import ClassVar
 
+import jwt
 import redis
 from fastapi import Request, status
-import jwt
 from jwt import InvalidTokenError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from app.config import settings
+from app.middleware.ip_whitelist import get_client_ip, parse_whitelist
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ logger = logging.getLogger(__name__)
 class RateLimiter:
     """基於 Redis 的滑動視窗限流器"""
 
-    def __init__(self, redis_url: Optional[str] = None):
+    def __init__(self, redis_url: str | None = None):
         if redis_url:
             self._redis_url = redis_url
         elif getattr(settings, "REDIS_HOST", None):
@@ -41,8 +43,10 @@ class RateLimiter:
             auth = f":{pwd}@" if pwd else ""
             self._redis_url = f"redis://{auth}{host}:{port}/2"
         else:
-            self._redis_url = getattr(settings, "CELERY_BROKER_URL", "redis://localhost:6379/2")
-        self._redis: Optional[redis.Redis] = None
+            self._redis_url = getattr(
+                settings, "CELERY_BROKER_URL", "redis://localhost:6379/2"
+            )
+        self._redis: redis.Redis | None = None
 
     @property
     def r(self) -> redis.Redis:
@@ -61,7 +65,7 @@ class RateLimiter:
         key: str,
         max_requests: int,
         window_seconds: int,
-    ) -> Tuple[bool, int, int]:
+    ) -> tuple[bool, int, int]:
         try:
             now = time.time()
             window_start = now - window_seconds
@@ -76,13 +80,17 @@ class RateLimiter:
             if current_count >= max_requests:
                 self.r.zrem(key, str(now))
                 oldest = self.r.zrange(key, 0, 0, withscores=True)
-                retry_after = int(window_seconds - (now - oldest[0][1])) if oldest else window_seconds
+                retry_after = (
+                    int(window_seconds - (now - oldest[0][1]))
+                    if oldest
+                    else window_seconds
+                )
                 return False, 0, max(retry_after, 1)
 
             remaining = max_requests - current_count - 1
             return True, max(remaining, 0), 0
 
-        except Exception as exc:
+        except redis.RedisError as exc:
             logger.warning("Rate limiter Redis error: %s, allowing request", exc)
             return True, max_requests, 0
 
@@ -102,7 +110,7 @@ class RateLimiter:
                 logger.warning("Abuse detected for %s, blocking for 10 minutes", key)
                 return True
             return False
-        except Exception as exc:
+        except redis.RedisError as exc:
             logger.warning("Abuse detection error: %s", exc)
             return False
 
@@ -111,7 +119,7 @@ def _cloud_layers_enabled() -> bool:
     return settings.APP_ENV in ("production", "staging", "saas")
 
 
-def _jwt_subject_and_tenant(request: Request) -> tuple[Optional[str], Optional[str]]:
+def _jwt_subject_and_tenant(request: Request) -> tuple[str | None, str | None]:
     auth = request.headers.get("authorization", "")
     if not auth.lower().startswith("bearer "):
         return None, None
@@ -119,13 +127,17 @@ def _jwt_subject_and_tenant(request: Request) -> tuple[Optional[str], Optional[s
     if not token:
         return None, None
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        payload = jwt.decode(
+            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
         return payload.get("sub"), payload.get("tenant_id")
     except InvalidTokenError:
         return None, None
 
 
-def _rate_limit_response(retry_after: int, *, error: str, message: str, limit: int) -> JSONResponse:
+def _rate_limit_response(
+    retry_after: int, *, error: str, message: str, limit: int
+) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         content={"detail": {"error": error, "message": message}},
@@ -138,29 +150,30 @@ def _rate_limit_response(retry_after: int, *, error: str, message: str, limit: i
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    SKIP_PATHS = {
-        "/",
-        "/health",
-        "/api/versions",
-        "/docs",
-        "/openapi.json",
-        "/redoc",
-        "/api/v1/documents/supported-formats",
-        "/api/v1/payment/notify",
-        "/api/v1/auth/login/access-token",
-        "/api/v1/sso/",
-    }
+    SKIP_PATHS: ClassVar[frozenset[str]] = frozenset(
+        {
+            "/",
+            "/health",
+            "/api/versions",
+            "/docs",
+            "/openapi.json",
+            "/redoc",
+            "/api/v1/documents/supported-formats",
+            "/api/v1/payment/notify",
+            "/api/v1/auth/login/access-token",
+            "/api/v1/sso/",
+        }
+    )
 
-    def __init__(self, app, redis_url: Optional[str] = None):
+    def __init__(self, app, redis_url: str | None = None):
         super().__init__(app)
         self.limiter = RateLimiter(redis_url)
+        self.trusted_proxies = parse_whitelist(settings.RATE_LIMIT_TRUSTED_PROXY_IPS)
 
     def _should_skip(self, path: str) -> bool:
         if path in self.SKIP_PATHS:
             return True
-        if path.startswith("/docs") or path.startswith("/api/v1/sso/"):
-            return True
-        return False
+        return bool(path.startswith(("/docs", "/api/v1/sso/")))
 
     async def dispatch(self, request: Request, call_next):
         if not settings.RATE_LIMIT_ENABLED:
@@ -170,7 +183,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self._should_skip(path):
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = get_client_ip(request, self.trusted_proxies)
 
         try:
             if self.limiter.record_abuse(f"ip:{client_ip}"):
@@ -255,12 +268,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                             limit=tenant_conf["max_requests"],
                         )
 
-        except Exception:
-            pass
+        except (redis.RedisError, TypeError, ValueError) as exc:
+            logger.warning("Rate-limit middleware degraded open: %s", exc)
 
         response = await call_next(request)
-        try:
-            response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_GLOBAL_PER_IP)
-        except Exception:
-            pass
+        response.headers["X-RateLimit-Limit"] = str(settings.RATE_LIMIT_GLOBAL_PER_IP)
         return response
