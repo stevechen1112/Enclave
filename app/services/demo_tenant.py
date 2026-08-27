@@ -83,6 +83,7 @@ def _content_hash(text: str) -> str:
 def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict[str, int]:
     from app.models.asset import AssetRevision, SourceAsset
     from app.models.document import Document, DocumentChunk
+    from app.models.ingestion import IngestionJob
     from app.models.kb_maintenance import DocumentVersion
     from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
     from app.models.knowledge_engine import (
@@ -207,6 +208,36 @@ def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict
             "legacy_document_id": str(document.id),
         }
         asset_revision.created_by = owner_id
+        db.flush()
+
+        ingestion_job_id = _stable_id(tenant_id, "ingestion-job", spec["key"], "1")
+        ingestion_job = (
+            db.query(IngestionJob)
+            .filter(IngestionJob.id == ingestion_job_id)
+            .first()
+        )
+        if ingestion_job is None:
+            ingestion_job = IngestionJob(
+                id=ingestion_job_id,
+                tenant_id=tenant_id,
+                asset_revision_id=asset_revision.id,
+            )
+            db.add(ingestion_job)
+        ingestion_job.adapter_key = "synthetic_demo"
+        ingestion_job.adapter_version = "1.0"
+        ingestion_job.requested_capabilities = ["retrieval", "citation"]
+        ingestion_job.idempotency_key = f"synthetic-demo:{spec['key']}:v1"
+        ingestion_job.status = "ready"
+        ingestion_job.phase = "completed"
+        ingestion_job.attempt = 1
+        ingestion_job.quality_state = "ready"
+        ingestion_job.readiness = {
+            "answer_ready": True,
+            "citation_ready": True,
+            "synthetic_demo": True,
+        }
+        ingestion_job.error = {}
+        ingestion_job.completed_at = datetime.now(UTC)
         db.flush()
 
         version_id = _stable_id(tenant_id, "document-version", spec["key"], "1")
@@ -568,6 +599,7 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
     from app.models.asset import AssetRevision, SourceAsset
     from app.models.connector import ConnectorInstance
     from app.models.document import Document
+    from app.models.ingestion import IngestionJob
     from app.models.kb_maintenance import DocumentVersion
     from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
     from app.models.mka import (
@@ -596,6 +628,11 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
     asset_revisions = (
         db.query(AssetRevision)
         .filter(AssetRevision.tenant_id == DEMO_TENANT_ID)
+        .all()
+    )
+    ingestion_jobs = (
+        db.query(IngestionJob)
+        .filter(IngestionJob.tenant_id == DEMO_TENANT_ID)
         .all()
     )
     answer_states = load_document_answer_states(
@@ -686,7 +723,14 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
             for asset in source_assets
         )
         and {revision.content_hash for revision in asset_revisions} == expected_hashes
-        and all(revision.ingestion_status == "ready" for revision in asset_revisions),
+        and all(revision.ingestion_status == "ready" for revision in asset_revisions)
+        and len(ingestion_jobs) == len(SYNTHETIC_DOCUMENTS)
+        and all(
+            job.status == "ready"
+            and job.quality_state == "ready"
+            and bool((job.readiness or {}).get("answer_ready"))
+            for job in ingestion_jobs
+        ),
         "all_documents_answer_ready": len(answer_states) == len(documents)
         and all(state.answer_ready for state in answer_states.values()),
         "one_exact_knowledge_base": len(knowledge_bases) == 1
