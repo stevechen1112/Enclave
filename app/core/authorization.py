@@ -36,15 +36,21 @@ class AuthorizationContext:
 
     tenant_id: UUID
     subject_id: UUID                          # user ID
-    role_ids: List[str] = field(default_factory=list)   # owner, admin, hr, employee, viewer
-    department_ids: List[UUID] = field(default_factory=list)  # 使用者所屬部門 + 祖先部門
-    group_ids: List[UUID] = field(default_factory=list)       # 外部群組映射
+    role_ids: tuple[str, ...] = field(default_factory=tuple)   # owner, admin, hr, employee, viewer
+    department_ids: tuple[UUID, ...] = field(default_factory=tuple)  # 使用者所屬部門 + 祖先部門
+    group_ids: tuple[UUID, ...] = field(default_factory=tuple)       # 外部群組映射
     is_superuser: bool = False
     policy_revision: int = 1
     policy_fingerprint: str = ""
 
     def __post_init__(self):
         """計算 policy_fingerprint（若未提供）。"""
+        # frozen dataclasses do not freeze mutable members. Normalize all
+        # authorization collections before computing the cache fingerprint so
+        # policy decisions and cache identity cannot diverge later.
+        object.__setattr__(self, "role_ids", tuple(self.role_ids or ()))
+        object.__setattr__(self, "department_ids", tuple(self.department_ids or ()))
+        object.__setattr__(self, "group_ids", tuple(self.group_ids or ()))
         if not self.policy_fingerprint:
             fingerprint = self._compute_fingerprint()
             object.__setattr__(self, 'policy_fingerprint', fingerprint)

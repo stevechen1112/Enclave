@@ -1,0 +1,281 @@
+from __future__ import annotations
+
+import json
+from io import BytesIO
+from uuid import UUID, uuid4
+
+import pytest
+from fastapi import HTTPException
+from starlette.datastructures import UploadFile
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import sessionmaker
+
+from app.api.v1.endpoints.knowledge_assets import (
+    _create_reference_asset,
+    _create_audio_asset,
+    get_asset,
+    list_asset_events,
+    list_assets,
+    retry_asset,
+    tombstone_asset,
+    _validate_source_url,
+)
+from app.models.asset import AssetRevision, SourceAsset
+from app.models.ingestion import IngestionJob, IngestionJobEvent
+from app.models.mka import JobRole
+from app.models.permission import Department
+from app.models.tenant import Tenant
+from app.models.user import User
+from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+
+
+def _session():
+    engine = create_engine("sqlite://")
+
+    @event.listens_for(engine, "connect")
+    def _foreign_keys(connection, _record):
+        connection.execute("PRAGMA foreign_keys=ON")
+
+    for table in (
+        Tenant.__table__,
+        Department.__table__,
+        JobRole.__table__,
+        User.__table__,
+        SourceAsset.__table__,
+        AssetRevision.__table__,
+        IngestionJob.__table__,
+        IngestionJobEvent.__table__,
+    ):
+        table.create(engine, checkfirst=True)
+    return engine, sessionmaker(bind=engine)()
+
+
+def _user(db, *, role="admin"):
+    tenant = Tenant(name=f"tenant-{uuid4().hex[:6]}")
+    db.add(tenant)
+    db.flush()
+    user = User(
+        tenant_id=tenant.id,
+        email=f"{uuid4().hex}@example.invalid",
+        hashed_password="x",
+        role=role,
+        status="active",
+    )
+    db.add(user)
+    db.flush()
+    return tenant, user
+
+
+def _reference(db, user, **overrides):
+    values = {
+        "title": "Safety portal",
+        "source_url": "https://example.invalid/safety",
+        "source_system": None,
+        "source_record_id": None,
+        "capture_manifest": None,
+        "media_type": None,
+        "idempotency_key": None,
+        "department_id": None,
+        "data_classification": "internal",
+    }
+    values.update(overrides)
+    return _create_reference_asset(db=db, current_user=user, **values)
+
+
+def test_reference_intake_is_idempotent_visible_and_has_capability_plan():
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        first = _reference(db, user, idempotency_key="web-safety-v1")
+        second = _reference(db, user, idempotency_key="web-safety-v1")
+
+        assert first["asset_kind"] == "web_page"
+        assert first["job"]["adapter_key"] == "core.document"
+        assert first["job"]["requested_capabilities"] == ["extract_text", "layout"]
+        assert second["id"] == first["id"]
+        assert second["deduplicated"] is True
+        assert [row["id"] for row in list_assets(db=db, current_user=user)] == [
+            first["id"]
+        ]
+        assert (
+            get_asset(UUID(first["id"]), db=db, current_user=user)["metadata"][
+                "direct_intake"
+            ]
+            is True
+        )
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_capture_and_connector_records_use_one_contract():
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        capture = _reference(
+            db,
+            user,
+            source_url=None,
+            capture_manifest=json.dumps(
+                {"capture_id": "mobile-1", "title": "現場照片"}
+            ),
+            media_type="image/jpeg",
+        )
+        record = _reference(
+            db,
+            user,
+            title="CRM record",
+            source_url=None,
+            source_system="crm",
+            source_record_id="case-42",
+        )
+        assert capture["source_system"] == "capture"
+        assert capture["metadata"]["capture_manifest"]["capture_id"] == "mobile-1"
+        assert record["asset_kind"] == "external_record"
+        assert record["source_system"] == "api:crm"
+        assert record["metadata"]["upstream_source_system"] == "crm"
+        assert record["job"]["adapter_key"] == "core.document"
+
+        audio = _reference(
+            db,
+            user,
+            source_url=None,
+            capture_manifest=json.dumps({"capture_id": "interview-1"}),
+            media_type="audio/wav",
+        )
+        assert audio["asset_kind"] == "audio"
+        assert audio["job"]["adapter_key"] == "core.long_interview_audio"
+        assert "transcribe" in audio["job"]["requested_capabilities"]
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_asset_lifecycle_retry_events_tombstone_and_tenant_isolation(monkeypatch):
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        _other_tenant, outsider = _user(db)
+        created = _reference(db, user)
+        asset_id = UUID(created["id"])
+
+        with pytest.raises(HTTPException) as denied:
+            get_asset(asset_id, db=db, current_user=outsider)
+        assert denied.value.status_code == 404
+
+        job = (
+            db.query(IngestionJob)
+            .filter(IngestionJob.id == UUID(created["job"]["id"]))
+            .one()
+        )
+        get_ingestion_orchestrator().transition(
+            db, job, to_status="running", phase="fetch"
+        )
+        get_ingestion_orchestrator().transition(
+            db,
+            job,
+            to_status="failed",
+            phase="fetch",
+            error={"code": "offline", "message": "source unavailable"},
+        )
+        db.commit()
+        monkeypatch.setattr(
+            "app.api.v1.endpoints.knowledge_assets._dispatch_retry",
+            lambda *_args: None,
+        )
+        retried = retry_asset(asset_id, db=db, current_user=user)
+        assert retried["job"]["status"] == "running"
+        assert retried["job"]["attempt"] == 2
+        assert [
+            row["to_status"]
+            for row in list_asset_events(asset_id, db=db, current_user=user)
+        ] == ["queued", "running", "failed", "running"]
+
+        assert (
+            tombstone_asset(asset_id, db=db, current_user=user)["status"]
+            == "tombstoned"
+        )
+        assert list_assets(db=db, current_user=user) == []
+        with pytest.raises(HTTPException) as missing:
+            get_asset(asset_id, db=db, current_user=user)
+        assert missing.value.status_code == 404
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_reference_validation_and_write_permission_fail_closed():
+    engine, db = _session()
+    try:
+        _tenant, admin = _user(db)
+        with pytest.raises(HTTPException) as invalid_url:
+            _reference(db, admin, source_url="file:///secret")
+        assert invalid_url.value.status_code == 400
+        with pytest.raises(HTTPException) as invalid_manifest:
+            _reference(db, admin, source_url=None, capture_manifest="[]")
+        assert invalid_manifest.value.status_code == 400
+        for blocked in (
+            "http://127.0.0.1/admin",
+            "http://localhost/",
+            "http://10.0.0.1/",
+        ):
+            with pytest.raises(HTTPException):
+                _validate_source_url(blocked)
+
+        _tenant2, viewer = _user(db, role="viewer")
+        created = _reference(db, viewer)
+        with pytest.raises(HTTPException) as forbidden:
+            tombstone_asset(UUID(created["id"]), db=db, current_user=viewer)
+        assert forbidden.value.status_code == 403
+    finally:
+        db.close()
+        engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_audio_upload_persists_job_and_dispatches_worker(monkeypatch):
+    engine, db = _session()
+    dispatched = []
+
+    class Storage:
+        def put(self, key, path):
+            assert key and path
+            return f"s3://test/{key}"
+
+        def delete(self, _key):
+            return None
+
+    try:
+        _tenant, user = _user(db)
+        monkeypatch.setattr(
+            "app.services.file_scan.scan_file_path", lambda *_args: None
+        )
+        monkeypatch.setattr(
+            "app.services.storage.get_storage_backend", lambda: Storage()
+        )
+        monkeypatch.setattr(
+            "app.crud.crud_tenant.lock_and_check_storage_quota",
+            lambda *_args: {"allowed": True},
+        )
+        monkeypatch.setattr(
+            "app.tasks.audio_tasks.process_audio_asset.delay",
+            lambda *args: dispatched.append(args),
+        )
+        result = await _create_audio_asset(
+            db=db,
+            file=UploadFile(
+                filename="interview.wav", file=BytesIO(b"RIFFtestWAVEdata")
+            ),
+            current_user=user,
+            title="訪談",
+            idempotency_key="audio-1",
+            department_id=None,
+            data_classification="internal",
+        )
+        assert result["asset_kind"] == "audio"
+        assert result["job"]["adapter_key"] == "core.long_interview_audio"
+        assert result["dispatched"] is True
+        assert len(dispatched) == 1
+    finally:
+        db.close()
+        engine.dispose()

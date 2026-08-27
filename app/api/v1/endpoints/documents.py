@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import uuid
@@ -160,6 +161,7 @@ async def upload_document(
     temp_file_path = os.path.join(upload_dir, f"tmp-{uuid.uuid4().hex}{file_ext}")
 
     file_size = 0
+    content_digest = hashlib.sha256()
     chunk_size = 1024 * 1024  # 1MB
     try:
         async with aiofiles.open(temp_file_path, "wb") as f:
@@ -177,6 +179,7 @@ async def upload_document(
                         ),
                     )
                 await f.write(chunk)
+                content_digest.update(chunk)
     except HTTPException:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
@@ -284,7 +287,37 @@ async def upload_document(
 
     # content_uri 持久化（local=絕對路徑，向後相容；s3=s3://bucket/key）
     document.file_path = content_uri
-    db.commit()
+    document.content_hash = content_digest.hexdigest()
+    try:
+        from app.services.asset_projection import project_document
+
+        project_document(
+            db,
+            document,
+            content_uri=content_uri,
+            content_hash=document.content_hash,
+            ingestion_status="pending",
+        )
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            backend.delete(storage_key)
+        except Exception:
+            logger.exception(
+                "unable to clean stored object after asset projection failure: %s",
+                storage_key,
+            )
+        try:
+            crud_document.tombstone(
+                db, document_id=document.id, reason="asset_projection_failed"
+            )
+        except Exception:
+            logger.exception(
+                "tombstone after asset projection failure also failed: doc=%s",
+                document.id,
+            )
+        raise
 
     # 6. 觸發背景任務處理
     process_document_task.delay(

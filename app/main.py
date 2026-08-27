@@ -140,7 +140,13 @@ def root():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "env": settings.APP_ENV}
+    from app.services.release_metadata import get_public_release_metadata
+
+    return {
+        "status": "ok",
+        "env": settings.APP_ENV,
+        "release": get_public_release_metadata(),
+    }
 
 # Prometheus metrics endpoint (T4-11)
 @app.get("/metrics", include_in_schema=False)

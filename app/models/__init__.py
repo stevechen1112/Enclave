@@ -2,6 +2,20 @@ from app.db.base_class import Base
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.document import Document, DocumentChunk
+from app.models.asset import (
+    ArtifactReviewDecision,
+    AssetRevision,
+    DerivedArtifact,
+    EvidenceSpan,
+    SourceAsset,
+)
+from app.models.ingestion import IngestionJob, IngestionJobEvent
+from app.models.knowledge_unit import (
+    KnowledgeUnitRecord,
+    KnowledgeUnitRelease,
+    KnowledgeUnitReleaseMembership,
+    KnowledgeUnitRevision,
+)
 from app.models.chat import Conversation, Message, RetrievalTrace
 from app.models.feedback import ChatFeedback
 from app.models.audit import AuditLog, UsageRecord

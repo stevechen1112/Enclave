@@ -1,3 +1,5 @@
+import type { Capability } from './navigation/capabilities'
+
 // ─── User ───
 export interface User {
   id: string
@@ -7,6 +9,18 @@ export interface User {
   role: string
   status: string | null
   is_superuser?: boolean
+}
+
+export interface UIModuleManifest {
+  pack_key: string
+  ui_key: string
+  version: string
+  module_key?: string | null
+  route_keys: string[]
+  required_capabilities: string[]
+  navigation: Array<{ to: string; label: string }>
+  bundle_key?: string | null
+  default_home?: string | null
 }
 
 // ─── Tenant ───
@@ -63,6 +77,13 @@ export interface ExperienceBootstrap {
   }
   capabilities: string[]
   default_home: string
+  primary_navigation?: Array<{
+    to: string
+    label: string
+    capability?: Capability
+    module?: string
+    end?: boolean
+  }>
   packs: Record<string, {
     enabled?: boolean
     available?: boolean
@@ -99,6 +120,195 @@ export interface ExperienceBootstrap {
   active_job_role?: Record<string, unknown> | null
   default_job_home?: string
   interaction_capabilities?: Record<string, boolean>
+  ui_modules?: UIModuleManifest[]
+  pack_permissions?: string[]
+  capability_catalog?: Array<{
+    key: string
+    pack_key?: string
+    kind: 'platform_capability' | 'domain_module'
+    deployment_status: string
+    entitlement_status: string
+    runtime_status: string
+    user_permission_status: string
+  }>
+}
+
+// ─── Video knowledge sources ───
+export interface VideoIngestionJob {
+  id: string
+  status: string
+  phase: string | null
+  quality_state: string | null
+  readiness: Record<string, unknown>
+  error: Record<string, unknown>
+}
+
+export interface VideoEvidenceSpan {
+  id: string
+  locator_kind: string
+  start_ms: number | null
+  end_ms: number | null
+  frame_index: number | null
+  speaker: string | null
+  deep_link: string
+}
+
+export interface VideoArtifactReview {
+  decision: 'approved' | 'rejected'
+  notes: string | null
+  reviewer_id: string
+  created_at: string
+  resolution?: Record<string, unknown>
+}
+
+export interface VideoArtifact {
+  id: string
+  kind: 'audio_event' | 'transcript_segment' | 'keyframe' | 'ocr_region' | 'procedure_candidate' | string
+  quality_state: string
+  confidence: number | null
+  content: string | Record<string, unknown> | null
+  metadata: Record<string, unknown>
+  content_url: string | null
+  evidence: VideoEvidenceSpan[]
+  review: VideoArtifactReview | null
+}
+
+export interface VideoAsset {
+  id: string
+  title: string
+  status: string
+  created_at: string
+  revision_id: string
+  duration_ms: number | null
+  media_type: string
+  probe: Record<string, unknown>
+  job: VideoIngestionJob | null
+  dispatched?: boolean
+}
+
+export interface VideoAssetDetail extends VideoAsset {
+  content_url: string
+  artifacts: VideoArtifact[]
+}
+
+// ─── Unified Knowledge Assets ───
+export interface KnowledgeAssetRevision {
+  id: string
+  revision: number
+  media_type: string
+  content_hash: string
+  byte_size: number | null
+  duration_ms: number | null
+  ingestion_status: string
+  created_at: string
+}
+
+export interface KnowledgeAssetJob {
+  id: string
+  status: string
+  phase: string
+  quality_state: string
+  adapter_key: string
+  adapter_version: string
+  requested_capabilities: string[]
+  readiness: Record<string, unknown>
+  error: Record<string, unknown>
+  attempt: number
+  created_at: string
+  completed_at: string | null
+}
+
+export interface KnowledgeAsset {
+  id: string
+  asset_kind: string
+  title: string
+  source_system: string
+  data_classification: string
+  status: string
+  current_revision: number
+  created_at: string
+  updated_at: string | null
+  tombstoned_at: string | null
+  metadata: Record<string, unknown>
+  revision: KnowledgeAssetRevision | null
+  revisions?: KnowledgeAssetRevision[]
+  job: KnowledgeAssetJob | null
+  deduplicated?: boolean
+}
+
+export interface KnowledgeAssetEvent {
+  id: string
+  job_id: string
+  sequence: number
+  from_status: string | null
+  to_status: string
+  phase: string
+  details: Record<string, unknown>
+  created_at: string
+}
+
+export interface ReviewEvidenceLocator {
+  id: string
+  kind: 'document' | 'table' | 'image' | 'audio' | 'video' | 'external_record'
+  page?: number | null
+  section?: string | null
+  bbox?: number[] | Record<string, number> | null
+  coordinate_space?: string | null
+  worksheet?: string | null
+  table_name?: string | null
+  row_number?: number | null
+  column_name?: string | null
+  cell_range?: string | null
+  start_ms?: number | null
+  end_ms?: number | null
+  speaker?: string | null
+  frame_index?: number | null
+  source_system?: string | null
+  source_record_id?: string | null
+  field_path?: string | null
+  deep_link: string
+}
+
+export interface KnowledgeReviewItem {
+  id: string
+  provider: string
+  source_type: string
+  asset_kind: string
+  title: string
+  subtitle: string
+  status: string
+  risk_level: 'low' | 'medium' | 'high'
+  confidence: number | null
+  created_at: string
+  due_at: string | null
+  department_ids: string[]
+  policy_key: string
+  policy_version: string | number
+  assignee: string | null
+  batch_eligible: boolean
+  blocked_reasons: string[]
+  proposal: Record<string, unknown>
+  evidence: ReviewEvidenceLocator[]
+  publication: {
+    unit_key: string | null
+    next_revision: number
+    effective_from: string
+    acl: Record<string, unknown>
+    rollback: string
+    sop_precedence: boolean
+  }
+}
+
+export interface KnowledgeReviewInbox {
+  items: KnowledgeReviewItem[]
+  total: number
+  limit: number
+  offset: number
+  facets: {
+    source_types: string[]
+    policy_keys: string[]
+    assignees: string[]
+  }
 }
 
 // ─── Chat ───

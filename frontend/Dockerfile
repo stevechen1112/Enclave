@@ -1,6 +1,22 @@
 # ── Stage 1: Build ──
 FROM node:22-alpine AS build
 WORKDIR /app
+ARG VITE_RELEASE_ID=dev
+ARG VITE_SOURCE_COMMIT=unknown
+ARG VITE_SOURCE_DIRTY=unknown
+ARG VITE_BUILD_TIME=unknown
+ARG VITE_DEPLOYMENT_MANIFEST_ID=unknown
+ARG VITE_SCHEMA_HEAD=unknown
+ENV VITE_RELEASE_ID=${VITE_RELEASE_ID} \
+    VITE_SOURCE_COMMIT=${VITE_SOURCE_COMMIT} \
+    VITE_SOURCE_DIRTY=${VITE_SOURCE_DIRTY} \
+    VITE_BUILD_TIME=${VITE_BUILD_TIME} \
+    VITE_DEPLOYMENT_MANIFEST_ID=${VITE_DEPLOYMENT_MANIFEST_ID} \
+    VITE_SCHEMA_HEAD=${VITE_SCHEMA_HEAD}
+LABEL org.opencontainers.image.revision=${VITE_SOURCE_COMMIT} \
+      org.opencontainers.image.created=${VITE_BUILD_TIME} \
+      io.enclave.release-id=${VITE_RELEASE_ID} \
+      io.enclave.schema-head=${VITE_SCHEMA_HEAD}
 COPY package*.json ./
 RUN npm ci
 COPY . .

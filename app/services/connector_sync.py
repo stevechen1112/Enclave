@@ -170,6 +170,15 @@ class ConnectorSyncService:
             )
             db.add(doc)
             db.flush()
+            from app.services.asset_projection import project_document
+
+            project_document(
+                db,
+                doc,
+                content_uri=str(dest),
+                content_hash=content_hash,
+                ingestion_status="pending",
+            )
             created_ids.append(str(doc_id))
 
             try:

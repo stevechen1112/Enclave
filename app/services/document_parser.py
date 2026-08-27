@@ -1215,8 +1215,10 @@ class DocumentParser:
             raise ValueError("trafilatura 未安裝，無法擷取網頁")
 
         try:
-            # 下載網頁
-            downloaded = trafilatura.fetch_url(url)
+            # 下載網頁。每次 redirect 都重新驗證 DNS/IP，避免知識匯入成為 SSRF 入口。
+            from app.services.safe_web_fetch import fetch_public_web_page
+
+            downloaded = fetch_public_web_page(url)
             if not downloaded:
                 report.add_error(f"無法下載網頁: {url}")
                 report.compute_quality()
@@ -1237,13 +1239,6 @@ class DocumentParser:
                 report.add_error("網頁內容為空或無法提取正文")
                 report.compute_quality()
                 raise ValueError("網頁內容為空")
-
-            # 嘗試同時取得 metadata
-            metadata_extracted = trafilatura.extract(
-                downloaded,
-                output_format="xml",
-                include_tables=True,
-            )
 
             report.total_chars = len(text)
             report.total_pages = 1
@@ -1436,7 +1431,7 @@ class TextChunker:
         lines = text.splitlines()[:200]
         if not lines:
             return False
-        heading_lines = sum(1 for l in lines if l.lstrip().startswith("#"))
+        heading_lines = sum(1 for line in lines if line.lstrip().startswith("#"))
         return heading_lines >= 3 or heading_lines / max(len(lines), 1) > 0.1
 
     @classmethod

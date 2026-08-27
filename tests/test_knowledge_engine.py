@@ -169,7 +169,8 @@ def test_incomplete_safety_procedure_is_never_answerable():
 
 def test_knowhow_scope_requires_role_and_named_equipment():
     from types import SimpleNamespace
-    from app.services.retrieval_facade import RetrievalFacade
+    from app.packs.mka.knowledge_provider import ApprovedKnowhowProvider
+    from app.platform.knowledge import KnowledgeContributionContext
 
     card = SimpleNamespace(
         applicable_roles=["master"],
@@ -181,21 +182,37 @@ def test_knowhow_scope_requires_role_and_named_equipment():
     )
     master = SimpleNamespace(role_ids=["master"])
     sales = SimpleNamespace(role_ids=["sales"])
-    assert RetrievalFacade._knowhow_applies(card, authz=master, query="P-200 如何校正")
-    assert not RetrievalFacade._knowhow_applies(card, authz=master, query="如何校正")
-    assert not RetrievalFacade._knowhow_applies(card, authz=sales, query="P-200 如何校正")
+
+    def context(authz, query):
+        return KnowledgeContributionContext(authz=authz, query=query, db=None)
+
+    assert ApprovedKnowhowProvider._applies(
+        card, context=context(master, "P-200 如何校正")
+    )
+    assert not ApprovedKnowhowProvider._applies(
+        card, context=context(master, "如何校正")
+    )
+    assert not ApprovedKnowhowProvider._applies(
+        card, context=context(sales, "P-200 如何校正")
+    )
 
 
 def test_high_risk_knowhow_requires_formal_authority():
     from types import SimpleNamespace
-    from app.services.retrieval_facade import RetrievalFacade
+    from app.packs.mka.knowledge_provider import ApprovedKnowhowProvider
+    from app.platform.knowledge import KnowledgeContributionContext
 
     card = SimpleNamespace(
         applicable_roles=[], equipment_ids=[], product_ids=[], customer_ids=[],
         authority_level=60, risk_level="high",
     )
     authz = SimpleNamespace(role_ids=["master"])
-    assert not RetrievalFacade._knowhow_applies(card, authz=authz, query="安全停機步驟")
+    assert not ApprovedKnowhowProvider._applies(
+        card,
+        context=KnowledgeContributionContext(
+            authz=authz, query="安全停機步驟", db=None
+        ),
+    )
 
 
 def test_persistent_lexical_index_is_incremental_and_searchable(test_engine):

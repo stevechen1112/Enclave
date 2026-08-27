@@ -99,6 +99,9 @@ class Settings(BaseSettings):
     # Tenant RLS（ADR-012）：false=shadow（policy 已建、owner 不受 FORCE 約束）；
     # true=enforce（migration 需以同名環境變數重跑才會 FORCE ROW LEVEL SECURITY）
     RLS_ENFORCEMENT_ENABLED: bool = False
+    # Canonical KnowledgeUnit serving cutover: shadow compares authority with
+    # legacy retrieval; enforce serves only active release memberships.
+    KNOWLEDGE_UNIT_READ_MODE: str = "shadow"  # shadow | enforce
     
     # Document Processing
     CHUNK_SIZE: int = 1000  # tokens
@@ -166,6 +169,16 @@ class Settings(BaseSettings):
     VOICE_REALTIME_CONNECT_TIMEOUT_SECONDS: int = 30
     VOICE_REALTIME_MAX_SESSION_SECONDS: int = 900
     LONG_INTERVIEW_STT_MODEL: str = "gpt-4o-transcribe-diarize"
+    # Governed video ingestion (Phase F). Upload and worker both revalidate.
+    VIDEO_INGESTION_ENABLED: bool = True
+    VIDEO_MAX_BYTES: int = 500 * 1024 * 1024
+    VIDEO_MAX_SECONDS: int = 60 * 60
+    VIDEO_MAX_WIDTH: int = 3840
+    VIDEO_MAX_HEIGHT: int = 2160
+    VIDEO_MAX_KEYFRAMES: int = 24
+    VIDEO_KEYFRAME_MIN_INTERVAL_SECONDS: int = 15
+    VIDEO_AUDIO_CHUNK_SECONDS: int = 300
+    VIDEO_ALLOWED_CODECS: str = "h264,hevc,vp8,vp9,av1"
 
     # Query embedding cache（ENGINEERING_PLAN §7.2 P0 補強）
     EMBEDDING_CACHE_ENABLED: bool = True
@@ -186,6 +199,9 @@ class Settings(BaseSettings):
 
     # 職能模組 Router（稽核文件 §10 P1）
     MODULE_ROUTER_ENABLED: bool = True
+    # Pack flags express what this deployment can host. TenantModuleBinding is
+    # still the authority for whether a company may use an MKA capability.
+    PACK_MKA_ENABLED: bool = True
 
     # ── P2：Know-how 與長文件 ──
     # Know-how Card（稽核文件 §7.4 P0、§11.4）
@@ -320,6 +336,14 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("KNOWLEDGE_UNIT_READ_MODE", mode="before")
+    @classmethod
+    def _normalize_knowledge_unit_read_mode(cls, value: object) -> str:
+        normalized = str(value or "shadow").strip().lower()
+        if normalized not in {"shadow", "enforce"}:
+            raise ValueError("KNOWLEDGE_UNIT_READ_MODE must be shadow or enforce")
+        return normalized
+
     @field_validator("SOURCE_VERIFY_MODE", mode="before")
     @classmethod
     def _normalize_source_verify_mode(cls, value: object) -> str:
@@ -354,6 +378,7 @@ class Settings(BaseSettings):
                     ("FIXED_FORM_ENABLED", self.FIXED_FORM_ENABLED),
                     ("KNOWHOW_CARD_ENABLED", self.KNOWHOW_CARD_ENABLED),
                     ("MODULE_ROUTER_ENABLED", self.MODULE_ROUTER_ENABLED),
+                    ("PACK_MKA_ENABLED", self.PACK_MKA_ENABLED),
                 )
                 if not enabled
             ]

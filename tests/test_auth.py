@@ -2,15 +2,26 @@
 Authentication Tests — /api/v1/auth
 測試 JWT 登入、token 格式、無效憑證拒絕
 """
+
 import pytest
 from httpx import AsyncClient
-from tests.conftest import create_tenant, create_user, login_user
 
+from tests.conftest import create_tenant, create_user
 
 # ── 登入成功 ──
 
+
 @pytest.mark.asyncio
-async def test_superuser_login_returns_token(client: AsyncClient, superuser_headers: dict):
+async def test_login_options_are_public_and_fail_closed_for_demo(client: AsyncClient):
+    resp = await client.get("/api/v1/auth/login/options")
+    assert resp.status_code == 200
+    assert resp.json() == {"password_enabled": True, "demo_enabled": False}
+
+
+@pytest.mark.asyncio
+async def test_superuser_login_returns_token(
+    client: AsyncClient, superuser_headers: dict
+):
     """superuser 登入應回傳有效 JWT"""
     resp = await client.post(
         "/api/v1/auth/login/access-token",
@@ -27,10 +38,17 @@ async def test_superuser_login_returns_token(client: AsyncClient, superuser_head
 async def test_tenant_user_login(client: AsyncClient, superuser_headers: dict):
     """租戶使用者登入應成功"""
     t = await create_tenant(client, superuser_headers, {"name": "Auth Co"})
-    await create_user(client, superuser_headers, {
-        "email": "auth@authco.com", "password": "AuthPass1!",
-        "full_name": "Auth User", "role": "employee", "tenant_id": t["id"],
-    })
+    await create_user(
+        client,
+        superuser_headers,
+        {
+            "email": "auth@authco.com",
+            "password": "AuthPass1!",
+            "full_name": "Auth User",
+            "role": "employee",
+            "tenant_id": t["id"],
+        },
+    )
     resp = await client.post(
         "/api/v1/auth/login/access-token",
         data={"username": "auth@authco.com", "password": "AuthPass1!"},
@@ -40,6 +58,7 @@ async def test_tenant_user_login(client: AsyncClient, superuser_headers: dict):
 
 
 # ── 登入失敗 ──
+
 
 @pytest.mark.asyncio
 async def test_wrong_password_rejected(client: AsyncClient):
@@ -62,6 +81,7 @@ async def test_nonexistent_user_rejected(client: AsyncClient):
 
 
 # ── Token 驗證 ──
+
 
 @pytest.mark.asyncio
 async def test_invalid_token_rejected(client: AsyncClient):

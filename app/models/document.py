@@ -6,6 +6,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     String,
@@ -42,6 +43,9 @@ class Document(Base):
 
     uploaded_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     department_id = Column(UUID(as_uuid=True), ForeignKey("departments.id"), nullable=True, index=True)
+    # Phase B compatibility pointer. SourceAsset is canonical for new input;
+    # Document remains the production model during dual-write.
+    source_asset_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -54,6 +58,11 @@ class Document(Base):
     artifacts = relationship("DocumentArtifact", back_populates="document", cascade="all, delete-orphan")
 
     __table_args__ = (
+        ForeignKeyConstraint(
+            ["tenant_id", "source_asset_id"],
+            ["source_assets.tenant_id", "source_assets.id"],
+            name="fk_documents_tenant_source_asset",
+        ),
         # One active row per external record; tombstoned history may coexist.
         Index(
             "uq_documents_tenant_source_record_active",
@@ -66,6 +75,13 @@ class Document(Base):
                 & source_record_id.isnot(None)
                 & tombstoned_at.is_(None)
             ),
+        ),
+        Index(
+            "uq_documents_tenant_source_asset",
+            "tenant_id",
+            "source_asset_id",
+            unique=True,
+            postgresql_where=(source_asset_id.isnot(None)),
         ),
     )
 

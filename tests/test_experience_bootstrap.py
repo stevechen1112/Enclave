@@ -1,4 +1,5 @@
 """UX experience bootstrap — capabilities & honesty surface."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
@@ -19,6 +20,8 @@ def test_capabilities_admin_has_admin_home():
     assert "admin_home" in caps
     assert "review_queue" in caps
     assert "ask" in caps
+    assert "home" in caps
+    assert "field_work" not in caps
 
 
 def test_capabilities_employee_no_review():
@@ -29,6 +32,8 @@ def test_capabilities_employee_no_review():
     assert "ask" in caps
     assert "review_queue" not in caps
     assert "admin_home" not in caps
+    assert "home" in caps
+    assert "field_work" not in caps
 
 
 def test_capabilities_unknown_role_least_privilege():
@@ -90,3 +95,33 @@ def test_bootstrap_shape():
     assert data["features"]["sso"] is False
     assert data["features"]["wiki_editor"] is False
     assert "ask" in data["capabilities"]
+    db.commit.assert_not_called()
+    db.add.assert_not_called()
+
+
+def test_disabled_mka_pack_clears_routes_workspace_and_field_home(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "PACK_MKA_ENABLED", False)
+    db = MagicMock()
+    user = MagicMock()
+    user.id = "00000000-0000-0000-0000-000000000003"
+    user.email = "worker@example.invalid"
+    user.full_name = "Worker"
+    user.role = "employee"
+    user.tenant_id = "00000000-0000-0000-0000-000000000002"
+    user.is_superuser = False
+    user.department_id = None
+
+    data = experience_bootstrap(db=db, current_user=user)
+
+    assert data["ui_modules"] == []
+    assert data["workspace_entries"] == []
+    assert data["job_modules"] == []
+    assert data["default_home"] == "overview"
+    assert data["primary_navigation"] == [
+        {"to": "/overview", "label": "總覽", "capability": "home", "end": True},
+        {"to": "/ask", "label": "問答", "capability": "ask"},
+        {"to": "/knowledge", "label": "知識", "capability": "browse_knowledge"},
+    ]
+    assert "field_work" not in data["capabilities"]

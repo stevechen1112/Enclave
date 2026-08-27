@@ -51,6 +51,13 @@ class CitationBuilder:
                     citation_id=f"cite-{i}",
                     canonical_document_id=doc_id or UUID(int=0),
                     document_revision=revision,
+                    canonical_resource_type=str(
+                        meta.get("canonical_resource_type") or "document"
+                    ),
+                    canonical_resource_id=str(
+                        meta.get("canonical_resource_id")
+                        or (doc_id if doc_id and doc_id.int != 0 else "")
+                    ) or None,
                     artifact_id=r.id or meta.get("artifact_id"),
                     artifact_type=r.result_type or meta.get("artifact_type") or "chunk",
                     source_system=meta.get("source_system"),
@@ -71,20 +78,28 @@ class CitationBuilder:
         """
         Lineage completeness metrics for GA gate.
 
-        Base required: canonical_document_id, document_revision, provider, acl_revision.
+        Base required: canonical resource/document identity, revision, provider,
+        and acl_revision.
         Object-level (+): content_hash; and when source_system is a connector, source_record_id.
         """
         if not citations:
             return {"total": 0, "complete": 0, "rate": 1.0, "missing": []}
-        required = ["canonical_document_id", "document_revision", "provider", "acl_revision"]
+        required = ["canonical_resource_identity", "document_revision", "provider", "acl_revision"]
         if object_level:
             required.append("content_hash")
         complete = 0
         missing = []
         for c in citations:
             bad = []
-            if not c.canonical_document_id or c.canonical_document_id.int == 0:
-                bad.append("canonical_document_id")
+            if (
+                not c.canonical_resource_id
+                and (not c.canonical_document_id or c.canonical_document_id.int == 0)
+            ):
+                bad.append(
+                    "canonical_document_id"
+                    if c.canonical_resource_type == "document"
+                    else "canonical_resource_id"
+                )
             if not c.document_revision:
                 bad.append("document_revision")
             if not c.provider:

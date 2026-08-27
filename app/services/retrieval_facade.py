@@ -11,11 +11,17 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.authorization import AuthorizationContext
 from app.gateway.citation import CitationBuilder
 from app.gateway.contracts import ChunkResult, Citation, SearchDomain
+from app.gateway.fusion_policy import FusionPolicy
+from app.platform.knowledge.providers import (
+    KnowledgeProviderFailure,
+    KnowledgeProviderRegistry,
+)
 from app.services.catalog_retrieval import CatalogRetriever, RetrievalHit, get_catalog_retriever
 from app.services.query_plan import is_inventory_query  # noqa: F401 — re-export 相容
 
@@ -34,6 +40,7 @@ class RetrievalResult:
     # A6: propagate gateway audit so chat/SSE can persist providers_called.
     audit_trail: Optional[Any] = None
     gateway_status: Optional[str] = None  # success | partial | error
+    provider_failures: List[KnowledgeProviderFailure] = field(default_factory=list)
 
     def to_context_parts(self) -> List[str]:
         from app.config import settings
@@ -59,9 +66,15 @@ class RetrievalResult:
 class RetrievalFacade:
     """Canonical retrieval + authorization + citation orchestration."""
 
-    def __init__(self, catalog: Optional[CatalogRetriever] = None):
+    def __init__(
+        self,
+        providers: KnowledgeProviderRegistry,
+        catalog: Optional[CatalogRetriever] = None,
+    ):
         self._citation = CitationBuilder()
+        self._fusion = FusionPolicy()
         self._catalog = catalog or get_catalog_retriever()
+        self._providers = providers
 
     def search_catalog(
         self,
@@ -127,10 +140,66 @@ class RetrievalFacade:
             authz=authz,
             filter_dict=scope,
         )
-        chunks = self._dicts_to_chunks(raw)
+        provider_batch = self._providers.contribute(
+            authz=authz,
+            query=query,
+            db=db,
+            top_k=top_k,
+            scope=scope,
+            domain=SearchDomain.DOCUMENT.value,
+            mode=mode,
+        )
+        provider_chunks = self._dicts_to_chunks(provider_batch.to_retrieval_dicts())
+        provider_chunks = self._filter_gateway_visibility(
+            provider_chunks, authz=authz, scope=scope, db=db
+        )
+        legacy_chunks = self._dicts_to_chunks(raw) + provider_chunks
+        from app.config import settings
 
-        self._inject_approved_knowhow(authz=authz, raw=raw, db=db, query=query)
-        chunks = self._dicts_to_chunks(raw)
+        if settings.KNOWLEDGE_UNIT_READ_MODE == "enforce" and db is None:
+            raise RuntimeError("knowledge authority enforce mode requires a DB session")
+        authority_chunks: List[ChunkResult] = []
+        if db is not None:
+            try:
+                authority_units = self._authority_units(
+                    db=db, authz=authz, scope=scope, query=query
+                )
+                authority_chunks = self._authority_chunks_from_units(
+                    units=authority_units,
+                    query=query,
+                    top_k=top_k,
+                )
+                if settings.KNOWLEDGE_UNIT_READ_MODE == "shadow":
+                    from app.services.knowledge_authority_read import sealed_parity_report
+
+                    report = sealed_parity_report(
+                        legacy_resource_ids=[
+                            str(
+                                chunk.metadata.get("canonical_resource_id")
+                                or chunk.metadata.get("chunk_id")
+                                or chunk.id
+                            )
+                            for chunk in legacy_chunks
+                        ],
+                        authority_units=authority_units,
+                    )
+                    if report["status"] == "mismatch":
+                        logger.info("knowledge authority shadow mismatch: %s", report)
+            except SQLAlchemyError:
+                if settings.KNOWLEDGE_UNIT_READ_MODE == "enforce":
+                    raise
+                # During an additive deployment workers may briefly run before
+                # the authority migration. Shadow mode must preserve the legacy
+                # answer path while making the missing projection observable.
+                logger.warning("knowledge authority shadow read unavailable", exc_info=True)
+        chunks = (
+            authority_chunks
+            if settings.KNOWLEDGE_UNIT_READ_MODE == "enforce"
+            else legacy_chunks
+        )
+        fusion = self._fusion.apply(chunks, query=query, top_k=top_k)
+        chunks = fusion.results
+        raw = self._chunks_to_dicts(chunks)
 
         citations = self._citation.build(
             chunks,
@@ -143,6 +212,8 @@ class RetrievalFacade:
             citations=citations,
             mode=mode,
             total=len(raw),
+            gateway_status="partial" if provider_batch.degraded else "success",
+            provider_failures=list(provider_batch.failures),
         )
 
     def get_document_head(
@@ -275,20 +346,33 @@ class RetrievalFacade:
             msgs = "; ".join(getattr(e, "message", str(e)) for e in errors) or "gateway_error"
             raise RuntimeError(msgs)
 
-        results = [
-            {
-                "id": r.id,
-                "document_id": r.document_id,
-                "text": r.content,
-                "content": r.content,
-                "score": r.score,
-                "provider": r.provider,
-                "metadata": r.metadata or {},
-            }
-            for r in (response.results or [])
-        ]
-        self._inject_approved_knowhow(authz=authz, raw=results, db=db, query=query)
-        chunks = self._dicts_to_chunks(results)
+        provider_batch = self._providers.contribute(
+            authz=authz,
+            query=query,
+            db=db,
+            top_k=top_k,
+            scope=scope,
+            domain=domain.value,
+            mode="gateway",
+        )
+        audit_trail = getattr(response, "audit_trail", None)
+        if audit_trail is not None:
+            for key in self._providers.provider_keys:
+                marker = f"knowledge:{key}"
+                if marker not in audit_trail.providers_called:
+                    audit_trail.providers_called.append(marker)
+            for failure in provider_batch.failures:
+                audit_trail.decisions.append(
+                    f"knowledge_provider_degraded:{failure.provider_key}:{failure.code}"
+                )
+        provider_chunks = self._dicts_to_chunks(provider_batch.to_retrieval_dicts())
+        provider_chunks = self._filter_gateway_visibility(
+            provider_chunks, authz=authz, scope=scope, db=db
+        )
+        chunks = list(response.results or []) + provider_chunks
+        fusion = self._fusion.apply(chunks, query=query, top_k=top_k)
+        chunks = fusion.results
+        results = self._chunks_to_dicts(chunks)
         citations = self._citation.build(
             chunks,
             acl_revision=getattr(authz, "policy_revision", 1) or 1,
@@ -300,9 +384,117 @@ class RetrievalFacade:
             citations=citations,
             mode=str(domain),
             total=len(results),
-            audit_trail=getattr(response, "audit_trail", None),
-            gateway_status=getattr(response, "status", None),
+            audit_trail=audit_trail,
+            gateway_status=(
+                "partial"
+                if provider_batch.degraded
+                and getattr(response, "status", None) == "success"
+                else getattr(response, "status", None)
+            ),
+            provider_failures=list(provider_batch.failures),
         )
+
+    @staticmethod
+    def _authority_units(
+        *,
+        db: Session,
+        authz: AuthorizationContext,
+        scope: Optional[Dict[str, Any]],
+        query: str | None = None,
+    ):
+        from app.services.knowledge_authority_read import list_active_knowledge_units
+
+        raw_scope: List[Any] = []
+        explicit = False
+        if "kb_revision_id" in (scope or {}):
+            explicit = True
+            raw_scope.append((scope or {}).get("kb_revision_id"))
+        if "kb_revision_ids" in (scope or {}):
+            explicit = True
+            raw_scope.extend((scope or {}).get("kb_revision_ids") or [])
+        revision_ids = [UUID(str(item)) for item in raw_scope if item]
+        return list_active_knowledge_units(
+            db,
+            authz=authz,
+            kb_revision_ids=revision_ids if explicit else None,
+            query_text=query,
+        )
+
+    @classmethod
+    def _authority_chunks(
+        cls,
+        *,
+        db: Session,
+        authz: AuthorizationContext,
+        query: str,
+        scope: Optional[Dict[str, Any]],
+        top_k: int,
+    ) -> List[ChunkResult]:
+        return cls._authority_chunks_from_units(
+            units=cls._authority_units(
+                db=db, authz=authz, scope=scope, query=query
+            ),
+            query=query,
+            top_k=top_k,
+        )
+
+    @classmethod
+    def _authority_chunks_from_units(
+        cls,
+        *,
+        units,
+        query: str,
+        top_k: int,
+    ) -> List[ChunkResult]:
+        terms = {term.lower() for term in query.split() if term.strip()}
+        scored = []
+        for unit in units:
+            haystack = f"{unit.title} {unit.content}".lower()
+            score = (
+                sum(1 for term in terms if term in haystack) / max(len(terms), 1)
+                if terms
+                else 0.0
+            )
+            metadata = dict(unit.metadata)
+            metadata.update(
+                {
+                    "knowledge_unit_id": str(unit.unit_id),
+                    "knowledge_unit_revision_id": str(unit.unit_revision_id),
+                    "knowledge_release_id": str(unit.release_id),
+                    "canonical_resource_type": unit.source_resource_type,
+                    "canonical_resource_id": unit.source_resource_id,
+                    "source_asset_id": (
+                        str(unit.source_asset_id) if unit.source_asset_id else None
+                    ),
+                    "source_asset_revision_id": (
+                        str(unit.source_asset_revision_id)
+                        if unit.source_asset_revision_id
+                        else None
+                    ),
+                    "source_artifact_id": (
+                        str(unit.source_artifact_id)
+                        if unit.source_artifact_id
+                        else None
+                    ),
+                }
+            )
+            scored.append(
+                {
+                    "id": str(unit.unit_revision_id),
+                    "score": score,
+                    "content": unit.content,
+                    "text": unit.content,
+                    "document_id": metadata.get("document_id"),
+                    "document_revision": metadata.get("document_revision"),
+                    "filename": unit.title,
+                    "metadata": metadata,
+                    "provider": "knowledge_authority",
+                    "provider_version": "1.0",
+                    "result_type": unit.unit_type,
+                }
+            )
+        scored.sort(key=lambda row: (-float(row["score"]), str(row["id"])))
+        return cls._dicts_to_chunks(scored[:top_k])
 
     @staticmethod
     def _filter_gateway_visibility(results, *, authz: AuthorizationContext, scope, db=None):
@@ -333,6 +525,9 @@ class RetrievalFacade:
                 by_uuid.setdefault(doc_id, []).append(result)
 
             scope_is_explicit = "kb_revision_ids" in (scope or {})
+            scope_is_explicit = scope_is_explicit or "kb_revision_id" in (scope or {})
+            if not by_uuid:
+                return [] if scope_is_explicit else passthrough
             visible_query = apply_document_visibility(
                 session.query(Document.id, Document.version), authz=authz, db=session,
                 require_completed=not scope_is_explicit,
@@ -343,7 +538,10 @@ class RetrievalFacade:
                 if deny_set_allows(doc_id, authz=authz)
             }
 
-            raw_revision_ids = (scope or {}).get("kb_revision_ids") or []
+            raw_revision_ids = []
+            if (scope or {}).get("kb_revision_id"):
+                raw_revision_ids.append((scope or {})["kb_revision_id"])
+            raw_revision_ids.extend((scope or {}).get("kb_revision_ids") or [])
             if scope_is_explicit:
                 try:
                     revision_ids = [UUID(str(value)) for value in raw_revision_ids]
@@ -390,125 +588,6 @@ class RetrievalFacade:
                 session.close()
 
     @staticmethod
-    def _inject_approved_knowhow(
-        *,
-        authz: AuthorizationContext,
-        raw: List[Dict[str, Any]],
-        db: Optional[Session],
-        query: str = "",
-    ) -> None:
-        """Append approved cards from the current request session only.
-
-        Authority-based scoring (§7.3):
-        - authority_level 100 (formal_policy) → score * 1.0
-        - authority_level 90 (approved_sop) → score * 0.95
-        - authority_level 80 (approved_spec) → score * 0.90
-        - authority_level 70 (approved_case) → score * 0.85
-        - authority_level 60 (approved_knowhow) → score * 0.80
-        - authority_level 20 (external_reference) → score * 0.50
-        Draft (0) is excluded by draft isolation.
-        """
-        from app.config import settings
-
-        if not (
-            settings.KNOWHOW_CARD_ENABLED
-            and settings.KNOWHOW_DRAFT_ISOLATION
-            and db is not None
-        ):
-            return
-        from app.services.mka_persistence import MKARepository
-
-        # Authority score multiplier mapping (§7.3)
-        AUTHORITY_MULTIPLIER = {
-            100: 1.0,   # formal_policy
-            90: 0.95,   # approved_sop
-            80: 0.90,   # approved_spec_or_contract
-            70: 0.85,   # approved_case
-            60: 0.80,   # approved_knowhow
-            20: 0.50,   # external_reference
-        }
-
-        for card in MKARepository(db).list_approved_knowhow(
-            tenant_id=authz.tenant_id
-        ):
-            if not RetrievalFacade._knowhow_applies(card, authz=authz, query=query):
-                continue
-            authority = getattr(card, "authority_level", 60) or 60
-            multiplier = AUTHORITY_MULTIPLIER.get(authority, 0.80)
-            base_score = 0.85
-            adjusted_score = round(base_score * multiplier, 4)
-
-            raw.append(
-                {
-                    "id": f"knowhow:{card.card_id}",
-                    "score": adjusted_score,
-                    "content": (
-                        f"[知識卡] {card.title}\n{card.summary or ''}\n"
-                        + "\n".join(card.steps or [])
-                    ),
-                    # A knowledge card is itself a durable canonical record.
-                    # Its UUID + version form a complete citation even when the
-                    # source was an interview rather than an uploaded document.
-                    "document_id": str(card.id),
-                    "document_revision": int(card.version or 1),
-                    "filename": f"knowhow:{card.title}",
-                    "chunk_index": 0,
-                    "metadata": {
-                        "type": "knowhow_card",
-                        "card_id": card.card_id,
-                        "version": card.version,
-                        "document_revision": int(card.version or 1),
-                        "authority_level": authority,
-                        "artifact_type": "knowhow",
-                        "source_system": "knowhow",
-                        "source_record_id": card.card_id,
-                        "source_document_id": card.source_document_id,
-                    },
-                    "source": "knowhow",
-                    "provider": "knowhow",
-                    "result_type": "knowhow",
-                }
-            )
-
-        # Re-sort: know-how cards 按 authority 排序後插入適當位置，
-        # 但不破壞原有 rerank 排序的 chunk 順序。
-        # 策略：將 know-how card 按 authority-adjusted score 插入，
-        # 保留原有 chunk 的相對順序。
-        original_chunks = [r for r in raw if r.get("source") != "knowhow"]
-        knowhow_entries = [r for r in raw if r.get("source") == "knowhow"]
-        # know-how card 之間按 score 降序
-        knowhow_entries.sort(key=lambda r: r.get("score", 0), reverse=True)
-        # 重新組裝：原有 chunk 在前，know-how card 在後
-        # （know-how 的 score 通常低於 rerank 後的 chunk，自然排在後面）
-        raw.clear()
-        raw.extend(original_chunks)
-        raw.extend(knowhow_entries)
-
-    @staticmethod
-    def _knowhow_applies(card, *, authz: AuthorizationContext, query: str) -> bool:
-        """Fail closed for role/entity-scoped and high-risk field knowledge."""
-        query_key = (query or "").casefold().replace(" ", "")
-        roles = {str(role).casefold() for role in (authz.role_ids or [])}
-        applicable_roles = {str(role).casefold() for role in (card.applicable_roles or [])}
-        if applicable_roles and not roles.intersection(applicable_roles):
-            return False
-
-        # Scoped cards require the relevant equipment/product/customer to be
-        # present in the question.  Silence is ambiguity, not permission to
-        # apply a specific machine's technique globally.
-        for values in (card.equipment_ids or [], card.product_ids or [], card.customer_ids or []):
-            normalized = [str(value).casefold().replace(" ", "") for value in values if value]
-            if normalized and not any(value in query_key for value in normalized):
-                return False
-
-        authority = int(card.authority_level or 0)
-        if str(card.risk_level or "").casefold() == "high" and authority < 90:
-            return False
-        if any(token in query_key for token in ("工安", "安全", "危險", "停機", "品質放行")) and authority < 90:
-            return False
-        return True
-
-    @staticmethod
     def _dicts_to_chunks(raw: List[Dict[str, Any]]) -> List[ChunkResult]:
         chunks: List[ChunkResult] = []
         for r in raw:
@@ -522,6 +601,10 @@ class RetrievalFacade:
                 meta.setdefault("parent_chunk_id", r["parent_chunk_id"])
             if r.get("chunk_index") is not None:
                 meta.setdefault("chunk_index", r["chunk_index"])
+            if r.get("filename"):
+                meta.setdefault("filename", r["filename"])
+            if r.get("title"):
+                meta.setdefault("title", r["title"])
             chunks.append(
                 ChunkResult(
                     id=str(r.get("id") or r.get("chunk_id") or ""),
@@ -537,6 +620,26 @@ class RetrievalFacade:
             )
         return chunks
 
+    @staticmethod
+    def _chunks_to_dicts(chunks: List[ChunkResult]) -> List[Dict[str, Any]]:
+        return [
+            {
+                "id": chunk.id,
+                "document_id": chunk.document_id or None,
+                "document_revision": chunk.document_revision,
+                "text": chunk.content,
+                "content": chunk.content,
+                "score": chunk.score,
+                "provider": chunk.provider,
+                "provider_version": chunk.provider_version,
+                "result_type": chunk.result_type,
+                "filename": (chunk.metadata or {}).get("filename")
+                or (chunk.metadata or {}).get("title"),
+                "metadata": dict(chunk.metadata or {}),
+            }
+            for chunk in chunks
+        ]
+
 
 _facade: Optional[RetrievalFacade] = None
 
@@ -544,5 +647,7 @@ _facade: Optional[RetrievalFacade] = None
 def get_retrieval_facade() -> RetrievalFacade:
     global _facade
     if _facade is None:
-        _facade = RetrievalFacade()
+        from app.composition.knowledge import build_knowledge_provider_registry
+
+        _facade = RetrievalFacade(providers=build_knowledge_provider_registry())
     return _facade

@@ -32,9 +32,24 @@ class TestAuthorizationContext:
 
         assert authz.tenant_id == user.tenant_id
         assert authz.subject_id == user.id
-        assert authz.role_ids == ["employee"]
+        assert authz.role_ids == ("employee",)
         assert authz.is_superuser is False
-        assert authz.department_ids == []
+        assert authz.department_ids == ()
+
+    def test_policy_collections_are_immutable_after_fingerprint(self):
+        tenant_id = uuid.uuid4()
+        subject_id = uuid.uuid4()
+        authz = AuthorizationContext(
+            tenant_id=tenant_id,
+            subject_id=subject_id,
+            role_ids=["viewer"],
+        )
+        fingerprint = authz.policy_fingerprint
+
+        with pytest.raises(AttributeError):
+            authz.role_ids.append("kb_admin")  # type: ignore[attr-defined]
+        assert not authz.has_kb_admin
+        assert authz.policy_fingerprint == fingerprint
 
     def test_from_user_with_department(self):
         """從 User 建立 authz — 包含部門。"""

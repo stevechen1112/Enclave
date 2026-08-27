@@ -12,7 +12,6 @@ from app.api.v1.endpoints import (
     documents,
     experience,
     feature_flags,
-    forms,
     gateway,
     connectors,
     wiki,
@@ -31,23 +30,11 @@ from app.api.v1.endpoints import (
     users,
     voice,
     internal_service_auth,
-    knowhow,
-    mka_approvals,
-    interaction,
-    scene,
-    scene_admin,
-    job_modules,
-    job_roles,
-    tasks,
-    terms,
-    audio_policy,
-    form_templates,
-    enterprise,
-    mka_metrics,
-    interview,
-    knowledge_capture,
-    realtime_voice,
     knowledge_control,
+    knowledge_assets,
+    review_items,
+    video_assets,
+    deprecations,
 )
 
 api_router = APIRouter()
@@ -84,34 +71,21 @@ api_router.include_router(connectors.router, tags=["connectors"])
 api_router.include_router(wiki.router, tags=["wiki"])
 api_router.include_router(operations.router, tags=["operations"])
 api_router.include_router(agent_approvals.router, tags=["agent-approvals"])
-api_router.include_router(mka_approvals.router, tags=["mka-approvals"])
-api_router.include_router(knowhow.router, tags=["knowhow"])
 api_router.include_router(graph.router, tags=["graph"])
 api_router.include_router(internal_service_auth.router, tags=["internal-service-auth"])
 # P3-2 — Read-only FastMCP Server
 api_router.include_router(mcp.router, tags=["mcp"])
 # P1-1 — Voice STT/TTS
 api_router.include_router(voice.router, tags=["voice"])
-# P1-2 — Fixed Form
-api_router.include_router(forms.router, tags=["forms"])
-# MKA-P1 — Interaction API (§5.2)
-api_router.include_router(interaction.router, tags=["interaction"])
-# MKA-P1 — Scene API (§5.3)
-api_router.include_router(scene.router, tags=["scene"])
-api_router.include_router(scene_admin.router, tags=["scene-admin"])
-# MKA-P4 — Module Admin API (§5.4)
-api_router.include_router(job_modules.router, tags=["job-modules"])
-api_router.include_router(job_roles.router, tags=["job-roles"])
-api_router.include_router(tasks.router, tags=["tasks"])
-# MKA-P1 — Term Dictionary API (§4.5)
-api_router.include_router(terms.router, tags=["terms"])
-# MKA — Audio Retention Policy API (§12.1)
-api_router.include_router(audio_policy.router, tags=["audio-policy"])
-# MKA — 公司版型／企業整合／指標／訪談
-api_router.include_router(form_templates.router, tags=["form-templates"])
-api_router.include_router(enterprise.router, tags=["enterprise"])
-api_router.include_router(mka_metrics.router, tags=["mka-metrics"])
-api_router.include_router(interview.router, tags=["interview"])
-api_router.include_router(knowledge_capture.router, tags=["knowledge-captures"])
-api_router.include_router(realtime_voice.router, tags=["voice-realtime"])
 api_router.include_router(knowledge_control.router, tags=["knowledge-control"])
+api_router.include_router(knowledge_assets.router)
+api_router.include_router(review_items.router)
+api_router.include_router(video_assets.router, tags=["video-assets"])
+api_router.include_router(deprecations.router, tags=["deprecations"])
+
+# Optional products contribute their own complete API surface. Disabled packs
+# are absent from the route inventory rather than relying on endpoint-local flags.
+from app.composition.pack_surfaces import include_pack_routers
+from app.composition.packs import build_pack_registry
+
+include_pack_routers(api_router, build_pack_registry())

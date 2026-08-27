@@ -29,8 +29,8 @@ AUTHORITY_EXTERNAL = "external_context"
 DOMAIN_INTERNAL_RECORDS = "internal_records"
 DOMAIN_GENERAL = "general"
 
-_COMPILED_PROVIDERS = {"weknora", "wiki", "graph", "graphrag"}
-_COMPILED_TYPES = {"wiki_page", "graph_entity"}
+_COMPILED_PROVIDERS = {"weknora", "wiki", "graph", "graphrag", "knowhow"}
+_COMPILED_TYPES = {"wiki_page", "graph_entity", "knowhow"}
 _EXTERNAL_PROVIDERS = {"pipeshub", "connector"}
 _EXTERNAL_TYPES = {"connector_record", "connector"}
 
@@ -59,12 +59,13 @@ def visible_title(result: ChunkResult) -> str:
 
 
 def is_citable(result: ChunkResult) -> bool:
-    """可引用性：必須有非空檔名／title；primary 另需可解析 document_id。"""
+    """可引用性：必須有可見標題與穩定 canonical identity。"""
     if not visible_title(result):
         return False
     if classify_authority(result) == AUTHORITY_PRIMARY:
         return bool(result.document_id)
-    return True
+    meta = result.metadata or {}
+    return bool(meta.get("canonical_resource_id") or result.id)
 
 
 def classify_query_domain(query: str) -> str:

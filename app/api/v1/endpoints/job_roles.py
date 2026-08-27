@@ -177,40 +177,6 @@ class ModuleConfigUpdate(BaseModel):
     config: Dict[str, Any] = Field(default_factory=dict)
 
 
-@router.get("/job-modules")
-def list_job_modules_with_bindings(
-    db: Session = Depends(deps.get_db),
-    current_user: User = Depends(deps.get_current_verified_user),
-) -> List[Dict[str, Any]]:
-    """全部模組 + 本租戶 binding 狀態（設定中心用）。"""
-    _require_admin(current_user)
-    from app.models.mka import TenantModuleBinding
-    from app.services.module_registry import get_module_registry
-
-    registry = get_module_registry(db)
-    modules = registry.list_modules(tenant_id=None)  # 全域定義
-    bindings = {
-        b.module_key: b
-        for b in db.query(TenantModuleBinding)
-        .filter(TenantModuleBinding.tenant_id == current_user.tenant_id)
-        .all()
-    }
-    out = []
-    for m in modules:
-        b = bindings.get(m["module_key"])
-        out.append({
-            "module_key": m["module_key"],
-            "name": m.get("name"),
-            "description": m.get("description"),
-            "status": m.get("status"),
-            "bound": b is not None,
-            "enabled": bool(b.enabled) if b else False,
-            "license_state": b.license_state if b else None,
-            "config_version": b.config_version if b else 0,
-        })
-    return out
-
-
 class ModuleBindingUpdate(BaseModel):
     enabled: bool
 

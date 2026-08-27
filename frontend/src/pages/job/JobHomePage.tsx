@@ -93,14 +93,16 @@ export default function JobHomePage() {
   }, [assignments, experience])
 
   const entries = useMemo(() => {
+    // A loaded empty bootstrap is authoritative after tenant/pack disable.
+    if (!experience) return FALLBACK_ENTRIES
     // 無職能指派 → 空態，禁止回退成全部功能（FALLBACK 僅供 bootstrap 尚未載入）
     if (needsJobRoleAssignment) return demoViewer ? DEMO_VIEWER_ENTRIES : []
-    if (!workspaceFromBootstrap.length) return FALLBACK_ENTRIES
+    if (!workspaceFromBootstrap.length) return []
     if (!activeAssignment?.default_module_keys?.length) return workspaceFromBootstrap
     const allow = new Set(activeAssignment.default_module_keys)
     const filtered = workspaceFromBootstrap.filter(e => !e.module_key || allow.has(e.module_key))
     return filtered.length ? filtered : workspaceFromBootstrap
-  }, [workspaceFromBootstrap, activeAssignment, needsJobRoleAssignment, demoViewer])
+  }, [workspaceFromBootstrap, activeAssignment, needsJobRoleAssignment, demoViewer, experience])
 
   const handleSwitchRole = async (assignmentId: string) => {
     const target = assignments.find(a => a.id === assignmentId)
@@ -112,10 +114,6 @@ export default function JobHomePage() {
       toast.error('切換職能失敗，請稍後再試')
     }
   }
-
-  useEffect(() => {
-    refreshExperience?.().catch(() => undefined)
-  }, [refreshExperience])
 
   useEffect(() => {
     if (!canReview) return

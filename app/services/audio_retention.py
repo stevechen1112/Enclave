@@ -12,6 +12,7 @@ MKA 音訊 retention 與成本記錄。
 2. DB-backed `*_db` 函式 — 正式路徑；政策與成本記錄持久化於
    ``mka_audio_policies``／``mka_task_costs``，purge 由 Celery beat 每日執行
 """
+
 from __future__ import annotations
 
 import logging
@@ -37,6 +38,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AudioRetentionPolicy:
     """音訊保留政策。"""
+
     tenant_id: str = ""
     save_audio: bool = False  # 預設不保存音訊
     save_transcript: bool = True  # 預設保存轉寫
@@ -60,6 +62,7 @@ class AudioRetentionPolicy:
 @dataclass
 class TaskCostRecord:
     """任務成本記錄（§13.4 COGS）。"""
+
     task_id: str = ""
     tenant_id: str = ""
     correlation_id: str = ""
@@ -74,13 +77,19 @@ class TaskCostRecord:
     # 統計
     total_cost: float = 0.0
     # 時間
-    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    created_at: str = field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
 
     def __post_init__(self):
         self.total_cost = (
-            self.stt_cost + self.llm_cost + self.embedding_cost +
-            self.rerank_cost + self.ocr_cost + self.source_verify_cost +
-            self.storage_cost
+            self.stt_cost
+            + self.llm_cost
+            + self.embedding_cost
+            + self.rerank_cost
+            + self.ocr_cost
+            + self.source_verify_cost
+            + self.storage_cost
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -110,7 +119,9 @@ class AudioRetentionManager:
     def set_policy(self, policy: AudioRetentionPolicy) -> None:
         """設定租戶音訊保留政策。"""
         self._policies[policy.tenant_id] = policy
-        logger.info(f"Audio retention policy set for tenant {policy.tenant_id}: save_audio={policy.save_audio}")
+        logger.info(
+            f"Audio retention policy set for tenant {policy.tenant_id}: save_audio={policy.save_audio}"
+        )
 
     def get_policy(self, tenant_id: str) -> AudioRetentionPolicy:
         """取得租戶音訊保留政策（無設定時回傳預設）。"""
@@ -192,8 +203,13 @@ def get_audio_retention_manager() -> AudioRetentionManager:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _COST_FIELDS = (
-    "stt_cost", "llm_cost", "embedding_cost", "rerank_cost",
-    "ocr_cost", "source_verify_cost", "storage_cost",
+    "stt_cost",
+    "llm_cost",
+    "embedding_cost",
+    "rerank_cost",
+    "ocr_cost",
+    "source_verify_cost",
+    "storage_cost",
 )
 
 
@@ -211,11 +227,7 @@ def _policy_from_row(row: MKAAudioPolicy) -> AudioRetentionPolicy:
 
 def get_policy_db(db: Session, tenant_id: UUID) -> AudioRetentionPolicy:
     """取得租戶政策；無記錄時回傳預設（不寫入）。"""
-    row = (
-        db.query(MKAAudioPolicy)
-        .filter(MKAAudioPolicy.tenant_id == tenant_id)
-        .first()
-    )
+    row = db.query(MKAAudioPolicy).filter(MKAAudioPolicy.tenant_id == tenant_id).first()
     if row is None:
         return AudioRetentionPolicy(tenant_id=str(tenant_id))
     return _policy_from_row(row)
@@ -224,14 +236,14 @@ def get_policy_db(db: Session, tenant_id: UUID) -> AudioRetentionPolicy:
 def set_policy_db(db: Session, tenant_id: UUID, **fields: Any) -> AudioRetentionPolicy:
     """Upsert 租戶政策。"""
     allowed = {
-        "save_audio", "save_transcript", "audio_retention_days",
-        "transcript_retention_days", "encrypt_at_rest", "audit_downloads",
+        "save_audio",
+        "save_transcript",
+        "audio_retention_days",
+        "transcript_retention_days",
+        "encrypt_at_rest",
+        "audit_downloads",
     }
-    row = (
-        db.query(MKAAudioPolicy)
-        .filter(MKAAudioPolicy.tenant_id == tenant_id)
-        .first()
-    )
+    row = db.query(MKAAudioPolicy).filter(MKAAudioPolicy.tenant_id == tenant_id).first()
     if row is None:
         row = MKAAudioPolicy(tenant_id=tenant_id)
         db.add(row)
@@ -332,7 +344,11 @@ def purge_expired_transcripts(
         deleted += count
     db.flush()
     logger.info("MKA retention purge: deleted=%d tenants=%d", deleted, len(tenant_ids))
-    return {"deleted_sessions": deleted, "tenants_scanned": len(tenant_ids), "per_tenant": per_tenant}
+    return {
+        "deleted_sessions": deleted,
+        "tenants_scanned": len(tenant_ids),
+        "per_tenant": per_tenant,
+    }
 
 
 def purge_expired_knowledge_captures(
@@ -375,10 +391,26 @@ def purge_expired_knowledge_captures(
             try:
                 storage.delete(chunk.storage_key)
             except Exception:
-                logger.exception("Unable to purge interview audio: session=%s chunk=%s", session.id, chunk.id)
+                logger.exception(
+                    "Unable to purge interview audio: session=%s chunk=%s",
+                    session.id,
+                    chunk.id,
+                )
                 continue
             chunk.deleted_at = now
             audio_deleted += 1
+        remaining = (
+            db.query(KnowledgeCaptureChunk.id)
+            .filter(
+                KnowledgeCaptureChunk.session_id == session.id,
+                KnowledgeCaptureChunk.deleted_at.is_(None),
+            )
+            .first()
+        )
+        if remaining is None:
+            from app.services.asset_projection import mark_capture_audio_purged
+
+            mark_capture_audio_purged(db, capture=session)
 
     expired_transcripts = (
         db.query(KnowledgeCaptureSession)
@@ -400,4 +432,7 @@ def purge_expired_knowledge_captures(
         ).delete(synchronize_session=False)
         transcript_deleted += 1
     db.flush()
-    return {"deleted_audio_chunks": audio_deleted, "deleted_capture_transcripts": transcript_deleted}
+    return {
+        "deleted_audio_chunks": audio_deleted,
+        "deleted_capture_transcripts": transcript_deleted,
+    }

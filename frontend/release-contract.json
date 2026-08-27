@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "canonical_routes": [
+    "/overview",
+    "/ask",
+    "/knowledge/assets",
+    "/knowledge/new",
+    "/knowledge/review",
+    "/knowledge/quality",
+    "/system/health",
+    "/job"
+  ]
+}

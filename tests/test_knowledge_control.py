@@ -709,7 +709,11 @@ async def test_document_head_cannot_cross_department_on_same_filename(client, su
         authz = AuthorizationContext(
             tenant_id=tenant_id, subject_id=uuid.uuid4(), department_ids=[allowed_department.id],
         )
-        rows = RetrievalFacade().get_document_head(authz=authz, filename=filename, n=10, db=db)
+        from app.platform.knowledge import KnowledgeProviderRegistry
+
+        rows = RetrievalFacade(
+            providers=KnowledgeProviderRegistry()
+        ).get_document_head(authz=authz, filename=filename, n=10, db=db)
         assert [row["content"] for row in rows] == ["可見內容"]
     finally:
         db.rollback(); db.close()

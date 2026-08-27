@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import inspect
+import ast
 from pathlib import Path
 
 import pytest
 
+from app.platform.knowledge import KnowledgeProviderRegistry
 from app.services.retrieval_facade import RetrievalFacade, get_retrieval_facade
 
 
@@ -14,9 +16,14 @@ APP = ROOT / "app"
 
 
 def test_facade_requires_authz():
-    facade = RetrievalFacade()
+    facade = RetrievalFacade(providers=KnowledgeProviderRegistry())
     with pytest.raises(ValueError, match="AuthorizationContext"):
         facade.search(authz=None, query="x")  # type: ignore[arg-type]
+
+
+def test_facade_requires_explicit_provider_composition():
+    with pytest.raises(TypeError):
+        RetrievalFacade()  # type: ignore[call-arg]
 
 
 def test_kb_endpoint_uses_retrieval_facade():
@@ -76,6 +83,62 @@ def test_get_retrieval_facade_singleton():
     a = get_retrieval_facade()
     b = get_retrieval_facade()
     assert a is b
+
+
+def test_retrieval_kernel_does_not_import_mka_repository():
+    """Domain packs contribute through the platform registry, not core imports."""
+    from app.services import retrieval_facade as rf
+
+    src = inspect.getsource(rf)
+    assert "MKARepository" not in src
+    assert "app.models.mka" not in src
+    assert "app.packs.mka" not in src
+    assert "KnowledgeProviderRegistry" in src
+
+
+def test_platform_packages_do_not_import_domain_packs():
+    violations = []
+    for path in (APP / "platform").rglob("*.py"):
+        text = path.read_text(encoding="utf-8")
+        tree = ast.parse(text)
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                names = [node.module]
+            if any(
+                name.startswith(
+                    ("app.packs", "app.models.mka", "app.services.mka_")
+                )
+                for name in names
+            ):
+                violations.append(
+                    f"{path.relative_to(ROOT)}:{getattr(node, 'lineno', 0)}"
+                )
+    assert violations == []
+
+
+def test_provider_candidates_are_filtered_and_fused_before_citations():
+    from app.services import retrieval_facade as rf
+
+    for method in (rf.RetrievalFacade.search, rf.RetrievalFacade.search_gateway):
+        src = inspect.getsource(method)
+        provider_idx = src.index("self._providers.contribute")
+        visibility_idx = src.index("self._filter_gateway_visibility", provider_idx)
+        fusion_idx = src.index("self._fusion.apply", visibility_idx)
+        citation_idx = src.index("self._citation.build", fusion_idx)
+        assert provider_idx < visibility_idx < fusion_idx < citation_idx
+
+
+def test_composed_knowledge_providers_are_versioned_and_capability_declared():
+    from app.composition.knowledge import build_knowledge_provider_registry
+
+    registry = build_knowledge_provider_registry()
+    assert registry.provider_keys == (
+        "core.video_procedure",
+        "mka.approved_knowhow",
+    )
 
 
 def test_search_gateway_uses_configured_router():

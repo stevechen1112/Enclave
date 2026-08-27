@@ -88,6 +88,8 @@ class Citation:
     citation_id: str
     canonical_document_id: UUID
     document_revision: int
+    canonical_resource_type: str = "document"
+    canonical_resource_id: Optional[str] = None
     artifact_id: Optional[str] = None       # chunk/wiki/entity ID
     artifact_type: str = "chunk"            # chunk | wiki_page | graph_entity
     source_system: Optional[str] = None     # google_drive | sharepoint | ...

@@ -29,11 +29,20 @@ router = APIRouter()
 
 DemoPersona = Literal["sales", "field", "master", "newcomer", "viewer", "admin"]
 
+
 class DemoLoginRequest(BaseModel):
     persona: DemoPersona
 
 
-def _resolve_demo_user(db: Session, persona: DemoPersona) -> tuple[User, dict[str, Any]]:
+@router.get("/login/options")
+def login_options() -> dict[str, bool]:
+    """Expose only safe login-mode availability; never return tenant identity."""
+    return {"password_enabled": True, "demo_enabled": settings.DEMO_LOGIN_ENABLED}
+
+
+def _resolve_demo_user(
+    db: Session, persona: DemoPersona
+) -> tuple[User, dict[str, Any]]:
     """Resolve an allowlisted demo identity and fail closed on configuration drift."""
     from app.models.mka import JobRole, UserJobRoleAssignment
     from app.services.rls import apply_rls_bypass
@@ -47,11 +56,15 @@ def _resolve_demo_user(db: Session, persona: DemoPersona) -> tuple[User, dict[st
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Demo tenant is not configured",
         ) from exc
-    tenant = db.query(Tenant).filter(
-        Tenant.id == demo_tenant_id,
-        Tenant.is_demo.is_(True),
-        Tenant.status == "active",
-    ).first()
+    tenant = (
+        db.query(Tenant)
+        .filter(
+            Tenant.id == demo_tenant_id,
+            Tenant.is_demo.is_(True),
+            Tenant.status == "active",
+        )
+        .first()
+    )
     if tenant is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -59,10 +72,14 @@ def _resolve_demo_user(db: Session, persona: DemoPersona) -> tuple[User, dict[st
         )
 
     preferred_email = settings.DEMO_ADMIN_EMAIL if persona == "admin" else spec["email"]
-    user = db.query(User).filter(
-        User.email == preferred_email,
-        User.tenant_id == tenant.id,
-    ).first()
+    user = (
+        db.query(User)
+        .filter(
+            User.email == preferred_email,
+            User.tenant_id == tenant.id,
+        )
+        .first()
+    )
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -103,7 +120,9 @@ def _resolve_demo_user(db: Session, persona: DemoPersona) -> tuple[User, dict[st
 
 
 @router.post("/login/demo")
-def demo_login(body: DemoLoginRequest, db: Session = Depends(deps.get_db)) -> dict[str, Any]:
+def demo_login(
+    body: DemoLoginRequest, db: Session = Depends(deps.get_db)
+) -> dict[str, Any]:
     """Issue a short-lived token for one of the explicitly allowlisted demo doors."""
     if not settings.DEMO_LOGIN_ENABLED:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
@@ -212,18 +231,23 @@ class MFASetupResponse(BaseModel):
     provisioning_uri: str
 
 
-def _user_from_partial(db: Session, partial_token: str, allowed_scopes: tuple[str, ...]) -> User:
+def _user_from_partial(
+    db: Session, partial_token: str, allowed_scopes: tuple[str, ...]
+) -> User:
     payload = security.decode_partial_token(partial_token)
     if not payload or payload.get("scope") not in allowed_scopes:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or expired partial token"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired partial token",
         )
     from app.services.rls import apply_rls_bypass
 
     apply_rls_bypass(db)
     user = crud_user.get_by_email(db, email=payload.get("sub", ""))
     if not user or not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+        )
     return user
 
 
@@ -242,7 +266,9 @@ def mfa_setup(
     elif partial_token:
         user = _user_from_partial(db, partial_token, (SCOPE_MFA_ENROLL,))
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
 
     if user.mfa_enabled:
         raise HTTPException(status_code=400, detail="MFA already enabled")
@@ -272,7 +298,9 @@ def mfa_enable(
         enroll_user = _user_from_partial(db, partial_token, (SCOPE_MFA_ENROLL,))
         user = enroll_user
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
+        )
 
     if not user.mfa_secret:
         raise HTTPException(status_code=400, detail="Call /mfa/setup first")
@@ -332,7 +360,9 @@ def verify_email(body: VerifyEmailRequest, db: Session = Depends(deps.get_db)) -
     """以 email 連結中的 token 完成驗證。"""
     email = parse_verification_token(body.token)
     if not email:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification token")
+        raise HTTPException(
+            status_code=400, detail="Invalid or expired verification token"
+        )
 
     from app.services.rls import apply_rls_bypass
 

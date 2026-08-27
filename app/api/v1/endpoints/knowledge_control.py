@@ -274,6 +274,7 @@ def promote(revision_id: UUID, body: PromoteIn, db: Session = Depends(deps.get_d
         gate_evidence={gate: "PASS" for gate in artifacts},
         runtime_manifest=runtime_manifest,
         gate_artifacts=artifacts,
+        created_by=current_user.id,
     )
     except ValueError as exc: raise HTTPException(409, str(exc)) from exc
     db.commit(); return {"id": str(rev.id), "status": rev.status, "active_revision": rev.kb.active_revision}

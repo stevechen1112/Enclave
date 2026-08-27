@@ -10,9 +10,21 @@ Phase 10 — 審核佇列項目 Model
 """
 
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Float, Text, Integer, ForeignKey, func
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
+from sqlalchemy import (
+    JSON,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
+
 from app.db.base_class import Base
 
 
@@ -32,14 +44,14 @@ class ReviewItem(Base):
     # AI 分類提案
     suggested_category = Column(String(255), nullable=True)
     suggested_subcategory = Column(String(255), nullable=True)
-    suggested_tags = Column(JSONB, nullable=True)       # {"date": "2023-04", "person": "王小明", ...}
+    suggested_tags = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # {"date": "2023-04", "person": "王小明", ...}
     confidence_score = Column(Float, nullable=True)     # 0.0 ~ 1.0
     reasoning = Column(Text, nullable=True)             # AI 判斷依據說明
 
     # 人工審核結果
     status = Column(String(50), default="pending", nullable=False, index=True)
     approved_category = Column(String(255), nullable=True)      # 人工修改後的分類
-    approved_tags = Column(JSONB, nullable=True)                # 人工修改後的標籤
+    approved_tags = Column(JSON().with_variant(JSONB, "postgresql"), nullable=True)  # 人工修改後的標籤
     reviewer_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     review_note = Column(Text, nullable=True)                   # 審核備註
     reviewed_at = Column(DateTime(timezone=True), nullable=True)

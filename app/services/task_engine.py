@@ -176,9 +176,16 @@ class TaskEngine:
         # 1. 安全能力
         required = list(definition.required_capabilities or [])
         if required:
-            from app.api.v1.endpoints.experience import _capabilities_for
+            from app.services.access_capabilities import capabilities_for_user
 
-            caps = set(_capabilities_for(user))
+            caps = set(capabilities_for_user(user))
+            # Domain workspace access is contextual, not a Base role grant.
+            # The module ACL below remains authoritative and deny-first.
+            if (
+                definition.module_key
+                and definition.module_key in job_ctx.active_module_keys
+            ):
+                caps.add("field_work")
             missing = [c for c in required if c not in caps]
             if missing:
                 raise TaskAccessDenied(f"缺少能力：{missing}")

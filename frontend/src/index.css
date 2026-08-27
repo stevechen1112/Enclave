@@ -91,6 +91,9 @@
   .card-interactive {
     @apply rounded-2xl border border-line/70 bg-surface shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lift hover:border-accent/40 cursor-pointer;
   }
+  .panel {
+    @apply overflow-hidden rounded-2xl border border-line/70 bg-surface shadow-card;
+  }
 
   /* 按鈕：全部 ≥44px 觸控目標 */
   .btn {
@@ -168,4 +171,13 @@
 }
 .animate-rise-in {
   animation: rise-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -8,6 +8,7 @@ interface AuthState {
   experience: ExperienceBootstrap | null
   token: string | null
   loading: boolean
+  experienceStatus: 'idle' | 'loading' | 'ready' | 'error'
   login: (email: string, password: string) => Promise<void>
   demoLogin: (persona: DemoPersona) => Promise<void>
   logout: () => void
@@ -21,13 +22,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [experience, setExperience] = useState<ExperienceBootstrap | null>(null)
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'))
   const [loading, setLoading] = useState(true)
+  const [experienceStatus, setExperienceStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
 
   const refreshExperience = useCallback(async () => {
+    setExperienceStatus('loading')
     try {
       const exp = await authApi.experience()
       setExperience(exp)
+      setExperienceStatus('ready')
     } catch {
       setExperience(null)
+      setExperienceStatus('error')
     }
   }, [])
 
@@ -35,16 +40,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const u = await authApi.me()
       setUser(u)
+      setExperienceStatus('loading')
       try {
         const exp = await authApi.experience()
         setExperience(exp)
+        setExperienceStatus('ready')
       } catch {
         setExperience(null)
+        setExperienceStatus('error')
       }
     } catch {
       setToken(null)
       setUser(null)
       setExperience(null)
+      setExperienceStatus('idle')
       localStorage.removeItem('token')
     } finally {
       setLoading(false)
@@ -64,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setUser(null)
     setExperience(null)
+    setExperienceStatus('loading')
     localStorage.setItem('token', access_token)
     setToken(access_token)
   }
@@ -73,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setUser(null)
     setExperience(null)
+    setExperienceStatus('loading')
     localStorage.setItem('token', access_token)
     setToken(access_token)
   }
@@ -82,11 +93,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null)
     setUser(null)
     setExperience(null)
+    setExperienceStatus('idle')
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, experience, token, loading, login, demoLogin, logout, refreshExperience }}
+      value={{ user, experience, token, loading, experienceStatus, login, demoLogin, logout, refreshExperience }}
     >
       {children}
     </AuthContext.Provider>

@@ -14,34 +14,45 @@ from app.crud import crud_document
 from app.services.document_parser import DocumentParser, TextChunker
 from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.schemas.document import DocumentUpdate
-from app.models.document import DocumentChunk, DocumentChunk as DChunk  # alias for task use
+from app.models.document import (
+    DocumentChunk,
+    DocumentChunk as DChunk,
+)  # alias for task use
 
 logger = logging.getLogger(__name__)
 
 
 # ── Embedding helpers ────────────────────────────────────────────────────────
 
-def _embed_voyage(texts: List[str], model: str, input_type: str = "document") -> List[List[float]]:
+
+def _embed_voyage(
+    texts: List[str], model: str, input_type: str = "document"
+) -> List[List[float]]:
     """Cloud embedding via Voyage AI API."""
     import voyageai
+
     client = voyageai.Client(api_key=settings.VOYAGE_API_KEY)
     all_embeddings: List[List[float]] = []
     batch_size = 32
     for i in range(0, len(texts), batch_size):
-        result = client.embed(texts[i:i + batch_size], model=model, input_type=input_type)
+        result = client.embed(
+            texts[i : i + batch_size], model=model, input_type=input_type
+        )
         all_embeddings.extend(result.embeddings)
         time.sleep(0.5)
     return all_embeddings
 
 
-def _embed_ollama(texts: List[str], model: str, _input_type: str = "document") -> List[List[float]]:
+def _embed_ollama(
+    texts: List[str], model: str, _input_type: str = "document"
+) -> List[List[float]]:
     """Local embedding via Ollama /api/embed endpoint (bge-m3 etc.)."""
     url = f"{settings.OLLAMA_EMBED_URL}/api/embed"
     all_embeddings: List[List[float]] = []
     batch_size = 16  # Ollama handles batch natively
     with httpx.Client(timeout=120.0) as client:
         for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
+            batch = texts[i : i + batch_size]
             resp = client.post(url, json={"model": model, "input": batch})
             resp.raise_for_status()
             all_embeddings.extend(resp.json()["embeddings"])
@@ -52,13 +63,24 @@ def embed_texts(texts: List[str], input_type: str = "document") -> List[List[flo
     """Route to the configured embedding provider."""
     runtime = resolve_runtime_profiles_no_db()
     embed_cfg = runtime.get("embedding", {})
-    provider = str(embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))).lower()
-    model = str(embed_cfg.get("model", settings.VOYAGE_MODEL if provider == "voyage" else settings.OLLAMA_EMBED_MODEL))
+    provider = str(
+        embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))
+    ).lower()
+    model = str(
+        embed_cfg.get(
+            "model",
+            settings.VOYAGE_MODEL
+            if provider == "voyage"
+            else settings.OLLAMA_EMBED_MODEL,
+        )
+    )
     if provider == "ollama":
         return _embed_ollama(texts, model, input_type)
     else:
         if not settings.VOYAGE_API_KEY:
-            raise ValueError("VOYAGE_API_KEY 未設定（或改用 EMBEDDING_PROVIDER=ollama）")
+            raise ValueError(
+                "VOYAGE_API_KEY 未設定（或改用 EMBEDDING_PROVIDER=ollama）"
+            )
         return _embed_voyage(texts, model, input_type)
 
 
@@ -72,24 +94,43 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
     4. 寫入 pgvector（PostgreSQL）
     """
     db = SessionLocal()
+    ingestion_job_id = None
 
     try:
         # ADR-012：task session 立即設定租戶 context（enforce 階段的最後防線）
         from app.services.rls import apply_rls_context
+
         apply_rls_context(db, UUID(tenant_id))
 
         # 1. 獲取文件記錄
         doc = crud_document.get(db, document_id=UUID(document_id))
         if not doc:
             raise ValueError("文件不存在")
-        
+        # Phase B dual-write bridge also covers watcher, restore and legacy
+        # ingestion paths that did not originate from the upload endpoint.
+        from app.services.asset_projection import project_document
+
+        source_projection = project_document(db, doc, ingestion_status="pending")
+        if source_projection.revision is not None:
+            from app.ingestion.core_adapters import document_capabilities
+            from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+
+            orchestrator = get_ingestion_orchestrator()
+            job = orchestrator.ensure_job(
+                db,
+                tenant_id=UUID(tenant_id),
+                asset_revision_id=source_projection.revision.id,
+                capabilities=document_capabilities(source_projection.asset.asset_kind),
+                idempotency_key=f"document:{document_id}:{doc.version or 1}",
+                correlation_id=document_id,
+            )
+            ingestion_job_id = job.id
+            if job.status in {"queued", "failed"}:
+                orchestrator.transition(db, job, to_status="running", phase="parsing")
+
         # 2. 更新狀態：解析中
-        crud_document.update(
-            db,
-            db_obj=doc,
-            obj_in=DocumentUpdate(status="parsing")
-        )
-        
+        crud_document.update(db, db_obj=doc, obj_in=DocumentUpdate(status="parsing"))
+
         # 3. 解析文件（capability router: native / RAGFlow）
         # ADR-011：s3:// content_uri 先經後端下載到暫存再解析；本機路徑直接使用
         parse_path = file_path
@@ -102,6 +143,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             # 防禦性檢查：key 的租戶前綴必須與 task 租戶一致——
             # RLS 只約束 DB，擋不住物件儲存層的跨租戶 key 讀取
             from app.services.storage import assert_key_matches_tenant
+
             assert_key_matches_tenant(storage_key, tenant_id)
             suffix = os.path.splitext(storage_key)[1] or ".bin"
             fd, _tmp_download = tempfile.mkstemp(prefix="enclave-dl-", suffix=suffix)
@@ -110,35 +152,108 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             parse_path = _tmp_download
         try:
             from app.services.parse_pipeline import parse_document
+
             text_content, metadata, artifact = parse_document(
-                parse_path, doc.file_type or "txt",
+                parse_path,
+                doc.file_type or "txt",
                 document_id=UUID(document_id),
                 revision=doc.version or 1,
                 tenant_id=UUID(tenant_id),
             )
             # 儲存 ParseArtifact 到 document_artifacts
             from app.models.knowledge_base import DocumentArtifact
-            db.add(DocumentArtifact(
-                document_id=UUID(document_id),
-                revision=doc.version or 1,
-                artifact_type="parse",
-                provider=artifact.parser.split("/")[0] if "/" in artifact.parser else "enclave",
-                provider_version=artifact.version,
-                checksum=artifact.source_hash,
-                status="active",
-                metadata_json=artifact.model_dump(),
-            ))
+
+            db.add(
+                DocumentArtifact(
+                    document_id=UUID(document_id),
+                    revision=doc.version or 1,
+                    artifact_type="parse",
+                    provider=artifact.parser.split("/")[0]
+                    if "/" in artifact.parser
+                    else "enclave",
+                    provider_version=artifact.version,
+                    checksum=artifact.source_hash,
+                    status="active",
+                    metadata_json=artifact.model_dump(),
+                )
+            )
             if artifact.source_hash:
                 doc.content_hash = artifact.source_hash
             db.flush()
+            from app.services.asset_projection import project_document_text_artifact
+
+            project_document_text_artifact(
+                db,
+                document=doc,
+                content=text_content,
+                provider=(
+                    artifact.parser.split("/")[0]
+                    if "/" in artifact.parser
+                    else "enclave"
+                ),
+                provider_version=artifact.version,
+                metadata={"parse_artifact": artifact.model_dump()},
+            )
+            if ingestion_job_id is None:
+                source_projection = project_document(
+                    db, doc, ingestion_status="pending"
+                )
+                if source_projection.revision is None:
+                    raise RuntimeError("document source revision is unavailable")
+                from app.services.ingestion_orchestrator import (
+                    get_ingestion_orchestrator,
+                )
+                from app.ingestion.core_adapters import document_capabilities
+
+                orchestrator = get_ingestion_orchestrator()
+                job = orchestrator.ensure_job(
+                    db,
+                    tenant_id=UUID(tenant_id),
+                    asset_revision_id=source_projection.revision.id,
+                    capabilities=document_capabilities(
+                        source_projection.asset.asset_kind
+                    ),
+                    idempotency_key=f"document:{document_id}:{doc.version or 1}",
+                    correlation_id=document_id,
+                )
+                ingestion_job_id = job.id
+                if job.status in {"queued", "failed"}:
+                    orchestrator.transition(
+                        db, job, to_status="running", phase="parsing"
+                    )
         except Exception as e:
+            db.rollback()
+            doc = crud_document.get(db, document_id=UUID(document_id))
+            if doc is None:
+                raise
+            if ingestion_job_id is not None:
+                from app.models.ingestion import IngestionJob
+                from app.services.ingestion_orchestrator import (
+                    get_ingestion_orchestrator,
+                )
+
+                failed_job = (
+                    db.query(IngestionJob)
+                    .filter(
+                        IngestionJob.tenant_id == UUID(tenant_id),
+                        IngestionJob.id == ingestion_job_id,
+                    )
+                    .first()
+                )
+                if failed_job is not None and failed_job.status == "running":
+                    get_ingestion_orchestrator().fail(
+                        db,
+                        failed_job,
+                        code="document_parse_failed",
+                        message=str(e),
+                        phase="parsing",
+                    )
             crud_document.update(
                 db,
                 db_obj=doc,
                 obj_in=DocumentUpdate(
-                    status="failed",
-                    error_message=f"解析失敗: {str(e)}"
-                )
+                    status="failed", error_message=f"解析失敗: {str(e)}"
+                ),
             )
             if self.request.retries < self.max_retries:
                 raise self.retry(exc=e, countdown=60)
@@ -149,14 +264,12 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     os.remove(_tmp_download)
                 except OSError:
                     pass
-        
+
         # 3.5 儲存品質報告
         crud_document.update(
-            db,
-            db_obj=doc,
-            obj_in=DocumentUpdate(quality_report=metadata)
+            db, db_obj=doc, obj_in=DocumentUpdate(quality_report=metadata)
         )
-        
+
         # 4. 切片（結構化表格優先全量入庫）
         full_table_ok = doc.file_type in {"csv", "xlsx", "xls"}
         if full_table_ok and len(text_content) <= settings.TABLE_FULL_CHUNK_MAX_CHARS:
@@ -165,45 +278,43 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             chunks = TextChunker.split_by_tokens(
                 text_content,
                 chunk_size=settings.CHUNK_SIZE,
-                chunk_overlap=settings.CHUNK_OVERLAP
+                chunk_overlap=settings.CHUNK_OVERLAP,
             )
-        
+
         # 4.5 小檔案 fallback：若文字有效但太短無法分割，整段作為一個 chunk
         if not chunks and text_content.strip():
             chunks = [text_content.strip()]
-        
+
         if not chunks:
             crud_document.update(
                 db,
                 db_obj=doc,
                 obj_in=DocumentUpdate(
-                    status="failed",
-                    error_message="文件切片後無有效內容"
-                )
+                    status="failed", error_message="文件切片後無有效內容"
+                ),
             )
             return {"status": "failed", "error": "No valid chunks"}
-        
+
         # 5. 更新狀態：向量化中
         crud_document.update(
             db,
             db_obj=doc,
-            obj_in=DocumentUpdate(
-                status="embedding",
-                chunk_count=len(chunks)
-            )
+            obj_in=DocumentUpdate(status="embedding", chunk_count=len(chunks)),
         )
-        
+
         # 6. 向量化（Ollama bge-m3 本地 / Voyage cloud — 由 EMBEDDING_PROVIDER 決定）
         all_embeddings = embed_texts(chunks, input_type="document")
-        
+
         # 7. 寫入 pgvector（直接儲存到 PostgreSQL）—— 含去重
         # Pre-fetch existing chunk hashes for this document in one query (avoids N+1)
         existing_hashes = {
             row.chunk_hash
-            for row in db.query(DChunk.chunk_hash).filter(
+            for row in db.query(DChunk.chunk_hash)
+            .filter(
                 DChunk.document_id == UUID(document_id),
                 DChunk.document_revision == int(doc.version or 1),
-            ).all()
+            )
+            .all()
         }
 
         inserted = 0
@@ -219,7 +330,11 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 continue
 
             # 為 chunk 加入檔名前綴以增強檢索關聯性
-            chunk_with_prefix = f"【{doc.filename}】\n{chunk}" if idx == 0 or len(chunk) < 800 else chunk
+            chunk_with_prefix = (
+                f"【{doc.filename}】\n{chunk}"
+                if idx == 0 or len(chunk) < 800
+                else chunk
+            )
 
             db_chunk = DChunk(
                 document_id=UUID(document_id),
@@ -237,27 +352,30 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     "quality_score": metadata.get("quality_score", 0),
                     "tables_detected": metadata.get("tables_detected", 0),
                     "ocr_used": metadata.get("ocr_used", False),
-                }
+                },
             )
             db.add(db_chunk)
             inserted_chunks.append(db_chunk)
             inserted += 1
         db.flush()
         from app.services.lexical_index import upsert_chunks as upsert_lexical_chunks
+
         upsert_lexical_chunks(db, inserted_chunks, doc)
         db.commit()
-        
+
         if skipped:
             logger.info(f"去重: 跳過 {skipped} 個重複 chunk，寫入 {inserted} 個")
-        
+
         # 8. 狀態 completed 與 outbox document_processed 必須同一交易
         from app.services.outbox_events import publish_event
+
         doc.status = "completed"
         doc.chunk_count = inserted
         doc.quality_report = metadata
         # ADR-008：catalog 粒度 genre 標註；標註失敗不得擋住入庫
         try:
             from app.services.genre_tagger import tag_document
+
             tag_document(doc, content_sample=text_content[:2000])
         except Exception as genre_exc:
             logger.warning("genre tagging failed (non-blocking): %s", genre_exc)
@@ -265,16 +383,20 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         # creation is part of the completion transaction and therefore cannot
         # silently fail for an active document.
         from app.services.document_profile import upsert_document_profile
+
         profile_row = upsert_document_profile(db, doc, text_content, metadata)
         if doc.file_type in {"csv", "xlsx", "xls"}:
             from app.services.structured_projection import upsert_structured_projection
+
             upsert_structured_projection(db, doc, text_content)
         if (profile_row.capability_readiness or {}).get("procedure"):
             from app.services.procedure_projection import project_procedure
+
             project_procedure(db, doc, text_content)
         # F4：跨語條款投影（非阻塞；失敗不影響 completed）
         try:
             from app.services.clause_projection import needs_clause_projection
+
             if needs_clause_projection(doc.filename or "", text_content[:2000]):
                 import asyncio
                 import openai as _openai
@@ -282,6 +404,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     extract_clauses_with_llm,
                     upsert_clause_projection,
                 )
+
                 provider = str(getattr(settings, "LLM_PROVIDER", "openai")).lower()
                 client = None
                 model = ""
@@ -317,6 +440,28 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         except Exception as proj_exc:
             logger.warning("clause projection failed (non-blocking): %s", proj_exc)
         db.add(doc)
+        project_document(db, doc, ingestion_status="ready")
+        if ingestion_job_id is not None:
+            from app.models.ingestion import IngestionJob
+            from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+
+            completed_job = (
+                db.query(IngestionJob)
+                .filter(
+                    IngestionJob.tenant_id == UUID(tenant_id),
+                    IngestionJob.id == ingestion_job_id,
+                )
+                .first()
+            )
+            if completed_job is not None and completed_job.status == "running":
+                get_ingestion_orchestrator().transition(
+                    db,
+                    completed_job,
+                    to_status="ready",
+                    phase="published",
+                    quality_state="ready",
+                    readiness={"search": True, "answer": True},
+                )
         payload = {
             "filename": doc.filename,
             "file_type": doc.file_type,
@@ -335,6 +480,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             resolve_ragflow_dataset_id,
             resolve_weknora_kb_id,
         )
+
         dataset_id = resolve_ragflow_dataset_id(db, UUID(tenant_id))
         if dataset_id:
             payload["dataset_id"] = dataset_id
@@ -346,6 +492,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             try:
                 from app.gateway.resource_registry import ResourceRegistry
                 from app.models.outbox import ProjectionStatus
+
                 rid = str(payload["ragflow_doc_ids"][0])
                 ResourceRegistry().upsert_mapping(
                     db,
@@ -396,6 +543,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         # 8.6 清除租戶檢索快取（新文件上傳後失效舊快取）
         try:
             from app.services.kb_retrieval import KnowledgeBaseRetriever
+
             KnowledgeBaseRetriever().invalidate_cache(UUID(tenant_id))
         except Exception:
             pass
@@ -405,27 +553,47 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             "document_id": document_id,
             "chunks": inserted,
         }
-        
+
     except Exception as e:
         # 記錄錯誤
         if db:
+            db.rollback()
             doc = crud_document.get(db, document_id=UUID(document_id))
+            if ingestion_job_id is not None:
+                from app.models.ingestion import IngestionJob
+                from app.services.ingestion_orchestrator import (
+                    get_ingestion_orchestrator,
+                )
+
+                failed_job = (
+                    db.query(IngestionJob)
+                    .filter(
+                        IngestionJob.tenant_id == UUID(tenant_id),
+                        IngestionJob.id == ingestion_job_id,
+                    )
+                    .first()
+                )
+                if failed_job is not None and failed_job.status == "running":
+                    get_ingestion_orchestrator().fail(
+                        db,
+                        failed_job,
+                        code="document_ingestion_failed",
+                        message=str(e),
+                        phase="processing",
+                    )
             if doc:
                 crud_document.update(
                     db,
                     db_obj=doc,
-                    obj_in=DocumentUpdate(
-                        status="failed",
-                        error_message=str(e)
-                    )
+                    obj_in=DocumentUpdate(status="failed", error_message=str(e)),
                 )
-        
+
         # 重試機制
         if self.request.retries < self.max_retries:
             raise self.retry(exc=e, countdown=60)
-        
+
         return {"status": "failed", "error": str(e)}
-    
+
     finally:
         db.close()
 
@@ -442,6 +610,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
     4. 寫入 pgvector
     """
     db = SessionLocal()
+    ingestion_job_id = None
 
     try:
         doc = crud_document.get(db, document_id=UUID(document_id))
@@ -449,7 +618,8 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             raise ValueError("文件記錄不存在")
 
         crud_document.update(
-            db, db_obj=doc,
+            db,
+            db_obj=doc,
             obj_in=DocumentUpdate(status="parsing"),
         )
 
@@ -458,15 +628,58 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             text_content, metadata = DocumentParser.parse_url(url)
         except Exception as e:
             crud_document.update(
-                db, db_obj=doc,
-                obj_in=DocumentUpdate(status="failed", error_message=f"網頁擷取失敗: {e}"),
+                db,
+                db_obj=doc,
+                obj_in=DocumentUpdate(
+                    status="failed", error_message=f"網頁擷取失敗: {e}"
+                ),
             )
             if self.request.retries < self.max_retries:
                 raise self.retry(exc=e, countdown=60)
             return {"status": "failed", "error": str(e)}
 
+        # Persist the fetched snapshot as an immutable web-page source revision.
+        doc.file_path = url
+        doc.file_type = doc.file_type or "html"
+        doc.source_type = "web"
+        doc.source_system = doc.source_system or "web"
+        doc.source_record_id = doc.source_record_id or url
+        doc.content_hash = hashlib.sha256(text_content.encode("utf-8")).hexdigest()
+        from app.services.asset_projection import (
+            project_document,
+            project_document_text_artifact,
+        )
+
+        project_document_text_artifact(
+            db,
+            document=doc,
+            content=text_content,
+            provider="trafilatura",
+            provider_version=str(metadata.get("parser_version") or "1"),
+            metadata={"source_url": url, **dict(metadata or {})},
+        )
+        source_projection = project_document(db, doc, ingestion_status="pending")
+        from app.ingestion.core_adapters import document_capabilities
+        from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+
+        orchestrator = get_ingestion_orchestrator()
+        ingestion_job = orchestrator.ensure_job(
+            db,
+            tenant_id=UUID(tenant_id),
+            asset_revision_id=source_projection.revision.id,
+            capabilities=document_capabilities(source_projection.asset.asset_kind),
+            idempotency_key=f"document:{document_id}:{doc.version or 1}",
+            correlation_id=document_id,
+        )
+        ingestion_job_id = ingestion_job.id
+        if ingestion_job.status in {"queued", "failed"}:
+            orchestrator.transition(
+                db, ingestion_job, to_status="running", phase="parsing"
+            )
+
         crud_document.update(
-            db, db_obj=doc,
+            db,
+            db_obj=doc,
             obj_in=DocumentUpdate(quality_report=metadata),
         )
 
@@ -479,13 +692,17 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
 
         if not chunks:
             crud_document.update(
-                db, db_obj=doc,
-                obj_in=DocumentUpdate(status="failed", error_message="網頁內容切片後無有效內容"),
+                db,
+                db_obj=doc,
+                obj_in=DocumentUpdate(
+                    status="failed", error_message="網頁內容切片後無有效內容"
+                ),
             )
             return {"status": "failed", "error": "No valid chunks from URL"}
 
         crud_document.update(
-            db, db_obj=doc,
+            db,
+            db_obj=doc,
             obj_in=DocumentUpdate(status="embedding", chunk_count=len(chunks)),
         )
 
@@ -494,7 +711,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         all_embeddings = []
 
         for i in range(0, len(chunks), batch_size):
-            batch = chunks[i:i + batch_size]
+            batch = chunks[i : i + batch_size]
             batch_embs = embed_texts(batch)
             all_embeddings.extend(batch_embs)
             time.sleep(0.1)
@@ -503,10 +720,12 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         # Pre-fetch existing hashes in one query (avoids N+1)
         existing_hashes = {
             row.chunk_hash
-            for row in db.query(DChunk.chunk_hash).filter(
+            for row in db.query(DChunk.chunk_hash)
+            .filter(
                 DChunk.document_id == UUID(document_id),
                 DChunk.document_revision == int(doc.version or 1),
-            ).all()
+            )
+            .all()
         }
 
         inserted = 0
@@ -539,21 +758,34 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             inserted += 1
         db.flush()
         from app.services.lexical_index import upsert_chunks as upsert_lexical_chunks
+
         upsert_lexical_chunks(db, inserted_chunks, doc)
         db.commit()
 
         # completed + document_processed 同一交易（與 process_document_task 對齊）
         from app.services.outbox_events import publish_event
+
         doc.status = "completed"
         doc.chunk_count = inserted
         doc.quality_report = metadata
         from app.services.document_profile import upsert_document_profile
+
         upsert_document_profile(
             db,
             doc,
             text_content,
             {**(metadata or {}), "parse_engine": "trafilatura", "ocr_used": False},
         )
+        project_document(db, doc, ingestion_status="ready")
+        if ingestion_job.status == "running":
+            orchestrator.transition(
+                db,
+                ingestion_job,
+                to_status="ready",
+                phase="published",
+                quality_state="ready",
+                readiness={"search": True, "answer": True},
+            )
         db.add(doc)
         publish_event(
             db,
@@ -579,6 +811,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         # 清除快取
         try:
             from app.services.kb_retrieval import KnowledgeBaseRetriever
+
             retriever = KnowledgeBaseRetriever()
             retriever.invalidate_cache(UUID(tenant_id))
         except Exception:
@@ -593,10 +826,34 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
 
     except Exception as e:
         if db:
+            db.rollback()
             doc = crud_document.get(db, document_id=UUID(document_id))
+            if ingestion_job_id is not None:
+                from app.models.ingestion import IngestionJob
+                from app.services.ingestion_orchestrator import (
+                    get_ingestion_orchestrator,
+                )
+
+                failed_job = (
+                    db.query(IngestionJob)
+                    .filter(
+                        IngestionJob.tenant_id == UUID(tenant_id),
+                        IngestionJob.id == ingestion_job_id,
+                    )
+                    .first()
+                )
+                if failed_job is not None and failed_job.status == "running":
+                    get_ingestion_orchestrator().fail(
+                        db,
+                        failed_job,
+                        code="web_ingestion_failed",
+                        message=str(e),
+                        phase="processing",
+                    )
             if doc:
                 crud_document.update(
-                    db, db_obj=doc,
+                    db,
+                    db_obj=doc,
                     obj_in=DocumentUpdate(status="failed", error_message=str(e)),
                 )
         if self.request.retries < self.max_retries:
@@ -610,6 +867,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
 # ─────────────────────────────────────────────────────────────
 # P10-1 File Watcher 專用任務
 # ─────────────────────────────────────────────────────────────
+
 
 @celery_app.task(bind=True, max_retries=3, name="tasks.watcher_ingest_file")
 def watcher_ingest_file_task(
@@ -681,6 +939,7 @@ def watcher_ingest_file_task(
                 db.commit()
                 try:
                     from app.services.kb_retrieval import KnowledgeBaseRetriever
+
                     KnowledgeBaseRetriever().invalidate_cache(UUID(tenant_id))
                 except Exception:
                     pass
@@ -708,9 +967,12 @@ def watcher_ingest_file_task(
                 existing.tombstoned_at = None
                 try:
                     from app.gateway.authorization import get_gateway_authorizer
+
                     get_gateway_authorizer().clear_resource_deny(str(existing.id))
                 except Exception as exc:
-                    logger.warning("[WatcherTask] clear deny after restore failed: %s", exc)
+                    logger.warning(
+                        "[WatcherTask] clear deny after restore failed: %s", exc
+                    )
             existing.version = int(existing.version or 1) + 1
             existing.status = "uploading"
             existing.error_message = None
@@ -795,9 +1057,15 @@ def watcher_delete_file_task(self, file_path: str, tenant_id: str):
                 file_path,
                 result.get("reason"),
             )
-            return {"status": "not_found", "path": file_path, "reason": result.get("reason")}
+            return {
+                "status": "not_found",
+                "path": file_path,
+                "reason": result.get("reason"),
+            }
 
-        logger.info(f"[WatcherTask] 已從知識庫移除：{Path(file_path).name} (doc={doc_id})")
+        logger.info(
+            f"[WatcherTask] 已從知識庫移除：{Path(file_path).name} (doc={doc_id})"
+        )
 
         return {"status": "deleted", "document_id": doc_id, "deny_first": True}
 

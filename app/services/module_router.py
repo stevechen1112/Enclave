@@ -91,18 +91,9 @@ class ModuleRouter:
 
     def _load_from_db(self) -> None:
         from app.services.module_registry import get_module_registry
-        from app.services.mka_module_seed import seed_canonical_modules
 
         registry = get_module_registry(self.db)
         modules = registry.list_modules(include_disabled=False)
-        if not modules:
-            # 首次：seed 正式五模組後再讀
-            seed_canonical_modules(self.db)
-            try:
-                self.db.commit()
-            except Exception:
-                self.db.rollback()
-            modules = registry.list_modules(include_disabled=False)
         self._cache = {}
         for row in modules:
             cfg = _from_registry_row(row)

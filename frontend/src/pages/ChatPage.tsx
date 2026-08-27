@@ -550,6 +550,7 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full">
+      <h1 className="sr-only">企業知識問答</h1>
       {/* ──── Conversation sidebar（桌機）──── */}
       <div className="hidden w-72 flex-col border-r border-line bg-surface md:flex">
         {sidebarBody}

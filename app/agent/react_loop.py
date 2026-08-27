@@ -181,6 +181,8 @@ class ReActLoop:
                     {
                         "citation_id": c.citation_id,
                         "document_id": str(c.canonical_document_id),
+                        "canonical_resource_type": c.canonical_resource_type,
+                        "canonical_resource_id": c.canonical_resource_id,
                         "revision": c.document_revision,
                     }
                     for c in retrieved.citations[:3]

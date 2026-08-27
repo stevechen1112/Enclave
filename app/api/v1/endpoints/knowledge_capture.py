@@ -132,6 +132,10 @@ def create_capture(
         transcript_expires_at=now + timedelta(days=policy.transcript_retention_days),
     )
     db.add(row)
+    db.flush()
+    from app.services.asset_projection import ensure_capture_asset
+
+    ensure_capture_asset(db, row)
     db.commit()
     db.refresh(row)
     return _session_to_dict(row)
@@ -327,6 +331,9 @@ def complete_capture(
     row.total_duration_ms = recorded_duration
     row.completed_at = _utcnow()
     row.status = "queued"
+    from app.services.asset_projection import finalize_capture_asset_revision
+
+    finalize_capture_asset_revision(db, capture=row, chunks=chunks)
     db.commit()
 
     queue_enqueued = True

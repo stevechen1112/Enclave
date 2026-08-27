@@ -82,7 +82,8 @@ class KBRevisionRuntime:
         revision.status = target
 
     def promote(self, db, *, kb: KnowledgeBase, revision: KnowledgeBaseRevision, gate_evidence: dict,
-                runtime_manifest: Optional[dict] = None, gate_artifacts: Optional[dict] = None) -> None:
+                runtime_manifest: Optional[dict] = None, gate_artifacts: Optional[dict] = None,
+                created_by: Optional[UUID] = None) -> None:
         if revision.status != "shadow":
             raise ValueError("only a shadow revision may be promoted")
         from app.services.release_gate_evidence import REQUIRED_PROMOTION_GATES
@@ -159,6 +160,17 @@ class KBRevisionRuntime:
             activated_at=revision.activated_at,
         ))
         db.flush()
+        # Phase H dual-write: the legacy KB revision remains the serving path,
+        # while the exact same sealed membership is published to the canonical
+        # KnowledgeUnit authority in this transaction.
+        from app.services.knowledge_authority import publish_document_kb_revision
+
+        publish_document_kb_revision(
+            db,
+            kb=kb,
+            kb_revision=revision,
+            created_by=created_by,
+        )
 
     def rollback(self, db, *, kb: KnowledgeBase, target: KnowledgeBaseRevision, executed_by: Optional[UUID] = None) -> None:
         if target.status not in {"retired", "active"}:

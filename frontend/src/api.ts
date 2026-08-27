@@ -4,12 +4,30 @@ import type {
   Conversation, Message, UsageSummary, UsageByAction,
   UsageRecord, AuditLog, ExperienceBootstrap,
   SSEEvent, FeedbackCreate, FeedbackResponse, SearchResult,
+  VideoAsset, VideoAssetDetail,
+  KnowledgeAsset, KnowledgeAssetEvent,
+  KnowledgeReviewInbox,
 } from './types'
 import { parseApiError } from './lib/apiError'
 
 const api = axios.create({ baseURL: '/api/v1' })
 
 export type DemoPersona = 'sales' | 'field' | 'master' | 'newcomer' | 'viewer' | 'admin'
+
+export interface ReleaseMetadata {
+  schema_version: number
+  release_id: string
+  source_commit: string
+  source_dirty: string
+  build_time: string
+  deployment_manifest_id: string
+  schema_head: string
+  route_contract_hash: string
+  identifiable?: boolean
+  database_schema_heads?: string[]
+  schema_matches?: boolean
+  canonical_routes?: string[]
+}
 
 // ─── Request interceptor: attach JWT ───
 api.interceptors.request.use((config) => {
@@ -22,7 +40,8 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const isLoginRequest = String(err.config?.url || '').startsWith('/auth/login/')
+    if (err.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
@@ -36,6 +55,7 @@ export type { ApiErrorInfo } from './lib/apiError'
 
 // ─── Auth ───
 export const authApi = {
+  loginOptions: () => api.get<{ password_enabled: boolean; demo_enabled: boolean }>('/auth/login/options').then(r => r.data),
   login: async (email: string, password: string) => {
     const params = new URLSearchParams()
     params.append('username', email)
@@ -120,6 +140,95 @@ export const docApi = {
     }).then(r => r.data)
   },
   delete: (id: string) => api.delete(`/documents/${id}`).then(r => r.data),
+}
+
+// ─── Video knowledge sources ───
+export const videoApi = {
+  list: () => api.get<VideoAsset[]>('/media/videos').then(r => r.data),
+  get: (assetId: string) =>
+    api.get<VideoAssetDetail>(`/media/videos/${assetId}`).then(r => r.data),
+  upload: (
+    file: File,
+    metadata?: { title?: string; equipmentIds?: string; applicableRoles?: string },
+    onProgress?: (pct: number) => void,
+  ) => {
+    const form = new FormData()
+    form.append('file', file, file.name.split(/[\\/]/).pop() || file.name)
+    if (metadata?.title?.trim()) form.append('title', metadata.title.trim())
+    if (metadata?.equipmentIds?.trim()) form.append('equipment_ids', metadata.equipmentIds.trim())
+    if (metadata?.applicableRoles?.trim()) form.append('applicable_roles', metadata.applicableRoles.trim())
+    return api.post<VideoAsset>('/media/videos', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (event) => {
+        if (event.total && onProgress) {
+          onProgress(Math.round((event.loaded * 100) / event.total))
+        }
+      },
+    }).then(r => r.data)
+  },
+  review: (
+    artifactId: string,
+    decision: 'approved' | 'rejected',
+    notes?: string,
+    governance?: { conflictResolutions?: Record<string, string>; acknowledgeHighRisk?: boolean },
+  ) => api.post(`/media/video-artifacts/${artifactId}/review`, {
+    decision,
+    notes,
+    conflict_resolutions: governance?.conflictResolutions || {},
+    acknowledge_high_risk: governance?.acknowledgeHighRisk || false,
+  }).then(r => r.data),
+}
+
+// ─── Unified knowledge intake and Asset Library ───
+export const knowledgeAssetApi = {
+  list: (params?: { kind?: string; source_system?: string; processing_status?: string; data_classification?: string; department_id?: string; updated_after?: string; publication_status?: string }) =>
+    api.get<KnowledgeAsset[]>('/knowledge/assets', { params }).then(r => r.data),
+  get: (assetId: string) =>
+    api.get<KnowledgeAsset>(`/knowledge/assets/${assetId}`).then(r => r.data),
+  events: (assetId: string) =>
+    api.get<KnowledgeAssetEvent[]>(`/knowledge/assets/${assetId}/events`).then(r => r.data),
+  create: (
+    input: { file?: File; title?: string; sourceUrl?: string; sourceSystem?: string; sourceRecordId?: string; dataClassification?: string },
+    onProgress?: (pct: number) => void,
+  ) => {
+    const form = new FormData()
+    if (input.file) form.append('file', input.file, input.file.name.split(/[\\/]/).pop() || input.file.name)
+    if (input.title?.trim()) form.append('title', input.title.trim())
+    if (input.sourceUrl?.trim()) form.append('source_url', input.sourceUrl.trim())
+    if (input.sourceSystem?.trim()) form.append('source_system', input.sourceSystem.trim())
+    if (input.sourceRecordId?.trim()) form.append('source_record_id', input.sourceRecordId.trim())
+    form.append('data_classification', input.dataClassification || 'internal')
+    return api.post<KnowledgeAsset>('/knowledge/assets', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: event => {
+        if (event.total && onProgress) onProgress(Math.round((event.loaded * 100) / event.total))
+      },
+    }).then(r => r.data)
+  },
+  retry: (assetId: string) => api.post(`/knowledge/assets/${assetId}/retry`).then(r => r.data),
+  tombstone: (assetId: string) => api.delete(`/knowledge/assets/${assetId}`).then(r => r.data),
+}
+
+export const knowledgeReviewApi = {
+  list: (params?: { risk_level?: string; confidence_max?: number; overdue?: boolean; source_type?: string; department_id?: string; policy_key?: string; assignee?: string }) =>
+    api.get<KnowledgeReviewInbox>('/knowledge/review-items', { params }).then(r => r.data),
+  decide: (itemId: string, input: {
+    decision: 'approved' | 'rejected'
+    notes?: string
+    acknowledgeHighRisk?: boolean
+    acknowledgeLowConfidence?: boolean
+    conflictResolutions?: Record<string, string>
+    idempotencyKey?: string
+  }) => api.post(`/knowledge/review-items/${encodeURIComponent(itemId)}/decision`, {
+    decision: input.decision,
+    notes: input.notes,
+    acknowledge_high_risk: input.acknowledgeHighRisk || false,
+    acknowledge_low_confidence: input.acknowledgeLowConfidence || false,
+    conflict_resolutions: input.conflictResolutions || {},
+    idempotency_key: input.idempotencyKey || crypto.randomUUID(),
+  }).then(r => r.data),
+  batchApprove: (itemIds: string[], notes?: string) =>
+    api.post('/knowledge/review-items/batch/approve', { item_ids: itemIds, notes }).then(r => r.data),
 }
 
 // ─── Chat ───
@@ -240,6 +349,14 @@ export const companyApi = {
   usageByUser: () => api.get('/audit/usage/by-action').then(r => r.data),
   getDeploymentMode: () => api.get('/company/deployment-mode').then(r => r.data),
   setDeploymentMode: (mode: 'gpu' | 'nogpu') => api.put('/company/deployment-mode', { mode }).then(r => r.data),
+}
+
+export const operationsApi = {
+  release: () => api.get<ReleaseMetadata>('/operations/release').then(r => r.data),
+  frontendRelease: () => fetch('/release.json', { cache: 'no-store' }).then(async response => {
+    if (!response.ok) throw new Error(`release metadata unavailable: ${response.status}`)
+    return response.json() as Promise<ReleaseMetadata>
+  }),
 }
 
 // ─── Phase 13: KB Maintenance ───

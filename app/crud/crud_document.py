@@ -77,6 +77,10 @@ def tombstone(db: Session, *, document_id: UUID, reason: str = "user_request") -
     doc.version = revision
     db.flush()
 
+    from app.services.asset_projection import project_document
+
+    project_document(db, doc)
+
     from app.services.outbox_events import publish_event
     publish_event(
         db,

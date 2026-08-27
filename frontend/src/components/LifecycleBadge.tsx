@@ -71,9 +71,9 @@ export function toLifecycle(
   const s = (status || '').toLowerCase()
   if (answerReady) return 'searchable'
   if (s === 'uploading') return 'uploading'
-  if (s === 'pending_review' || s === 'pending') return 'pending_review'
-  if (s === 'parsing' || s === 'embedding' || s === 'processing') return 'processing'
-  if (s === 'completed' || s === 'indexed' || s === 'searchable') return 'not_searchable'
+  if (s === 'pending_review' || s === 'pending' || s === 'review_required') return 'pending_review'
+  if (s === 'parsing' || s === 'embedding' || s === 'processing' || s === 'queued' || s === 'running') return 'processing'
+  if (s === 'completed' || s === 'indexed' || s === 'searchable' || s === 'ready' || s === 'active' || s === 'draft') return 'not_searchable'
   if (s === 'failed') return 'failed'
   if (s === 'revoked' || s === 'tombstoned') return 'revoked'
   return 'unknown'

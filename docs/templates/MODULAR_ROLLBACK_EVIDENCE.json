@@ -1,0 +1,34 @@
+{
+  "deployment": {
+    "manifest_id": "",
+    "backend_image": "",
+    "frontend_image": "",
+    "worker_image": ""
+  },
+  "backup_restore": {
+    "database_backup_sha256": "",
+    "object_backup_sha256": "",
+    "restore_status": "NOT_RUN",
+    "isolated_environment": false,
+    "restore_rto_seconds": null
+  },
+  "database_downgrade": {
+    "status": "NOT_RUN",
+    "from_revision": "",
+    "to_revision": "",
+    "new_kind_compatibility_scan": "NOT_RUN"
+  },
+  "object_store": {
+    "inventory_status": "NOT_RUN",
+    "protected_kinds": [],
+    "deleted_during_drill": null
+  },
+  "rollback_smoke": {
+    "asset_read": "NOT_RUN",
+    "review": "NOT_RUN",
+    "sealed_retrieval": "NOT_RUN",
+    "tenant_isolation": "NOT_RUN"
+  },
+  "operator": "",
+  "completed_at": ""
+}

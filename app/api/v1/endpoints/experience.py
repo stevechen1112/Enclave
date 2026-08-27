@@ -1,79 +1,131 @@
 """UX experience bootstrap — capabilities, packs, deployment boundary (UIUX 2.0)."""
+
 from __future__ import annotations
 
+import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
 from app.models.user import User
+from app.platform.packs import PackRegistry, PackTenantContext
+from app.services.access_capabilities import ROLE_CAPABILITIES, capabilities_for_user
 from app.services.product_license import ProductModule, module_status
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
-# Formal roles only — manager is not a UserRole
-# 注意：此表必須與 frontend/src/navigation/capabilities.ts 的 ROLE_CAPS 保持一致；
-# bootstrap 是能力唯一來源，前端本地表僅作 bootstrap 未載入時的 route-guard fallback。
-_ROLE_CAPS: Dict[str, List[str]] = {
-    "owner": [
-        "ask", "browse_knowledge", "upload_documents", "manage_sources",
-        "review_queue", "governance", "system_ops", "create_content",
-        "view_usage", "admin_home", "field_work",
-    ],
-    "admin": [
-        "ask", "browse_knowledge", "upload_documents", "manage_sources",
-        "review_queue", "governance", "system_ops", "create_content",
-        "view_usage", "admin_home", "field_work",
-    ],
-    "hr": [
-        "ask", "browse_knowledge", "upload_documents", "create_content", "view_usage",
-        "field_work",
-    ],
-    "employee": [
-        "ask", "browse_knowledge", "create_content", "view_usage", "field_work",
-    ],
-    "viewer": [
-        "ask", "browse_knowledge", "view_usage", "field_work",
-    ],
-}
+# Formal roles only — manager is not a UserRole.  This server-owned map is the
+# only role-to-capability authority; the frontend deliberately has no copy.
+_ROLE_CAPS = ROLE_CAPABILITIES
 
 
-def _capabilities_for(user: User) -> List[str]:
-    role = (user.role or "employee").lower()
-    caps = list(_ROLE_CAPS.get(role, _ROLE_CAPS["employee"]))
-    if user.is_superuser:
-        for c in ("system_ops", "governance", "admin_home", "review_queue", "manage_sources"):
-            if c not in caps:
-                caps.append(c)
-    return caps
+def _capabilities_for(user: User) -> list[str]:
+    return capabilities_for_user(user)
 
 
 def _filter_task_workspace_entries(
-    entries: List[Dict[str, Any]], accessible_task_keys: set[str]
-) -> List[Dict[str, Any]]:
+    entries: list[dict[str, Any]], accessible_task_keys: set[str]
+) -> list[dict[str, Any]]:
     """Remove task links that the current user cannot start at runtime."""
-    filtered: List[Dict[str, Any]] = []
+    filtered: list[dict[str, Any]] = []
     prefix = "/job/tasks/"
     for entry in entries:
         path = str(entry.get("path") or "")
         if path.startswith(prefix):
-            task_key = path[len(prefix):].split("?", 1)[0].split("/", 1)[0]
+            task_key = path[len(prefix) :].split("?", 1)[0].split("/", 1)[0]
             if task_key not in accessible_task_keys:
                 continue
         filtered.append(entry)
     return filtered
 
 
-def _inference_boundary(db: Session) -> Dict[str, Any]:
+def _primary_navigation(
+    capabilities: list[str], ui_modules: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Compose one ordered navigation decision for every frontend surface."""
+    caps = set(capabilities)
+    base = [
+        {"to": "/overview", "label": "總覽", "capability": "home", "end": True},
+        {"to": "/ask", "label": "問答", "capability": "ask"},
+        {"to": "/knowledge", "label": "知識", "capability": "browse_knowledge"},
+        {"to": "/governance", "label": "管理", "capability": "governance"},
+        {"to": "/system", "label": "系統", "capability": "system_ops"},
+    ]
+    items = [item for item in base if item["capability"] in caps]
+    module_items = [
+        {"to": nav["to"], "label": nav["label"], "module": manifest["ui_key"]}
+        for manifest in ui_modules
+        for nav in manifest.get("navigation", [])
+        if str(nav.get("to") or "").startswith("/") and nav.get("label")
+    ]
+    seen = {item["to"] for item in items}
+    insert_at = 1 if items and items[0]["to"] == "/overview" else 0
+    for item in module_items:
+        if item["to"] in seen:
+            continue
+        items.insert(insert_at, item)
+        insert_at += 1
+        seen.add(item["to"])
+    return items
+
+
+def _default_home(
+    capabilities: list[str],
+    ui_modules: list[dict[str, Any]],
+    primary_navigation: list[dict[str, Any]],
+) -> str:
+    """Choose a home only from the navigation already authorized by the server."""
+    if "admin_home" in capabilities:
+        return "overview"
+    reachable = {str(item.get("to")) for item in primary_navigation}
+    for manifest in ui_modules:
+        candidate = str(manifest.get("default_home") or "")
+        if candidate in reachable:
+            return candidate.removeprefix("/")
+    return "overview" if "home" in capabilities else "ask"
+
+
+def _tenant_ui_manifests(
+    registry: PackRegistry,
+    *,
+    db: Session,
+    tenant_id: Any,
+) -> list[dict[str, Any]]:
+    """Serialize the same pack eligibility decision used by API and UI routes."""
+    manifests: list[dict[str, Any]] = []
+    for pack_key, ui_module in registry.enabled_ui_modules(
+        context=PackTenantContext(tenant_id=tenant_id, db=db)
+    ):
+        manifests.append(
+            {
+                "pack_key": pack_key,
+                "ui_key": ui_module.ui_key,
+                "version": ui_module.ui_version,
+                "module_key": ui_module.module_key,
+                "route_keys": list(ui_module.route_keys),
+                "required_capabilities": list(ui_module.required_capability_keys),
+                "navigation": [dict(item) for item in ui_module.navigation],
+                "bundle_key": ui_module.bundle_key,
+                "default_home": ui_module.default_home,
+            }
+        )
+    return manifests
+
+
+def _inference_boundary(db: Session) -> dict[str, Any]:
     """Honest data-boundary signal for UI (local vs external model)."""
     try:
         from app.services.deployment_mode import resolve_runtime_profiles
 
         profiles = resolve_runtime_profiles(db)
-        main_provider = str((profiles.get("main") or {}).get("provider") or "ollama").lower()
-    except Exception:
+        main_provider = str(
+            (profiles.get("main") or {}).get("provider") or "ollama"
+        ).lower()
+    except Exception:  # noqa: BLE001 - bootstrap reports a conservative boundary
         main_provider = str(os.getenv("LLM_PROVIDER") or "ollama").lower()
 
     external = main_provider in ("gemini", "openai", "anthropic", "azure")
@@ -89,7 +141,7 @@ def _inference_boundary(db: Session) -> Dict[str, Any]:
     }
 
 
-def _pack_states() -> Dict[str, Dict[str, Any]]:
+def _pack_states() -> dict[str, dict[str, Any]]:
     status = module_status()
     from app.gateway.runtime_health import get_runtime_health_snapshot
 
@@ -102,7 +154,7 @@ def _pack_states() -> Dict[str, Dict[str, Any]]:
         ProductModule.KNOWLEDGE_COMPILER.value: "知識編譯（API-only）",
         ProductModule.AGENT_AUTOMATION.value: "自動入庫／審核",
     }
-    out: Dict[str, Dict[str, Any]] = {}
+    out: dict[str, dict[str, Any]] = {}
     for key, enabled in status.items():
         verified = runtime_packs.get(key) or {}
         state = verified.get("state")
@@ -134,58 +186,66 @@ def _pack_states() -> Dict[str, Dict[str, Any]]:
 
 @router.get("/bootstrap")
 def experience_bootstrap(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> Dict[str, Any]:
+    db: Session = Depends(get_db),  # noqa: B008 - FastAPI dependency declaration
+    current_user: User = Depends(get_current_active_user),  # noqa: B008
+) -> dict[str, Any]:
     """
     Single bootstrap for UI navigation / honesty surface.
     """
     caps = _capabilities_for(current_user)
 
     # MKA: job modules + interaction capabilities（§5.4）
-    job_modules: List[Dict[str, Any]] = []
-    workspace_entries: List[Dict[str, Any]] = []
-    job_role_assignments: List[Dict[str, Any]] = []
-    active_job_role: Optional[Dict[str, Any]] = None
-    interaction_caps: Dict[str, bool] = {
-        "voice": False, "camera": False, "qr": False, "offline": False,
+    job_modules: list[dict[str, Any]] = []
+    workspace_entries: list[dict[str, Any]] = []
+    job_role_assignments: list[dict[str, Any]] = []
+    active_job_role: dict[str, Any] | None = None
+    interaction_caps: dict[str, bool] = {
+        "voice": False,
+        "camera": False,
+        "qr": False,
+        "offline": False,
     }
     default_job_home = "job"
     needs_job_role_assignment = False
     is_demo_tenant = False
+    ui_modules: list[dict[str, Any]] = []
+    from app.composition.packs import build_pack_registry
+
+    pack_registry = build_pack_registry()
+    from app.composition.pack_surfaces import resolve_pack_permissions
+
+    pack_permissions = list(resolve_pack_permissions(pack_registry, current_user))
+    from app.gateway.runtime_health import get_runtime_health_snapshot
+    from app.services.capability_catalog import build_capability_catalog
+
     try:
+        if not pack_registry.is_deployed("mka"):
+            raise LookupError("MKA pack is not deployed")
+        # Bootstrap is a pure read. Canonical MKA data and tenant bindings are
+        # provisioned by the explicit pack lifecycle hook/demo setup service.
+        from app.models.tenant import Tenant
         from app.services.job_context import build_effective_job_context
         from app.services.module_registry import get_module_registry
         from app.services.module_router import get_module_router
-        from app.services.mka_module_seed import (
-            ensure_tenant_module_bindings,
-            seed_canonical_modules,
-            seed_canonical_task_definitions,
-            seed_default_job_roles,
-        )
-
-        seed_canonical_modules(db)
-        seed_canonical_task_definitions(db)
-        # 新租戶模組改為 opt-in：只有明確標記的合成 Demo 租戶自動補 binding，
-        # 其他租戶由管理員在設定中心逐個啟用（避免新租戶工作台全攤平）。
-        from app.models.tenant import Tenant
 
         tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
         from app.demo.manifest import DEMO_TENANT_ID
 
         if tenant is not None and tenant.is_demo and tenant.id == DEMO_TENANT_ID:
             is_demo_tenant = True
-            ensure_tenant_module_bindings(db, current_user.tenant_id)
-        seed_default_job_roles(db, current_user.tenant_id)
-        try:
-            db.commit()
-        except Exception:
-            db.rollback()
 
-        # EffectiveJobContext：安全角色（AuthorizationContext）＋業務職能（JobRole 指派）
+        if not pack_registry.is_enabled_for_tenant(
+            "mka",
+            context=PackTenantContext(tenant_id=current_user.tenant_id, db=db),
+        ):
+            raise LookupError("MKA pack is not enabled for tenant")
+
+        # EffectiveJobContext combines security roles and business job roles.
         job_ctx = build_effective_job_context(db, current_user)
         job_role_assignments = [a.to_dict() for a in job_ctx.assignments]
-        active_job_role = job_ctx.active_job_role.to_dict() if job_ctx.active_job_role else None
+        active_job_role = (
+            job_ctx.active_job_role.to_dict() if job_ctx.active_job_role else None
+        )
         needs_job_role_assignment = job_ctx.needs_job_role_assignment
 
         registry = get_module_registry(db)
@@ -213,12 +273,16 @@ def experience_bootstrap(
 
             authz = AuthorizationContext.from_user(current_user)
             module_keys = job_ctx.active_module_keys or None
-            workspace_entries = get_module_router(db=db).workspace_entries(authz, module_keys)
+            workspace_entries = get_module_router(db=db).workspace_entries(
+                authz, module_keys
+            )
             from app.services.task_engine import get_task_engine
 
             accessible_task_keys = {
                 definition.task_key
-                for definition in get_task_engine(db).list_accessible_definitions(current_user)
+                for definition in get_task_engine(db).list_accessible_definitions(
+                    current_user
+                )
             }
             workspace_entries = _filter_task_workspace_entries(
                 workspace_entries, accessible_task_keys
@@ -226,8 +290,58 @@ def experience_bootstrap(
         if job_modules:
             first_key = job_modules[0].get("module_key", "")
             default_job_home = f"module:{first_key}"
+        ui_modules = _tenant_ui_manifests(
+            pack_registry, db=db, tenant_id=current_user.tenant_id
+        )
+    except LookupError:
+        # Expected for a deployment- or tenant-disabled pack.
+        job_modules = []
+        workspace_entries = []
+        job_role_assignments = []
+        active_job_role = None
+        interaction_caps = {
+            "voice": False,
+            "camera": False,
+            "qr": False,
+            "offline": False,
+        }
+        ui_modules = []
     except Exception:
-        pass  # 誠實降級 — 不顯示假功能
+        # Never return a partially assembled workspace after a DB or pack error.
+        logger.exception("MKA experience bootstrap degraded closed")
+        job_modules = []
+        workspace_entries = []
+        job_role_assignments = []
+        active_job_role = None
+        interaction_caps = {
+            "voice": False,
+            "camera": False,
+            "qr": False,
+            "offline": False,
+        }
+        ui_modules = []
+
+    field_work_available = any(
+        "mka.job.home" in manifest.get("route_keys", []) for manifest in ui_modules
+    )
+    if field_work_available and "field_work" not in caps:
+        caps.append("field_work")
+    capability_catalog = build_capability_catalog(
+        db,
+        tenant_id=current_user.tenant_id,
+        pack_registry=pack_registry,
+        runtime_snapshot=get_runtime_health_snapshot(),
+        user_permissions=set(pack_permissions),
+        accessible_modules_by_pack={
+            "mka": {
+                str(module.get("module_key"))
+                for module in job_modules
+                if module.get("module_key")
+            }
+        },
+    )
+    primary_navigation = _primary_navigation(caps, ui_modules)
+    default_home = _default_home(caps, ui_modules, primary_navigation)
 
     return {
         "product": {
@@ -241,16 +355,15 @@ def experience_bootstrap(
             "email": current_user.email,
             "full_name": current_user.full_name,
             "role": current_user.role,
-            "tenant_id": str(current_user.tenant_id) if current_user.tenant_id else None,
+            "tenant_id": str(current_user.tenant_id)
+            if current_user.tenant_id
+            else None,
             "is_superuser": bool(current_user.is_superuser),
         },
         "capabilities": caps,
-        # 與前端 defaultHomePath 一致：admin → overview；現場人員 → job；其他 → ask
-        "default_home": (
-            "overview" if "admin_home" in caps
-            else "job" if "field_work" in caps
-            else "ask"
-        ),
+        # The same server decision drives login redirect, shell and route guards.
+        "default_home": default_home,
+        "primary_navigation": primary_navigation,
         "packs": _pack_states(),
         "inference": _inference_boundary(db),
         "features": {
@@ -260,7 +373,8 @@ def experience_bootstrap(
             "mobile_ga": False,
             "sharepoint_certified": False,
             "google_drive_certified": False,
-            "review_queue_enabled": os.getenv("REVIEW_QUEUE_ENABLED", "true").lower() == "true",
+            "review_queue_enabled": os.getenv("REVIEW_QUEUE_ENABLED", "true").lower()
+            == "true",
         },
         "demo_mode": is_demo_tenant,
         # MKA §5.4: job modules + interaction capabilities
@@ -271,4 +385,7 @@ def experience_bootstrap(
         "needs_job_role_assignment": needs_job_role_assignment,
         "default_job_home": default_job_home,
         "interaction_capabilities": interaction_caps,
+        "ui_modules": ui_modules,
+        "pack_permissions": pack_permissions,
+        "capability_catalog": capability_catalog,
     }

@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth'
 import Layout from './components/Layout'
 import type { Capability } from './navigation/capabilities'
 import { useDefaultHomePath, useHasCapability } from './navigation/useCapabilities'
-import { useCanAuthorKnowhow } from './navigation/useKnowhowPermissions'
+import { buildModuleRouteElements } from './modules/registry'
+import api from './api'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
@@ -27,6 +28,11 @@ const QualityPage = lazy(() => import('./pages/knowledge/QualityPage'))
 const DocumentDetailPage = lazy(() => import('./pages/knowledge/DocumentDetailPage'))
 const WikiListPage = lazy(() => import('./pages/knowledge/WikiListPage'))
 const WikiDetailPage = lazy(() => import('./pages/knowledge/WikiDetailPage'))
+const VideoAssetsPage = lazy(() => import('./pages/knowledge/VideoAssetsPage'))
+const VideoReviewPage = lazy(() => import('./pages/knowledge/VideoReviewPage'))
+const AssetLibraryPage = lazy(() => import('./pages/knowledge/AssetLibraryPage'))
+const AddKnowledgePage = lazy(() => import('./pages/knowledge/AddKnowledgePage'))
+const AssetDetailPage = lazy(() => import('./pages/knowledge/AssetDetailPage'))
 const GovernanceLayout = lazy(() => import('./pages/governance/GovernanceLayout'))
 const SystemLayout = lazy(() => import('./pages/system/SystemLayout'))
 const ModulesPage = lazy(() => import('./pages/system/ModulesPage'))
@@ -34,16 +40,7 @@ const HealthPage = lazy(() => import('./pages/system/HealthPage'))
 const BackupPage = lazy(() => import('./pages/system/BackupPage'))
 const DeployPage = lazy(() => import('./pages/system/DeployPage'))
 const CreateLayout = lazy(() => import('./pages/create/CreateLayout'))
-const JobHomePage = lazy(() => import('./pages/job/JobHomePage'))
-const TaskWorkspacePage = lazy(() => import('./pages/job/TaskWorkspacePage'))
 const TenantAdminPage = lazy(() => import('./pages/system/TenantAdminPage'))
-const FormPage = lazy(() => import('./pages/forms/FormPage'))
-const FormInstancesPage = lazy(() => import('./pages/forms/FormInstancesPage'))
-const FormInstanceDetailPage = lazy(() => import('./pages/forms/FormInstanceDetailPage'))
-const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'))
-const KnowhowListPage = lazy(() => import('./pages/knowhow/KnowhowListPage'))
-const KnowhowDetailPage = lazy(() => import('./pages/knowhow/KnowhowDetailPage'))
-const InterviewPage = lazy(() => import('./pages/knowhow/InterviewPage'))
 
 function PageLoader() {
   return (
@@ -57,10 +54,24 @@ function PageLoader() {
   )
 }
 
+function ExperienceUnavailable() {
+  const { refreshExperience, logout } = useAuth()
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-wash p-6">
+      <section className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 text-center shadow-card" aria-labelledby="experience-error-title">
+        <h1 id="experience-error-title" className="font-display text-xl font-semibold text-ink">無法載入您的工作空間</h1>
+        <p className="mt-2 text-sm text-muted">為避免顯示未授權功能，系統已暫停載入導覽與應用。請重試，或重新登入。</p>
+        <div className="mt-5 flex justify-center gap-3"><button type="button" className="btn-primary" onClick={() => void refreshExperience()}>重新載入</button><button type="button" className="btn-outline" onClick={logout}>重新登入</button></div>
+      </section>
+    </main>
+  )
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token, loading } = useAuth()
-  if (loading) return <PageLoader />
+  const { token, loading, experience, experienceStatus } = useAuth()
+  if (loading || experienceStatus === 'loading') return <PageLoader />
   if (!token) return <Navigate to="/login" replace />
+  if (!experience) return <ExperienceUnavailable />
   return <>{children}</>
 }
 
@@ -79,19 +90,32 @@ function CapGuard({
   return <>{children}</>
 }
 
-function KnowhowAuthorGuard({ children }: { children: React.ReactNode }) {
-  const allowed = useCanAuthorKnowhow()
-  return allowed ? <>{children}</> : <Navigate to="/knowhow" replace />
+function LegacyRedirect({ surfaceKey, to }: { surfaceKey: string; to: string }) {
+  useEffect(() => {
+    void api.post('/deprecations/usage', {
+      key: surfaceKey,
+      client_path: `${window.location.pathname}${window.location.search}`,
+    }).catch(() => undefined)
+  }, [surfaceKey])
+  return <Navigate to={to} replace />
 }
 
 function LegacyReportDetailRedirect() {
   const { id } = useParams<{ id: string }>()
-  return <Navigate to={`/create/reports/${id}`} replace />
+  return <LegacyRedirect surfaceKey="frontend.report_detail" to={`/create/reports/${id}`} />
 }
 
 function AppRoutes() {
-  const { token, user, loading } = useAuth()
+  const { token, user, loading, experience, experienceStatus } = useAuth()
   const home = useDefaultHomePath()
+  const moduleRoutes = buildModuleRouteElements(experience?.ui_modules)
+
+  // Module routes are server-owned. Keep the requested deep link intact until
+  // bootstrap has supplied its manifest; otherwise the wildcard route would
+  // briefly treat valid module URLs (for example /job) as unknown and send the
+  // browser back to the landing page.
+  if (token && (loading || experienceStatus === 'loading')) return <PageLoader />
+  if (token && experienceStatus === 'error') return <ExperienceUnavailable />
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -122,13 +146,18 @@ function AppRoutes() {
           <Route path="ask" element={<ChatPage />} />
           <Route
             path="overview"
-            element={<CapGuard capability="admin_home"><OverviewPage /></CapGuard>}
+            element={<CapGuard capability="home"><OverviewPage /></CapGuard>}
           />
 
           <Route path="knowledge" element={<KnowledgeLayout />}>
-            <Route index element={<Navigate to="documents" replace />} />
+            <Route index element={<Navigate to="assets" replace />} />
+            <Route path="assets" element={<AssetLibraryPage />} />
+            <Route path="assets/:assetId" element={<AssetDetailPage />} />
+            <Route path="new" element={<CapGuard capability="upload_documents"><AddKnowledgePage /></CapGuard>} />
             <Route path="documents" element={<DocumentsPage />} />
             <Route path="documents/:id" element={<DocumentDetailPage />} />
+            <Route path="videos" element={<VideoAssetsPage />} />
+            <Route path="videos/:assetId" element={<VideoReviewPage />} />
             <Route path="wiki" element={<WikiListPage />} />
             <Route path="wiki/:id" element={<WikiDetailPage />} />
             <Route
@@ -171,47 +200,7 @@ function AppRoutes() {
 
           <Route path="me/usage" element={<UsagePage />} />
 
-          {/* MKA 現場作業（製造業 PWA）：職務入口／報價／審核／師傅經驗庫 */}
-          <Route
-            path="job"
-            element={<CapGuard capability="field_work"><JobHomePage /></CapGuard>}
-          />
-          <Route
-            path="job/tasks/:taskKey"
-            element={<CapGuard capability="field_work"><TaskWorkspacePage /></CapGuard>}
-          />
-          <Route
-            path="quote"
-            element={<Navigate to="/forms/quote" replace />}
-          />
-          <Route
-            path="forms/mine"
-            element={<CapGuard capability="field_work"><FormInstancesPage /></CapGuard>}
-          />
-          <Route
-            path="forms/instances/:instanceId"
-            element={<CapGuard capability="field_work"><FormInstanceDetailPage /></CapGuard>}
-          />
-          <Route
-            path="forms/:formKey"
-            element={<CapGuard capability="field_work"><FormPage /></CapGuard>}
-          />
-          <Route
-            path="approvals"
-            element={<CapGuard capability="field_work"><ApprovalsPage /></CapGuard>}
-          />
-          <Route
-            path="knowhow"
-            element={<CapGuard capability="field_work"><KnowhowListPage /></CapGuard>}
-          />
-          <Route
-            path="knowhow/interview"
-            element={<CapGuard capability="field_work"><KnowhowAuthorGuard><InterviewPage /></KnowhowAuthorGuard></CapGuard>}
-          />
-          <Route
-            path="knowhow/:id"
-            element={<CapGuard capability="field_work"><KnowhowDetailPage /></CapGuard>}
-          />
+          {moduleRoutes}
 
           {/* V1.1 create workspace — user menu, not primary nav */}
           <Route
@@ -224,21 +213,21 @@ function AppRoutes() {
           </Route>
 
           {/* Legacy redirects */}
-          <Route path="documents" element={<Navigate to="/knowledge/documents" replace />} />
-          <Route path="connectors" element={<Navigate to="/knowledge/sources" replace />} />
-          <Route path="agent" element={<Navigate to="/knowledge/sources" replace />} />
-          <Route path="agent/review" element={<Navigate to="/knowledge/review" replace />} />
-          <Route path="agent/progress" element={<Navigate to="/knowledge/review" replace />} />
-          <Route path="kb-health" element={<Navigate to="/knowledge/quality" replace />} />
-          <Route path="query-analytics" element={<Navigate to="/governance/insights" replace />} />
-          <Route path="audit" element={<Navigate to="/governance/audit" replace />} />
-          <Route path="departments" element={<Navigate to="/governance/departments" replace />} />
-          <Route path="company" element={<Navigate to="/governance/organization" replace />} />
-          <Route path="knowledge-compiler" element={<Navigate to="/system/modules" replace />} />
-          <Route path="usage" element={<Navigate to="/me/usage" replace />} />
-          <Route path="my-usage" element={<Navigate to="/me/usage" replace />} />
-          <Route path="generate" element={<Navigate to="/create" replace />} />
-          <Route path="reports" element={<Navigate to="/create/reports" replace />} />
+          <Route path="documents" element={<LegacyRedirect surfaceKey="frontend.documents" to="/knowledge/assets" />} />
+          <Route path="connectors" element={<LegacyRedirect surfaceKey="frontend.connectors" to="/knowledge/sources" />} />
+          <Route path="agent" element={<LegacyRedirect surfaceKey="frontend.agent" to="/knowledge/sources" />} />
+          <Route path="agent/review" element={<LegacyRedirect surfaceKey="frontend.agent_review" to="/knowledge/review" />} />
+          <Route path="agent/progress" element={<LegacyRedirect surfaceKey="frontend.agent_progress" to="/knowledge/review" />} />
+          <Route path="kb-health" element={<LegacyRedirect surfaceKey="frontend.kb_health" to="/knowledge/quality" />} />
+          <Route path="query-analytics" element={<LegacyRedirect surfaceKey="frontend.query_analytics" to="/governance/insights" />} />
+          <Route path="audit" element={<LegacyRedirect surfaceKey="frontend.audit" to="/governance/audit" />} />
+          <Route path="departments" element={<LegacyRedirect surfaceKey="frontend.departments" to="/governance/departments" />} />
+          <Route path="company" element={<LegacyRedirect surfaceKey="frontend.company" to="/governance/organization" />} />
+          <Route path="knowledge-compiler" element={<LegacyRedirect surfaceKey="frontend.knowledge_compiler" to="/system/modules" />} />
+          <Route path="usage" element={<LegacyRedirect surfaceKey="frontend.usage" to="/me/usage" />} />
+          <Route path="my-usage" element={<LegacyRedirect surfaceKey="frontend.my_usage" to="/me/usage" />} />
+          <Route path="generate" element={<LegacyRedirect surfaceKey="frontend.generate" to="/create" />} />
+          <Route path="reports" element={<LegacyRedirect surfaceKey="frontend.reports" to="/create/reports" />} />
           <Route path="reports/:id" element={<LegacyReportDetailRedirect />} />
 
           {/* Advanced: full Agent wizard still available via deep link */}

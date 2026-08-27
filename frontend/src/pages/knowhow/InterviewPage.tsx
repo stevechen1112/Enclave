@@ -87,7 +87,6 @@ export default function InterviewPage() {
     <div className="h-full overflow-y-auto p-4 md:p-6">
       <div className="mx-auto max-w-2xl space-y-4">
         <PageHeader
-          variant="section"
           title="師傅訪談與知識傳承"
           subtitle="可直接在手機錄音；系統會安全上傳、轉寫並建立可送審的知識草稿。"
         />

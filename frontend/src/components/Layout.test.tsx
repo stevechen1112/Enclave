@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -22,9 +22,12 @@ vi.mock('../auth', () => ({
 }))
 
 vi.mock('../navigation/useCapabilities', () => ({
-  useDefaultHomePath: () => '/job',
+  useDefaultHomePath: () => '/overview',
   useHasCapability: () => false,
-  usePrimaryNav: () => [],
+  usePrimaryNav: () => [
+    { to: '/overview', label: '總覽', capability: 'home' },
+    { to: '/ask', label: '問答', capability: 'ask' },
+  ],
 }))
 
 vi.mock('./ReadinessBanner', () => ({ default: () => null }))
@@ -38,10 +41,10 @@ describe('Layout user menu', () => {
   it('allows the visible desktop menu to log out when desktop and mobile sidebars coexist', async () => {
     const user = userEvent.setup()
     render(
-      <MemoryRouter initialEntries={['/job']}>
+      <MemoryRouter initialEntries={['/overview']}>
         <Routes>
           <Route path="/" element={<Layout />}>
-            <Route path="job" element={<div>工作頁</div>} />
+            <Route path="overview" element={<div>工作頁</div>} />
           </Route>
           <Route path="/login" element={<div>登入頁</div>} />
         </Routes>
@@ -53,5 +56,21 @@ describe('Layout user menu', () => {
 
     expect(auth.logout).toHaveBeenCalledOnce()
     expect(screen.getByText('登入頁')).toBeInTheDocument()
+  })
+
+  it('uses the same server navigation in shell, mobile menu and command palette', async () => {
+    const user = userEvent.setup()
+    render(<MemoryRouter initialEntries={['/overview']}><Routes><Route path="/" element={<Layout />}><Route path="overview" element={<div>工作頁</div>} /></Route></Routes></MemoryRouter>)
+
+    expect(screen.getAllByRole('link', { name: '總覽' })).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: '問答' })).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: '開啟選單' }))
+    expect(screen.getAllByRole('link', { name: '總覽' })).toHaveLength(2)
+    expect(screen.getAllByRole('link', { name: '問答' })).toHaveLength(2)
+    await user.keyboard('{Control>}k{/Control}')
+    expect(screen.getByRole('dialog', { name: '前往功能' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /總覽/ })).toHaveLength(3)
+    expect(screen.queryByRole('link', { name: /現場作業/ })).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('textbox', { name: '搜尋可用功能' })).toHaveFocus())
   })
 })

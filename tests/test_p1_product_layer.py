@@ -505,6 +505,11 @@ class TestModuleRouter:
         )
         session = sessionmaker(bind=engine)()
         try:
+            # Phase I: provisioning is explicit; read construction never seeds.
+            from app.services.mka_module_seed import seed_canonical_modules
+
+            seed_canonical_modules(session)
+            session.flush()
             yield session
         finally:
             session.close()

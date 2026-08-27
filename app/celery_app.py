@@ -40,7 +40,13 @@ import app.tasks.kb_maintenance_tasks  # noqa: F401, E402
 import app.tasks.outbox_worker  # noqa: F401, E402
 import app.tasks.reconciliation_tasks  # noqa: F401, E402
 import app.tasks.connector_tasks  # noqa: F401, E402
-import app.tasks.mka_tasks  # noqa: F401, E402
+import app.tasks.video_tasks  # noqa: F401, E402
+import app.tasks.audio_tasks  # noqa: F401, E402
+
+from app.composition.pack_surfaces import import_pack_task_modules  # noqa: E402
+from app.composition.packs import build_pack_registry  # noqa: E402
+
+_deployed_pack_task_modules = import_pack_task_modules(build_pack_registry())
 
 from app.observability.sentry import init_sentry
 
@@ -59,10 +65,6 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.poll_pending_connectors",
         "schedule": 60.0,
     },
-    "purge-mka-retention": {
-        "task": "tasks.purge_mka_retention",
-        "schedule": 86400.0,  # 每日硬刪過期轉寫（§12.1）
-    },
     "detect-knowledge-gaps": {
         "task": "tasks.detect_knowledge_gaps",
         "schedule": 86400.0,
@@ -73,3 +75,9 @@ celery_app.conf.beat_schedule = {
         "schedule": 86400.0,
     },
 }
+
+if "app.tasks.mka_tasks" in _deployed_pack_task_modules:
+    celery_app.conf.beat_schedule["purge-mka-retention"] = {
+        "task": "tasks.purge_mka_retention",
+        "schedule": 86400.0,
+    }

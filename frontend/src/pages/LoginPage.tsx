@@ -1,7 +1,35 @@
-import { Shield } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Loader2, Shield } from 'lucide-react'
 import DemoDoors from '../components/DemoDoors'
+import { authApi } from '../api'
+import { useAuth } from '../auth'
 
 export default function LoginPage() {
+  const { login } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [demoEnabled, setDemoEnabled] = useState(false)
+
+  useEffect(() => {
+    void authApi.loginOptions()
+      .then(options => setDemoEnabled(options.demo_enabled))
+      .catch(() => setDemoEnabled(false))
+  }, [])
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await login(email.trim(), password)
+    } catch {
+      setError('帳號或密碼不正確，請重新確認。')
+      setBusy(false)
+    }
+  }
+
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#292724] px-4 py-8 sm:px-6 lg:px-8">
       <div
@@ -15,31 +43,55 @@ export default function LoginPage() {
       />
 
       <div className="relative mx-auto w-full max-w-6xl">
-        <header className="mb-7 text-center sm:mb-9">
+        <header className="mx-auto mb-7 max-w-md text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent shadow-lg shadow-black/20">
             <Shield className="h-7 w-7 text-white" aria-hidden />
           </div>
-          <p className="text-xs font-semibold tracking-[0.2em] text-[#d0a27f]">
-            ENCLAVE 六道門
-          </p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            選一位同事，直接看看他怎麼用
-          </h1>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-sidebar-muted sm:text-base">
-            業務、現場、師傅、新人、主管檢視與公司管理。免帳號、免密碼，點選人物即可進入他的工作畫面。
-          </p>
-          <a href="/" className="mt-4 inline-flex text-sm font-medium text-[#d8b08c] underline-offset-4 hover:underline">
-            回產品介紹
-          </a>
+          <p className="text-xs font-semibold tracking-[0.2em] text-[#d0a27f]">ENCLAVE</p>
+          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white">登入企業知識平台</h1>
+          <p className="mt-3 text-sm leading-6 text-sidebar-muted">使用公司核發的帳號，進入您獲授權的知識與應用。</p>
         </header>
 
-        <DemoDoors />
+        <form onSubmit={event => void submit(event)} className="mx-auto max-w-md rounded-2xl border border-stone-300 bg-[#fffdf8] p-6 shadow-xl" noValidate>
+          <label className="block text-sm font-semibold text-stone-800">
+            電子郵件
+            <input
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={event => setEmail(event.target.value)}
+              className="input mt-2 w-full"
+            />
+          </label>
+          <label className="mt-4 block text-sm font-semibold text-stone-800">
+            密碼
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={event => setPassword(event.target.value)}
+              className="input mt-2 w-full"
+            />
+          </label>
+          {error && <p role="alert" aria-live="polite" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+          <button type="submit" disabled={busy || !email.trim() || !password} className="btn-primary mt-5 w-full justify-center disabled:opacity-50">
+            {busy ? <><Loader2 className="h-4 w-4 animate-spin" aria-hidden />登入中…</> : '登入'}
+          </button>
+        </form>
 
-        <footer className="mt-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-sidebar-muted sm:flex-row sm:gap-4">
-          <span>合成展示環境，請勿輸入真實客戶資料、個資或公司機密</span>
-          <span className="hidden h-1 w-1 rounded-full bg-sidebar-muted sm:block" aria-hidden />
-          <span>離開角色後可隨時返回此頁重新選擇</span>
-        </footer>
+        {demoEnabled && (
+          <details className="mt-6 rounded-2xl border border-white/15 bg-white/5 p-4 text-white">
+            <summary className="cursor-pointer text-center text-sm font-semibold">查看合成 Demo 角色</summary>
+            <div className="mt-5">
+              <DemoDoors compact />
+              <p className="mt-4 text-center text-xs text-sidebar-muted">合成展示環境，請勿輸入真實客戶資料、個資或公司機密。</p>
+            </div>
+          </details>
+        )}
+
+        <a href="/" className="mx-auto mt-6 block max-w-md text-center text-sm font-medium text-[#d8b08c] underline-offset-4 hover:underline">回產品介紹</a>
       </div>
     </main>
   )

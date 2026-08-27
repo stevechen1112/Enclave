@@ -1,13 +1,12 @@
 from typing import Generator, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.core import security
 from app.crud import crud_user
 from app.db.session import SessionLocal
 from app.models.user import User
@@ -30,7 +29,9 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def get_current_user(
-    db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
+    request: Request = None,
+    db: Session = Depends(get_db),
+    token: str = Depends(reusable_oauth2),
 ) -> User:
     try:
         payload = jwt.decode(
@@ -64,6 +65,8 @@ def get_current_user(
         )
     # 之後本 request 的所有查詢受此租戶約束（apply_rls_context 會關閉 bypass）
     apply_rls_context(db, user.tenant_id)
+    if request is not None:
+        request.state.current_user = user
     return user
 
 

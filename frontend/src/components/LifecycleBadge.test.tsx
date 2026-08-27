@@ -18,4 +18,12 @@ describe('LifecycleBadge canonical answer readiness', () => {
   it('keeps revocation deny-first even if stale readiness is true', () => {
     expect(toLifecycle('completed', '2026-08-25T00:00:00Z', true)).toBe('revoked')
   })
+
+  it('maps canonical asset and ingestion states without an unknown badge', () => {
+    expect(toLifecycle('active')).toBe('not_searchable')
+    expect(toLifecycle('queued')).toBe('processing')
+    expect(toLifecycle('running')).toBe('processing')
+    expect(toLifecycle('review_required')).toBe('pending_review')
+    expect(toLifecycle('ready', null, true)).toBe('searchable')
+  })
 })

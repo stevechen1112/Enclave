@@ -251,6 +251,14 @@ def approve_knowhow(
             tenant_id=current_user.tenant_id, knowhow_id=knowhow_id
         )
 
+        from app.services.knowledge_authority import publish_approved_knowhow
+
+        authority = publish_approved_knowhow(
+            db,
+            card=row,
+            reviewer_id=current_user.id,
+        )
+
         # ── Knowhow lifecycle: review reminder 與核准同一筆交易 ──
         # 若 reminder 寫入失敗，rollback 會一併撤銷核准，避免「已核准但無提醒」
         lifecycle = get_knowhow_lifecycle_manager(db=db, tenant_id=current_user.tenant_id)
@@ -270,6 +278,7 @@ def approve_knowhow(
         return {
             "knowhow": knowhow_to_dict(row),
             "approval": approval_to_dict(approval),
+            "knowledge_authority": authority,
         }
     except Exception as exc:
         db.rollback()
@@ -285,6 +294,15 @@ def retire_knowhow(
     try:
         row = MKARepository(db).retire_knowhow(
             tenant_id=current_user.tenant_id, knowhow_id=knowhow_id
+        )
+
+        from app.services.knowledge_authority import retire_knowledge_unit
+
+        retire_knowledge_unit(
+            db,
+            tenant_id=current_user.tenant_id,
+            unit_key=f"knowhow:{row.id}",
+            retired_by=current_user.id,
         )
 
         # ── Knowhow lifecycle: purge expired audio on retire（與 retire 同交易）──

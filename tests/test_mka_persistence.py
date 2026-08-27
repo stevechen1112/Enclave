@@ -17,6 +17,7 @@ from app.models.mka import (
     InteractionSession,
     KnowhowCardModel,
     MKAApprovalRequest,
+    TenantModuleBinding,
 )
 from app.models.document import Document, DocumentChunk
 from app.models.permission import Department
@@ -48,6 +49,7 @@ def db():
         MKAApprovalRequest.__table__,
         FormInstance.__table__,
         KnowhowCardModel.__table__,
+        TenantModuleBinding.__table__,
         # SOP 衝突檢查會真實查詢 Document／DocumentChunk，測試庫必須建表
         Document.__table__,
         DocumentChunk.__table__,
@@ -145,13 +147,22 @@ def test_retrieval_facade_injects_only_tenant_approved_db_cards(db, monkeypatch)
     db.flush()
 
     from app.config import settings
+    from app.composition.knowledge import build_knowledge_provider_registry
     from app.services.kb_retrieval import KnowledgeBaseRetriever
     from app.services.retrieval_facade import RetrievalFacade
 
     monkeypatch.setattr(settings, "KNOWHOW_CARD_ENABLED", True)
     monkeypatch.setattr(settings, "KNOWHOW_DRAFT_ISOLATION", True)
+    db.add(
+        TenantModuleBinding(
+            tenant_id=tenant_a.id,
+            module_key="training_knowhow",
+            enabled=True,
+        )
+    )
+    db.flush()
     monkeypatch.setattr(KnowledgeBaseRetriever, "search", lambda *args, **kwargs: [])
-    result = RetrievalFacade().search(
+    result = RetrievalFacade(providers=build_knowledge_provider_registry()).search(
         authz=AuthorizationContext.from_user(user_a),
         query="know-how",
         db=db,
@@ -160,6 +171,39 @@ def test_retrieval_facade_injects_only_tenant_approved_db_cards(db, monkeypatch)
     assert f"knowhow:{approved.card_id}" in ids
     assert f"knowhow:{draft.card_id}" not in ids
     assert f"knowhow:{other.card_id}" not in ids
+    citation = next(
+        item
+        for item in result.citations
+        if item.canonical_resource_id == str(approved.id)
+    )
+    assert citation.canonical_resource_type == "knowhow_card"
+    assert citation.canonical_document_id.int == 0
+
+    scoped = RetrievalFacade(
+        providers=build_knowledge_provider_registry()
+    ).search(
+        authz=AuthorizationContext.from_user(user_a),
+        query="know-how",
+        db=db,
+        scope={"kb_revision_ids": [str(uuid.uuid4())]},
+    )
+    assert scoped.results == []
+
+    binding = (
+        db.query(TenantModuleBinding)
+        .filter(TenantModuleBinding.tenant_id == tenant_a.id)
+        .one()
+    )
+    binding.enabled = False
+    db.flush()
+    disabled = RetrievalFacade(
+        providers=build_knowledge_provider_registry()
+    ).search(
+        authz=AuthorizationContext.from_user(user_a),
+        query="know-how",
+        db=db,
+    )
+    assert disabled.results == []
 
 
 def test_form_optimistic_lock_and_immutable_snapshot(db):

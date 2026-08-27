@@ -7,6 +7,7 @@ from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.document import Document
 from app.models.audit import UsageRecord
+from app.models.asset import AssetRevision, SourceAsset
 from app.config import settings
 from app.schemas.tenant import TenantCreate, TenantUpdate, PLAN_QUOTAS
 
@@ -30,12 +31,24 @@ def create(db: Session, *, obj_in: TenantCreate) -> Tenant:
         name=obj_in.name,
         plan=plan,
         status=obj_in.status or "active",
-        max_users=obj_in.max_users if obj_in.max_users is not None else defaults.get("max_users"),
-        max_documents=obj_in.max_documents if obj_in.max_documents is not None else defaults.get("max_documents"),
-        max_storage_mb=obj_in.max_storage_mb if obj_in.max_storage_mb is not None else defaults.get("max_storage_mb"),
-        monthly_query_limit=obj_in.monthly_query_limit if obj_in.monthly_query_limit is not None else defaults.get("monthly_query_limit"),
-        monthly_token_limit=obj_in.monthly_token_limit if obj_in.monthly_token_limit is not None else defaults.get("monthly_token_limit"),
-        quota_alert_threshold=obj_in.quota_alert_threshold if obj_in.quota_alert_threshold is not None else 0.8,
+        max_users=obj_in.max_users
+        if obj_in.max_users is not None
+        else defaults.get("max_users"),
+        max_documents=obj_in.max_documents
+        if obj_in.max_documents is not None
+        else defaults.get("max_documents"),
+        max_storage_mb=obj_in.max_storage_mb
+        if obj_in.max_storage_mb is not None
+        else defaults.get("max_storage_mb"),
+        monthly_query_limit=obj_in.monthly_query_limit
+        if obj_in.monthly_query_limit is not None
+        else defaults.get("monthly_query_limit"),
+        monthly_token_limit=obj_in.monthly_token_limit
+        if obj_in.monthly_token_limit is not None
+        else defaults.get("monthly_token_limit"),
+        quota_alert_threshold=obj_in.quota_alert_threshold
+        if obj_in.quota_alert_threshold is not None
+        else 0.8,
         quota_alert_email=obj_in.quota_alert_email,
     )
     db.add(db_obj)
@@ -69,6 +82,7 @@ def update(db: Session, *, db_obj: Tenant, obj_in: TenantUpdate) -> Tenant:
 #  Quota 查詢與檢查
 # ═══════════════════════════════════════════
 
+
 def _month_start() -> datetime:
     """取得當月第一天"""
     now = datetime.now(UTC)
@@ -79,33 +93,71 @@ def get_current_usage(db: Session, tenant_id: UUID) -> Dict[str, Any]:
     """取得租戶目前使用量"""
     month_start = _month_start()
 
-    user_count = db.query(func.count(User.id)).filter(
-        User.tenant_id == tenant_id, User.status == "active"
-    ).scalar() or 0
+    user_count = (
+        db.query(func.count(User.id))
+        .filter(User.tenant_id == tenant_id, User.status == "active")
+        .scalar()
+        or 0
+    )
 
-    doc_count = db.query(func.count(Document.id)).filter(
-        Document.tenant_id == tenant_id,
-        Document.tombstoned_at.is_(None),
-    ).scalar() or 0
+    doc_count = (
+        db.query(func.count(Document.id))
+        .filter(
+            Document.tenant_id == tenant_id,
+            Document.tombstoned_at.is_(None),
+        )
+        .scalar()
+        or 0
+    )
 
-    # CG-QUOTA 儲存軸：以文件 file_size 累計（bytes → MB）
-    storage_bytes = db.query(
-        func.coalesce(func.sum(Document.file_size), 0)
-    ).filter(
+    # 文件相容列仍是現有文件的計量來源；非文件資產（音訊、影片、
+    # direct API/capture）改由 canonical current revision 補入，避免雙算。
+    document_storage_bytes = (
+        db.query(func.coalesce(func.sum(Document.file_size), 0))
+        .filter(
+            Document.tenant_id == tenant_id,
+            Document.tombstoned_at.is_(None),
+        )
+        .scalar()
+        or 0
+    )
+    document_asset_ids = db.query(Document.source_asset_id).filter(
         Document.tenant_id == tenant_id,
+        Document.source_asset_id.is_not(None),
         Document.tombstoned_at.is_(None),
-    ).scalar() or 0
+    )
+    canonical_storage_bytes = (
+        db.query(func.coalesce(func.sum(AssetRevision.byte_size), 0))
+        .join(
+            SourceAsset,
+            (SourceAsset.tenant_id == AssetRevision.tenant_id)
+            & (SourceAsset.id == AssetRevision.asset_id)
+            & (SourceAsset.current_revision == AssetRevision.revision),
+        )
+        .filter(
+            SourceAsset.tenant_id == tenant_id,
+            SourceAsset.tombstoned_at.is_(None),
+            SourceAsset.id.not_in(document_asset_ids),
+        )
+        .scalar()
+        or 0
+    )
+    storage_bytes = int(document_storage_bytes) + int(canonical_storage_bytes)
 
     # 月度查詢次數和 token 數
-    monthly = db.query(
-        func.count(UsageRecord.id).label("queries"),
-        func.coalesce(
-            func.sum(UsageRecord.input_tokens + UsageRecord.output_tokens), 0
-        ).label("tokens"),
-    ).filter(
-        UsageRecord.tenant_id == tenant_id,
-        UsageRecord.created_at >= month_start,
-    ).first()
+    monthly = (
+        db.query(
+            func.count(UsageRecord.id).label("queries"),
+            func.coalesce(
+                func.sum(UsageRecord.input_tokens + UsageRecord.output_tokens), 0
+            ).label("tokens"),
+        )
+        .filter(
+            UsageRecord.tenant_id == tenant_id,
+            UsageRecord.created_at >= month_start,
+        )
+        .first()
+    )
 
     return {
         "current_users": user_count,
@@ -233,8 +285,16 @@ def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
         "user": (usage["current_users"], tenant.max_users, "使用者數量"),
         "document": (usage["current_documents"], tenant.max_documents, "文件數量"),
         "storage": (usage["current_storage_mb"], tenant.max_storage_mb, "儲存空間"),
-        "query": (usage["current_monthly_queries"], tenant.monthly_query_limit, "月查詢次數"),
-        "token": (usage["current_monthly_tokens"], tenant.monthly_token_limit, "月 Token 量"),
+        "query": (
+            usage["current_monthly_queries"],
+            tenant.monthly_query_limit,
+            "月查詢次數",
+        ),
+        "token": (
+            usage["current_monthly_tokens"],
+            tenant.monthly_token_limit,
+            "月 Token 量",
+        ),
     }
 
     if resource not in checks:
@@ -242,7 +302,12 @@ def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
 
     current, limit, label = checks[resource]
     if limit is None:
-        return {"allowed": True, "message": f"{label}無上限", "current": current, "limit": None}
+        return {
+            "allowed": True,
+            "message": f"{label}無上限",
+            "current": current,
+            "limit": None,
+        }
     if current >= limit:
         return {
             "allowed": False,
@@ -269,12 +334,7 @@ def lock_and_check_storage_quota(
     db: Session, tenant_id: UUID, additional_bytes: int
 ) -> Dict[str, Any]:
     """FOR UPDATE 鎖租戶後檢查儲存配額（與後續 create 同一 transaction，防 TOCTOU）。"""
-    locked = (
-        db.query(Tenant)
-        .filter(Tenant.id == tenant_id)
-        .with_for_update()
-        .first()
-    )
+    locked = db.query(Tenant).filter(Tenant.id == tenant_id).with_for_update().first()
     if not locked:
         db.rollback()
         return {"allowed": False, "message": "租戶不存在"}
@@ -296,12 +356,7 @@ def reserve_chat_quota(
     """
     reserve_tokens = int(getattr(settings, "CHAT_TOKEN_RESERVE_ESTIMATE", 4000) or 4000)
 
-    locked = (
-        db.query(Tenant)
-        .filter(Tenant.id == tenant_id)
-        .with_for_update()
-        .first()
-    )
+    locked = db.query(Tenant).filter(Tenant.id == tenant_id).with_for_update().first()
     if not locked:
         return {"allowed": False, "message": "租戶不存在", "usage_record_id": None}
 
@@ -352,15 +407,21 @@ def cancel_chat_quota_reservation(db: Session, usage_record_id: UUID) -> None:
         db.commit()
 
 
-def update_quota(db: Session, tenant_id: UUID, quota_data: Dict[str, Any]) -> Optional[Tenant]:
+def update_quota(
+    db: Session, tenant_id: UUID, quota_data: Dict[str, Any]
+) -> Optional[Tenant]:
     """更新租戶配額設定。"""
     tenant = get(db, tenant_id)
     if not tenant:
         return None
     for field in (
-        "max_users", "max_documents", "max_storage_mb",
-        "monthly_query_limit", "monthly_token_limit",
-        "quota_alert_threshold", "quota_alert_email",
+        "max_users",
+        "max_documents",
+        "max_storage_mb",
+        "monthly_query_limit",
+        "monthly_token_limit",
+        "quota_alert_threshold",
+        "quota_alert_email",
     ):
         if field in quota_data and quota_data[field] is not None:
             setattr(tenant, field, quota_data[field])
@@ -399,7 +460,9 @@ def get_security_config(db: Session, tenant_id: UUID) -> Optional[Dict[str, Any]
     }
 
 
-def update_security_config(db: Session, tenant_id: UUID, config: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def update_security_config(
+    db: Session, tenant_id: UUID, config: Dict[str, Any]
+) -> Optional[Dict[str, Any]]:
     tenant = get(db, tenant_id)
     if not tenant:
         return None

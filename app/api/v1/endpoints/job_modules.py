@@ -42,8 +42,28 @@ def list_modules(
 ):
     """List all job modules available to the current tenant."""
     registry = get_module_registry(db)
+    from app.models.mka import TenantModuleBinding
+
     modules = registry.list_modules(tenant_id=current_user.tenant_id)
-    return {"modules": modules, "count": len(modules)}
+    bindings = {
+        row.module_key: row
+        for row in db.query(TenantModuleBinding)
+        .filter(TenantModuleBinding.tenant_id == current_user.tenant_id)
+        .all()
+    }
+    rows = []
+    for module in modules:
+        binding = bindings.get(module["module_key"])
+        rows.append(
+            {
+                **module,
+                "bound": binding is not None,
+                "enabled": bool(binding.enabled) if binding else False,
+                "license_state": binding.license_state if binding else None,
+                "config_version": binding.config_version if binding else 0,
+            }
+        )
+    return rows
 
 
 # ── Admin endpoints (registered BEFORE /{module_key} to avoid route shadowing) ──

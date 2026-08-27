@@ -7,6 +7,10 @@
 
 name: Deploy Production
 
+permissions:
+  contents: read
+  packages: read
+
 on:
   workflow_dispatch:
     inputs:
@@ -28,7 +32,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+  # Keep this identical to the staging publisher; OCI repository names are lowercase.
+  IMAGE_PREFIX: ghcr.io/stevechen1112/enclave
 
 jobs:
   deploy-production:
@@ -132,6 +137,7 @@ jobs:
           key: ${{ secrets.PRODUCTION_SSH_KEY }}
           script: |
             set -e
+            cd /opt/enclave
             echo "🔍 Running smoke tests..."
 
             # API health：必須經 edge；容器內 8000 僅診斷，不可單獨判定成功
@@ -147,7 +153,56 @@ jobs:
             curl -sf -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"
             echo "  ✅ Frontend OK"
 
+            # Emergency rollback may target an image created before release metadata existed.
+            # New deployments must always pass strict backend/frontend/schema parity.
+            if [ -n "${{ inputs.rollback_tag }}" ]; then
+              echo "  ⚠️ Explicit rollback: legacy release metadata may be unavailable"
+            else
+              curl -sf http://localhost/health > /tmp/enclave-health.json
+              curl -sf http://localhost/release.json > /tmp/enclave-frontend-release.json
+              docker compose -f docker-compose.prod.yml exec -T web alembic current > /tmp/enclave-alembic-current.txt
+              python3 - <<'PY'
+            import json
+            import re
+            from pathlib import Path
+            health = json.loads(Path('/tmp/enclave-health.json').read_text())
+            frontend = json.loads(Path('/tmp/enclave-frontend-release.json').read_text())
+            current_text = Path('/tmp/enclave-alembic-current.txt').read_text()
+            backend = health.get('release') or {}
+            keys = ('release_id', 'source_commit', 'source_dirty', 'schema_head', 'route_contract_hash')
+            mismatches = [key for key in keys if backend.get(key) != frontend.get(key)]
+            required = {'/overview', '/ask', '/knowledge/assets', '/knowledge/new', '/knowledge/review', '/knowledge/quality', '/system/health', '/job'}
+            missing = sorted(required - set(frontend.get('canonical_routes') or []))
+            actual_heads = sorted(re.findall(r'^([A-Za-z0-9_]+)(?:\s+\(head\))?$', current_text, re.MULTILINE))
+            schema_mismatch = actual_heads != [backend.get('schema_head')]
+            dirty_source = backend.get('source_dirty') != 'false'
+            if not backend.get('identifiable') or dirty_source or mismatches or missing or schema_mismatch:
+                raise SystemExit(f'release parity HOLD: identifiable={backend.get("identifiable")} mismatches={mismatches} missing={missing} actual_heads={actual_heads}')
+            print(f'release parity PASS: {backend.get("release_id")} {backend.get("source_commit")}')
+            PY
+            fi
+
             echo "✅ All smoke tests passed"
+
+      - name: Set up Node.js for authenticated browser smoke
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install browser smoke dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Authenticated canonical-route smoke
+        working-directory: frontend
+        env:
+          E2E_BASE_URL: ${{ vars.PRODUCTION_BASE_URL || 'https://kachu.tw' }}
+          RELEASE_PARITY_E2E: 'true'
+        run: npx playwright test e2e/release-parity.spec.ts --reporter=github
 
       # ── Summary ──
       - name: Deployment summary

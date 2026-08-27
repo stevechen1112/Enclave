@@ -7,13 +7,19 @@
 
 name: Deploy Staging
 
+permissions:
+  contents: read
+  packages: write
+
 on:
   push:
     branches: [main]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+  # OCI repository names must be lowercase. GitHub preserves the mixed-case
+  # repository display name (Enclave), which Docker rejects as an image path.
+  IMAGE_PREFIX: ghcr.io/stevechen1112/enclave
 
 jobs:
   deploy-staging:
@@ -27,6 +33,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolve release identity
+        id: release
+        shell: bash
+        run: python scripts/release_identity.py --github-output >> "$GITHUB_OUTPUT"
 
       # ── Build & Push Docker Images ──
       - name: Log in to GHCR
@@ -49,6 +60,14 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/backend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            ENCLAVE_RELEASE_ID=${{ steps.release.outputs.release_id }}
+            ENCLAVE_SOURCE_COMMIT=${{ steps.release.outputs.source_commit }}
+            ENCLAVE_SOURCE_DIRTY=${{ steps.release.outputs.source_dirty }}
+            ENCLAVE_BUILD_TIME=${{ steps.release.outputs.build_time }}
+            ENCLAVE_DEPLOYMENT_MANIFEST_ID=${{ steps.release.outputs.deployment_manifest_id }}
+            ENCLAVE_SCHEMA_HEAD=${{ steps.release.outputs.schema_head }}
+            ENCLAVE_ROUTE_CONTRACT_HASH=${{ steps.release.outputs.route_contract_hash }}
 
       - name: Build & push frontend image
         uses: docker/build-push-action@v5
@@ -60,6 +79,13 @@ jobs:
             ${{ env.IMAGE_PREFIX }}/frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            VITE_RELEASE_ID=${{ steps.release.outputs.release_id }}
+            VITE_SOURCE_COMMIT=${{ steps.release.outputs.source_commit }}
+            VITE_SOURCE_DIRTY=${{ steps.release.outputs.source_dirty }}
+            VITE_BUILD_TIME=${{ steps.release.outputs.build_time }}
+            VITE_DEPLOYMENT_MANIFEST_ID=${{ steps.release.outputs.deployment_manifest_id }}
+            VITE_SCHEMA_HEAD=${{ steps.release.outputs.schema_head }}
 
       # ── Deploy via SSH ──
       - name: Deploy to staging server
@@ -99,6 +125,29 @@ jobs:
                 exit 1
               fi
             done
+
+            curl -sf http://localhost/health > /tmp/enclave-health.json
+            curl -sf http://localhost/release.json > /tmp/enclave-frontend-release.json
+            docker compose -f docker-compose.prod.yml exec -T web alembic current > /tmp/enclave-alembic-current.txt
+            python3 - <<'PY'
+            import json
+            import re
+            from pathlib import Path
+            health = json.loads(Path('/tmp/enclave-health.json').read_text())
+            frontend = json.loads(Path('/tmp/enclave-frontend-release.json').read_text())
+            current_text = Path('/tmp/enclave-alembic-current.txt').read_text()
+            backend = health.get('release') or {}
+            keys = ('release_id', 'source_commit', 'source_dirty', 'schema_head', 'route_contract_hash')
+            mismatches = [key for key in keys if backend.get(key) != frontend.get(key)]
+            required = {'/overview', '/ask', '/knowledge/assets', '/knowledge/new', '/knowledge/review', '/knowledge/quality', '/system/health', '/job'}
+            missing = sorted(required - set(frontend.get('canonical_routes') or []))
+            actual_heads = sorted(re.findall(r'^([A-Za-z0-9_]+)(?:\s+\(head\))?$', current_text, re.MULTILINE))
+            schema_mismatch = actual_heads != [backend.get('schema_head')]
+            dirty_source = backend.get('source_dirty') != 'false'
+            if not backend.get('identifiable') or dirty_source or mismatches or missing or schema_mismatch:
+                raise SystemExit(f'release parity HOLD: identifiable={backend.get("identifiable")} mismatches={mismatches} missing={missing} actual_heads={actual_heads}')
+            print(f'release parity PASS: {backend.get("release_id")} {backend.get("source_commit")}')
+            PY
 
             docker image prune -f
             echo "✅ Staging deployment complete: ${{ github.sha }}"

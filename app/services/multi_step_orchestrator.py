@@ -503,6 +503,8 @@ class MultiStepOrchestrator:
                                 {
                                     "citation_id": c.citation_id,
                                     "document_id": str(c.canonical_document_id),
+                                    "canonical_resource_type": c.canonical_resource_type,
+                                    "canonical_resource_id": c.canonical_resource_id,
                                     "document_revision": c.document_revision,
                                     "provider": c.provider,
                                 }

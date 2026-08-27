@@ -102,6 +102,8 @@ async def gateway_search(
             {
                 "citation_id": c.citation_id,
                 "canonical_document_id": str(c.canonical_document_id),
+                "canonical_resource_type": c.canonical_resource_type,
+                "canonical_resource_id": c.canonical_resource_id,
                 "document_revision": c.document_revision,
                 "artifact_type": c.artifact_type,
                 "provider": c.provider,

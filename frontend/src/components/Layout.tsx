@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import {
-  Shield, LogOut, Menu, X, BarChart3, ChevronDown, PenLine,
-  LayoutGrid, HardHat, MessageCircle, BookOpen, Scale, Settings2,
+  Shield, LogOut, Menu, X, BarChart3, ChevronDown, PenLine, Plus,
+  LayoutGrid, Blocks, MessageCircle, BookOpen, Scale, Settings2, Search,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { ROLE_LABELS } from '../navigation/capabilities'
@@ -14,10 +14,10 @@ import {
 } from '../navigation/useCapabilities'
 import ReadinessBanner from './ReadinessBanner'
 import InferenceBanner from './InferenceBanner'
+import CommandPalette from './CommandPalette'
 
 const NAV_ICONS: Record<string, typeof LayoutGrid> = {
   '/overview': LayoutGrid,
-  '/job': HardHat,
   '/ask': MessageCircle,
   '/knowledge': BookOpen,
   '/governance': Scale,
@@ -29,10 +29,12 @@ export default function Layout() {
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [commandOpen, setCommandOpen] = useState(false)
 
   const nav = usePrimaryNav()
   const home = useDefaultHomePath()
   const canCreate = useHasCapability('create_content')
+  const canAddKnowledge = useHasCapability('upload_documents')
   const roleLabel = ROLE_LABELS[user?.role ?? ''] || user?.role || '使用者'
   const orgLabel =
     experience?.product?.name ||
@@ -67,6 +69,19 @@ export default function Layout() {
     return () => document.removeEventListener('keydown', onKey)
   }, [sidebarOpen])
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setCommandOpen(open => !open)
+      } else if (event.key === 'Escape') {
+        setCommandOpen(false)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -95,8 +110,22 @@ export default function Layout() {
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="主要導覽">
+        {canAddKnowledge && (
+          <Link
+            to="/knowledge/new"
+            onClick={() => setSidebarOpen(false)}
+            className="mb-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-semibold text-white shadow-sm hover:brightness-105"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+            新增知識
+          </Link>
+        )}
+        <button type="button" onClick={() => setCommandOpen(true)} className="mb-3 flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg" aria-label="搜尋可用功能">
+          <Search className="h-5 w-5" aria-hidden />
+          <span className="flex-1 text-left">搜尋功能</span><kbd className="rounded border border-sidebar-line px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
+        </button>
         {nav.map(item => {
-          const Icon = NAV_ICONS[item.to]
+          const Icon = item.module ? Blocks : NAV_ICONS[item.to]
           return (
             <NavLink
               key={item.to}
@@ -223,6 +252,7 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+      <CommandPalette open={commandOpen} items={nav} onClose={() => setCommandOpen(false)} />
     </div>
   )
 }
