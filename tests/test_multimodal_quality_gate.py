@@ -99,7 +99,7 @@ def test_low_confidence_and_sop_conflict_fail_closed(manifest):
 def test_locator_precision_and_recall_cannot_be_hidden_by_average(manifest):
     bundle = build_contract_results(manifest, "mock_contract", "fixture", "1")
     row = bundle["results"][0]
-    row["evidence_locators"] = [{"id": "wrong", "kind": "page", "page": 99, "revision_id": "rev-doc-001"}]
+    row["evidence_locators"] = [{"id": "wrong", "kind": "document", "page": 99, "revision_id": "rev-doc-001"}]
     report = evaluate(
         manifest,
         bundle,
@@ -116,6 +116,16 @@ def test_result_bundle_must_match_corpus_hash(manifest):
     bundle["corpus_sha256"] = "0" * 64
     with pytest.raises(CorpusValidationError, match="does not match"):
         evaluate(manifest, bundle)
+
+
+def test_locator_matching_ignores_run_specific_id_and_accepts_time_overlap(manifest):
+    bundle = build_contract_results(manifest, "mock_contract", "fixture", "1")
+    row = next(item for item in bundle["results"] if item["case_id"] == "video-caption-001")
+    row["evidence_locators"][0]["id"] = "database-generated-id"
+    row["evidence_locators"][0]["start_ms"] = 6500
+    row["evidence_locators"][0]["end_ms"] = 9000
+    report = evaluate(manifest, bundle)
+    assert report["status"] == "PASS"
 
 
 def test_matrix_requires_distinct_modes(manifest):

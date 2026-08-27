@@ -71,7 +71,7 @@ def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
         for locator in expected.get("evidence_locators") or []:
             if not locator.get("id") or not locator.get("kind"):
                 raise CorpusValidationError(f"{case_id}: locator id/kind are required")
-            if locator.get("kind") in {"audio_time", "video_time"}:
+            if locator.get("kind") in {"audio", "video"}:
                 start = locator.get("start_ms")
                 end = locator.get("end_ms")
                 if not isinstance(start, int) or not isinstance(end, int) or start < 0 or end <= start:
@@ -112,17 +112,44 @@ def validate_results(results: dict[str, Any], case_ids: set[str]) -> list[dict[s
     return rows
 
 
-def _locator_key(locator: dict[str, Any]) -> tuple[Any, ...]:
-    return (
-        locator.get("id"),
-        locator.get("kind"),
-        locator.get("page"),
-        locator.get("sheet"),
-        locator.get("cell_range"),
-        locator.get("start_ms"),
-        locator.get("end_ms"),
-        locator.get("revision_id"),
+def _locator_matches(expected: dict[str, Any], predicted: dict[str, Any]) -> bool:
+    """Match stable source coordinates, never run-specific database IDs."""
+    if expected.get("kind") != predicted.get("kind"):
+        return False
+    if expected.get("revision_id") != predicted.get("revision_id"):
+        return False
+    kind = expected.get("kind")
+    if kind in {"audio", "video"}:
+        expected_start, expected_end = expected.get("start_ms"), expected.get("end_ms")
+        predicted_start, predicted_end = predicted.get("start_ms"), predicted.get("end_ms")
+        if not all(isinstance(value, int) for value in (expected_start, expected_end, predicted_start, predicted_end)):
+            return False
+        overlap = max(0, min(expected_end, predicted_end) - max(expected_start, predicted_start))
+        union = max(expected_end, predicted_end) - min(expected_start, predicted_start)
+        return bool(union and overlap / union >= 0.5)
+    coordinate_fields = (
+        "page", "section", "worksheet", "table_name", "cell_range",
+        "row_number", "column_name", "region",
     )
+    return all(
+        expected.get(field) == predicted.get(field)
+        for field in coordinate_fields
+        if field in expected or field in predicted
+    )
+
+
+def _locator_match_count(
+    expected: list[dict[str, Any]], predicted: list[dict[str, Any]]
+) -> int:
+    remaining = list(predicted)
+    matches = 0
+    for expected_item in expected:
+        for index, predicted_item in enumerate(remaining):
+            if _locator_matches(expected_item, predicted_item):
+                matches += 1
+                remaining.pop(index)
+                break
+    return matches
 
 
 @dataclass(frozen=True)
@@ -172,15 +199,15 @@ def evaluate(
             valid_terminal += 1
             per_slice[slice_key]["terminal_pass"] += 1
 
-        expected_locators = {_locator_key(item) for item in expected.get("evidence_locators") or []}
-        predicted_locators = {_locator_key(item) for item in row.get("evidence_locators") or []}
+        expected_locators = expected.get("evidence_locators") or []
+        predicted_locators = row.get("evidence_locators") or []
         expected_locator_count += len(expected_locators)
         predicted_locator_count += len(predicted_locators)
-        matches = expected_locators & predicted_locators
-        correct_locator_count += len(matches)
+        matches = _locator_match_count(expected_locators, predicted_locators)
+        correct_locator_count += matches
         per_slice[slice_key]["locator_expected"] += len(expected_locators)
         per_slice[slice_key]["locator_predicted"] += len(predicted_locators)
-        per_slice[slice_key]["locator_correct"] += len(matches)
+        per_slice[slice_key]["locator_correct"] += matches
 
         answer = row.get("answer") or {}
         citations = answer.get("citations") or []
