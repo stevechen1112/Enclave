@@ -14,7 +14,7 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 |---|---|
 | 架構與程式基線 | PASS；Phase B–M、F1–F3、UX-A–UX-D 已完成 |
 | 正式服務存在 | PASS；`https://kachu.tw` 可用 |
-| 正式站與目前工作區完全同版 | 尚未；正式站仍有 legacy knowledge routes，詳見 production browser acceptance |
+| 正式站與核准 release 完全同版 | PASS；`gh-33065429723-1` 已通過 machine parity、Playwright 與 in-app browser acceptance |
 | 內部產品化閉環 | 進行中；可由本團隊自行完成 |
 | 商業 GA 外部閘門 | 尚未；只保留第三方、客戶與法律不可代勞項目 |
 
@@ -39,7 +39,7 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 
 **優先級：P0；立即處理**
 
-**2026-08-27 狀態：** Implementation PASS；production activation HOLD。詳見 `PHASE_P0_RELEASE_PARITY_CODE_REVIEW.md`。
+**2026-08-27 狀態：** COMPLETE；implementation、production activation、machine parity 與 browser acceptance 全部 PASS。詳見 `PHASE_P0_RELEASE_PARITY_CODE_REVIEW.md`。
 
 ### 已有基礎
 
@@ -47,7 +47,7 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 - Deployment manifest、image identity 與 rollback gate 已有程式及測試。
 - 正式首頁、Demo 登入及部分新版工作區已可用。
 
-### 待完成
+### 已完成
 
 - Build 時產生不可變 release metadata：source commit、dirty state、backend／frontend image digest、deployment manifest id、migration head、OpenAPI hash、frontend route-contract hash。
 - 由受保護 operations API 與「系統／版本更新」畫面顯示相同 metadata。

@@ -34,6 +34,15 @@ test('frontend and backend expose one clean release identity', async ({ request 
   expect(new Set(frontend.canonical_routes)).toEqual(new Set(canonicalRoutes))
 })
 
+test('canonical deep links serve the frontend shell', async ({ request }) => {
+  for (const route of canonicalRoutes) {
+    const response = await request.get(route)
+    expect(response.status(), `${route} must be served directly`).toBe(200)
+    expect(new URL(response.url()).pathname, `${route} must not redirect`).toBe(route)
+    expect(response.headers()['content-type'], `${route} must return the SPA shell`).toContain('text/html')
+  }
+})
+
 test('demo administrator can open every canonical product route', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /以公司管理進入 Demo/ }).click()
@@ -41,7 +50,13 @@ test('demo administrator can open every canonical product route', async ({ page 
   await expect(page.getByRole('navigation', { name: '主要導覽' })).toBeVisible()
 
   for (const route of canonicalRoutes) {
-    await page.goto(route)
+    // Exercise the routes the same way a signed-in user does. Repeated hard
+    // reloads re-run the complete bootstrap request fan-out and turn this into
+    // an accidental gateway rate-limit test instead of a route-contract test.
+    await page.evaluate((path) => {
+      window.history.pushState({}, '', path)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }, route)
     await expect(page, `${route} must not fall through or redirect`).toHaveURL(
       new RegExp(`${route.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`),
     )
