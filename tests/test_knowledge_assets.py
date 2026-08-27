@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from app.api.v1.endpoints.knowledge_assets import (
     _create_reference_asset,
     _create_audio_asset,
+    create_asset,
     get_asset,
     list_asset_events,
     list_assets,
@@ -276,6 +277,45 @@ async def test_audio_upload_persists_job_and_dispatches_worker(monkeypatch):
         assert result["job"]["adapter_key"] == "core.long_interview_audio"
         assert result["dispatched"] is True
         assert len(dispatched) == 1
+    finally:
+        db.close()
+        engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_unified_video_intake_uses_canonical_video_response_id(monkeypatch):
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        existing = _reference(db, user, title="video placeholder")
+        asset = db.query(SourceAsset).filter(SourceAsset.id == UUID(existing["id"])).one()
+        asset.asset_kind = "video"
+        db.commit()
+
+        async def fake_upload_video_asset(**_kwargs):
+            return {"id": str(asset.id), "dispatched": True}
+
+        monkeypatch.setattr(
+            "app.api.v1.endpoints.video_assets.upload_video_asset",
+            fake_upload_video_asset,
+        )
+        result = await create_asset(
+            db=db,
+            current_user=user,
+            file=UploadFile(filename="machine.mp4", file=BytesIO(b"video")),
+            title="machine video",
+            source_url=None,
+            source_system=None,
+            source_record_id=None,
+            capture_manifest=None,
+            media_type=None,
+            idempotency_key=None,
+            department_id=None,
+            data_classification="confidential",
+        )
+
+        assert result["id"] == str(asset.id)
+        assert result["asset_kind"] == "video"
     finally:
         db.close()
         engine.dispose()

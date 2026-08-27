@@ -476,7 +476,7 @@ async def create_asset(
                 db.query(SourceAsset)
                 .filter(
                     SourceAsset.tenant_id == current_user.tenant_id,
-                    SourceAsset.id == UUID(legacy["asset_id"]),
+                    SourceAsset.id == UUID(legacy["id"]),
                 )
                 .one()
             )
