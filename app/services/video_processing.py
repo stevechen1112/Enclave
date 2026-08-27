@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -323,6 +324,36 @@ def default_stt(path: str) -> tuple[list[dict[str, Any]], float | None]:
     return rows, result.confidence
 
 
+def detect_first_audio_activity_ms(
+    path: str,
+    *,
+    runner: Callable[..., subprocess.CompletedProcess[str]] = _run,
+) -> int:
+    """Return the first non-silent sample offset for timestamp alignment."""
+
+    completed = runner(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-nostats",
+            "-i",
+            path,
+            "-af",
+            "silencedetect=noise=-45dB:d=0.1",
+            "-f",
+            "null",
+            "-",
+        ],
+        timeout=120,
+    )
+    output = f"{completed.stdout or ''}\n{completed.stderr or ''}"
+    start_match = re.search(r"silence_start:\s*([0-9.]+)", output)
+    end_match = re.search(r"silence_end:\s*([0-9.]+)", output)
+    if not start_match or not end_match or float(start_match.group(1)) > 0.05:
+        return 0
+    return max(0, round(float(end_match.group(1)) * 1000))
+
+
 def process_video_file(
     path: str,
     output_dir: str,
@@ -347,16 +378,40 @@ def process_video_file(
     for chunk_index, audio_path in enumerate(audio_paths):
         offset_ms = chunk_index * int(settings.VIDEO_AUDIO_CHUNK_SECONDS) * 1000
         rows, confidence = stt(audio_path)
+        activity_ms = detect_first_audio_activity_ms(audio_path, runner=runner)
+        starts = [
+            int(float(row.get("start") or 0) * 1000)
+            for row in rows
+            if str(row.get("text") or "").strip()
+        ]
+        first_segment_ms = min(starts) if starts else 0
+        # Diarized ASR can partially collapse long leading silence. Align only
+        # forward, and only for a material discrepancy, so ordinary word-level
+        # timestamp variation is preserved rather than over-corrected.
+        activity_shift_ms = (
+            activity_ms - first_segment_ms
+            if activity_ms - first_segment_ms >= 500
+            else 0
+        )
         for row in rows:
             text = str(row.get("text") or "").strip()
             if not text:
                 continue
-            start_ms = offset_ms + int(float(row.get("start") or 0) * 1000)
-            end_ms = offset_ms + int(float(row.get("end") or 0) * 1000)
+            start_ms = (
+                offset_ms + activity_shift_ms + int(float(row.get("start") or 0) * 1000)
+            )
+            end_ms = (
+                offset_ms + activity_shift_ms + int(float(row.get("end") or 0) * 1000)
+            )
+            bounded_start_ms = min(max(0, start_ms), max(0, probe.duration_ms - 1))
+            bounded_end_ms = min(
+                probe.duration_ms,
+                max(bounded_start_ms + 1, end_ms),
+            )
             transcript_segments.append(
                 VideoTranscriptSegment(
-                    start_ms=max(0, start_ms),
-                    end_ms=max(start_ms + 1, end_ms),
+                    start_ms=bounded_start_ms,
+                    end_ms=bounded_end_ms,
                     text=text,
                     speaker=str(row.get("speaker") or "").strip() or None,
                     confidence=confidence,

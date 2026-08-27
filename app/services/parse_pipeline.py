@@ -121,7 +121,6 @@ def _native_evidence_chunks(
             chunks = [
                 ParseChunk(
                     text=" | ".join(row),
-                    table_name=path.stem,
                     row_number=index,
                     chunk_index=index - 1,
                 )

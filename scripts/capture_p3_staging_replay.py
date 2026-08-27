@@ -149,7 +149,6 @@ def make_document_fixtures(work: Path) -> dict[str, Path]:
         (160, 150),
         "P3HAND inspect valve",
         fill="black",
-        font=fixture_font,
     )
     handwritten_path = work / "handwritten-note.png"
     handwritten.save(handwritten_path)

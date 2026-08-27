@@ -57,6 +57,7 @@ from app.services.video_processing import (
     VideoProbe,
     VideoProcessingResult,
     VideoTranscriptSegment,
+    detect_first_audio_activity_ms,
     extract_keyframes,
     parse_probe_payload,
     process_video_file,
@@ -276,6 +277,47 @@ def test_keyframe_extraction_stays_inside_last_decodable_frame(tmp_path, monkeyp
     assert len(frames) == 2
     assert seeks == [0.0, 14.795]
     assert seeks[-1] < 15.045
+
+
+def test_video_stt_timestamps_align_to_detected_audio_onset(tmp_path):
+    def runner(command, *, timeout):
+        output = command[-1]
+        if "silencedetect=noise=-45dB:d=0.1" in command:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout="",
+                stderr="silence_start: 0\nsilence_end: 12.500 | silence_duration: 12.500",
+            )
+        if "%04d" in output:
+            Path(output.replace("%04d", "0000")).write_bytes(b"audio")
+        elif output.endswith(".jpg"):
+            Path(output).write_bytes(b"jpeg")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    result = process_video_file(
+        "source.mp4",
+        str(tmp_path),
+        probe=VideoProbe(15_000, 640, 360, "h264", "aac", 24.0, "mp4"),
+        runner=runner,
+        stt=lambda _path: ([{"start": 7.0, "end": 9.5, "text": "inspect valve"}], 0.8),
+        ocr=lambda _path: ("", None),
+    )
+
+    assert result.transcript_segments[0].start_ms == 12_500
+    assert result.transcript_segments[0].end_ms == 15_000
+
+
+def test_audio_activity_detection_ignores_nonleading_silence():
+    def runner(command, *, timeout):
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout="",
+            stderr="silence_start: 4.0\nsilence_end: 5.0 | silence_duration: 1.0",
+        )
+
+    assert detect_first_audio_activity_ms("audio.mp3", runner=runner) == 0
 
 
 def test_scene_boundaries_become_bounded_timeline_observations():
