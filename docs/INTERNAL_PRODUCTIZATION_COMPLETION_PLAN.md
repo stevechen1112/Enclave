@@ -99,7 +99,7 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 
 **優先級：P0**
 
-**2026-08-27 狀態：** IMPLEMENTATION／CODE REVIEW PASS；PHASE GATE HOLD。內部程式、全新 FORCE-RLS DB、攻擊矩陣、資料生命週期與全量 backend regression 已通過；尚缺 staging FORCE RLS 全量回歸，因此依 gate 不進 P3。詳見 `PHASE_P2_TENANT_HARD_ISOLATION_CODE_REVIEW.md`。
+**2026-08-28 狀態：** COMPLETE；implementation、獨立 staging FORCE-RLS 全量回歸、80 秒 rollback drill 與最終 Code Review 全部 PASS。100 張保護表、3 租戶 × 100 shadow comparisons、11 項攻擊矩陣、1,263 項 backend regression、14 項 browser E2E 與多模態 live smoke 均通過；P3 entry 已開放。詳見 `PHASE_P2_TENANT_HARD_ISOLATION_CODE_REVIEW.md` 與 `reports/PHASE_P2_STAGING_FORCE_RLS_VERIFICATION_2026-08-28.md`。
 
 ### 已有基礎
 
@@ -116,9 +116,9 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 - 完整驗證 delete／retention／tombstone 後，資料不會從 cache、projection、索引、匯出或舊 evidence locator 復活。
 - 為 break-glass／platform maintenance bypass 建立獨立身分、audit 與最小權限測試。
 
-### 尚待環境驗證
+### 已完成（staging）
 
-- 在具備獨立 application／maintenance／owner secrets 的 staging 啟用 FORCE RLS，執行完整 backend、frontend、worker、connector、audio/video、export、signed URL 與 browser regression，保存部署版本及 rollback 證據。
+- 在具備獨立 application／maintenance／owner secrets 的 staging 啟用 FORCE RLS，完成 backend、frontend、worker、connector、audio/video、export、signed URL 與 browser regression，並保存部署版本及 rollback 證據。
 
 ### Gate
 

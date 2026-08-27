@@ -1,17 +1,18 @@
 # Phase P2 — 多租戶硬隔離與資料生命週期 Code Review
 
-**Review date:** 2026-08-27
-**Implementation commit:** `b1b8bb32f87211c97ed8066cd905fd349e5fb379`
+**Review date:** 2026-08-28
+**Implementation commit:** `beffab1f11540ee92e840ce19646a7dd5a849b6d`
 **Internal implementation gate:** PASS
 **Code review:** PASS（Critical／High 未處理 finding：0）
-**Phase gate:** HOLD（尚缺 staging FORCE RLS 全量回歸）
-**P3 entry:** BLOCKED
+**Staging FORCE-RLS gate:** PASS
+**Phase gate:** PASS
+**P3 entry:** ALLOWED
 
 ## Conclusion
 
-P2 的內部實作與 code review 已完成。系統現在以 production-like、非 superuser、無 PostgreSQL 原生 `BYPASSRLS` 的 application role 執行攻擊測試；100 張 tenant-owned tables 都有 machine-verified RLS policy，兩個租戶共 200 次以上 shadow visibility 比對差異為 0。缺 tenant context 看不到租戶資料，跨租戶 raw SQL／ORM／child write 被拒絕，commit 後 context 會自動恢復，stale cache、tombstone、projection、export 與 evidence path 不會讓撤回資料復活。
+P2 的內部實作、獨立 staging FORCE-RLS 部署與 code review 已完成。系統以 production-like、非 superuser、無 PostgreSQL 原生 `BYPASSRLS` 的 application role 執行攻擊測試；100 張 tenant-owned tables 都有 machine-verified RLS policy，3 個租戶共 300 次 shadow visibility 比對差異為 0。缺 tenant context 看不到租戶資料，跨租戶 raw SQL／ORM／child write 被拒絕，commit 後 context 會自動恢復，stale cache、tombstone、projection、export 與 evidence path 不會讓撤回資料復活。
 
-本次 review 修完所有發現的 Critical／High-impact 問題後，內部 implementation gate 為 PASS；但計畫明訂的 staging FORCE RLS 全量回歸尚無執行證據，所以整個 P2 仍是 HOLD，不能進 P3，也不能宣稱 production FORCE activation 已完成。
+最終 staging release `staging-beffab1` 已完成三憑證 operations-profile 部署、完整 backend／frontend／worker／connector／多模態與瀏覽器驗證，以及 80 秒 downgrade／upgrade rollback drill。所有 Critical／High-impact finding 均已修正，P2 phase gate 為 PASS，可進入 P3。這項判定不等於 production FORCE activation；production 仍須另走正式部署閘門。
 
 ## Implemented
 
@@ -48,28 +49,45 @@ P2 的內部實作與 code review 已完成。系統現在以 production-like、
 | P2 migration downgrade → upgrade | PASS |
 | Tenant catalog／role gate | PASS；100 protected tables，application／maintenance attributes 與 audit grants 正確 |
 | Production-like FORCE-RLS attack matrix | 11 passed |
-| Shadow visibility report | PASS；2 tenants × 100 tables，difference 0 |
+| Shadow visibility report | PASS；3 tenants × 100 tables，difference 0 |
 | Tenant boundary matrix | 6 passed |
 | Delete／revoke／retention lifecycle | PASS |
 | Session context static gate | PASS；5 reviewed global／health exceptions，stale exception 會阻擋 |
-| Full backend regression | 1243 passed，11 skipped，0 failed |
+| Full backend regression | 1,263 passed，12 skipped，0 failed |
 | Post-review deployment／credential regression | 44 passed |
 | Compose rendered credential boundary | PASS；web 無 admin／maintenance secret，worker 無 owner secret |
 | Workflow YAML parse、Compose config、compileall、diff check | PASS |
 
-一般全量測試中的 10 個 production-like attack tests 因未注入專用 `P2_*_DSN` 而 skip；同一批測試已在全新 `enclave_p2_test` FORCE-RLS database 以專屬步驟 10/10 PASS。另有一個 optional live-local sidecar test 因既有 `enclave` database 曾套用較早開發版 P2 schema 而明確 skip；fresh database migration 與 CI 路徑不受此本機歷史狀態影響。
+最終 staging 同版補充證據：
 
-## Residual risks and required external evidence
+| 驗證 | 結果 |
+|---|---|
+| Exact release identity | `beffab1f11540ee92e840ce19646a7dd5a849b6d`；dirty `false`；schema `p2_tenant_hard_isolation_001` |
+| Full backend regression | 1,263 passed，12 skipped，0 failed |
+| Frontend unit／lint／build | 25 files／88 passed；ESLint、TypeScript、Vite PASS |
+| Browser E2E | 14／14 passed |
+| Tenant catalog／shadow | 100 protected tables；3 tenants × 100 comparisons；difference 0 |
+| FORCE-RLS attack matrix | 11／11 passed |
+| Live multimodal smoke | document、connector、audio、video、DOCX、PDF 全部 PASS |
+| Canonical Demo UI | 5 assets；5／5「可搜尋」 |
+| Rollback drill | PASS；80 seconds；downgrade 後復原 100 FORCE policies |
+| Operations credential boundary | PASS；bootstrap services 無 owner secret |
 
-- 尚未在 staging 以三份實際 secrets 啟用 FORCE RLS 並跑完整 API、worker、connector、audio/video、export、signed URL、frontend 與 browser regression。
-- 尚未保存 staging rollback drill、source commit、image digest、schema head、role gate、attack report 與 browser evidence 的同版關聯。
-- Production 不得直接代替 staging 做首次 FORCE activation；在上述證據完成前，P2 維持 HOLD。
+完整 staging 證據與 image IDs 見 `reports/PHASE_P2_STAGING_FORCE_RLS_VERIFICATION_2026-08-28.md`。
+
+一般本機全量測試會在未注入專用 `P2_*_DSN` 時跳過 production-like attack tests；同一批測試已在隔離 staging FORCE-RLS database 以專屬步驟 11／11 PASS。其餘 skip 是明確標示的 optional live-provider／環境型測試，不影響 fresh database migration、CI 與 staging gate。
+
+## Residual risks and production boundary
+
+- P2 已在隔離 staging 以三份實際 secrets 完成 FORCE-RLS 全量回歸與 rollback；尚未把這個工作區版本部署到 production。
+- Production 不得把 staging PASS 視為自動發布授權；仍須依 production runbook 執行備份、migration、role provision、canary、release parity、browser acceptance 與 rollback gate。
+- 商業 GA 所需的外部滲透、法律與客戶資料／現場驗收不屬於 P2 內部 phase gate。
 
 ## Gate decision
 
 - **Internal implementation：PASS**
 - **Code review：PASS**
 - **Critical／High unhandled findings：0**
-- **Staging FORCE full regression：MISSING**
-- **Phase P2：HOLD**
-- **P3 entry：BLOCKED**
+- **Staging FORCE full regression：PASS**
+- **Phase P2：PASS**
+- **P3 entry：ALLOWED**

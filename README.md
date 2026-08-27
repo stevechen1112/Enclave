@@ -9,17 +9,17 @@ Enclave 的核心不是單一聊天機器人，也不是把多套 AI 工具 UI �
 Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期；回答與應用
 輸出都必須服從租戶、權限、版本、證據與發布治理。
 
-## 目前狀態（2026-08-27）
+## 目前狀態（2026-08-28）
 
 | 項目 | 狀態 |
 |---|---|
 | 工作區程式基線 | Phase B–M、影片 F1–F3、UI/UX UX-A–UX-D 已完成並通過各階段 Code Review |
 | 核心架構 | 多租戶平台、Enterprise Knowledge Kernel、多模態 Ingestion Fabric、Workflow Kernel、Domain Pack Runtime 已建立 |
 | 最新瀏覽器驗收 | P0 核准 release 的 authenticated canonical routes、Owner 核心平台、六種 Demo persona、Asset Library、統一 Intake、Review、手機版與權限邊界均 PASS |
-| 前端最新回歸 | 25 個測試檔／87 項測試通過；ESLint、TypeScript 與 Vite production build 通過 |
-| 後端架構基線 | P2 全量回歸 1,243 passed／0 failed；production-like FORCE-RLS 攻擊矩陣 11 passed |
+| 前端最新回歸 | 25 個測試檔／88 項測試通過；14 項 staging Playwright E2E、ESLint、TypeScript 與 Vite production build 通過 |
+| 後端架構基線 | P2 全量回歸 1,263 passed／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
 | 正式站 | [https://kachu.tw](https://kachu.tw) 已正式上線；P0 核准 release 已通過 source／schema／route machine parity 與瀏覽器驗收 |
-| 產品化 Phase | P0 release parity、P1 CI／供應鏈 PASS；P2 內部實作與 Code Review PASS，但 staging FORCE-RLS 全量回歸尚缺，Phase Gate 為 HOLD，尚未進 P3 |
+| 產品化 Phase | P0 release parity、P1 CI／供應鏈、P2 多租戶硬隔離與 staging FORCE-RLS 全量回歸均 PASS；P3 可開始 |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；外部滲透、法律／現場簽核、真機弱網噪音與跨產業多模態 holdout 尚待完成 |
 
@@ -31,6 +31,7 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 - `docs/PHASE_P0_RELEASE_PARITY_CODE_REVIEW.md`
 - `docs/PHASE_P1_CI_SUPPLY_CHAIN_SECURITY_CODE_REVIEW.md`
 - `docs/PHASE_P2_TENANT_HARD_ISOLATION_CODE_REVIEW.md`
+- `docs/reports/PHASE_P2_STAGING_FORCE_RLS_VERIFICATION_2026-08-28.md`
 - `docs/UIUX_BROWSER_ACCEPTANCE_2026-08-27.md`
 
 ---
@@ -379,7 +380,7 @@ bash scripts/verify_deployment.sh
 ### 正式站現況
 
 - [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；P0 核准 release `gh-33065429723-1` 的 backend、frontend、migration、canonical routes 與 browser acceptance 已完成同版驗證。
-- P1 CI／supply-chain release provenance 已 PASS。P2 本工作區改動尚未宣稱已在 production 啟用 FORCE RLS；必須先完成 staging 全量回歸。
+- P1 CI／supply-chain release provenance 與 P2 staging FORCE-RLS full regression 已 PASS；P2 本工作區改動尚未宣稱已在 production 啟用 FORCE RLS，正式發布仍須另走 production gate。
 - 正式服務在線、核准 release parity、目前未發布工作區與商業 GA 是四個不同判定；以各 Phase review 與 deployment manifest 為準。
 
 Production DB secrets 必須分為三檔：`.env.production`（application）、`.env.db-admin`（schema owner／backup）、`.env.maintenance`（audited cross-tenant worker），權限均為 `0600`。`web` 不得取得後兩者；完整順序見 `docs/runbooks/RLS_AUTHORITY_ROLLOUT.md`。
