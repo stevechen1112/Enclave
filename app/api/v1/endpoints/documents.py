@@ -160,7 +160,15 @@ async def upload_document(
 
     # 4. 串流寫檔（避免一次把整個檔案讀進記憶體）
     upload_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.tenant_id))
-    os.makedirs(upload_dir, exist_ok=True)
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except OSError as exc:
+        await file.close()
+        logger.warning("upload spool unavailable before write")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="檔案儲存服務暫時不可用；資料未發布，請稍後重試",
+        ) from exc
     temp_file_path = os.path.join(upload_dir, f"tmp-{uuid.uuid4().hex}{file_ext}")
 
     file_size = 0
@@ -187,6 +195,17 @@ async def upload_document(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
         raise
+    except OSError as exc:
+        if os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+            except OSError:
+                logger.warning("failed to remove upload spool after storage outage")
+        logger.warning("upload spool unavailable during write")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="檔案儲存服務暫時不可用；資料未發布，請稍後重試",
+        ) from exc
     except Exception:
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)

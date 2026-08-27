@@ -305,6 +305,49 @@ class TestUploadPutFailure(unittest.IsolatedAsyncioTestCase):
         shutil.rmtree(tmp_root, ignore_errors=True)
 
 
+class TestUploadSpoolFailure(unittest.IsolatedAsyncioTestCase):
+    """Local spool failures must be explicit and must not create document rows."""
+
+    async def test_spool_directory_failure_returns_safe_503(self):
+        from fastapi import HTTPException
+
+        from app.api.v1.endpoints import documents as docs_ep
+
+        user = types.SimpleNamespace(
+            tenant_id=uuid4(), id=uuid4(), role="admin", is_superuser=False
+        )
+
+        class FakeUpload:
+            filename = "report.pdf"
+            closed = False
+
+            async def close(self):
+                self.closed = True
+
+        upload = FakeUpload()
+        with (
+            patch.object(docs_ep, "check_document_permission"),
+            patch.object(
+                docs_ep.crud_tenant, "check_quota", return_value={"allowed": True}
+            ),
+            patch(
+                "app.services.document_parser.DocumentParser.detect_file_type",
+                return_value="pdf",
+            ),
+            patch.object(docs_ep.os, "makedirs", side_effect=PermissionError("denied")),
+            patch.object(docs_ep.crud_document, "create") as create_mock,
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                await docs_ep.upload_document(
+                    db=MagicMock(), file=upload, current_user=user
+                )
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertIn("資料未發布", raised.exception.detail)
+        self.assertTrue(upload.closed)
+        create_mock.assert_not_called()
+
+
 class TestContentReferenceS3(unittest.TestCase):
     def test_resolve_s3_uri_via_backend(self):
         from app.services import content_reference
