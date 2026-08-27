@@ -1,7 +1,7 @@
-# Keep the API/router contract on the fully qualified production baseline.
-# FastAPI 0.141+ changed include_router() to lazy _IncludedRouter objects,
-# which requires a separately reviewed framework migration.
-fastapi>=0.115.9,<0.116.0
+# Keep the API/router contract on the security-audited production baseline.
+# FastAPI 0.141 uses lazy included routers; route gates expand their effective
+# contexts and the upper bound prevents an unreviewed framework migration.
+fastapi>=0.141.1,<0.142.0
 uvicorn[standard]>=0.30.0
 pydantic>=2.10.0
 pydantic-settings>=2.5.0

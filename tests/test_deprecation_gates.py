@@ -81,7 +81,14 @@ def test_warn_stage_requires_full_zero_traffic_window():
 
 def test_fastapi_has_no_duplicate_method_path_registrations():
     routes: dict[tuple[str, str], list[str]] = defaultdict(list)
+    effective_routes = []
     for route in app.routes:
+        route_contexts = getattr(route, "effective_route_contexts", None)
+        if callable(route_contexts):
+            effective_routes.extend(route_contexts())
+        else:
+            effective_routes.append(route)
+    for route in effective_routes:
         for method in getattr(route, "methods", ()):
             routes[(method, route.path)].append(route.name)
     duplicates = {key: names for key, names in routes.items() if len(names) > 1}
