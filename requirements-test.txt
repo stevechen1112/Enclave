@@ -2,6 +2,7 @@
 pytest>=9.0,<10
 pytest-asyncio>=1.3,<2
 pytest-cov>=6,<8
+respx>=0.22,<1
 
 # 資料工廠與模複
 factory-boy==3.3.0
