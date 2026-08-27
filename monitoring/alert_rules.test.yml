@@ -1,0 +1,88 @@
+rule_files:
+  - alert_rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: HighErrorRate fires and recovers
+    interval: 1m
+    input_series:
+      - series: 'http_requests_total{status="200"}'
+        values: '0+90x20'
+      - series: 'http_requests_total{status="500"}'
+        values: '0+10x7 70+0x13'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: HighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: "High HTTP 5xx error rate (>5%)"
+              description: "10% of requests are failing."
+      - eval_time: 14m
+        alertname: HighErrorRate
+        exp_alerts: []
+
+  - name: HighLatency fires and recovers
+    interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{le="0.5"}'
+        values: '0+0x20'
+      - series: 'http_request_duration_seconds_bucket{le="1"}'
+        values: '0+0x20'
+      - series: 'http_request_duration_seconds_bucket{le="2"}'
+        values: '0+0x20'
+      - series: 'http_request_duration_seconds_bucket{le="5"}'
+        values: '0+100x7 700+0x13'
+      - series: 'http_request_duration_seconds_bucket{le="+Inf"}'
+        values: '0+100x7 700+0x13'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: HighLatency
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "High request latency (p95 > 2s)"
+              description: "95th percentile latency is 4.85s."
+      - eval_time: 14m
+        alertname: HighLatency
+        exp_alerts: []
+
+  - name: ServiceDown fires and recovers
+    interval: 1m
+    input_series:
+      - series: 'up{job="enclave-backend"}'
+        values: '0 0 0 1 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ServiceDown
+        exp_alerts:
+          - exp_labels:
+              job: enclave-backend
+              severity: critical
+            exp_annotations:
+              summary: "Enclave backend is down"
+              description: "The backend service has been unreachable for over 1 minute."
+      - eval_time: 4m
+        alertname: ServiceDown
+        exp_alerts: []
+
+  - name: HighConcurrency fires and recovers
+    interval: 1m
+    input_series:
+      - series: 'http_requests_in_progress'
+        values: '101 101 101 101 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: HighConcurrency
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: "High number of concurrent requests (>100)"
+              description: "101 requests are currently in-progress."
+      - eval_time: 5m
+        alertname: HighConcurrency
+        exp_alerts: []

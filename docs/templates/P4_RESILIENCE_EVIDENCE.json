@@ -1,0 +1,25 @@
+{
+  "rollback_evidence": {},
+  "restore_drill": {
+    "status": "NOT_RUN",
+    "isolated_environment": false,
+    "rto_seconds": null,
+    "rpo_seconds": null,
+    "rto_target_seconds": 900,
+    "rpo_target_seconds": 300,
+    "database": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""},
+    "object_store": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""},
+    "index": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""},
+    "configuration": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""}
+  },
+  "fault_injection": [],
+  "alert_lifecycle": [],
+  "runtime_verification": {
+    "health_status": "NOT_RUN",
+    "data_loss": null,
+    "cross_tenant_leak": null,
+    "false_completion": null
+  },
+  "operator": "",
+  "completed_at": ""
+}

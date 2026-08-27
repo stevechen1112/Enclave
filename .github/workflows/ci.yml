@@ -57,6 +57,7 @@ jobs:
           app/core/authorization.py
           app/platform/packs/contracts.py
           app/services/rollback_gate.py
+          app/services/resilience_gate.py
           scripts/release_identity.py
           --ignore-missing-imports
           --follow-imports=skip
@@ -210,6 +211,16 @@ jobs:
           path: artifacts/quality/*.json
           retention-days: 30
 
+      - name: P4 resilience evidence contracts
+        run: >-
+          python -m pytest
+          tests/test_p4_resilience_gate.py
+          tests/test_p4_restore_drill.py
+          tests/test_p4_alert_lifecycle.py
+          tests/test_p2_backup_ops.py
+          tests/test_phase_m_rollback.py
+          -q
+
       - name: Run tests
         run: |
           python -m pytest tests/ \
@@ -326,6 +337,14 @@ jobs:
 
       - name: Build gateway image
         run: docker build -f docker/gateway.Dockerfile -t enclave-gateway:ci .
+
+      - name: Prometheus alert fire and recover tests
+        run: >-
+          docker run --rm
+          --entrypoint=/bin/promtool
+          -v "$PWD/monitoring:/work:ro"
+          prom/prometheus:v2.51.0@sha256:5ccad477d0057e62a7cd1981ffcc43785ac10c5a35522dc207466ff7e7ec845f
+          test rules /work/alert_rules.test.yml
 
       - name: Scan backend image for Critical and High CVEs
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0

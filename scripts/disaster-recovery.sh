@@ -3,7 +3,7 @@
 # Enclave Disaster Recovery Script
 # ========================================================
 # Full system recovery from a snapshot backup.
-# Restores: Database → Redis → Uploads
+# Restores: Database → Redis → canonical upload volume
 #
 # Usage:
 #   ./scripts/disaster-recovery.sh backups/snapshot_20240101_020000
@@ -53,13 +53,13 @@ echo ""
 
 # ── Step 1: Stop application ──
 echo "━━━ [1/5] Stopping Services ━━━"
-docker compose stop web worker frontend 2>/dev/null || true
+docker compose stop gateway frontend web worker worker-beat 2>/dev/null || true
 echo "✓ Services stopped"
 echo ""
 
 # ── Step 2: Restore Database ──
 echo "━━━ [2/5] Restoring Database ━━━"
-DB_DUMP=$(find "${SNAPSHOT_DIR}" -name "enclave_*.sql.gz" | head -1)
+DB_DUMP=$(find "${SNAPSHOT_DIR}" -maxdepth 1 -type f \( -name "enclave_*.sql" -o -name "enclave_*.sql.gz" \) | head -1)
 if [[ -n "${DB_DUMP}" ]]; then
     echo "▸ Using backup: ${DB_DUMP}"
 
@@ -77,10 +77,17 @@ if [[ -n "${DB_DUMP}" ]]; then
     docker compose exec -T "${COMPOSE_SERVICE}" \
         createdb -U "${POSTGRES_USER}" "${POSTGRES_DB}"
 
-    # Restore
-    gunzip -c "${DB_DUMP}" | \
+    # Restore the exact format emitted by ops_lifecycle.py backup. Legacy
+    # compressed snapshots remain readable for backward compatibility.
+    if [[ "${DB_DUMP}" == *.gz ]]; then
+        gunzip -c "${DB_DUMP}" | \
+            docker compose exec -T "${COMPOSE_SERVICE}" \
+            psql -v ON_ERROR_STOP=1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -q
+    else
         docker compose exec -T "${COMPOSE_SERVICE}" \
-        psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -q
+            psql -v ON_ERROR_STOP=1 -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -q \
+            < "${DB_DUMP}"
+    fi
 
     TABLE_COUNT=$(docker compose exec -T "${COMPOSE_SERVICE}" \
         psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -t -c \
@@ -107,13 +114,16 @@ echo ""
 
 # ── Step 4: Restore Uploads ──
 echo "━━━ [4/5] Restoring Uploads ━━━"
-UPLOADS_ARCHIVE="${SNAPSHOT_DIR}/uploads.tar.gz"
+UPLOADS_ARCHIVE=$(find "${SNAPSHOT_DIR}" -maxdepth 1 -type f \( -name "uploads_*.tgz" -o -name "uploads.tar.gz" \) | head -1)
 if [[ -f "${UPLOADS_ARCHIVE}" ]]; then
-    UPLOADS_DIR="./uploads"
-    mkdir -p "${UPLOADS_DIR}"
-    tar -xzf "${UPLOADS_ARCHIVE}" -C "${UPLOADS_DIR}"
-    FILE_COUNT=$(find "${UPLOADS_DIR}" -type f | wc -l)
-    echo "✓ Uploads restored (${FILE_COUNT} files)"
+    # Production stores uploads in a named volume, not the host ./uploads path.
+    # init-storage is a narrow one-shot service with only that volume mounted.
+    docker compose run --rm -T --no-deps --entrypoint sh init-storage -c \
+        'test "$(readlink -f /code/uploads)" = "/code/uploads" && find /code/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf - -C /code' \
+        < "${UPLOADS_ARCHIVE}"
+    FILE_COUNT=$(docker compose run --rm -T --no-deps --entrypoint sh init-storage -c \
+        'find /code/uploads -type f | wc -l')
+    echo "✓ Canonical upload volume restored (${FILE_COUNT} files)"
 else
     echo "⚠ No uploads archive found, skipping"
 fi
@@ -121,7 +131,7 @@ echo ""
 
 # ── Step 5: Restart Everything ──
 echo "━━━ [5/5] Starting Services ━━━"
-docker compose start web worker frontend
+docker compose start web worker worker-beat frontend gateway
 echo "✓ All services started"
 
 # ── Health Check ──
@@ -129,11 +139,12 @@ echo ""
 echo "▸ Waiting for services to be healthy..."
 sleep 5
 
-HEALTH=$(curl -s http://localhost:8000/api/v1/admin/health 2>/dev/null || echo '{"status":"unknown"}')
+HEALTH_URL="${HEALTH_URL:-http://localhost/health}"
+HEALTH=$(curl -fsS "${HEALTH_URL}" 2>/dev/null || echo '{"status":"unknown"}')
 echo "  Backend health: ${HEALTH}"
 
 echo ""
 echo "════════════════════════════════════════════"
 echo "  ✓ Disaster recovery complete!"
-echo "  Please verify system functionality manually."
+echo "  Run sealed retrieval, tenant-isolation, asset-read, and review smoke gates now."
 echo "════════════════════════════════════════════"

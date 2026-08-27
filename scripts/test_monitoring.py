@@ -132,6 +132,58 @@ if os.path.exists(alert_file):
 else:
     log("SKIP", "MON-05", "monitoring/alert_rules.yml not found")
 
+# P4: every declared alert must have an explicit fire and recover test case.
+alert_test_file = os.path.join(PROJECT_ROOT, "monitoring", "alert_rules.test.yml")
+if os.path.exists(alert_test_file):
+    try:
+        with open(alert_file, "r", encoding="utf-8") as f:
+            declared = {
+                rule["alert"]
+                for group in (yaml.safe_load(f) or {}).get("groups", [])
+                for rule in group.get("rules", [])
+                if rule.get("alert")
+            }
+        with open(alert_test_file, "r", encoding="utf-8") as f:
+            cases = (yaml.safe_load(f) or {}).get("tests", [])
+        tested = {
+            check["alertname"]
+            for case in cases
+            for check in case.get("alert_rule_test", [])
+            if check.get("alertname")
+        }
+        lifecycle = {
+            name: {
+                "fire": any(
+                    check.get("alertname") == name and bool(check.get("exp_alerts"))
+                    for case in cases
+                    for check in case.get("alert_rule_test", [])
+                ),
+                "recover": any(
+                    check.get("alertname") == name and check.get("exp_alerts") == []
+                    for case in cases
+                    for check in case.get("alert_rule_test", [])
+                ),
+            }
+            for name in declared
+        }
+        missing = sorted(
+            name
+            for name, result in lifecycle.items()
+            if not result["fire"] or not result["recover"]
+        )
+        if declared == tested and not missing:
+            log("PASS", "MON-05b", f"{len(declared)} alerts have fire/recover tests")
+        else:
+            log(
+                "FAIL",
+                "MON-05b",
+                f"declared={sorted(declared)} tested={sorted(tested)} missing={missing}",
+            )
+    except Exception as e:
+        log("FAIL", "MON-05b", f"Cannot validate alert lifecycle tests: {e}")
+else:
+    log("FAIL", "MON-05b", "monitoring/alert_rules.test.yml not found")
+
 
 # ── MON-06: Grafana dashboard provisioning ──
 print("--- MON-06: Grafana dashboards ---")
