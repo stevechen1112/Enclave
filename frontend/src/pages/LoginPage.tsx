@@ -3,6 +3,7 @@ import { Loader2, Shield } from 'lucide-react'
 import DemoDoors from '../components/DemoDoors'
 import { authApi } from '../api'
 import { useAuth } from '../auth'
+import { parseApiError } from '../lib/apiError'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -24,8 +25,15 @@ export default function LoginPage() {
     setError('')
     try {
       await login(email.trim(), password)
-    } catch {
-      setError('帳號或密碼不正確，請重新確認。')
+    } catch (reason) {
+      const info = parseApiError(reason)
+      if (info.status === 401) {
+        setError('帳號或密碼不正確，請重新確認。')
+      } else if (info.status === 429) {
+        setError('登入嘗試過於頻繁，請稍候再試。')
+      } else {
+        setError('登入服務目前無法使用，請稍後再試。')
+      }
       setBusy(false)
     }
   }
