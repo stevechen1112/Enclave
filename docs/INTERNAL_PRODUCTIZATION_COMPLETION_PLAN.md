@@ -99,12 +99,14 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 
 **優先級：P0**
 
+**2026-08-27 狀態：** IMPLEMENTATION／CODE REVIEW PASS；PHASE GATE HOLD。內部程式、全新 FORCE-RLS DB、攻擊矩陣、資料生命週期與全量 backend regression 已通過；尚缺 staging FORCE RLS 全量回歸，因此依 gate 不進 P3。詳見 `PHASE_P2_TENANT_HARD_ISOLATION_CODE_REVIEW.md`。
+
 ### 已有基礎
 
 - 應用層 tenant ACL、RLS policy、shadow mode、tenant isolation tests 及 RLS rollout runbook 已存在。
 - Asset tombstone、知識撤回、audit、資料匯出與刪除 runbook 已存在。
 
-### 待完成
+### 已完成（內部）
 
 - 建立 production-like 非 superuser、無 `BYPASSRLS` 的 application DB role 測試環境。
 - 自動掃描所有 tenant-owned tables；新增 tenant table 卻沒有 RLS policy 時 CI 失敗。
@@ -113,6 +115,10 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 - 產生 shadow difference report；內部 staging 可先啟用 FORCE RLS 並跑完整回歸。
 - 完整驗證 delete／retention／tombstone 後，資料不會從 cache、projection、索引、匯出或舊 evidence locator 復活。
 - 為 break-glass／platform maintenance bypass 建立獨立身分、audit 與最小權限測試。
+
+### 尚待環境驗證
+
+- 在具備獨立 application／maintenance／owner secrets 的 staging 啟用 FORCE RLS，執行完整 backend、frontend、worker、connector、audio/video、export、signed URL 與 browser regression，保存部署版本及 rollback 證據。
 
 ### Gate
 

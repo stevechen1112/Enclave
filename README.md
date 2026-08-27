@@ -15,11 +15,11 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 |---|---|
 | 工作區程式基線 | Phase B–M、影片 F1–F3、UI/UX UX-A–UX-D 已完成並通過各階段 Code Review |
 | 核心架構 | 多租戶平台、Enterprise Knowledge Kernel、多模態 Ingestion Fabric、Workflow Kernel、Domain Pack Runtime 已建立 |
-| 最新瀏覽器驗收 | 隔離本機環境 PASS：Owner 核心平台、六種 Demo persona、Asset Library、統一 Intake、Review、手機版與權限邊界均已驗證 |
-| 前端最新回歸 | 24 個測試檔／85 項測試通過；ESLint、TypeScript 與 Vite production build 通過 |
-| 後端架構基線 | Phase P0 後完整回歸 1,217 passed；release identity／parity focused tests 13 passed |
-| 正式站 | [https://kachu.tw](https://kachu.tw) 已正式上線；新版首頁、Demo 與部分工作區可用，但截至 2026-08-27 尚未與本工作區最新 modular baseline 完全同版 |
-| 發布判定 | 正式服務在線；目前工作區最新基線仍需完成 release parity、authenticated route smoke 與漸進發布驗證 |
+| 最新瀏覽器驗收 | P0 核准 release 的 authenticated canonical routes、Owner 核心平台、六種 Demo persona、Asset Library、統一 Intake、Review、手機版與權限邊界均 PASS |
+| 前端最新回歸 | 25 個測試檔／87 項測試通過；ESLint、TypeScript 與 Vite production build 通過 |
+| 後端架構基線 | P2 全量回歸 1,243 passed／0 failed；production-like FORCE-RLS 攻擊矩陣 11 passed |
+| 正式站 | [https://kachu.tw](https://kachu.tw) 已正式上線；P0 核准 release 已通過 source／schema／route machine parity 與瀏覽器驗收 |
+| 產品化 Phase | P0 release parity、P1 CI／供應鏈 PASS；P2 內部實作與 Code Review PASS，但 staging FORCE-RLS 全量回歸尚缺，Phase Gate 為 HOLD，尚未進 P3 |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；外部滲透、法律／現場簽核、真機弱網噪音與跨產業多模態 holdout 尚待完成 |
 
@@ -28,6 +28,9 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 - `docs/FINAL_MODULAR_PLATFORM_CODE_REVIEW.md`
 - `docs/FINAL_AUTHORITY_AND_UIUX_CODE_REVIEW.md`
 - `docs/FINAL_UIUX_EXPERIENCE_CONVERGENCE_CODE_REVIEW.md`
+- `docs/PHASE_P0_RELEASE_PARITY_CODE_REVIEW.md`
+- `docs/PHASE_P1_CI_SUPPLY_CHAIN_SECURITY_CODE_REVIEW.md`
+- `docs/PHASE_P2_TENANT_HARD_ISOLATION_CODE_REVIEW.md`
 - `docs/UIUX_BROWSER_ACCEPTANCE_2026-08-27.md`
 
 ---
@@ -375,14 +378,16 @@ bash scripts/verify_deployment.sh
 
 ### 正式站現況
 
-- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；HTTPS、公開首頁、六門 Demo、`/overview` 與 `/job` 正常。
-- 2026-08-27 實際瀏覽器檢查顯示正式站仍以 `/knowledge/documents` 作為主要知識工作區；目前工作區的 canonical `/knowledge/assets`、`/knowledge/new`、`/knowledge/coverage` 尚未出現在該 production bundle。
-- 因此「產品已正式上線」與「目前工作區最新 modular baseline 已完整部署」是兩個不同判定；後者仍需 release manifest parity 與 authenticated route smoke 證明。
+- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；P0 核准 release `gh-33065429723-1` 的 backend、frontend、migration、canonical routes 與 browser acceptance 已完成同版驗證。
+- P1 CI／supply-chain release provenance 已 PASS。P2 本工作區改動尚未宣稱已在 production 啟用 FORCE RLS；必須先完成 staging 全量回歸。
+- 正式服務在線、核准 release parity、目前未發布工作區與商業 GA 是四個不同判定；以各 Phase review 與 deployment manifest 為準。
+
+Production DB secrets 必須分為三檔：`.env.production`（application）、`.env.db-admin`（schema owner／backup）、`.env.maintenance`（audited cross-tenant worker），權限均為 `0600`。`web` 不得取得後兩者；完整順序見 `docs/runbooks/RLS_AUTHORITY_ROLLOUT.md`。
 
 ### 最新基線發布順序
 
 1. 建立 DB、object storage 與 deployment image 可驗證備份。
-2. 以正式 schema clone 執行 migration upgrade／downgrade／re-upgrade。
+2. 以正式 schema clone 執行 migration upgrade／downgrade／re-upgrade；部署採 stop → owner `migrate` → `provision-db-roles` → up，web 不執行 Alembic。
 3. 建置並 pin backend、worker、frontend image identity。
 4. 先部署 staging，再以少量 tenant／feature flag canary。
 5. 驗證登入、tenant isolation、Asset Intake、processing、Review、retrieval、citation、
