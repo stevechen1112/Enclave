@@ -134,13 +134,15 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 
 **優先級：P0**
 
+**2026-08-28 狀態：** COMPLETE；15-case sealed corpus、ground truth schema、provider matrix、degraded contract 與 exact-release staging replay 全部 PASS。terminal-state rate、evidence locator precision／recall 均為 100%，六種 critical errors 為 0；1,289 項 backend regression、88 項 frontend tests、production build 與最終 Code Review 均通過，P4 entry 已開放。詳見 `PHASE_P3_MULTIMODAL_GOLDEN_CORPUS_CODE_REVIEW.md`。
+
 ### 已有基礎
 
 - 文件問答已有 blind／holdout 架構與歷史 78–79% 基線。
 - OCR、ASR、影片 ingestion、timeline、review 與 evidence 已有程式與測試。
 - 目前尚無影片人工時間軸 ground truth，也沒有完整跨模態 sealed evaluation。
 
-### 待完成
+### 完成內容
 
 - 建立可合法保存在 repository 或受控 artifact store 的內部 golden corpus：原生／掃描 PDF、DOCX、XLSX、CSV、圖片、混排表格、安靜／噪音／多人／長時間語音，以及含字幕／無字幕、固定／手持、設備畫面的作業影片。
 - 建立 ground truth schema：文字、表格欄位、speaker、時間碼、OCR 區域、步驟、條件、風險、例外、SOP conflict 與 evidence locator。
