@@ -131,8 +131,12 @@ def candidate_asset_access_allows(
         parsed_id = UUID(str(asset_id))
     except (TypeError, ValueError, AttributeError):
         return False
-    asset = db.query(SourceAsset).filter(
-        SourceAsset.tenant_id == authz.tenant_id,
-        SourceAsset.id == parsed_id,
-    ).first()
+    asset = (
+        db.query(SourceAsset)
+        .filter(
+            SourceAsset.tenant_id == authz.tenant_id,
+            SourceAsset.id == parsed_id,
+        )
+        .first()
+    )
     return bool(asset and asset_access_allows(db, asset, authz=authz))

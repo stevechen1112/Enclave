@@ -218,7 +218,9 @@ class UIModuleContribution:
             default_home = str(self.default_home).strip()
             navigation_paths = {str(item.get("to")) for item in self.navigation}
             if not default_home.startswith("/") or default_home not in navigation_paths:
-                raise ValueError("ui default_home must match a contributed navigation path")
+                raise ValueError(
+                    "ui default_home must match a contributed navigation path"
+                )
             object.__setattr__(self, "default_home", default_home)
 
 
@@ -467,7 +469,9 @@ class PackRegistry:
                 continue
             if not self.is_enabled_for_tenant(pack_key, context=context):
                 continue
-            enabled.extend((pack_key, provider) for provider in contribution.review_providers)
+            enabled.extend(
+                (pack_key, provider) for provider in contribution.review_providers
+            )
         return tuple(enabled)
 
     def enabled_ui_modules(

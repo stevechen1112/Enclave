@@ -85,7 +85,9 @@ def _evidence_items(db: Session, revision: AssetRevision) -> list[dict[str, Any]
     return sorted(rows, key=lambda row: (row["start_ms"], row["text"]))
 
 
-def build_structured_procedure(db: Session, revision: AssetRevision) -> StructuredProcedure | None:
+def build_structured_procedure(
+    db: Session, revision: AssetRevision
+) -> StructuredProcedure | None:
     items = _evidence_items(db, revision)
     if not items:
         return None
@@ -100,8 +102,7 @@ def build_structured_procedure(db: Session, revision: AssetRevision) -> Structur
 
     semantic_items = list(
         {
-            (item["text"], item["start_ms"], item["end_ms"]): item
-            for item in items
+            (item["text"], item["start_ms"], item["end_ms"]): item for item in items
         }.values()
     )
 
@@ -114,7 +115,9 @@ def build_structured_procedure(db: Session, revision: AssetRevision) -> Structur
 
     actions = [item for item in items if item["evidence_kind"] == "action_event"]
     if not actions:
-        actions = [item for item in items if item["evidence_kind"] == "transcript_segment"]
+        actions = [
+            item for item in items if item["evidence_kind"] == "transcript_segment"
+        ]
     steps = [
         {"sequence": index, **copy.deepcopy(item)}
         for index, item in enumerate(actions[:30], start=1)
@@ -141,7 +144,9 @@ def build_structured_procedure(db: Session, revision: AssetRevision) -> Structur
         "title": f"{asset.title} — 作業程序候選",
         "summary": "由影片證據結構化；人員核准且正式 SOP 衝突處置前不得發布。",
         "applicable_equipment": equipment,
-        "applicable_roles": list((asset.metadata_json or {}).get("applicable_roles", [])),
+        "applicable_roles": list(
+            (asset.metadata_json or {}).get("applicable_roles", [])
+        ),
         "steps": steps,
         "preconditions": matching(_PRECONDITION_TERMS),
         "decision_rules": matching(_DECISION_TERMS),
@@ -151,7 +156,9 @@ def build_structured_procedure(db: Session, revision: AssetRevision) -> Structur
         "source_asset_id": str(asset.id),
         "source_revision_id": str(revision.id),
         "source_revision": revision.revision,
-        "effective_from": revision.effective_from.isoformat() if revision.effective_from else None,
+        "effective_from": revision.effective_from.isoformat()
+        if revision.effective_from
+        else None,
     }
     return StructuredProcedure(
         payload=payload,
@@ -193,7 +200,11 @@ def load_formal_sop_documents(db: Session, *, tenant_id: UUID) -> list[dict[str,
             .limit(80)
             .all()
         )
-        texts = [str(chunk.text or "").strip() for chunk in chunks if str(chunk.text or "").strip()]
+        texts = [
+            str(chunk.text or "").strip()
+            for chunk in chunks
+            if str(chunk.text or "").strip()
+        ]
         if not texts:
             continue
         rows.append(
@@ -201,11 +212,24 @@ def load_formal_sop_documents(db: Session, *, tenant_id: UUID) -> list[dict[str,
                 "id": str(document.id),
                 "revision": int(document.version or 1),
                 "title": document.filename,
-                "steps": [text for text in texts if any(term in text for term in ("步驟", "操作", "1.", "2."))] or texts[:10],
+                "steps": [
+                    text
+                    for text in texts
+                    if any(term in text for term in ("步驟", "操作", "1.", "2."))
+                ]
+                or texts[:10],
                 "applicable_equipment": sorted(
-                    {match.upper().replace("_", "-") for text in texts for match in _EQUIPMENT_RE.findall(text)}
+                    {
+                        match.upper().replace("_", "-")
+                        for text in texts
+                        for match in _EQUIPMENT_RE.findall(text)
+                    }
                 ),
-                "cautions": [text for text in texts if any(term in text for term in (*_RISK_TERMS, *_PROHIBITION_TERMS))],
+                "cautions": [
+                    text
+                    for text in texts
+                    if any(term in text for term in (*_RISK_TERMS, *_PROHIBITION_TERMS))
+                ],
                 "evidence": [
                     {
                         "document_id": str(document.id),
@@ -273,7 +297,11 @@ def build_sop_conflict_report(
         "authority_policy": "formal_sop_wins",
         "authority_basis": "completed_current_document_revision",
         "sop_sources": [
-            {"id": row.get("id"), "revision": row.get("revision"), "title": row.get("title")}
+            {
+                "id": row.get("id"),
+                "revision": row.get("revision"),
+                "title": row.get("title"),
+            }
             for row in sop_documents
         ],
         "conflicts": conflicts,
@@ -319,10 +347,16 @@ def apply_sop_precedence(
             unresolved.append(conflict_id)
             continue
         authority_overrides.append(
-            {"conflict_id": conflict_id, "resolution": "sop_wins", "sop_value": sop_value}
+            {
+                "conflict_id": conflict_id,
+                "resolution": "sop_wins",
+                "sop_value": sop_value,
+            }
         )
     published["authority_overrides"] = authority_overrides
-    published["governance_state"] = "approved_with_sop_precedence" if authority_overrides else "approved"
+    published["governance_state"] = (
+        "approved_with_sop_precedence" if authority_overrides else "approved"
+    )
     return published, unresolved
 
 
@@ -345,7 +379,9 @@ def project_governed_video_procedure(
         metadata={
             "schema_version": "2.0",
             "step_count": len(structured.payload["steps"]),
-            "high_risk": bool(structured.payload["risks"] or structured.payload["prohibited_actions"]),
+            "high_risk": bool(
+                structured.payload["risks"] or structured.payload["prohibited_actions"]
+            ),
         },
         provider="core.video_governance",
         provider_version="1.0",
@@ -357,8 +393,10 @@ def project_governed_video_procedure(
         start_ms=structured.start_ms,
         end_ms=structured.end_ms,
     )
-    sop_documents = sop_documents if sop_documents is not None else load_formal_sop_documents(
-        db, tenant_id=revision.tenant_id
+    sop_documents = (
+        sop_documents
+        if sop_documents is not None
+        else load_formal_sop_documents(db, tenant_id=revision.tenant_id)
     )
     report = build_sop_conflict_report(structured.payload, sop_documents)
     conflict_artifact = _upsert_artifact(
@@ -386,5 +424,7 @@ def project_governed_video_procedure(
         "procedure_artifact_id": str(procedure.id),
         "conflict_report_artifact_id": str(conflict_artifact.id),
         "conflict_count": len(report["conflicts"]),
-        "high_risk": bool(structured.payload["risks"] or structured.payload["prohibited_actions"]),
+        "high_risk": bool(
+            structured.payload["risks"] or structured.payload["prohibited_actions"]
+        ),
     }

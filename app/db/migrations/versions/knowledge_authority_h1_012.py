@@ -60,7 +60,10 @@ def upgrade() -> None:
             "status", sa.String(length=24), nullable=False, server_default="active"
         ),
         sa.Column(
-            "metadata_json", sa.JSON(), nullable=False, server_default=_json_default("{}")
+            "metadata_json",
+            sa.JSON(),
+            nullable=False,
+            server_default=_json_default("{}"),
         ),
         sa.Column(
             "schema_version", sa.String(length=20), nullable=False, server_default="1.0"
@@ -100,9 +103,7 @@ def upgrade() -> None:
     op.create_index(
         "ix_knowledge_units_source_asset_id", "knowledge_units", ["source_asset_id"]
     )
-    op.create_index(
-        "ix_knowledge_units_created_by", "knowledge_units", ["created_by"]
-    )
+    op.create_index("ix_knowledge_units_created_by", "knowledge_units", ["created_by"])
     op.create_index(
         "ix_knowledge_units_tenant_type_status",
         "knowledge_units",
@@ -126,13 +127,19 @@ def upgrade() -> None:
             server_default="primary_document",
         ),
         sa.Column(
-            "quality_state", sa.String(length=24), nullable=False, server_default="ready"
+            "quality_state",
+            sa.String(length=24),
+            nullable=False,
+            server_default="ready",
         ),
         sa.Column(
             "risk_level", sa.String(length=24), nullable=False, server_default="normal"
         ),
         sa.Column(
-            "acl_snapshot", sa.JSON(), nullable=False, server_default=_json_default("{}")
+            "acl_snapshot",
+            sa.JSON(),
+            nullable=False,
+            server_default=_json_default("{}"),
         ),
         sa.Column(
             "applicability_json",
@@ -141,7 +148,10 @@ def upgrade() -> None:
             server_default=_json_default("{}"),
         ),
         sa.Column(
-            "metadata_json", sa.JSON(), nullable=False, server_default=_json_default("{}")
+            "metadata_json",
+            sa.JSON(),
+            nullable=False,
+            server_default=_json_default("{}"),
         ),
         sa.Column("source_asset_revision_id", UUID(as_uuid=True)),
         sa.Column("source_artifact_id", UUID(as_uuid=True)),
@@ -183,7 +193,9 @@ def upgrade() -> None:
             ["derived_artifacts.tenant_id", "derived_artifacts.id"],
             name="fk_knowledge_unit_revisions_tenant_artifact",
         ),
-        sa.CheckConstraint("revision >= 1", name="ck_knowledge_unit_revisions_revision"),
+        sa.CheckConstraint(
+            "revision >= 1", name="ck_knowledge_unit_revisions_revision"
+        ),
         sa.CheckConstraint(
             "length(content_hash) IN (64, 71)", name="ck_knowledge_unit_revisions_hash"
         ),
@@ -241,7 +253,10 @@ def upgrade() -> None:
         sa.Column("policy_revision", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("manifest_hash", sa.String(length=64)),
         sa.Column(
-            "gate_evidence", sa.JSON(), nullable=False, server_default=_json_default("{}")
+            "gate_evidence",
+            sa.JSON(),
+            nullable=False,
+            server_default=_json_default("{}"),
         ),
         sa.Column("created_by", UUID(as_uuid=True), sa.ForeignKey("users.id")),
         sa.Column("activated_at", sa.DateTime(timezone=True)),
@@ -307,7 +322,10 @@ def upgrade() -> None:
         sa.Column("release_id", UUID(as_uuid=True), nullable=False),
         sa.Column("unit_revision_id", UUID(as_uuid=True), nullable=False),
         sa.Column(
-            "acl_snapshot", sa.JSON(), nullable=False, server_default=_json_default("{}")
+            "acl_snapshot",
+            sa.JSON(),
+            nullable=False,
+            server_default=_json_default("{}"),
         ),
         sa.Column("policy_revision", sa.Integer(), nullable=False, server_default="1"),
         sa.Column(

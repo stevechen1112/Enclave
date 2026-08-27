@@ -35,9 +35,7 @@ class BatchReviewRequest(BaseModel):
 
 
 def _require_reviewer(current_user: User) -> None:
-    if not (
-        current_user.is_superuser or current_user.role in {"owner", "admin"}
-    ):
+    if not (current_user.is_superuser or current_user.role in {"owner", "admin"}):
         raise HTTPException(status_code=403, detail="review permission required")
 
 
@@ -83,15 +81,15 @@ def review_inbox(
     if source_type:
         items = [item for item in items if item["source_type"] == source_type]
     if department_id:
-        items = [
-            item for item in items if department_id in item["department_ids"]
-        ]
+        items = [item for item in items if department_id in item["department_ids"]]
     if policy_key:
         items = [item for item in items if item["policy_key"] == policy_key]
     if assignee:
         items = [item for item in items if item.get("assignee") == assignee]
     priority = {"high": 0, "medium": 1, "low": 2}
-    items.sort(key=lambda item: (priority.get(item["risk_level"], 9), item["due_at"] or ""))
+    items.sort(
+        key=lambda item: (priority.get(item["risk_level"], 9), item["due_at"] or "")
+    )
     total = len(items)
     page = items[offset : offset + limit]
     return {
@@ -102,7 +100,9 @@ def review_inbox(
         "facets": {
             "source_types": sorted({item["source_type"] for item in items}),
             "policy_keys": sorted({item["policy_key"] for item in items}),
-            "assignees": sorted({item["assignee"] for item in items if item.get("assignee")}),
+            "assignees": sorted(
+                {item["assignee"] for item in items if item.get("assignee")}
+            ),
         },
     }
 
@@ -151,13 +151,15 @@ def batch_approve(
         for item_id in request.item_ids
     ]
     signatures = {
-        (item["provider"], item["source_type"], item["policy_key"])
-        for item in items
+        (item["provider"], item["source_type"], item["policy_key"]) for item in items
     }
     if len(signatures) != 1:
         raise HTTPException(
             status_code=409,
-            detail={"code": "batch_policy_mismatch", "message": "batch items must share provider, type, and policy"},
+            detail={
+                "code": "batch_policy_mismatch",
+                "message": "batch items must share provider, type, and policy",
+            },
         )
     ineligible = [item["id"] for item in items if not item["batch_eligible"]]
     if ineligible:

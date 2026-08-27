@@ -35,7 +35,11 @@ class MKAReviewProvider:
         if any(not row.get("resolved") for row in (card.conflict_report or [])):
             blocked.append("unresolved_sop_conflicts")
         required = {str(role) for role in (approval.reviewers or [])}
-        if required and not current_user.is_superuser and current_user.role not in required:
+        if (
+            required
+            and not current_user.is_superuser
+            and current_user.role not in required
+        ):
             blocked.append("reviewer_role_not_allowed")
         return blocked
 
@@ -97,8 +101,7 @@ class MKAReviewProvider:
                     "confidence": None,
                     "created_at": approval.created_at.isoformat(),
                     "due_at": (
-                        approval.expires_at
-                        or (approval.created_at + timedelta(days=7))
+                        approval.expires_at or (approval.created_at + timedelta(days=7))
                     ).isoformat(),
                     "department_ids": [],
                     "policy_key": f"mka:{policy.id}" if policy else "mka:missing",
@@ -161,7 +164,10 @@ class MKAReviewProvider:
             if unknown:
                 raise HTTPException(
                     status_code=400,
-                    detail={"code": "unknown_sop_conflict", "conflict_ids": sorted(unknown)},
+                    detail={
+                        "code": "unknown_sop_conflict",
+                        "conflict_ids": sorted(unknown),
+                    },
                 )
             report = []
             for index, row in enumerate(card.conflict_report or []):

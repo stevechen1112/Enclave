@@ -373,7 +373,7 @@ class TestSsoLogin:
         token = cb.json()["access_token"]
 
         # 3. JWT 含正確 tenant
-        from jose import jwt as jose_jwt
+        import jwt as jose_jwt
         from app.config import settings as _s
 
         payload = jose_jwt.decode(token, _s.SECRET_KEY, algorithms=[_s.ALGORITHM])

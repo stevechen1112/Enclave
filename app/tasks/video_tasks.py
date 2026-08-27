@@ -108,9 +108,7 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
             )
 
             understanding = analyze_multimodal_timeline(local_video, result)
-            projection.update(
-                project_multimodal_timeline(db, revision, understanding)
-            )
+            projection.update(project_multimodal_timeline(db, revision, understanding))
             from app.services.video_governance import (
                 project_governed_video_procedure,
             )

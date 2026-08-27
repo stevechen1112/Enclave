@@ -23,10 +23,12 @@ env:
 
 jobs:
   deploy-staging:
-    name: Deploy to Staging
+    name: Build release images / deploy staging when configured
     runs-on: ubuntu-latest
     # Only deploy if CI passed (rely on branch protection rules)
     environment: staging
+    env:
+      STAGING_CONFIGURED: ${{ secrets.STAGING_HOST != '' && secrets.STAGING_USER != '' && secrets.STAGING_SSH_KEY != '' }}
     concurrency:
       group: deploy-staging
       cancel-in-progress: true
@@ -89,6 +91,7 @@ jobs:
 
       # ── Deploy via SSH ──
       - name: Deploy to staging server
+        if: env.STAGING_CONFIGURED == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.STAGING_HOST }}
@@ -152,6 +155,12 @@ jobs:
             docker image prune -f
             echo "✅ Staging deployment complete: ${{ github.sha }}"
 
+      - name: Record unavailable staging activation
+        if: env.STAGING_CONFIGURED != 'true'
+        run: |
+          echo "::warning::Release images were published, but STAGING_HOST/STAGING_USER/STAGING_SSH_KEY are not configured."
+          echo "staging_activation=UNAVAILABLE" >> "$GITHUB_STEP_SUMMARY"
+
       # ── Notify ──
       - name: Deployment summary
         run: |
@@ -160,3 +169,4 @@ jobs:
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Images:** \`staging\` tag pushed to GHCR" >> $GITHUB_STEP_SUMMARY
+          echo "- **Staging activation:** ${{ env.STAGING_CONFIGURED == 'true' && 'deployed and parity-checked' || 'unavailable (secrets not configured)' }}" >> $GITHUB_STEP_SUMMARY

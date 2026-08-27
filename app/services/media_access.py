@@ -6,7 +6,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 
 from app.config import settings
 
@@ -40,7 +41,7 @@ def decode_media_token(
         payload = jwt.decode(
             token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
-    except JWTError:
+    except InvalidTokenError:
         return None
     if (
         payload.get("scope") != "media.read"

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import re
 
-from jose import jwt
+import jwt
+from jwt import InvalidTokenError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
@@ -80,7 +81,7 @@ class DemoAccessMiddleware(BaseHTTPMiddleware):
             payload = jwt.decode(
                 token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
             )
-        except jwt.JWTError:
+        except InvalidTokenError:
             return await call_next(request)
 
         if payload.get("demo_mode") is not True:

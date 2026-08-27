@@ -110,10 +110,14 @@ def list_active_knowledge_units(
             continue
         try:
             if unit.source_asset_id:
-                asset = db.query(SourceAsset).filter(
-                    SourceAsset.tenant_id == authz.tenant_id,
-                    SourceAsset.id == unit.source_asset_id,
-                ).first()
+                asset = (
+                    db.query(SourceAsset)
+                    .filter(
+                        SourceAsset.tenant_id == authz.tenant_id,
+                        SourceAsset.id == unit.source_asset_id,
+                    )
+                    .first()
+                )
                 if asset is None or not asset_access_allows(db, asset, authz=authz):
                     continue
             else:
@@ -125,11 +129,15 @@ def list_active_knowledge_units(
                         parsed_document_id = UUID(str(document_id))
                     except (TypeError, ValueError, AttributeError):
                         continue
-                    document = db.query(Document.id).filter(
-                        Document.tenant_id == authz.tenant_id,
-                        Document.id == parsed_document_id,
-                        Document.tombstoned_at.is_(None),
-                    ).first()
+                    document = (
+                        db.query(Document.id)
+                        .filter(
+                            Document.tenant_id == authz.tenant_id,
+                            Document.id == parsed_document_id,
+                            Document.tombstoned_at.is_(None),
+                        )
+                        .first()
+                    )
                     if document is None:
                         continue
                 if not AssetAccessPolicy.from_mapping(
@@ -193,11 +201,15 @@ def _applicability_allows(
             ]
             if values and not any(value in query_key for value in values):
                 return False
-        authority_level = int((revision.metadata_json or {}).get("authority_level") or 0)
+        authority_level = int(
+            (revision.metadata_json or {}).get("authority_level") or 0
+        )
         safety_query = any(
             token in query_key for token in ("工安", "安全", "危險", "停機", "品質放行")
         )
-        if (revision.risk_level in {"high", "critical"} or safety_query) and authority_level < 90:
+        if (
+            revision.risk_level in {"high", "critical"} or safety_query
+        ) and authority_level < 90:
             return False
     module_key = str((revision.metadata_json or {}).get("module_key") or "")
     if module_key:
@@ -205,20 +217,24 @@ def _applicability_allows(
 
         from app.models.mka import TenantModuleBinding
 
-        enabled = db.query(TenantModuleBinding.id).filter(
-            TenantModuleBinding.tenant_id == authz.tenant_id,
-            TenantModuleBinding.module_key == module_key,
-            TenantModuleBinding.enabled.is_(True),
-            TenantModuleBinding.license_state.in_(["trial", "active"]),
-            or_(
-                TenantModuleBinding.effective_from.is_(None),
-                TenantModuleBinding.effective_from <= func.now(),
-            ),
-            or_(
-                TenantModuleBinding.effective_to.is_(None),
-                TenantModuleBinding.effective_to > func.now(),
-            ),
-        ).first()
+        enabled = (
+            db.query(TenantModuleBinding.id)
+            .filter(
+                TenantModuleBinding.tenant_id == authz.tenant_id,
+                TenantModuleBinding.module_key == module_key,
+                TenantModuleBinding.enabled.is_(True),
+                TenantModuleBinding.license_state.in_(["trial", "active"]),
+                or_(
+                    TenantModuleBinding.effective_from.is_(None),
+                    TenantModuleBinding.effective_from <= func.now(),
+                ),
+                or_(
+                    TenantModuleBinding.effective_to.is_(None),
+                    TenantModuleBinding.effective_to > func.now(),
+                ),
+            )
+            .first()
+        )
         if enabled is None:
             return False
     return unit.status == "active"

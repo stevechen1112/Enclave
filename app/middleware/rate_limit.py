@@ -16,7 +16,8 @@ from typing import Optional, Tuple
 
 import redis
 from fastapi import Request, status
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
@@ -120,7 +121,7 @@ def _jwt_subject_and_tenant(request: Request) -> tuple[Optional[str], Optional[s
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload.get("sub"), payload.get("tenant_id")
-    except JWTError:
+    except InvalidTokenError:
         return None, None
 
 

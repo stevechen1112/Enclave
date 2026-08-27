@@ -2,7 +2,8 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from jose import jwt
+import jwt
+from jwt import InvalidTokenError
 from passlib.context import CryptContext
 
 from app.config import settings
@@ -83,7 +84,7 @@ def decode_partial_token(
     """解碼並驗證局部 token；scope 不符或驗證失敗回傳 None。"""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-    except jwt.JWTError:
+    except InvalidTokenError:
         return None
     scope = payload.get("scope")
     if scope not in (SCOPE_MFA_PENDING, SCOPE_MFA_ENROLL):

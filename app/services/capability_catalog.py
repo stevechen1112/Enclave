@@ -35,8 +35,7 @@ def build_capability_catalog(
                 "deployment_status": "deployed" if deployed else "not_deployed",
                 "entitlement_status": "included" if deployed else "unavailable",
                 "runtime_status": str(
-                    health.get("state")
-                    or ("unknown" if deployed else "not_deployed")
+                    health.get("state") or ("unknown" if deployed else "not_deployed")
                 ),
                 "user_permission_status": "not_applicable",
             }

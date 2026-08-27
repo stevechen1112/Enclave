@@ -166,15 +166,18 @@ def _activate_release(
         }
         return active_release, memberships, True
 
-    release_revision = int(
-        db.query(func.max(KnowledgeUnitRelease.revision))
-        .filter(
-            KnowledgeUnitRelease.tenant_id == tenant_id,
-            KnowledgeUnitRelease.release_key == release_key,
+    release_revision = (
+        int(
+            db.query(func.max(KnowledgeUnitRelease.revision))
+            .filter(
+                KnowledgeUnitRelease.tenant_id == tenant_id,
+                KnowledgeUnitRelease.release_key == release_key,
+            )
+            .scalar()
+            or 0
         )
-        .scalar()
-        or 0
-    ) + 1
+        + 1
+    )
     release = KnowledgeUnitRelease(
         tenant_id=tenant_id,
         release_key=release_key,
@@ -272,7 +275,10 @@ def publish_knowledge_unit(
             db.query(KnowledgeUnitReleaseMembership)
             .join(
                 KnowledgeUnitRevision,
-                (KnowledgeUnitRevision.tenant_id == KnowledgeUnitReleaseMembership.tenant_id)
+                (
+                    KnowledgeUnitRevision.tenant_id
+                    == KnowledgeUnitReleaseMembership.tenant_id
+                )
                 & (
                     KnowledgeUnitRevision.id
                     == KnowledgeUnitReleaseMembership.unit_revision_id
@@ -289,13 +295,15 @@ def publish_knowledge_unit(
 
     revision_acl_pairs: list[tuple[KnowledgeUnitRevision, dict[str, Any]]] = []
     for prior in prior_memberships:
-        prior_revision = db.query(KnowledgeUnitRevision).filter(
-            KnowledgeUnitRevision.tenant_id == tenant_id,
-            KnowledgeUnitRevision.id == prior.unit_revision_id,
-        ).one()
-        revision_acl_pairs.append(
-            (prior_revision, dict(prior.acl_snapshot or {}))
+        prior_revision = (
+            db.query(KnowledgeUnitRevision)
+            .filter(
+                KnowledgeUnitRevision.tenant_id == tenant_id,
+                KnowledgeUnitRevision.id == prior.unit_revision_id,
+            )
+            .one()
         )
+        revision_acl_pairs.append((prior_revision, dict(prior.acl_snapshot or {})))
     revision_acl_pairs.append((revision, dict(acl_snapshot or {})))
     release, memberships, idempotent = _activate_release(
         db,
@@ -426,17 +434,27 @@ def retire_knowledge_unit(
     retired_by: UUID | None,
 ) -> dict[str, Any]:
     """Tombstone a unit and atomically publish a release without it."""
-    unit = db.query(KnowledgeUnitRecord).filter(
-        KnowledgeUnitRecord.tenant_id == tenant_id,
-        KnowledgeUnitRecord.unit_key == unit_key,
-    ).with_for_update().first()
+    unit = (
+        db.query(KnowledgeUnitRecord)
+        .filter(
+            KnowledgeUnitRecord.tenant_id == tenant_id,
+            KnowledgeUnitRecord.unit_key == unit_key,
+        )
+        .with_for_update()
+        .first()
+    )
     if unit is None or unit.status == "tombstoned":
         return {"unit_key": unit_key, "idempotent": True}
-    active_release = db.query(KnowledgeUnitRelease).filter(
-        KnowledgeUnitRelease.tenant_id == tenant_id,
-        KnowledgeUnitRelease.release_key == _TENANT_RELEASE_KEY,
-        KnowledgeUnitRelease.status == "active",
-    ).with_for_update().first()
+    active_release = (
+        db.query(KnowledgeUnitRelease)
+        .filter(
+            KnowledgeUnitRelease.tenant_id == tenant_id,
+            KnowledgeUnitRelease.release_key == _TENANT_RELEASE_KEY,
+            KnowledgeUnitRelease.status == "active",
+        )
+        .with_for_update()
+        .first()
+    )
     retained: list[tuple[KnowledgeUnitRevision, dict[str, Any]]] = []
     if active_release is not None:
         rows = (
@@ -506,25 +524,37 @@ def publish_document_kb_revision(
     )
     revision_acl_pairs: list[tuple[KnowledgeUnitRevision, dict[str, Any]]] = []
     for member in members:
-        document = db.query(Document).filter(
-            Document.tenant_id == kb.tenant_id,
-            Document.id == member.document_id,
-            Document.tombstoned_at.is_(None),
-        ).one()
+        document = (
+            db.query(Document)
+            .filter(
+                Document.tenant_id == kb.tenant_id,
+                Document.id == member.document_id,
+                Document.tombstoned_at.is_(None),
+            )
+            .one()
+        )
         asset = None
         asset_revision = None
         if document.source_asset_id:
-            asset = db.query(SourceAsset).filter(
-                SourceAsset.tenant_id == kb.tenant_id,
-                SourceAsset.id == document.source_asset_id,
-                SourceAsset.tombstoned_at.is_(None),
-            ).first()
+            asset = (
+                db.query(SourceAsset)
+                .filter(
+                    SourceAsset.tenant_id == kb.tenant_id,
+                    SourceAsset.id == document.source_asset_id,
+                    SourceAsset.tombstoned_at.is_(None),
+                )
+                .first()
+            )
             if asset is not None:
-                asset_revision = db.query(AssetRevision).filter(
-                    AssetRevision.tenant_id == kb.tenant_id,
-                    AssetRevision.asset_id == asset.id,
-                    AssetRevision.revision == member.document_revision,
-                ).first()
+                asset_revision = (
+                    db.query(AssetRevision)
+                    .filter(
+                        AssetRevision.tenant_id == kb.tenant_id,
+                        AssetRevision.asset_id == asset.id,
+                        AssetRevision.revision == member.document_revision,
+                    )
+                    .first()
+                )
         acl = dict(member.acl_snapshot or {})
         if not acl and asset is not None:
             acl = dict(asset.acl_reference or {})

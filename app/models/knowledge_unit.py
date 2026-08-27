@@ -67,9 +67,7 @@ class KnowledgeUnitRecord(Base):
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "id", name="uq_knowledge_units_tenant_id"),
-        UniqueConstraint(
-            "tenant_id", "unit_key", name="uq_knowledge_units_tenant_key"
-        ),
+        UniqueConstraint("tenant_id", "unit_key", name="uq_knowledge_units_tenant_key"),
         ForeignKeyConstraint(
             ["tenant_id", "source_asset_id"],
             ["source_assets.tenant_id", "source_assets.id"],

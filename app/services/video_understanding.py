@@ -52,7 +52,9 @@ class MultimodalUnderstandingResult:
     provider_failures: list[dict[str, str]] = field(default_factory=list)
 
 
-def parse_scene_showinfo(stderr: str, *, duration_ms: int, frame_rate: float) -> list[TimelineObservation]:
+def parse_scene_showinfo(
+    stderr: str, *, duration_ms: int, frame_rate: float
+) -> list[TimelineObservation]:
     points = sorted(
         {
             max(0, min(duration_ms - 1, round(float(value) * 1000)))
@@ -94,8 +96,15 @@ class FfmpegSceneProvider:
     def analyze(self, context: MultimodalAnalysisContext) -> MultimodalProviderOutput:
         result = self._runner(
             [
-                "ffmpeg", "-hide_banner", "-i", context.video_path,
-                "-filter:v", "select='gt(scene,0.35)',showinfo", "-f", "null", "-",
+                "ffmpeg",
+                "-hide_banner",
+                "-i",
+                context.video_path,
+                "-filter:v",
+                "select='gt(scene,0.35)',showinfo",
+                "-f",
+                "null",
+                "-",
             ],
             check=True,
             capture_output=True,
@@ -113,11 +122,33 @@ class FfmpegSceneProvider:
 
 
 _ACTION_TERMS = (
-    "確認", "檢查", "按下", "開啟", "關閉", "設定", "調整", "更換",
-    "解除", "清潔", "停機", "啟動", "復歸", "掃描", "計數", "移除",
+    "確認",
+    "檢查",
+    "按下",
+    "開啟",
+    "關閉",
+    "設定",
+    "調整",
+    "更換",
+    "解除",
+    "清潔",
+    "停機",
+    "啟動",
+    "復歸",
+    "掃描",
+    "計數",
+    "移除",
 )
 _STATE_TERMS = (
-    "歸零", "運轉", "停止", "已開啟", "已關閉", "正常", "異常", "完成", "就緒",
+    "歸零",
+    "運轉",
+    "停止",
+    "已開啟",
+    "已關閉",
+    "正常",
+    "異常",
+    "完成",
+    "就緒",
 )
 _MEASUREMENT_RE = re.compile(
     r"(?P<name>壓力|溫度|速度|轉速|電流|電壓|濃度|張力)?\s*"
@@ -141,8 +172,15 @@ class EvidenceRuleTimelineProvider:
 
     @staticmethod
     def _observation(
-        *, kind: str, label: str, text: str, start_ms: int, end_ms: int,
-        confidence: float | None, speaker: str | None = None, attributes: dict[str, Any] | None = None,
+        *,
+        kind: str,
+        label: str,
+        text: str,
+        start_ms: int,
+        end_ms: int,
+        confidence: float | None,
+        speaker: str | None = None,
+        attributes: dict[str, Any] | None = None,
     ) -> TimelineObservation:
         return TimelineObservation(
             kind=kind,
@@ -166,30 +204,48 @@ class EvidenceRuleTimelineProvider:
                 continue
             if segment.speaker:
                 has_speaker = True
-                rows.append(self._observation(
-                    kind="speaker_turn", label="speaker_turn", text=text,
-                    start_ms=segment.start_ms, end_ms=segment.end_ms,
-                    confidence=segment.confidence, speaker=segment.speaker,
-                    attributes={"speaker_source": "upstream_asr_or_diarization"},
-                ))
+                rows.append(
+                    self._observation(
+                        kind="speaker_turn",
+                        label="speaker_turn",
+                        text=text,
+                        start_ms=segment.start_ms,
+                        end_ms=segment.end_ms,
+                        confidence=segment.confidence,
+                        speaker=segment.speaker,
+                        attributes={"speaker_source": "upstream_asr_or_diarization"},
+                    )
+                )
             if any(term in text for term in _ACTION_TERMS):
-                rows.append(self._observation(
-                    kind="action_event", label="spoken_action_candidate", text=text,
-                    start_ms=segment.start_ms, end_ms=segment.end_ms,
-                    confidence=segment.confidence, speaker=segment.speaker,
-                    attributes={"detection_method": "explicit_action_term"},
-                ))
+                rows.append(
+                    self._observation(
+                        kind="action_event",
+                        label="spoken_action_candidate",
+                        text=text,
+                        start_ms=segment.start_ms,
+                        end_ms=segment.end_ms,
+                        confidence=segment.confidence,
+                        speaker=segment.speaker,
+                        attributes={"detection_method": "explicit_action_term"},
+                    )
+                )
             matches = list(_MEASUREMENT_RE.finditer(text))
             if matches or any(term in text for term in _STATE_TERMS):
-                rows.append(self._observation(
-                    kind="equipment_state", label="spoken_equipment_state_candidate", text=text,
-                    start_ms=segment.start_ms, end_ms=segment.end_ms,
-                    confidence=segment.confidence, speaker=segment.speaker,
-                    attributes={
-                        "detection_method": "explicit_state_or_measurement",
-                        "measurements": [match.groupdict() for match in matches],
-                    },
-                ))
+                rows.append(
+                    self._observation(
+                        kind="equipment_state",
+                        label="spoken_equipment_state_candidate",
+                        text=text,
+                        start_ms=segment.start_ms,
+                        end_ms=segment.end_ms,
+                        confidence=segment.confidence,
+                        speaker=segment.speaker,
+                        attributes={
+                            "detection_method": "explicit_state_or_measurement",
+                            "measurements": [match.groupdict() for match in matches],
+                        },
+                    )
+                )
 
         for frame in context.keyframes:
             text = str(frame.ocr_text or "").strip()
@@ -197,20 +253,27 @@ class EvidenceRuleTimelineProvider:
                 continue
             matches = list(_MEASUREMENT_RE.finditer(text))
             if matches or any(term in text for term in _STATE_TERMS):
-                rows.append(self._observation(
-                    kind="equipment_state", label="visual_equipment_state_candidate", text=text,
-                    start_ms=frame.timestamp_ms, end_ms=frame.timestamp_ms + 1,
-                    confidence=frame.ocr_confidence,
-                    attributes={
-                        "detection_method": "ocr_state_or_measurement",
-                        "frame_index": frame.frame_index,
-                        "measurements": [match.groupdict() for match in matches],
-                    },
-                ))
+                rows.append(
+                    self._observation(
+                        kind="equipment_state",
+                        label="visual_equipment_state_candidate",
+                        text=text,
+                        start_ms=frame.timestamp_ms,
+                        end_ms=frame.timestamp_ms + 1,
+                        confidence=frame.ocr_confidence,
+                        attributes={
+                            "detection_method": "ocr_state_or_measurement",
+                            "frame_index": frame.frame_index,
+                            "measurements": [match.groupdict() for match in matches],
+                        },
+                    )
+                )
         return MultimodalProviderOutput(
             observations=rows,
             capability_states={
-                "speaker_diarization": "available_upstream" if has_speaker else "unavailable",
+                "speaker_diarization": "available_upstream"
+                if has_speaker
+                else "unavailable",
                 "action_event": "candidate_rules",
                 "equipment_state": "candidate_rules",
                 "temporal_alignment": "available",
@@ -237,9 +300,20 @@ class AudioSignalOutlierProvider:
         sample_rate = 8000
         result = self._runner(
             [
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-i",
-                context.video_path, "-vn", "-ac", "1", "-ar", str(sample_rate),
-                "-f", "s16le", "pipe:1",
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-i",
+                context.video_path,
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                str(sample_rate),
+                "-f",
+                "s16le",
+                "pipe:1",
             ],
             check=True,
             capture_output=True,
@@ -297,7 +371,9 @@ class AudioSignalOutlierProvider:
 
 
 class MultimodalProviderRegistry:
-    def __init__(self, providers: list[MultimodalUnderstandingProvider] | None = None) -> None:
+    def __init__(
+        self, providers: list[MultimodalUnderstandingProvider] | None = None
+    ) -> None:
         self._providers = providers or [
             FfmpegSceneProvider(),
             EvidenceRuleTimelineProvider(),
@@ -310,7 +386,9 @@ class MultimodalProviderRegistry:
                 raise ValueError(f"duplicate multimodal provider: {identity}")
             identities.add(identity)
 
-    def analyze(self, context: MultimodalAnalysisContext) -> MultimodalUnderstandingResult:
+    def analyze(
+        self, context: MultimodalAnalysisContext
+    ) -> MultimodalUnderstandingResult:
         result = MultimodalUnderstandingResult(
             capability_states={key: "unavailable" for key in _CAPABILITIES}
         )
@@ -331,7 +409,9 @@ class MultimodalProviderRegistry:
                     if rank.get(state, 0) >= rank.get(current, 0):
                         result.capability_states[capability] = state
             except Exception as exc:
-                logger.exception("multimodal provider failed: %s", provider.provider_key)
+                logger.exception(
+                    "multimodal provider failed: %s", provider.provider_key
+                )
                 result.provider_failures.append(
                     {"provider": provider.provider_key, "error": str(exc)[:300]}
                 )

@@ -408,11 +408,15 @@ def get_video_review(
     for artifact in artifacts:
         decision = decisions.get(artifact.id)
         content: Any = artifact.content
-        if artifact.artifact_kind in {
-            "procedure_candidate",
-            "timeline_alignment",
-            "sop_conflict_report",
-        } and artifact.content:
+        if (
+            artifact.artifact_kind
+            in {
+                "procedure_candidate",
+                "timeline_alignment",
+                "sop_conflict_report",
+            }
+            and artifact.content
+        ):
             try:
                 content = json.loads(artifact.content)
             except ValueError:
@@ -502,7 +506,9 @@ def _media_token_authz(
         .first()
     )
     if user is None:
-        raise HTTPException(status_code=403, detail="media token subject is unavailable")
+        raise HTTPException(
+            status_code=403, detail="media token subject is unavailable"
+        )
     return AuthorizationContext.from_user(user)
 
 
@@ -524,9 +530,7 @@ def get_video_content(
         raise HTTPException(status_code=403, detail="invalid media token") from exc
     apply_rls_context(db, tenant_id)
     authz = _media_token_authz(db, claims=claims, tenant_id=tenant_id)
-    asset = _asset_or_404(
-        db, tenant_id=tenant_id, asset_id=asset_id, authz=authz
-    )
+    asset = _asset_or_404(db, tenant_id=tenant_id, asset_id=asset_id, authz=authz)
     revision = _current_revision(db, asset=asset, tenant_id=tenant_id)
     metadata = dict(revision.metadata_json or {})
     return _object_response(
@@ -647,7 +651,9 @@ def review_video_procedure(
     try:
         procedure_payload = json.loads(artifact.content or "{}")
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=409, detail="procedure payload is invalid") from exc
+        raise HTTPException(
+            status_code=409, detail="procedure payload is invalid"
+        ) from exc
     conflict_artifacts = (
         db.query(DerivedArtifact)
         .filter(
@@ -672,7 +678,9 @@ def review_video_procedure(
         try:
             conflict_report = json.loads(conflict_artifact.content or "{}")
         except json.JSONDecodeError as exc:
-            raise HTTPException(status_code=409, detail="SOP conflict report is invalid") from exc
+            raise HTTPException(
+                status_code=409, detail="SOP conflict report is invalid"
+            ) from exc
 
     resolution_json: dict[str, Any] = {}
     approved = request.decision == "approved"

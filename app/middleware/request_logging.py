@@ -29,7 +29,7 @@ def _extract_user_context(request: Request) -> tuple[str, str]:
     # before route handlers, so we parse Authorization header minimally.
     try:
         from app.config import settings
-        from jose import jwt
+        import jwt
 
         auth = request.headers.get("authorization", "")
         if auth.startswith("Bearer "):

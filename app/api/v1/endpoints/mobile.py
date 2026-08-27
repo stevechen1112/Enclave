@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from jose import jwt
+import jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 

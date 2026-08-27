@@ -6,27 +6,55 @@ from typing import Any
 
 ROLE_CAPABILITIES: dict[str, tuple[str, ...]] = {
     "owner": (
-        "ask", "browse_knowledge", "upload_documents", "manage_sources",
-        "review_queue", "governance", "system_ops", "create_content",
-        "view_usage", "admin_home", "home",
+        "ask",
+        "browse_knowledge",
+        "upload_documents",
+        "manage_sources",
+        "review_queue",
+        "governance",
+        "system_ops",
+        "create_content",
+        "view_usage",
+        "admin_home",
+        "home",
     ),
     "admin": (
-        "ask", "browse_knowledge", "upload_documents", "manage_sources",
-        "review_queue", "governance", "system_ops", "create_content",
-        "view_usage", "admin_home", "home",
+        "ask",
+        "browse_knowledge",
+        "upload_documents",
+        "manage_sources",
+        "review_queue",
+        "governance",
+        "system_ops",
+        "create_content",
+        "view_usage",
+        "admin_home",
+        "home",
     ),
     "hr": (
-        "ask", "browse_knowledge", "upload_documents", "create_content",
-        "view_usage", "home",
+        "ask",
+        "browse_knowledge",
+        "upload_documents",
+        "create_content",
+        "view_usage",
+        "home",
     ),
     "employee": (
-        "ask", "browse_knowledge", "create_content", "view_usage", "home",
+        "ask",
+        "browse_knowledge",
+        "create_content",
+        "view_usage",
+        "home",
     ),
     "viewer": ("ask", "browse_knowledge", "view_usage", "home"),
 }
 
 SUPERUSER_CAPABILITIES = (
-    "system_ops", "governance", "admin_home", "review_queue", "manage_sources",
+    "system_ops",
+    "governance",
+    "admin_home",
+    "review_queue",
+    "manage_sources",
 )
 
 

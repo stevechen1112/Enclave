@@ -801,7 +801,7 @@ def test_media_token_is_tenant_and_resource_bound():
 
 
 def test_expired_media_token_is_rejected():
-    from jose import jwt
+    import jwt
 
     from app.config import settings
 

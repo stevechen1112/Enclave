@@ -54,4 +54,6 @@ class MultimodalUnderstandingProvider(Protocol):
     capability_keys: tuple[str, ...]
     execution_boundary: str
 
-    def analyze(self, context: MultimodalAnalysisContext) -> MultimodalProviderOutput: ...
+    def analyze(
+        self, context: MultimodalAnalysisContext
+    ) -> MultimodalProviderOutput: ...

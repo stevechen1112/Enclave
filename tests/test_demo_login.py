@@ -7,7 +7,7 @@ from copy import deepcopy
 
 import pytest
 from httpx import AsyncClient
-from jose import jwt
+import jwt
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings

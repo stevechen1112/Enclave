@@ -141,7 +141,11 @@ def _blocked_reasons(
         blocked.append("separation_of_duty")
     if evidence_count == 0:
         blocked.append("evidence_missing")
-    conflicts = linked_conflicts if linked_conflicts is not None else _artifact_conflicts(artifact.content)
+    conflicts = (
+        linked_conflicts
+        if linked_conflicts is not None
+        else _artifact_conflicts(artifact.content)
+    )
     if any(not row.get("resolved") for row in conflicts):
         blocked.append("unresolved_sop_conflicts")
     return blocked
@@ -206,7 +210,9 @@ def _artifact_item(
         "created_at": _iso(artifact.created_at),
         "due_at": _iso((artifact.created_at or datetime.now(UTC)) + timedelta(days=7)),
         "department_ids": department_ids,
-        "policy_key": str(metadata.get("review_policy_key") or "artifact-human-review-v1"),
+        "policy_key": str(
+            metadata.get("review_policy_key") or "artifact-human-review-v1"
+        ),
         "policy_version": int(metadata.get("review_policy_version") or 1),
         "assignee": None,
         "batch_eligible": (
@@ -222,7 +228,9 @@ def _artifact_item(
             "artifact_id": str(artifact.id),
             "asset_id": str(asset.id),
             "asset_revision": revision.revision,
-            "conflicts": list(linked_conflicts or _artifact_conflicts(artifact.content)),
+            "conflicts": list(
+                linked_conflicts or _artifact_conflicts(artifact.content)
+            ),
         },
         "evidence": evidence,
         "publication": {
@@ -240,7 +248,11 @@ def _legacy_item(item: LegacyReviewItem) -> dict[str, Any]:
     tags = dict(item.suggested_tags or {})
     related = tags.pop("_related_ids", [])
     confidence = item.confidence_score
-    risk = "low" if confidence is not None and confidence >= _LOW_CONFIDENCE and not related else "medium"
+    risk = (
+        "low"
+        if confidence is not None and confidence >= _LOW_CONFIDENCE and not related
+        else "medium"
+    )
     return {
         "id": f"legacy:{item.id}",
         "provider": "core.legacy_file_classification",
@@ -335,10 +347,12 @@ def list_review_items(db: Session, *, current_user: User) -> list[dict[str, Any]
     for artifact, _revision, _asset in visible:
         if artifact.artifact_kind != "sop_conflict_report":
             continue
-        procedure_id = str((artifact.metadata_json or {}).get("procedure_artifact_id") or "")
+        procedure_id = str(
+            (artifact.metadata_json or {}).get("procedure_artifact_id") or ""
+        )
         if procedure_id:
-            conflict_reports[(artifact.asset_revision_id, procedure_id)] = _artifact_conflicts(
-                artifact.content
+            conflict_reports[(artifact.asset_revision_id, procedure_id)] = (
+                _artifact_conflicts(artifact.content)
             )
     visible = [row for row in visible if row[0].artifact_kind != "sop_conflict_report"]
     artifact_ids = [row[0].id for row in visible]
@@ -384,11 +398,13 @@ def list_review_items(db: Session, *, current_user: User) -> list[dict[str, Any]
     return items
 
 
-def get_review_item(
-    db: Session, *, current_user: User, item_id: str
-) -> dict[str, Any]:
+def get_review_item(db: Session, *, current_user: User, item_id: str) -> dict[str, Any]:
     item = next(
-        (row for row in list_review_items(db, current_user=current_user) if row["id"] == item_id),
+        (
+            row
+            for row in list_review_items(db, current_user=current_user)
+            if row["id"] == item_id
+        ),
         None,
     )
     if item is None:
@@ -467,7 +483,10 @@ def _decide_artifact(
         linked_conflicts = (
             _artifact_conflicts(conflict_artifact.content)
             if conflict_artifact is not None
-            and str((conflict_artifact.metadata_json or {}).get("procedure_artifact_id") or "")
+            and str(
+                (conflict_artifact.metadata_json or {}).get("procedure_artifact_id")
+                or ""
+            )
             == str(artifact.id)
             else []
         )
@@ -487,9 +506,16 @@ def _decide_artifact(
             current_user=current_user,
             linked_conflicts=linked_conflicts,
         )
-        hard_blocks = [reason for reason in item["blocked_reasons"] if reason != "unresolved_sop_conflicts"]
+        hard_blocks = [
+            reason
+            for reason in item["blocked_reasons"]
+            if reason != "unresolved_sop_conflicts"
+        ]
         if decision == "approved" and hard_blocks:
-            raise HTTPException(status_code=409, detail={"code": hard_blocks[0], "blocked_reasons": hard_blocks})
+            raise HTTPException(
+                status_code=409,
+                detail={"code": hard_blocks[0], "blocked_reasons": hard_blocks},
+            )
         return review_video_procedure(
             artifact_id,
             ArtifactReviewRequest(
@@ -530,19 +556,31 @@ def _decide_artifact(
         )
         .all()
     )
-    item = _artifact_item(
-        artifact, revision, asset, spans, current_user=current_user
-    )
+    item = _artifact_item(artifact, revision, asset, spans, current_user=current_user)
     if decision == "approved":
         if item["blocked_reasons"]:
             raise HTTPException(
                 status_code=409,
-                detail={"code": item["blocked_reasons"][0], "blocked_reasons": item["blocked_reasons"]},
+                detail={
+                    "code": item["blocked_reasons"][0],
+                    "blocked_reasons": item["blocked_reasons"],
+                },
             )
-        if _artifact_risk(artifact) == "high" and not payload.get("acknowledge_high_risk"):
-            raise HTTPException(status_code=409, detail={"code": "high_risk_acknowledgement_required"})
-        if artifact.confidence is not None and artifact.confidence < _LOW_CONFIDENCE and not payload.get("acknowledge_low_confidence"):
-            raise HTTPException(status_code=409, detail={"code": "low_confidence_acknowledgement_required"})
+        if _artifact_risk(artifact) == "high" and not payload.get(
+            "acknowledge_high_risk"
+        ):
+            raise HTTPException(
+                status_code=409, detail={"code": "high_risk_acknowledgement_required"}
+            )
+        if (
+            artifact.confidence is not None
+            and artifact.confidence < _LOW_CONFIDENCE
+            and not payload.get("acknowledge_low_confidence")
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail={"code": "low_confidence_acknowledgement_required"},
+            )
     authority: dict[str, Any] | None = None
     if decision == "approved":
         from app.services.knowledge_authority import publish_knowledge_unit
@@ -553,7 +591,8 @@ def _decide_artifact(
             unit_key=f"artifact:{artifact.id}",
             unit_type=_knowledge_unit_type(artifact.artifact_kind),
             title=asset.title,
-            content=artifact.content or json.dumps(artifact.metadata_json or {}, ensure_ascii=False),
+            content=artifact.content
+            or json.dumps(artifact.metadata_json or {}, ensure_ascii=False),
             authority_class="human_reviewed_artifact",
             acl_snapshot=dict(asset.acl_reference or {}),
             source_resource_type="derived_artifact",
@@ -567,7 +606,9 @@ def _decide_artifact(
             gate_evidence={
                 "reviewer_id": str(current_user.id),
                 "decision": decision,
-                "acknowledged_low_confidence": bool(payload.get("acknowledge_low_confidence")),
+                "acknowledged_low_confidence": bool(
+                    payload.get("acknowledge_low_confidence")
+                ),
             },
         )
     db.add(
@@ -583,11 +624,15 @@ def _decide_artifact(
     )
     artifact.quality_state = "ready" if decision == "approved" else "rejected"
     db.flush()
-    remaining = db.query(DerivedArtifact.id).filter(
-        DerivedArtifact.tenant_id == current_user.tenant_id,
-        DerivedArtifact.asset_revision_id == revision.id,
-        DerivedArtifact.quality_state == "review_required",
-    ).first()
+    remaining = (
+        db.query(DerivedArtifact.id)
+        .filter(
+            DerivedArtifact.tenant_id == current_user.tenant_id,
+            DerivedArtifact.asset_revision_id == revision.id,
+            DerivedArtifact.quality_state == "review_required",
+        )
+        .first()
+    )
     if remaining is None:
         has_approved = (
             db.query(ArtifactReviewDecision.id)
@@ -599,11 +644,16 @@ def _decide_artifact(
             .first()
             is not None
         )
-        job = db.query(IngestionJob).filter(
-            IngestionJob.tenant_id == current_user.tenant_id,
-            IngestionJob.asset_revision_id == revision.id,
-            IngestionJob.status == "review_required",
-        ).with_for_update().first()
+        job = (
+            db.query(IngestionJob)
+            .filter(
+                IngestionJob.tenant_id == current_user.tenant_id,
+                IngestionJob.asset_revision_id == revision.id,
+                IngestionJob.status == "review_required",
+            )
+            .with_for_update()
+            .first()
+        )
         if job is not None:
             from app.services.ingestion_orchestrator import get_ingestion_orchestrator
 
@@ -620,7 +670,11 @@ def _decide_artifact(
             )
         revision.ingestion_status = "ready"
         asset.status = "active"
-    return {"item_id": f"artifact:{artifact.id}", "decision": decision, "knowledge_authority": authority}
+    return {
+        "item_id": f"artifact:{artifact.id}",
+        "decision": decision,
+        "knowledge_authority": authority,
+    }
 
 
 def decide_review_item(
@@ -642,16 +696,16 @@ def decide_review_item(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail="review item not found") from exc
     try:
-        snapshot = get_review_item(
-            db, current_user=current_user, item_id=item_id
-        )
+        snapshot = get_review_item(db, current_user=current_user, item_id=item_id)
     except HTTPException as exc:
         if exc.status_code != 404 or prefix not in {"artifact", "legacy"}:
             raise
         snapshot = None
 
     audit_evidence = {
-        "provider": snapshot["provider"] if snapshot else (
+        "provider": snapshot["provider"]
+        if snapshot
+        else (
             "core.legacy_file_classification"
             if prefix == "legacy"
             else "core.asset_artifact"
@@ -660,13 +714,9 @@ def decide_review_item(
         "risk_level": snapshot["risk_level"] if snapshot else None,
         "policy_key": snapshot["policy_key"] if snapshot else None,
         "policy_version": snapshot["policy_version"] if snapshot else None,
-        "evidence_ids": [row["id"] for row in snapshot["evidence"]]
-        if snapshot
-        else [],
+        "evidence_ids": [row["id"] for row in snapshot["evidence"]] if snapshot else [],
         "acknowledged_high_risk": bool(payload.get("acknowledge_high_risk")),
-        "acknowledged_low_confidence": bool(
-            payload.get("acknowledge_low_confidence")
-        ),
+        "acknowledged_low_confidence": bool(payload.get("acknowledge_low_confidence")),
         "conflict_resolution_ids": sorted(
             (payload.get("conflict_resolutions") or {}).keys()
         ),
@@ -691,10 +741,14 @@ def decide_review_item(
             db.commit()
         return result
     if prefix == "legacy":
-        item = db.query(LegacyReviewItem).filter(
-            LegacyReviewItem.tenant_id == current_user.tenant_id,
-            LegacyReviewItem.id == object_id,
-        ).first()
+        item = (
+            db.query(LegacyReviewItem)
+            .filter(
+                LegacyReviewItem.tenant_id == current_user.tenant_id,
+                LegacyReviewItem.id == object_id,
+            )
+            .first()
+        )
         if item is None:
             raise HTTPException(status_code=404, detail="review item not found")
         same_decision = (
