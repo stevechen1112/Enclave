@@ -8,8 +8,10 @@ import os
 import re
 import time
 import asyncio
+import csv
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID
+from pathlib import Path
 
 from app.schemas.parse_artifact import ParseArtifact, ParseChunk
 from app.services.parse_router import ParseRoute, classify_document
@@ -20,6 +22,133 @@ from app.services.content_reference import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _native_evidence_chunks(
+    file_path: str,
+    file_type: str,
+    text: str,
+    metadata: Dict[str, Any],
+) -> List[ParseChunk]:
+    """Preserve stable source coordinates for native parser output."""
+
+    kind = (file_type or "").lower().lstrip(".")
+    path = Path(file_path)
+    try:
+        if kind == "pdf":
+            from pypdf import PdfReader
+
+            pages = [
+                str(page.extract_text() or "").strip()
+                for page in PdfReader(file_path).pages
+            ]
+            chunks = [
+                ParseChunk(text=value, page=index, chunk_index=index - 1)
+                for index, value in enumerate(pages, start=1)
+                if value
+            ]
+            if chunks:
+                return chunks
+            if text.strip() and len(pages) == 1:
+                return [ParseChunk(text=text.strip(), page=1, chunk_index=0)]
+        elif kind == "docx":
+            from docx import Document as WordDocument
+
+            sections: List[ParseChunk] = []
+            heading: str | None = None
+            lines: List[str] = []
+
+            def flush() -> None:
+                if not lines:
+                    return
+                sections.append(
+                    ParseChunk(
+                        text="\n".join(lines).strip(),
+                        hierarchy=[heading] if heading else [],
+                        section=heading or "document",
+                        chunk_index=len(sections),
+                    )
+                )
+                lines.clear()
+
+            for paragraph in WordDocument(file_path).paragraphs:
+                value = paragraph.text.strip()
+                if not value:
+                    continue
+                if str(paragraph.style.name or "").lower().startswith("heading"):
+                    flush()
+                    heading = value
+                    lines.append(value)
+                else:
+                    lines.append(value)
+            flush()
+            if sections:
+                return sections
+        elif kind in {"xlsx", "xls"}:
+            from openpyxl import load_workbook
+            from openpyxl.utils import get_column_letter
+
+            workbook = load_workbook(file_path, read_only=True, data_only=False)
+            chunks = []
+            try:
+                for sheet in workbook.worksheets:
+                    rows = [
+                        ["" if value is None else str(value) for value in row]
+                        for row in sheet.iter_rows(values_only=True)
+                    ]
+                    content = "\n".join(" | ".join(row) for row in rows).strip()
+                    if not content:
+                        continue
+                    cell_range = (
+                        f"{get_column_letter(sheet.min_column)}{sheet.min_row}:"
+                        f"{get_column_letter(sheet.max_column)}{sheet.max_row}"
+                    )
+                    chunks.append(
+                        ParseChunk(
+                            text=content,
+                            worksheet=sheet.title,
+                            cell_range=cell_range,
+                            chunk_index=len(chunks),
+                        )
+                    )
+            finally:
+                workbook.close()
+            if chunks:
+                return chunks
+        elif kind == "csv":
+            with path.open("r", encoding="utf-8-sig", newline="") as stream:
+                rows = list(csv.reader(stream))
+            chunks = [
+                ParseChunk(
+                    text=" | ".join(row),
+                    table_name=path.stem,
+                    row_number=index,
+                    chunk_index=index - 1,
+                )
+                for index, row in enumerate(rows, start=1)
+                if any(str(value).strip() for value in row)
+            ]
+            if chunks:
+                return chunks
+        elif kind in {"jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp", "image"}:
+            return (
+                [
+                    ParseChunk(
+                        text=text.strip(),
+                        bbox={"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0},
+                        chunk_index=0,
+                    )
+                ]
+                if text.strip()
+                else []
+            )
+    except Exception as exc:
+        logger.warning("native evidence coordinate extraction failed: %s", exc)
+    return (
+        [ParseChunk(text=text.strip(), section="document", chunk_index=0)]
+        if text.strip()
+        else []
+    )
 
 
 class ScanParseDeliveryError(RuntimeError):
@@ -567,7 +696,7 @@ def parse_document(
         source_hash=content_hash,
         document_id=str(document_id),
         document_revision=revision,
-        chunks=[ParseChunk(text=text_content[:8000], chunk_index=0)],
+        chunks=_native_evidence_chunks(file_path, file_type, text_content, metadata),
         confidence=float(metadata.get("quality_score", 0.8)),
         elapsed_ms=elapsed_ms,
         ocr_used=bool(metadata.get("ocr_used", False)),

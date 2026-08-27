@@ -41,6 +41,17 @@ _ASSET_KIND_BY_EXTENSION = {
     **{ext: "dataset" for ext in ("parquet", "ndjson")},
 }
 
+_SEMANTIC_ASSET_KINDS = {
+    "spreadsheet": "spreadsheet",
+    "image": "image",
+    "audio": "audio",
+    "video": "video",
+    "email": "email",
+    "web_page": "web_page",
+    "dataset": "dataset",
+    "document": "document",
+}
+
 
 class AssetProjectionConflict(RuntimeError):
     """Legacy state conflicts with an already immutable canonical revision."""
@@ -61,9 +72,27 @@ def normalize_sha256(value: Any) -> str | None:
 
 def infer_asset_kind(*, filename: str, file_type: str | None) -> str:
     extension = str(file_type or "").lower().lstrip(".")
+    if extension in _SEMANTIC_ASSET_KINDS:
+        return _SEMANTIC_ASSET_KINDS[extension]
     if not extension and "." in (filename or ""):
         extension = filename.rsplit(".", 1)[-1].lower()
     return _ASSET_KIND_BY_EXTENSION.get(extension, "document")
+
+
+def document_quality_state(metadata: dict[str, Any] | None) -> str:
+    """Map parser quality into the canonical human-review policy."""
+
+    values = dict(metadata or {})
+    if values.get("errors"):
+        return "review_required"
+    score = values.get("quality_score")
+    if isinstance(score, (int, float)) and float(score) < 0.5:
+        return "review_required"
+    if values.get("ocr_used"):
+        confidence = values.get("ocr_confidence")
+        if isinstance(confidence, (int, float)) and float(confidence) < 0.7:
+            return "review_required"
+    return "ready"
 
 
 def infer_media_type(*, filename: str, file_type: str | None) -> str:
@@ -264,6 +293,22 @@ def project_document_text_artifact(
         raise AssetProjectionConflict(
             "cannot create derived artifact before the source revision is immutable"
         )
+    parse_artifact = dict((metadata or {}).get("parse_artifact") or {})
+    confidence_value = parse_artifact.get("confidence")
+    confidence = (
+        float(confidence_value) if isinstance(confidence_value, (int, float)) else None
+    )
+    quality_state = document_quality_state(
+        {
+            **dict(metadata or {}),
+            "quality_score": parse_artifact.get("confidence"),
+            **{
+                key: value
+                for key, value in parse_artifact.items()
+                if key in {"quality_score", "ocr_used", "ocr_confidence", "errors"}
+            },
+        }
+    )
     digest = hashlib.sha256((content or "").encode("utf-8")).hexdigest()
     artifact = (
         db.query(DerivedArtifact)
@@ -285,7 +330,8 @@ def project_document_text_artifact(
             content_hash=digest,
             provider=provider,
             provider_version=provider_version,
-            quality_state="provisional",
+            quality_state=quality_state,
+            confidence=confidence,
             content=content,
             metadata_json={
                 **dict(metadata or {}),
@@ -295,6 +341,145 @@ def project_document_text_artifact(
         )
         db.add(artifact)
         db.flush()
+    else:
+        artifact.quality_state = quality_state
+        artifact.confidence = confidence
+
+    asset_kind = projection.asset.asset_kind
+    parse_chunks = parse_artifact.get("chunks") or [
+        {"text": content, "section": "document", "chunk_index": 0}
+    ]
+    for index, raw_chunk in enumerate(parse_chunks):
+        chunk = dict(raw_chunk or {})
+        chunk_content = str(chunk.get("text") or "").strip()
+        if not chunk_content:
+            continue
+        if asset_kind == "spreadsheet":
+            artifact_kind = "table"
+            locator_kind = "table"
+        elif asset_kind == "image":
+            artifact_kind = "ocr_region"
+            locator_kind = "image"
+        else:
+            artifact_kind = "layout_page"
+            locator_kind = "document"
+        chunk_digest = hashlib.sha256(chunk_content.encode("utf-8")).hexdigest()
+        child = (
+            db.query(DerivedArtifact)
+            .filter(
+                DerivedArtifact.tenant_id == document.tenant_id,
+                DerivedArtifact.asset_revision_id == projection.revision.id,
+                DerivedArtifact.artifact_kind == artifact_kind,
+                DerivedArtifact.provider == provider,
+                DerivedArtifact.provider_version == provider_version,
+                DerivedArtifact.content_hash == chunk_digest,
+            )
+            .first()
+        )
+        if child is None:
+            child = DerivedArtifact(
+                tenant_id=document.tenant_id,
+                asset_revision_id=projection.revision.id,
+                artifact_kind=artifact_kind,
+                content_hash=chunk_digest,
+                provider=provider,
+                provider_version=provider_version,
+                quality_state=quality_state,
+                confidence=confidence,
+                content=chunk_content,
+                metadata_json={
+                    "parse_chunk_index": int(chunk.get("chunk_index", index)),
+                    "legacy_document_id": str(document.id),
+                    "legacy_document_revision": int(document.version or 1),
+                },
+            )
+            db.add(child)
+            db.flush()
+        else:
+            child.quality_state = quality_state
+            child.confidence = confidence
+
+        hierarchy = [
+            str(item).strip()
+            for item in chunk.get("hierarchy") or []
+            if str(item).strip()
+        ]
+        bbox = chunk.get("bbox")
+        if isinstance(bbox, dict):
+            bbox = [
+                bbox.get("x", 0),
+                bbox.get("y", 0),
+                bbox.get("w", 0),
+                bbox.get("h", 0),
+            ]
+        locator_values: dict[str, Any] = {
+            "page": chunk.get("page"),
+            "section": chunk.get("section") or (hierarchy[-1] if hierarchy else None),
+            "bbox": bbox,
+            "coordinate_space": "normalized" if bbox is not None else None,
+            "worksheet": chunk.get("worksheet"),
+            "table_name": chunk.get("table_name"),
+            "row_number": chunk.get("row_number"),
+            "column_name": chunk.get("column_name"),
+            "cell_range": chunk.get("cell_range"),
+        }
+        if locator_kind == "document" and not (
+            locator_values["page"] or locator_values["section"]
+        ):
+            locator_values["section"] = "document"
+        if locator_kind == "table" and not (
+            locator_values["worksheet"] or locator_values["table_name"]
+        ):
+            locator_values["table_name"] = document.filename.rsplit(".", 1)[0]
+        if locator_kind == "table" and not any(
+            locator_values[key] for key in ("row_number", "column_name", "cell_range")
+        ):
+            locator_values["row_number"] = 1
+        if locator_kind == "image" and locator_values["bbox"] is None:
+            locator_values["bbox"] = [0.0, 0.0, 1.0, 1.0]
+            locator_values["coordinate_space"] = "normalized"
+        existing_spans = (
+            db.query(EvidenceSpan)
+            .filter(
+                EvidenceSpan.tenant_id == document.tenant_id,
+                EvidenceSpan.artifact_id == child.id,
+                EvidenceSpan.asset_revision_id == projection.revision.id,
+            )
+            .all()
+        )
+        comparable_keys = (
+            "page",
+            "section",
+            "bbox",
+            "coordinate_space",
+            "worksheet",
+            "table_name",
+            "row_number",
+            "column_name",
+            "cell_range",
+        )
+        exists = any(
+            span.locator_kind == locator_kind
+            and all(
+                getattr(span, key) == locator_values.get(key) for key in comparable_keys
+            )
+            for span in existing_spans
+        )
+        if not exists:
+            db.add(
+                EvidenceSpan(
+                    tenant_id=document.tenant_id,
+                    artifact_id=child.id,
+                    asset_revision_id=projection.revision.id,
+                    locator_kind=locator_kind,
+                    **{
+                        key: value
+                        for key, value in locator_values.items()
+                        if value is not None
+                    },
+                )
+            )
+    db.flush()
     return artifact
 
 

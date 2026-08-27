@@ -235,7 +235,14 @@ def extract_keyframes(
     )
     keyframes: list[VideoKeyframe] = []
     for index in range(count):
-        timestamp_seconds = min(index * interval, max(0.0, duration_seconds - 0.001))
+        # Seeking to a container's reported duration can land after its last
+        # decodable frame (common with audio-shortened MP4 fixtures and VFR
+        # phone video). Keep at least two frame periods inside the stream.
+        frame_margin = max(0.250, 2.0 / max(probe.frame_rate, 1.0))
+        timestamp_seconds = min(
+            index * interval,
+            max(0.0, duration_seconds - frame_margin),
+        )
         output_path = str(Path(output_dir) / f"frame-{index:04d}.jpg")
         runner(
             [

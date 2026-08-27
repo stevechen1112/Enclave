@@ -1,4 +1,5 @@
 """ParseArtifact schema — RAGFlow parse output contract."""
+
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -31,6 +32,12 @@ class ParseChunk(BaseModel):
     page: Optional[int] = None
     bbox: Optional[BBox] = None
     chunk_index: int = 0
+    section: Optional[str] = None
+    worksheet: Optional[str] = None
+    table_name: Optional[str] = None
+    row_number: Optional[int] = None
+    column_name: Optional[str] = None
+    cell_range: Optional[str] = None
 
 
 class ParseArtifact(BaseModel):

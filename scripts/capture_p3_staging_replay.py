@@ -11,6 +11,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -30,22 +31,33 @@ from reportlab.pdfgen import canvas
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from app.db.session import SessionLocal
-from app.eval.multimodal_quality import canonical_hash, load_json
-from app.models.asset import AssetRevision, DerivedArtifact, EvidenceSpan, SourceAsset
-from app.services.rls import apply_rls_context
+from app.db.session import SessionLocal  # noqa: E402
+from app.eval.multimodal_quality import canonical_hash, load_json  # noqa: E402
+from app.models.asset import (  # noqa: E402
+    AssetRevision,
+    DerivedArtifact,
+    EvidenceSpan,
+    SourceAsset,
+)
+from app.services.rls import apply_rls_context  # noqa: E402
 
 BASE = os.getenv("P3_REPLAY_API_BASE", "http://web:8000/api/v1")
 TERMINAL = {"ready", "review_required", "completed_no_knowledge", "failed"}
 
 
-def require(response: httpx.Response, expected: tuple[int, ...], label: str) -> httpx.Response:
+def require(
+    response: httpx.Response, expected: tuple[int, ...], label: str
+) -> httpx.Response:
     if response.status_code not in expected:
-        raise RuntimeError(f"{label}: HTTP {response.status_code}: {response.text[:500]}")
+        raise RuntimeError(
+            f"{label}: HTTP {response.status_code}: {response.text[:500]}"
+        )
     return response
 
 
-def poll_asset(client: httpx.Client, headers: dict[str, str], asset_id: str, timeout: int) -> dict[str, Any]:
+def poll_asset(
+    client: httpx.Client, headers: dict[str, str], asset_id: str, timeout: int
+) -> dict[str, Any]:
     deadline = time.time() + timeout
     latest: dict[str, Any] = {}
     while time.time() < deadline:
@@ -80,7 +92,9 @@ def make_document_fixtures(work: Path) -> dict[str, Path]:
     fixtures["doc-pdf-native-001"] = native
 
     scanned_image = Image.new("RGB", (1200, 700), "white")
-    ImageDraw.Draw(scanned_image).text((120, 160), "P3SCAN pressure zero form", fill="black")
+    ImageDraw.Draw(scanned_image).text(
+        (120, 160), "P3SCAN pressure zero form", fill="black"
+    )
     scanned = work / "scanned-form.pdf"
     scanned_image.save(scanned, "PDF", resolution=150)
     fixtures["doc-pdf-scan-001"] = scanned
@@ -106,8 +120,24 @@ def make_document_fixtures(work: Path) -> dict[str, Path]:
     csv_path.write_text("part,quantity\nP3CSV-PART,42\n", encoding="utf-8")
     fixtures["sheet-csv-001"] = csv_path
 
+    try:
+        from PIL import ImageFont
+
+        fixture_font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 48
+        )
+    except OSError:
+        try:
+            fixture_font = ImageFont.load_default(size=48)
+        except TypeError:
+            fixture_font = ImageFont.load_default()
     printed = Image.new("RGB", (1200, 500), "white")
-    ImageDraw.Draw(printed).text((120, 80), "P3PRINT EQ-100 PRESSURE 0 BAR", fill="black")
+    ImageDraw.Draw(printed).text(
+        (120, 80),
+        "P3PRINT EQ-100 PRESSURE 0 BAR",
+        fill="black",
+        font=fixture_font,
+    )
     printed_path = work / "printed-label.png"
     printed.save(printed_path)
     fixtures["image-print-001"] = printed_path
@@ -115,7 +145,12 @@ def make_document_fixtures(work: Path) -> dict[str, Path]:
     handwritten = Image.new("RGB", (1200, 600), "white")
     draw = ImageDraw.Draw(handwritten)
     draw.line((100, 100, 900, 360), fill="black", width=5)
-    draw.text((160, 150), "P3HAND inspect valve", fill="black")
+    draw.text(
+        (160, 150),
+        "P3HAND inspect valve",
+        fill="black",
+        font=fixture_font,
+    )
     handwritten_path = work / "handwritten-note.png"
     handwritten.save(handwritten_path)
     fixtures["image-hand-001"] = handwritten_path
@@ -126,37 +161,95 @@ def make_audio_fixtures(work: Path) -> dict[str, Path]:
     fixtures: dict[str, Path] = {}
     quiet = work / "quiet-single.wav"
     run_ffmpeg(
-        "-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono:d=1",
-        "-f", "lavfi", "-i", "flite=text=P3QUIET confirm pressure zero",
-        "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1[out]", "-map", "[out]",
-        "-ar", "16000", "-ac", "1", "-y", str(quiet),
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=16000:cl=mono:d=1",
+        "-f",
+        "lavfi",
+        "-i",
+        "flite=text=P3QUIET confirm pressure zero",
+        "-filter_complex",
+        "[0:a][1:a]concat=n=2:v=0:a=1[out]",
+        "-map",
+        "[out]",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-y",
+        str(quiet),
     )
     fixtures["audio-quiet-001"] = quiet
 
     noisy = work / "noisy-floor.wav"
     run_ffmpeg(
-        "-f", "lavfi", "-i", "flite=text=P3NOISY inspect machine valve",
-        "-f", "lavfi", "-i", "anoisesrc=color=white:amplitude=0.03:d=6",
-        "-filter_complex", "[0:a][1:a]amix=inputs=2:duration=longest[out]", "-map", "[out]",
-        "-ar", "16000", "-ac", "1", "-y", str(noisy),
+        "-f",
+        "lavfi",
+        "-i",
+        "flite=text=P3NOISY inspect machine valve",
+        "-f",
+        "lavfi",
+        "-i",
+        "anoisesrc=color=white:amplitude=0.03:d=6",
+        "-filter_complex",
+        "[0:a][1:a]amix=inputs=2:duration=longest[out]",
+        "-map",
+        "[out]",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-y",
+        str(noisy),
     )
     fixtures["audio-noisy-001"] = noisy
 
     multi = work / "two-speakers.wav"
     run_ffmpeg(
-        "-f", "lavfi", "-i", "flite=text=P3MULTI operator confirms pressure zero:voice=kal",
-        "-f", "lavfi", "-i", "flite=text=supervisor approves inspection:voice=slt",
-        "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1[out]", "-map", "[out]",
-        "-ar", "16000", "-ac", "1", "-y", str(multi),
+        "-f",
+        "lavfi",
+        "-i",
+        "flite=text=P3MULTI operator confirms pressure zero:voice=kal",
+        "-f",
+        "lavfi",
+        "-i",
+        "flite=text=supervisor approves inspection:voice=slt",
+        "-filter_complex",
+        "[0:a][1:a]concat=n=2:v=0:a=1[out]",
+        "-map",
+        "[out]",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-y",
+        str(multi),
     )
     fixtures["audio-multi-001"] = multi
 
     long_audio = work / "long-shift-handover.mp3"
     run_ffmpeg(
-        "-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono:d=105",
-        "-f", "lavfi", "-i", "flite=text=P3LONG shift handover pressure zero",
-        "-filter_complex", "[0:a][1:a]concat=n=2:v=0:a=1[out]", "-map", "[out]",
-        "-ar", "16000", "-ac", "1", "-b:a", "32k", "-y", str(long_audio),
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=16000:cl=mono:d=105",
+        "-f",
+        "lavfi",
+        "-i",
+        "flite=text=P3LONG shift handover pressure zero",
+        "-filter_complex",
+        "[0:a][1:a]concat=n=2:v=0:a=1[out]",
+        "-map",
+        "[out]",
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-b:a",
+        "32k",
+        "-y",
+        str(long_audio),
     )
     fixtures["audio-long-001"] = long_audio
     return fixtures
@@ -174,8 +267,13 @@ def make_video(
     if speech:
         command += ["-f", "lavfi", "-i", f"flite=text={speech}"]
         command += [
-            "-filter_complex", f"[1:a]adelay={delay_ms}|{delay_ms}[a]",
-            "-map", "0:v", "-map", "[a]", "-shortest",
+            "-filter_complex",
+            f"[1:a]adelay={delay_ms}|{delay_ms}[a]",
+            "-map",
+            "0:v",
+            "-map",
+            "[a]",
+            "-shortest",
         ]
     else:
         command += ["-map", "0:v"]
@@ -189,7 +287,9 @@ def make_video(
 def make_video_fixtures(work: Path) -> dict[str, Path]:
     fixtures: dict[str, Path] = {}
     caption = work / "fixed-captioned.mp4"
-    make_video(caption, duration=12, speech="P3CAPTION confirm pressure zero", delay_ms=6400)
+    make_video(
+        caption, duration=12, speech="P3CAPTION confirm pressure zero", delay_ms=6400
+    )
     fixtures["video-caption-001"] = caption
 
     silent = work / "fixed-silent.mp4"
@@ -230,28 +330,42 @@ def upload_asset(
     path: Path,
 ) -> str:
     media_type = {
-        ".pdf": "application/pdf", ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".csv": "text/csv",
-        ".png": "image/png", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".mp4": "video/mp4",
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".csv": "text/csv",
+        ".png": "image/png",
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+        ".mp4": "video/mp4",
         ".txt": "text/plain",
     }[path.suffix.lower()]
     with path.open("rb") as stream:
         if case_id == "video-machine-001":
             response = client.post(
-                "/media/videos", headers=headers,
+                "/media/videos",
+                headers=headers,
                 files={"file": (path.name, stream, media_type)},
-                data={"title": case_id, "equipment_ids": "EQ-100", "applicable_roles": "operator"},
+                data={
+                    "title": case_id,
+                    "equipment_ids": "EQ-100",
+                    "applicable_roles": "operator",
+                },
             )
         else:
             response = client.post(
-                "/knowledge/assets", headers=headers,
+                "/knowledge/assets",
+                headers=headers,
                 files={"file": (path.name, stream, media_type)},
                 data={"title": case_id},
             )
     return str(require(response, (202,), f"upload {case_id}").json()["id"])
 
 
-def terminal_state(job_status: str) -> str:
+def terminal_state(job: dict[str, Any]) -> str:
+    job_status = str(job.get("status") or "failed")
+    if job_status == "ready" and job.get("phase") == "completed_no_knowledge":
+        return "completed_no_knowledge"
     return {
         "ready": "completed",
         "review_required": "review_required",
@@ -266,35 +380,86 @@ def evidence_for_asset(
     tenant_id: UUID,
     asset_id: UUID,
     revision_alias: str,
+    evidence_query: str | None,
 ) -> tuple[list[dict[str, Any]], bool]:
     apply_rls_context(db, tenant_id)
     asset = db.query(SourceAsset).filter(SourceAsset.id == asset_id).one()
-    revision = db.query(AssetRevision).filter(
-        AssetRevision.asset_id == asset.id,
-        AssetRevision.revision == asset.current_revision,
-    ).one()
-    artifacts = db.query(DerivedArtifact).filter(
-        DerivedArtifact.asset_revision_id == revision.id,
-    ).all()
-    artifact_ids = [row.id for row in artifacts]
-    spans = db.query(EvidenceSpan).filter(EvidenceSpan.artifact_id.in_(artifact_ids)).all() if artifact_ids else []
+    revision = (
+        db.query(AssetRevision)
+        .filter(
+            AssetRevision.asset_id == asset.id,
+            AssetRevision.revision == asset.current_revision,
+        )
+        .one()
+    )
+    artifacts = (
+        db.query(DerivedArtifact)
+        .filter(
+            DerivedArtifact.asset_revision_id == revision.id,
+        )
+        .all()
+    )
+    knowledge_kinds = {
+        "layout_page",
+        "table",
+        "ocr_region",
+        "transcript_segment",
+        "procedure_candidate",
+    }
+
+    def tokens(value: str) -> set[str]:
+        return set(re.findall(r"[a-z0-9\u4e00-\u9fff]+", value.lower()))
+
+    candidates = [row for row in artifacts if row.artifact_kind in knowledge_kinds]
+    if evidence_query:
+        query_tokens = tokens(evidence_query)
+        ranked = sorted(
+            candidates,
+            key=lambda row: (
+                len(query_tokens.intersection(tokens(str(row.content or "")))),
+                -len(tokens(str(row.content or ""))),
+            ),
+            reverse=True,
+        )
+        selected = ranked[:1] if ranked else []
+    else:
+        selected = []
+    artifact_ids = [row.id for row in selected]
+    spans = (
+        db.query(EvidenceSpan).filter(EvidenceSpan.artifact_id.in_(artifact_ids)).all()
+        if artifact_ids
+        else []
+    )
     locators: list[dict[str, Any]] = []
     for span in spans:
         locator: dict[str, Any] = {
             "id": str(span.id),
             "kind": span.locator_kind,
             "revision_id": revision_alias,
-            "tenant_id": "tenant-synthetic-a",
+            "tenant_id": (
+                "tenant-synthetic-a"
+                if span.tenant_id == tenant_id
+                else f"unexpected:{span.tenant_id}"
+            ),
         }
         for source, target in (
-            ("page", "page"), ("section", "section"), ("worksheet", "worksheet"),
-            ("table_name", "table_name"), ("row_number", "row_number"),
-            ("column_name", "column_name"), ("cell_range", "cell_range"),
-            ("start_ms", "start_ms"), ("end_ms", "end_ms"),
+            ("page", "page"),
+            ("section", "section"),
+            ("worksheet", "worksheet"),
+            ("table_name", "table_name"),
+            ("row_number", "row_number"),
+            ("column_name", "column_name"),
+            ("cell_range", "cell_range"),
+            ("start_ms", "start_ms"),
+            ("end_ms", "end_ms"),
         ):
             value = getattr(span, source)
             if value is not None:
-                locator[target] = int(value) if source in {"start_ms", "end_ms", "row_number", "page"} else value
+                locator[target] = (
+                    int(value)
+                    if source in {"start_ms", "end_ms", "row_number", "page"}
+                    else value
+                )
         if span.bbox is not None:
             locator["region"] = span.bbox
         locators.append(locator)
@@ -315,7 +480,11 @@ def main() -> int:
     source_commit = os.getenv("SOURCE_COMMIT", "")
     if len(source_commit) != 40:
         raise RuntimeError("SOURCE_COMMIT must be the deployed 40-character commit")
-    raw_capture: dict[str, Any] = {"run_id": run_id, "source_commit": source_commit, "cases": []}
+    raw_capture: dict[str, Any] = {
+        "run_id": run_id,
+        "source_commit": source_commit,
+        "cases": [],
+    }
     with tempfile.TemporaryDirectory(prefix="p3-replay-") as directory:
         work = Path(directory)
         fixtures = {
@@ -327,7 +496,10 @@ def main() -> int:
             login = require(
                 client.post(
                     "/auth/login/access-token",
-                    data={"username": os.environ["FIRST_SUPERUSER_EMAIL"], "password": os.environ["FIRST_SUPERUSER_PASSWORD"]},
+                    data={
+                        "username": os.environ["FIRST_SUPERUSER_EMAIL"],
+                        "password": os.environ["FIRST_SUPERUSER_PASSWORD"],
+                    },
                 ),
                 (200,),
                 "owner login",
@@ -337,7 +509,10 @@ def main() -> int:
             tenant_id = decode_tenant(token)
 
             sop_path = work / "P3_Formal_SOP.txt"
-            sop_path.write_text("P3 formal SOP. 禁止 force reset. First isolate power.", encoding="utf-8")
+            sop_path.write_text(
+                "P3 formal SOP. 禁止 force reset. First isolate power.",
+                encoding="utf-8",
+            )
             sop_asset = upload_asset(client, headers, "p3-formal-sop", sop_path)
             poll_asset(client, headers, sop_asset, 240)
 
@@ -354,12 +529,14 @@ def main() -> int:
                 for case in manifest["cases"]:
                     case_id = case["id"]
                     capture = captures[case_id]
-                    job_status = str((capture["status"].get("job") or {}).get("status") or "failed")
+                    job = dict(capture["status"].get("job") or {})
+                    job_status = str(job.get("status") or "failed")
                     locators, conflict = evidence_for_asset(
                         db,
                         tenant_id=tenant_id,
                         asset_id=UUID(capture["asset_id"]),
                         revision_alias=case["expected"]["revision_id"],
+                        evidence_query=case["expected"].get("evidence_query"),
                     )
                     review_created = job_status == "review_required"
                     raw_capture["cases"].append(
@@ -374,13 +551,17 @@ def main() -> int:
                     results.append(
                         {
                             "case_id": case_id,
-                            "terminal_state": terminal_state(job_status),
+                            "terminal_state": terminal_state(job),
                             "tenant_id": "tenant-synthetic-a",
                             "evidence_locators": locators,
                             "review_created": review_created,
                             "sop_conflict_detected": conflict,
                             "answer": {
-                                "status": "abstained" if case["expected"].get("high_risk") else "not_applicable",
+                                "status": (
+                                    "abstained"
+                                    if case["expected"].get("high_risk")
+                                    else "not_applicable"
+                                ),
                                 "grounded": True,
                                 "authoritative": False,
                                 "citations": [],
@@ -406,7 +587,13 @@ def main() -> int:
         },
         "results": results,
     }
-    print(json.dumps({"raw_capture": raw_capture, "result_bundle": bundle}, ensure_ascii=False, indent=2))
+    print(
+        json.dumps(
+            {"raw_capture": raw_capture, "result_bundle": bundle},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
     return 0
 
 

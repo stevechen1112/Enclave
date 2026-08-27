@@ -57,6 +57,7 @@ from app.services.video_processing import (
     VideoProbe,
     VideoProcessingResult,
     VideoTranscriptSegment,
+    extract_keyframes,
     parse_probe_payload,
     process_video_file,
     project_video_result,
@@ -255,6 +256,28 @@ def test_processing_demuxes_timestamps_keyframes_and_ocr(tmp_path):
     assert result.keyframes[0].ocr_text == "壓力 0 bar"
 
 
+def test_keyframe_extraction_stays_inside_last_decodable_frame(tmp_path, monkeypatch):
+    monkeypatch.setattr("app.config.settings.VIDEO_KEYFRAME_MIN_INTERVAL_SECONDS", 15)
+    monkeypatch.setattr("app.config.settings.VIDEO_MAX_KEYFRAMES", 10)
+    seeks = []
+
+    def runner(command, *, timeout):
+        seeks.append(float(command[command.index("-ss") + 1]))
+        Path(command[-1]).write_bytes(b"jpeg")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    frames = extract_keyframes(
+        "source.mp4",
+        str(tmp_path),
+        VideoProbe(15_045, 640, 360, "h264", "aac", 24.0, "mp4"),
+        runner=runner,
+    )
+
+    assert len(frames) == 2
+    assert seeks == [0.0, 14.795]
+    assert seeks[-1] < 15.045
+
+
 def test_scene_boundaries_become_bounded_timeline_observations():
     rows = parse_scene_showinfo(
         "frame:1 pts_time:2.500 scene:0.41\nframe:2 pts_time:7.000 scene:0.62",
@@ -285,7 +308,10 @@ def test_evidence_rules_do_not_invent_speakers_and_label_candidate_methods():
     )
 
     assert output.capability_states["speaker_diarization"] == "available_upstream"
-    assert any(row.kind == "speaker_turn" and row.speaker == "師傅" for row in output.observations)
+    assert any(
+        row.kind == "speaker_turn" and row.speaker == "師傅"
+        for row in output.observations
+    )
     assert any(row.kind == "action_event" for row in output.observations)
     visual_state = next(
         row
@@ -383,7 +409,9 @@ def test_multimodal_projection_preserves_provider_and_exact_evidence(video_db):
     )
     assert action is not None
     assert action.provider == "core.evidence_rules"
-    span = video_db.query(EvidenceSpan).filter(EvidenceSpan.artifact_id == action.id).one()
+    span = (
+        video_db.query(EvidenceSpan).filter(EvidenceSpan.artifact_id == action.id).one()
+    )
     assert span.locator_kind == "video"
     assert span.start_ms == 1_000
     timeline = (
@@ -406,8 +434,12 @@ def test_structured_procedure_classifies_only_evidence_backed_fields(video_db):
     result = _result()
     result.transcript_segments.extend(
         [
-            VideoTranscriptSegment(7_000, 8_000, "如果壓力未歸零則必須停機", "師傅", 0.87),
-            VideoTranscriptSegment(8_000, 9_000, "注意夾傷，禁止短接安全迴路", "師傅", 0.94),
+            VideoTranscriptSegment(
+                7_000, 8_000, "如果壓力未歸零則必須停機", "師傅", 0.87
+            ),
+            VideoTranscriptSegment(
+                8_000, 9_000, "注意夾傷，禁止短接安全迴路", "師傅", 0.94
+            ),
             VideoTranscriptSegment(9_000, 10_000, "異常時由主管確認", "師傅", 0.89),
         ]
     )
@@ -489,9 +521,7 @@ def test_review_blocks_unresolved_sop_conflict_then_publishes_sop_winner(video_d
             }
         ],
     )
-    artifact = video_db.get(
-        DerivedArtifact, UUID(projection["procedure_artifact_id"])
-    )
+    artifact = video_db.get(DerivedArtifact, UUID(projection["procedure_artifact_id"]))
     report_artifact = video_db.get(
         DerivedArtifact, UUID(projection["conflict_report_artifact_id"])
     )
@@ -519,7 +549,7 @@ def test_review_blocks_unresolved_sop_conflict_then_publishes_sop_winner(video_d
             ArtifactReviewRequest(decision="approved"),
             video_db,
             reviewer,
-    )
+        )
     assert "unresolved_sop_conflicts" in str(blocked.value)
 
     response = review_video_procedure(
@@ -544,9 +574,11 @@ def test_review_blocks_unresolved_sop_conflict_then_publishes_sop_winner(video_d
     authz = AuthorizationContext(
         tenant_id=tenant.id, subject_id=reviewer.id, role_ids=["admin"]
     )
-    rows = KnowledgeProviderRegistry([ApprovedVideoProcedureProvider()]).contribute(
-        authz=authz, query="復歸", db=video_db, top_k=5
-    ).to_retrieval_dicts()
+    rows = (
+        KnowledgeProviderRegistry([ApprovedVideoProcedureProvider()])
+        .contribute(authz=authz, query="復歸", db=video_db, top_k=5)
+        .to_retrieval_dicts()
+    )
     assert "禁止解除安全門鎖" in rows[0]["content"]
     assert "再解除安全門鎖" not in rows[0]["content"]
 
@@ -564,12 +596,8 @@ def test_high_risk_video_requires_explicit_reviewer_acknowledgement(video_db):
         )
     )
     project_video_result(video_db, revision, result, create_procedure_candidate=False)
-    projection = project_governed_video_procedure(
-        video_db, revision, sop_documents=[]
-    )
-    artifact = video_db.get(
-        DerivedArtifact, UUID(projection["procedure_artifact_id"])
-    )
+    projection = project_governed_video_procedure(video_db, revision, sop_documents=[])
+    artifact = video_db.get(DerivedArtifact, UUID(projection["procedure_artifact_id"]))
     video_db.add(
         IngestionJob(
             tenant_id=tenant.id,
@@ -597,9 +625,7 @@ def test_high_risk_video_requires_explicit_reviewer_acknowledgement(video_db):
 
     response = review_video_procedure(
         artifact.id,
-        ArtifactReviewRequest(
-            decision="approved", acknowledge_high_risk=True
-        ),
+        ArtifactReviewRequest(decision="approved", acknowledge_high_risk=True),
         video_db,
         reviewer,
     )
@@ -614,9 +640,7 @@ def test_high_risk_video_requires_explicit_reviewer_acknowledgement(video_db):
 
 def test_video_without_evidence_finishes_without_review_candidate(video_db):
     _, _, _, revision = _video_source(video_db)
-    projection = project_governed_video_procedure(
-        video_db, revision, sop_documents=[]
-    )
+    projection = project_governed_video_procedure(video_db, revision, sop_documents=[])
     assert projection == {
         "procedure_artifact_id": None,
         "conflict_count": 0,
@@ -662,9 +686,7 @@ def test_projection_creates_temporal_lineage_and_review_candidate(video_db):
 def test_human_approval_publishes_candidate_to_core_retrieval(video_db):
     tenant, reviewer, _, revision = _video_source(video_db)
     summary = project_video_result(video_db, revision, _result())
-    artifact = video_db.get(
-        DerivedArtifact, UUID(summary["procedure_artifact_id"])
-    )
+    artifact = video_db.get(DerivedArtifact, UUID(summary["procedure_artifact_id"]))
     job = IngestionJob(
         tenant_id=tenant.id,
         asset_revision_id=revision.id,
@@ -721,9 +743,7 @@ def test_human_approval_publishes_candidate_to_core_retrieval(video_db):
 def test_video_provider_revalidates_asset_acl(video_db):
     tenant, reviewer, asset, revision = _video_source(video_db)
     summary = project_video_result(video_db, revision, _result())
-    artifact = video_db.get(
-        DerivedArtifact, UUID(summary["procedure_artifact_id"])
-    )
+    artifact = video_db.get(DerivedArtifact, UUID(summary["procedure_artifact_id"]))
     video_db.add(
         IngestionJob(
             tenant_id=tenant.id,
@@ -773,9 +793,7 @@ def test_video_provider_revalidates_asset_acl(video_db):
 def test_review_decision_composite_fk_rejects_cross_tenant_artifact(video_db):
     tenant_a, _, _, revision = _video_source(video_db)
     summary = project_video_result(video_db, revision, _result())
-    artifact = video_db.get(
-        DerivedArtifact, UUID(summary["procedure_artifact_id"])
-    )
+    artifact = video_db.get(DerivedArtifact, UUID(summary["procedure_artifact_id"]))
     tenant_b, reviewer_b, _, _ = _video_source(video_db)
     assert tenant_a.id != tenant_b.id
     video_db.add(
@@ -854,7 +872,9 @@ def test_expired_media_token_is_rejected():
         settings.SECRET_KEY,
         algorithm=settings.ALGORITHM,
     )
-    assert decode_media_token(token, resource_kind="video", resource_id=asset_id) is None
+    assert (
+        decode_media_token(token, resource_kind="video", resource_id=asset_id) is None
+    )
 
 
 def test_phase_f_migration_renders_upgrade_and_downgrade():

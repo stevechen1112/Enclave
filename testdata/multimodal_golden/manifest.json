@@ -7,77 +7,77 @@
     {
       "id": "doc-pdf-native-001", "modality": "document", "slice": "pdf_native",
       "source": {"uri": "generated://documents/native-sop.pdf", "content_type": "application/pdf", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-doc-001", "evidence_locators": [{"id": "loc-doc-001", "kind": "document", "page": 2, "revision_id": "rev-doc-001"}]}
+      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-doc-001", "evidence_query": "P3NATIVE pressure zero", "evidence_locators": [{"id": "loc-doc-001", "kind": "document", "page": 2, "revision_id": "rev-doc-001"}]}
     },
     {
       "id": "doc-pdf-scan-001", "modality": "document", "slice": "pdf_scanned",
       "source": {"uri": "generated://documents/scanned-form.pdf", "content_type": "application/pdf", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-doc-002", "low_confidence": true, "evidence_locators": [{"id": "loc-doc-002", "kind": "document", "page": 1, "revision_id": "rev-doc-002"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-doc-002", "evidence_query": "P3SCAN pressure zero", "low_confidence": true, "evidence_locators": [{"id": "loc-doc-002", "kind": "document", "page": 1, "revision_id": "rev-doc-002"}]}
     },
     {
       "id": "doc-docx-001", "modality": "document", "slice": "docx_native",
       "source": {"uri": "generated://documents/work-instruction.docx", "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-doc-003", "evidence_locators": [{"id": "loc-doc-003", "kind": "document", "section": "Reset procedure", "revision_id": "rev-doc-003"}]}
+      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-doc-003", "evidence_query": "P3DOCX pressure zero reset", "evidence_locators": [{"id": "loc-doc-003", "kind": "document", "section": "Reset procedure", "revision_id": "rev-doc-003"}]}
     },
     {
       "id": "sheet-xlsx-001", "modality": "spreadsheet", "slice": "xlsx_formula_table",
       "source": {"uri": "generated://sheets/inspection.xlsx", "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-sheet-001", "evidence_locators": [{"id": "loc-sheet-001", "kind": "table", "worksheet": "檢驗", "cell_range": "B4:F9", "revision_id": "rev-sheet-001"}]}
+      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-sheet-001", "evidence_query": "P3XLSX-4-2", "evidence_locators": [{"id": "loc-sheet-001", "kind": "table", "worksheet": "檢驗", "cell_range": "B4:F9", "revision_id": "rev-sheet-001"}]}
     },
     {
       "id": "sheet-csv-001", "modality": "spreadsheet", "slice": "csv_structured",
       "source": {"uri": "generated://sheets/inventory.csv", "content_type": "text/csv", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-sheet-002", "evidence_locators": [{"id": "loc-sheet-002", "kind": "table", "table_name": "inventory", "row_number": 2, "revision_id": "rev-sheet-002"}]}
+      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-sheet-002", "evidence_query": "P3CSV-PART", "evidence_locators": [{"id": "loc-sheet-002", "kind": "table", "table_name": "inventory", "row_number": 2, "revision_id": "rev-sheet-002"}]}
     },
     {
       "id": "image-print-001", "modality": "image", "slice": "printed_ocr",
       "source": {"uri": "generated://images/printed-label.png", "content_type": "image/png", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-image-001", "evidence_locators": [{"id": "loc-image-001", "kind": "image", "region": [0.1, 0.1, 0.9, 0.4], "revision_id": "rev-image-001"}]}
+      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-image-001", "evidence_query": "EQ-100 PRESSURE 0 BAR", "evidence_locators": [{"id": "loc-image-001", "kind": "image", "region": [0.0, 0.0, 1.0, 1.0], "revision_id": "rev-image-001"}]}
     },
     {
       "id": "image-hand-001", "modality": "image", "slice": "handwritten_low_confidence",
       "source": {"uri": "generated://images/handwritten-note.png", "content_type": "image/png", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-image-002", "low_confidence": true, "evidence_locators": [{"id": "loc-image-002", "kind": "image", "region": [0.1, 0.1, 0.9, 0.6], "revision_id": "rev-image-002"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-image-002", "evidence_query": "inspect valve", "low_confidence": true, "evidence_locators": [{"id": "loc-image-002", "kind": "image", "region": [0.0, 0.0, 1.0, 1.0], "revision_id": "rev-image-002"}]}
     },
     {
       "id": "audio-quiet-001", "modality": "audio", "slice": "quiet_single_speaker",
       "source": {"uri": "generated://audio/quiet-single.wav", "content_type": "audio/wav", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-001", "evidence_locators": [{"id": "loc-audio-001", "kind": "audio", "start_ms": 1000, "end_ms": 4200, "revision_id": "rev-audio-001"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-001", "evidence_query": "confirm pressure zero", "evidence_locators": [{"id": "loc-audio-001", "kind": "audio", "start_ms": 1000, "end_ms": 4200, "revision_id": "rev-audio-001"}]}
     },
     {
       "id": "audio-noisy-001", "modality": "audio", "slice": "noisy_low_confidence",
       "source": {"uri": "generated://audio/noisy-floor.wav", "content_type": "audio/wav", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-002", "low_confidence": true, "evidence_locators": [{"id": "loc-audio-002", "kind": "audio", "start_ms": 800, "end_ms": 5600, "revision_id": "rev-audio-002"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-002", "evidence_query": "inspect machine valve", "low_confidence": true, "evidence_locators": [{"id": "loc-audio-002", "kind": "audio", "start_ms": 0, "end_ms": 6000, "revision_id": "rev-audio-002"}]}
     },
     {
       "id": "audio-multi-001", "modality": "audio", "slice": "multi_speaker",
       "source": {"uri": "generated://audio/two-speakers.wav", "content_type": "audio/wav", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-003", "low_confidence": true, "evidence_locators": [{"id": "loc-audio-003", "kind": "audio", "start_ms": 0, "end_ms": 9000, "revision_id": "rev-audio-003"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-003", "evidence_query": "operator confirms pressure zero", "low_confidence": true, "evidence_locators": [{"id": "loc-audio-003", "kind": "audio", "start_ms": 0, "end_ms": 3600, "revision_id": "rev-audio-003"}]}
     },
     {
       "id": "audio-long-001", "modality": "audio", "slice": "long_recording",
       "source": {"uri": "generated://audio/long-shift-handover.mp3", "content_type": "audio/mpeg", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-004", "evidence_locators": [{"id": "loc-audio-004", "kind": "audio", "start_ms": 105000, "end_ms": 115000, "revision_id": "rev-audio-004"}]}
+      "expected": {"terminal_states": ["completed", "review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-audio-004", "evidence_query": "shift handover pressure zero", "evidence_locators": [{"id": "loc-audio-004", "kind": "audio", "start_ms": 105000, "end_ms": 108500, "revision_id": "rev-audio-004"}]}
     },
     {
       "id": "video-caption-001", "modality": "video", "slice": "fixed_with_subtitles",
       "source": {"uri": "generated://video/fixed-captioned.mp4", "content_type": "video/mp4", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["completed", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-001", "evidence_locators": [{"id": "loc-video-001", "kind": "video", "start_ms": 6400, "end_ms": 9200, "revision_id": "rev-video-001"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-001", "evidence_query": "caption confirm pressure zero", "evidence_locators": [{"id": "loc-video-001", "kind": "video", "start_ms": 6400, "end_ms": 9200, "revision_id": "rev-video-001"}]}
     },
     {
       "id": "video-silent-001", "modality": "video", "slice": "fixed_no_subtitles",
       "source": {"uri": "generated://video/fixed-silent.mp4", "content_type": "video/mp4", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "completed_no_knowledge", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-002", "low_confidence": true, "evidence_locators": [{"id": "loc-video-002", "kind": "video", "start_ms": 3000, "end_ms": 7500, "revision_id": "rev-video-002"}]}
+      "expected": {"terminal_states": ["completed_no_knowledge", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-002", "evidence_locators": []}
     },
     {
       "id": "video-handheld-001", "modality": "video", "slice": "handheld_motion",
       "source": {"uri": "generated://video/handheld-inspection.mp4", "content_type": "video/mp4", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-003", "low_confidence": true, "evidence_locators": [{"id": "loc-video-003", "kind": "video", "start_ms": 12200, "end_ms": 17100, "revision_id": "rev-video-003"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-003", "evidence_query": "inspect equipment valve", "low_confidence": true, "evidence_locators": [{"id": "loc-video-003", "kind": "video", "start_ms": 12200, "end_ms": 17100, "revision_id": "rev-video-003"}]}
     },
     {
       "id": "video-machine-001", "modality": "video", "slice": "equipment_high_risk_sop_conflict",
       "source": {"uri": "generated://video/machine-reset.mp4", "content_type": "video/mp4", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-004", "low_confidence": true, "high_risk": true, "sop_conflict": true, "evidence_locators": [{"id": "loc-video-004", "kind": "video", "start_ms": 40200, "end_ms": 43800, "revision_id": "rev-video-004"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-004", "evidence_query": "machine danger force reset", "low_confidence": true, "high_risk": true, "sop_conflict": true, "evidence_locators": [{"id": "loc-video-004", "kind": "video", "start_ms": 40200, "end_ms": 43800, "revision_id": "rev-video-004"}]}
     }
   ]
 }

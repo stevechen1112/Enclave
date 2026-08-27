@@ -14,10 +14,7 @@ from app.crud import crud_document
 from app.services.document_parser import DocumentParser, TextChunker
 from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.schemas.document import DocumentUpdate
-from app.models.document import (
-    DocumentChunk,
-    DocumentChunk as DChunk,
-)  # alias for task use
+from app.models.document import DocumentChunk as DChunk  # alias for task use
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +66,11 @@ def embed_texts(texts: List[str], input_type: str = "document") -> List[List[flo
     model = str(
         embed_cfg.get(
             "model",
-            settings.VOYAGE_MODEL
-            if provider == "voyage"
-            else settings.OLLAMA_EMBED_MODEL,
+            (
+                settings.VOYAGE_MODEL
+                if provider == "voyage"
+                else settings.OLLAMA_EMBED_MODEL
+            ),
         )
     )
     if provider == "ollama":
@@ -168,9 +167,11 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     document_id=UUID(document_id),
                     revision=doc.version or 1,
                     artifact_type="parse",
-                    provider=artifact.parser.split("/")[0]
-                    if "/" in artifact.parser
-                    else "enclave",
+                    provider=(
+                        artifact.parser.split("/")[0]
+                        if "/" in artifact.parser
+                        else "enclave"
+                    ),
                     provider_version=artifact.version,
                     checksum=artifact.source_hash,
                     status="active",
@@ -440,7 +441,16 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         except Exception as proj_exc:
             logger.warning("clause projection failed (non-blocking): %s", proj_exc)
         db.add(doc)
-        project_document(db, doc, ingestion_status="ready")
+        from app.services.asset_projection import document_quality_state
+
+        terminal_quality = document_quality_state(metadata)
+        project_document(
+            db,
+            doc,
+            ingestion_status=(
+                "review_required" if terminal_quality == "review_required" else "ready"
+            ),
+        )
         if ingestion_job_id is not None:
             from app.models.ingestion import IngestionJob
             from app.services.ingestion_orchestrator import get_ingestion_orchestrator
@@ -454,13 +464,18 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 .first()
             )
             if completed_job is not None and completed_job.status == "running":
+                requires_review = terminal_quality == "review_required"
                 get_ingestion_orchestrator().transition(
                     db,
                     completed_job,
-                    to_status="ready",
-                    phase="published",
-                    quality_state="ready",
-                    readiness={"search": True, "answer": True},
+                    to_status="review_required" if requires_review else "ready",
+                    phase="human_review" if requires_review else "published",
+                    quality_state=terminal_quality,
+                    readiness={
+                        "search": not requires_review,
+                        "answer": not requires_review,
+                        "requires_human_review": requires_review,
+                    },
                 )
         payload = {
             "filename": doc.filename,
@@ -782,15 +797,29 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             text_content,
             {**(metadata or {}), "parse_engine": "trafilatura", "ocr_used": False},
         )
-        project_document(db, doc, ingestion_status="ready")
+        from app.services.asset_projection import document_quality_state
+
+        terminal_quality = document_quality_state(metadata)
+        project_document(
+            db,
+            doc,
+            ingestion_status=(
+                "review_required" if terminal_quality == "review_required" else "ready"
+            ),
+        )
         if ingestion_job.status == "running":
+            requires_review = terminal_quality == "review_required"
             orchestrator.transition(
                 db,
                 ingestion_job,
-                to_status="ready",
-                phase="published",
-                quality_state="ready",
-                readiness={"search": True, "answer": True},
+                to_status="review_required" if requires_review else "ready",
+                phase="human_review" if requires_review else "published",
+                quality_state=terminal_quality,
+                readiness={
+                    "search": not requires_review,
+                    "answer": not requires_review,
+                    "requires_human_review": requires_review,
+                },
             )
         db.add(doc)
         publish_event(

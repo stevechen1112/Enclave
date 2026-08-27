@@ -4,6 +4,7 @@ The evaluator intentionally separates contract fixtures from live provider outpu
 Mock results prove schema and policy behaviour; only replay/live results may be
 used as model or parser quality evidence.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -44,7 +45,9 @@ def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
     if manifest.get("schema_version") != 1:
         raise CorpusValidationError("manifest.schema_version must be 1")
     if manifest.get("classification") not in {"synthetic", "licensed_internal"}:
-        raise CorpusValidationError("manifest.classification must establish legal provenance")
+        raise CorpusValidationError(
+            "manifest.classification must establish legal provenance"
+        )
     cases = manifest.get("cases")
     if not isinstance(cases, list) or not cases:
         raise CorpusValidationError("manifest.cases must be a non-empty list")
@@ -59,7 +62,9 @@ def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
             raise CorpusValidationError(f"{case_id}: modality and slice are required")
         source = case.get("source") or {}
         if not source.get("uri") or not source.get("content_type"):
-            raise CorpusValidationError(f"{case_id}: source uri/content_type are required")
+            raise CorpusValidationError(
+                f"{case_id}: source uri/content_type are required"
+            )
         if not source.get("provenance"):
             raise CorpusValidationError(f"{case_id}: source provenance is required")
         expected = case.get("expected") or {}
@@ -67,19 +72,28 @@ def validate_manifest(manifest: dict[str, Any]) -> list[dict[str, Any]]:
         if not states or not states <= TERMINAL_STATES:
             raise CorpusValidationError(f"{case_id}: invalid expected terminal_states")
         if not expected.get("tenant_id") or not expected.get("revision_id"):
-            raise CorpusValidationError(f"{case_id}: tenant_id and revision_id are required")
+            raise CorpusValidationError(
+                f"{case_id}: tenant_id and revision_id are required"
+            )
         for locator in expected.get("evidence_locators") or []:
             if not locator.get("id") or not locator.get("kind"):
                 raise CorpusValidationError(f"{case_id}: locator id/kind are required")
             if locator.get("kind") in {"audio", "video"}:
                 start = locator.get("start_ms")
                 end = locator.get("end_ms")
-                if not isinstance(start, int) or not isinstance(end, int) or start < 0 or end <= start:
+                if (
+                    not isinstance(start, int)
+                    or not isinstance(end, int)
+                    or start < 0
+                    or end <= start
+                ):
                     raise CorpusValidationError(f"{case_id}: invalid time locator")
     return cases
 
 
-def validate_results(results: dict[str, Any], case_ids: set[str]) -> list[dict[str, Any]]:
+def validate_results(
+    results: dict[str, Any], case_ids: set[str]
+) -> list[dict[str, Any]]:
     mode = results.get("mode")
     if mode not in SUPPORTED_MODES:
         raise CorpusValidationError(f"unsupported provider mode: {mode!r}")
@@ -90,11 +104,21 @@ def validate_results(results: dict[str, Any], case_ids: set[str]) -> list[dict[s
     if mode == "internal_replay":
         provenance = results.get("provenance") or {}
         if not provenance.get("run_id") or not provenance.get("captured_at"):
-            raise CorpusValidationError("internal_replay requires run_id and captured_at")
-        if not re.fullmatch(r"[0-9a-f]{40}", str(provenance.get("source_commit") or "")):
-            raise CorpusValidationError("internal_replay source_commit must be 40 lowercase hex")
-        if not provenance.get("execution_environment") or not provenance.get("source_artifact_sha256"):
-            raise CorpusValidationError("internal_replay requires execution environment and source artifact hash")
+            raise CorpusValidationError(
+                "internal_replay requires run_id and captured_at"
+            )
+        if not re.fullmatch(
+            r"[0-9a-f]{40}", str(provenance.get("source_commit") or "")
+        ):
+            raise CorpusValidationError(
+                "internal_replay source_commit must be 40 lowercase hex"
+            )
+        if not provenance.get("execution_environment") or not provenance.get(
+            "source_artifact_sha256"
+        ):
+            raise CorpusValidationError(
+                "internal_replay requires execution environment and source artifact hash"
+            )
     rows = results.get("results")
     if not isinstance(rows, list):
         raise CorpusValidationError("results.results must be a list")
@@ -102,7 +126,9 @@ def validate_results(results: dict[str, Any], case_ids: set[str]) -> list[dict[s
     for row in rows:
         case_id = str(row.get("case_id") or "")
         if case_id not in case_ids or case_id in seen:
-            raise CorpusValidationError(f"unknown or duplicated result case: {case_id!r}")
+            raise CorpusValidationError(
+                f"unknown or duplicated result case: {case_id!r}"
+            )
         seen.add(case_id)
         if row.get("terminal_state") not in TERMINAL_STATES:
             raise CorpusValidationError(f"{case_id}: invalid terminal state")
@@ -121,15 +147,28 @@ def _locator_matches(expected: dict[str, Any], predicted: dict[str, Any]) -> boo
     kind = expected.get("kind")
     if kind in {"audio", "video"}:
         expected_start, expected_end = expected.get("start_ms"), expected.get("end_ms")
-        predicted_start, predicted_end = predicted.get("start_ms"), predicted.get("end_ms")
-        if not all(isinstance(value, int) for value in (expected_start, expected_end, predicted_start, predicted_end)):
+        predicted_start, predicted_end = predicted.get("start_ms"), predicted.get(
+            "end_ms"
+        )
+        if not all(
+            isinstance(value, int)
+            for value in (expected_start, expected_end, predicted_start, predicted_end)
+        ):
             return False
-        overlap = max(0, min(expected_end, predicted_end) - max(expected_start, predicted_start))
+        overlap = max(
+            0, min(expected_end, predicted_end) - max(expected_start, predicted_start)
+        )
         union = max(expected_end, predicted_end) - min(expected_start, predicted_start)
         return bool(union and overlap / union >= 0.5)
     coordinate_fields = (
-        "page", "section", "worksheet", "table_name", "cell_range",
-        "row_number", "column_name", "region",
+        "page",
+        "section",
+        "worksheet",
+        "table_name",
+        "cell_range",
+        "row_number",
+        "column_name",
+        "region",
     )
     return all(
         expected.get(field) == predicted.get(field)
@@ -162,7 +201,9 @@ class Thresholds:
     @classmethod
     def from_dict(cls, values: dict[str, Any] | None) -> Thresholds:
         values = values or {}
-        return cls(**{key: values[key] for key in cls.__dataclass_fields__ if key in values})
+        return cls(
+            **{key: values[key] for key in cls.__dataclass_fields__ if key in values}
+        )
 
 
 def evaluate(
@@ -211,9 +252,13 @@ def evaluate(
 
         answer = row.get("answer") or {}
         citations = answer.get("citations") or []
-        if answer.get("status") == "answered" and (not answer.get("grounded", False) or not citations):
+        if answer.get("status") == "answered" and (
+            not answer.get("grounded", False) or not citations
+        ):
             hallucinations += 1
-        if any(item.get("revision_id") != expected["revision_id"] for item in citations):
+        if any(
+            item.get("revision_id") != expected["revision_id"] for item in citations
+        ):
             wrong_revision += 1
         if (
             expected.get("high_risk")
@@ -232,15 +277,24 @@ def evaluate(
         if row.get("tenant_id") != expected["tenant_id"]:
             cross_tenant_leaks += 1
         cross_tenant_leaks += sum(
-            1 for item in [*(row.get("evidence_locators") or []), *citations]
+            1
+            for item in [*(row.get("evidence_locators") or []), *citations]
             if item.get("tenant_id") and item.get("tenant_id") != expected["tenant_id"]
         )
 
     total = len(cases)
     terminal_rate = valid_terminal / total
     degraded_mode = result_bundle["mode"] == "degraded"
-    locator_precision = correct_locator_count / predicted_locator_count if predicted_locator_count else 0.0
-    locator_recall = correct_locator_count / expected_locator_count if expected_locator_count else 1.0
+    locator_precision = (
+        correct_locator_count / predicted_locator_count
+        if predicted_locator_count
+        else 0.0
+    )
+    locator_recall = (
+        correct_locator_count / expected_locator_count
+        if expected_locator_count
+        else 1.0
+    )
     critical = {
         "hallucinations": hallucinations,
         "wrong_revision_citations": wrong_revision,
@@ -254,8 +308,10 @@ def evaluate(
         "terminal_state_rate": terminal_rate >= thresholds.terminal_state_rate_min,
         # Degraded providers must abstain safely and explain terminal state. They
         # are not expected to emit evidence they could not extract.
-        "evidence_locator_precision": degraded_mode or locator_precision >= thresholds.evidence_locator_precision_min,
-        "evidence_locator_recall": degraded_mode or locator_recall >= thresholds.evidence_locator_recall_min,
+        "evidence_locator_precision": degraded_mode
+        or locator_precision >= thresholds.evidence_locator_precision_min,
+        "evidence_locator_recall": degraded_mode
+        or locator_recall >= thresholds.evidence_locator_recall_min,
         "critical_errors": critical_error_count <= thresholds.critical_error_max,
     }
     slices: dict[str, Any] = {}
@@ -266,11 +322,18 @@ def evaluate(
         slices[key] = {
             **dict(counts),
             "terminal_state_rate": counts["terminal_pass"] / total_slice,
-            "locator_precision": counts["locator_correct"] / predicted if predicted else 0.0,
-            "locator_recall": counts["locator_correct"] / expected_count if expected_count else 1.0,
+            "locator_precision": (
+                counts["locator_correct"] / predicted
+                if predicted
+                else (1.0 if expected_count == 0 else 0.0)
+            ),
+            "locator_recall": (
+                counts["locator_correct"] / expected_count if expected_count else 1.0
+            ),
         }
     checks["per_slice_terminal_state"] = all(
-        item["terminal_state_rate"] >= thresholds.terminal_state_rate_min for item in slices.values()
+        item["terminal_state_rate"] >= thresholds.terminal_state_rate_min
+        for item in slices.values()
     )
     checks["per_slice_evidence_locator"] = degraded_mode or all(
         item["locator_precision"] >= thresholds.evidence_locator_precision_min
@@ -282,7 +345,11 @@ def evaluate(
         "schema_version": 1,
         "gate": "P3-MULTIMODAL-QUALITY",
         "status": "PASS" if all(checks.values()) else "FAIL",
-        "evidence_class": "contract_only" if result_bundle["mode"] == "mock_contract" else result_bundle["mode"],
+        "evidence_class": (
+            "contract_only"
+            if result_bundle["mode"] == "mock_contract"
+            else result_bundle["mode"]
+        ),
         "provider": result_bundle["provider"],
         "provider_version": result_bundle["provider_version"],
         "mode": result_bundle["mode"],
@@ -308,22 +375,38 @@ def build_contract_results(
     """Build policy fixtures; never label these as live accuracy evidence."""
     cases = validate_manifest(manifest)
     if mode not in {"mock_contract", "degraded"}:
-        raise CorpusValidationError("synthetic result generation is limited to contract/degraded modes")
+        raise CorpusValidationError(
+            "synthetic result generation is limited to contract/degraded modes"
+        )
     rows = []
     for case in cases:
         expected = case["expected"]
         degraded = mode == "degraded"
         terminal_state = "degraded" if degraded else expected["terminal_states"][0]
-        answer_status = "abstained" if expected.get("high_risk") or degraded else "not_applicable"
+        answer_status = (
+            "abstained" if expected.get("high_risk") or degraded else "not_applicable"
+        )
         rows.append(
             {
                 "case_id": case["id"],
                 "terminal_state": terminal_state,
                 "tenant_id": expected["tenant_id"],
-                "evidence_locators": [] if degraded else deepcopy(expected.get("evidence_locators", [])),
-                "review_created": bool(expected.get("low_confidence") or expected.get("sop_conflict") or degraded),
-                "sop_conflict_detected": bool(expected.get("sop_conflict")) and not degraded,
-                "answer": {"status": answer_status, "grounded": True, "authoritative": False, "citations": []},
+                "evidence_locators": (
+                    [] if degraded else deepcopy(expected.get("evidence_locators", []))
+                ),
+                "review_created": bool(
+                    expected.get("low_confidence")
+                    or expected.get("sop_conflict")
+                    or degraded
+                ),
+                "sop_conflict_detected": bool(expected.get("sop_conflict"))
+                and not degraded,
+                "answer": {
+                    "status": answer_status,
+                    "grounded": True,
+                    "authoritative": False,
+                    "citations": [],
+                },
             }
         )
     return {
@@ -336,13 +419,17 @@ def build_contract_results(
     }
 
 
-def aggregate_matrix(reports: Iterable[dict[str, Any]], required_modes: Iterable[str]) -> dict[str, Any]:
+def aggregate_matrix(
+    reports: Iterable[dict[str, Any]], required_modes: Iterable[str]
+) -> dict[str, Any]:
     reports = list(reports)
     modes = [report.get("mode") for report in reports]
     duplicates = sorted({mode for mode in modes if modes.count(mode) > 1})
     by_mode = {report["mode"]: report for report in reports}
     missing = sorted(set(required_modes) - set(by_mode))
-    failed = sorted(mode for mode, report in by_mode.items() if report.get("status") != "PASS")
+    failed = sorted(
+        mode for mode, report in by_mode.items() if report.get("status") != "PASS"
+    )
     return {
         "schema_version": 1,
         "gate": "P3-PROVIDER-MATRIX",
