@@ -4,6 +4,7 @@
 S3 後端（mock boto3）、content_reference 的 s3:// 解析、
 上傳端點的 content_uri 持久化、worker 的 s3:// 暫存下載。
 """
+
 import os
 import sys
 import tempfile
@@ -45,8 +46,14 @@ class TestStorageKey(unittest.TestCase):
         validate_storage_key(build_storage_key(TENANT, DOC, ".docx"))
 
     def test_validate_rejects_no_tenant_prefix(self):
-        for bad in ("", "file.pdf", f"{DOC}.pdf", f"a/b/c.pdf",
-                    f"../{TENANT}/{DOC}.pdf", f"{TENANT}/{DOC}.pdf/extra"):
+        for bad in (
+            "",
+            "file.pdf",
+            f"{DOC}.pdf",
+            f"a/b/c.pdf",
+            f"../{TENANT}/{DOC}.pdf",
+            f"{TENANT}/{DOC}.pdf/extra",
+        ):
             with self.assertRaises(ValueError):
                 validate_storage_key(bad)
 
@@ -77,6 +84,7 @@ class TestLocalBackend(unittest.TestCase):
 
     def tearDown(self):
         import shutil
+
         shutil.rmtree(self.root, ignore_errors=True)
 
     def _write_tmp(self, content: bytes) -> str:
@@ -123,7 +131,9 @@ class TestLocalBackend(unittest.TestCase):
 class TestS3Backend(unittest.TestCase):
     def setUp(self):
         self.mock_client = MagicMock()
-        fake_boto3 = types.SimpleNamespace(client=MagicMock(return_value=self.mock_client))
+        fake_boto3 = types.SimpleNamespace(
+            client=MagicMock(return_value=self.mock_client)
+        )
         with patch.dict(sys.modules, {"boto3": fake_boto3}):
             from app.services.storage.s3_compatible import S3CompatibleBackend
 
@@ -137,6 +147,7 @@ class TestS3Backend(unittest.TestCase):
 
     def test_requires_bucket(self):
         from app.services.storage.s3_compatible import S3CompatibleBackend
+
         with self.assertRaises(ValueError):
             S3CompatibleBackend(bucket="", access_key="a", secret_key="s")
 
@@ -146,7 +157,9 @@ class TestS3Backend(unittest.TestCase):
             f.write(b"pdf-bytes")
         uri = self.backend.put(self.key, src)
         self.assertEqual(uri, f"s3://enclave-docs/{self.key}")
-        self.mock_client.upload_file.assert_called_once_with(src, "enclave-docs", self.key)
+        self.mock_client.upload_file.assert_called_once_with(
+            src, "enclave-docs", self.key
+        )
         os.remove(src)
 
     def test_all_ops_validate_key(self):
@@ -229,8 +242,9 @@ class TestUploadPutFailure(unittest.IsolatedAsyncioTestCase):
 
         tenant = uuid4()
         doc_id = uuid4()
-        user = types.SimpleNamespace(tenant_id=tenant, id=uuid4(), role="admin",
-                                     is_superuser=False)
+        user = types.SimpleNamespace(
+            tenant_id=tenant, id=uuid4(), role="admin", is_superuser=False
+        )
         created_doc = types.SimpleNamespace(id=doc_id, file_path=None)
 
         # read 第一次回內容、第二次回 EOF
@@ -249,23 +263,37 @@ class TestUploadPutFailure(unittest.IsolatedAsyncioTestCase):
         backend = MagicMock()
         backend.put.side_effect = RuntimeError("s3 unreachable")
 
-        with patch.object(docs_ep, "check_document_permission"), \
-             patch.object(docs_ep.crud_tenant, "check_quota",
-                          return_value={"allowed": True}), \
-             patch.object(docs_ep.crud_tenant, "check_storage_quota",
-                          return_value={"allowed": True}), \
-             patch.object(docs_ep.settings, "UPLOAD_DIR", tmp_root), \
-             patch.object(docs_ep.settings, "MAX_FILE_SIZE", 10 * 1024 * 1024), \
-             patch("app.services.document_parser.DocumentParser.detect_file_type",
-                   return_value="pdf"), \
-             patch.object(docs_ep.crud_document, "create", return_value=created_doc), \
-             patch.object(docs_ep.crud_document, "tombstone") as tombstone_mock, \
-             patch("app.services.storage.get_storage_backend", return_value=backend), \
-             patch.object(docs_ep.process_document_task, "delay") as delay_mock:
+        with (
+            patch.object(docs_ep, "check_document_permission"),
+            patch.object(
+                docs_ep.crud_tenant, "check_quota", return_value={"allowed": True}
+            ),
+            patch.object(
+                docs_ep.crud_tenant,
+                "check_storage_quota",
+                return_value={"allowed": True},
+            ),
+            patch.object(docs_ep.settings, "UPLOAD_DIR", tmp_root),
+            patch.object(docs_ep.settings, "MAX_FILE_SIZE", 10 * 1024 * 1024),
+            patch(
+                "app.services.document_parser.DocumentParser.detect_file_type",
+                return_value="pdf",
+            ),
+            patch.object(docs_ep.crud_document, "create", return_value=created_doc),
+            patch.object(docs_ep.crud_document, "tombstone") as tombstone_mock,
+            patch("app.services.storage.get_storage_backend", return_value=backend),
+            patch.object(docs_ep.process_document_task, "delay") as delay_mock,
+        ):
             db = MagicMock()
-            with self.assertRaises(RuntimeError):
-                await docs_ep.upload_document(db=db, file=FakeUpload2(),
-                                              current_user=user)
+            from fastapi import HTTPException
+
+            with self.assertRaises(HTTPException) as raised:
+                await docs_ep.upload_document(
+                    db=db, file=FakeUpload2(), current_user=user
+                )
+
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertIn("資料未發布", raised.exception.detail)
 
         tombstone_mock.assert_called_once()
         _, kwargs = tombstone_mock.call_args
@@ -273,6 +301,7 @@ class TestUploadPutFailure(unittest.IsolatedAsyncioTestCase):
         delay_mock.assert_not_called()  # 失敗不得觸發解析任務
 
         import shutil
+
         shutil.rmtree(tmp_root, ignore_errors=True)
 
 
@@ -283,7 +312,9 @@ class TestContentReferenceS3(unittest.TestCase):
         fake_backend = MagicMock()
         fake_backend.get_bytes.return_value = b"from-s3"
         key = build_storage_key(TENANT, DOC, ".pdf")
-        with patch("app.services.storage.get_storage_backend", return_value=fake_backend):
+        with patch(
+            "app.services.storage.get_storage_backend", return_value=fake_backend
+        ):
             data = content_reference.resolve_content_bytes(f"s3://bucket/{key}")
         self.assertEqual(data, b"from-s3")
         fake_backend.get_bytes.assert_called_once_with(key)
@@ -295,7 +326,9 @@ class TestContentReferenceS3(unittest.TestCase):
         with os.fdopen(fd, "wb") as f:
             f.write(b"local-bytes")
         try:
-            self.assertEqual(content_reference.resolve_content_bytes(path), b"local-bytes")
+            self.assertEqual(
+                content_reference.resolve_content_bytes(path), b"local-bytes"
+            )
         finally:
             os.remove(path)
 
