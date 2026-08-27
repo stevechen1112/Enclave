@@ -11,10 +11,9 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.api.deps_permissions import require_admin
 from app.models.user import User
-from app.services.connector_manager import ConnectorManager, GA_CONNECTORS
+from app.services.connector_manager import GA_CONNECTORS, ConnectorManager
 from app.services.connector_sync import ConnectorSyncService
 from app.services.module_gate import require_module
-from app.services.outbox_events import publish_event
 from app.services.product_license import ProductModule
 
 
@@ -71,7 +70,10 @@ def oauth_authorize_url(
 ) -> Dict[str, Any]:
     """Build OAuth authorize URL for SharePoint / Google Drive."""
     _require_connect_pack()
-    from app.services.connector_schemas import oauth_authorize_url, validate_connector_config
+    from app.services.connector_schemas import (
+        oauth_authorize_url,
+        validate_connector_config,
+    )
     try:
         cfg = validate_connector_config(body.connector_type, body.config)
     except ValueError as exc:
@@ -114,8 +116,11 @@ def oauth_token_exchange(
     """
     _require_connect_pack()
     import hashlib
-    import os
-    from app.services.connector_schemas import exchange_oauth_code, validate_connector_config
+
+    from app.services.connector_schemas import (
+        exchange_oauth_code,
+        validate_connector_config,
+    )
 
     try:
         cfg = validate_connector_config(body.connector_type, body.config)
@@ -135,7 +140,10 @@ def oauth_token_exchange(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     # Store token material outside uploads/ (DD-M14) — Fernet-sealed at rest
-    from app.services.credential_vault import ensure_credential_dir, write_credential_file
+    from app.services.credential_vault import (
+        ensure_credential_dir,
+        write_credential_file,
+    )
 
     vault_dir = ensure_credential_dir()
     digest = hashlib.sha256(
@@ -298,16 +306,9 @@ def trigger_sync(
     row = db.query(ConnectorInstance).filter(ConnectorInstance.id == connector_id).first()
     if not row or row.tenant_id != current_user.tenant_id:
         raise HTTPException(status_code=404, detail="連接器不存在")
-    import time
-    publish_event(
-        db,
-        aggregate_type="connector",
-        aggregate_id=str(connector_id),
-        event_type="sync_requested",
-        revision=int(time.time()),
-        payload={"tenant_id": str(current_user.tenant_id), "full_reindex": full_reindex},
-    )
-    db.commit()
+    # This endpoint is the sole executor for an interactive sync. Publishing a
+    # sync_requested event before running synchronously lets the outbox worker
+    # execute the same connector concurrently. run_sync emits sync_completed.
     return _sync.run_sync(
         db, connector_id, full_reindex=full_reindex, uploaded_by=current_user.id,
     )

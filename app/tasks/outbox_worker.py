@@ -15,11 +15,11 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.celery_app import celery_app
-from app.db.session import MaintenanceSessionLocal
-from app.models.outbox import OutboxEvent, DeadLetterEvent, ProjectionStatus
 from app.core.authorization import AuthorizationContext
-from app.gateway.adapter_factory import build_projection_adapters, PROJECTION_PROVIDERS
+from app.db.session import MaintenanceSessionLocal
+from app.gateway.adapter_factory import PROJECTION_PROVIDERS, build_projection_adapters
 from app.gateway.resource_registry import ResourceRegistry
+from app.models.outbox import DeadLetterEvent, OutboxEvent, ProjectionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -519,11 +519,14 @@ def _handle_permission_event(db: Session, event: OutboxEvent):
 
 
 def _handle_connector_event(db: Session, event: OutboxEvent):
-    payload = event.payload or {}
-    if event.event_type in ("created", "sync_requested", "credential_rotated"):
+    # created / credential_rotated are lifecycle audit events, not implicit
+    # sync commands. Interactive sync runs in the API and emits sync_completed;
+    # retaining sync_requested supports already-queued legacy async requests.
+    if event.event_type == "sync_requested":
         try:
-            from app.services.connector_sync import ConnectorSyncService
             from uuid import UUID as _UUID
+
+            from app.services.connector_sync import ConnectorSyncService
 
             ConnectorSyncService().run_sync(db, _UUID(event.aggregate_id))
         except Exception as exc:
@@ -536,9 +539,10 @@ def _handle_wiki_event(db: Session, event: OutboxEvent):
     payload = event.payload or {}
     if event.event_type == "compiled":
         if os.getenv("WEKNORA_ENABLED", "").lower() == "true":
+            from uuid import UUID as _UUID
+
             from app.gateway.adapters.weknora_http import WeKnoraHTTPAdapter
             from app.gateway.token_provider import build_weknora_token_provider
-            from uuid import UUID as _UUID
 
             adapter = WeKnoraHTTPAdapter(
                 base_url=os.getenv("WEKNORA_BASE_URL", "http://localhost:8081"),
@@ -562,8 +566,9 @@ def _handle_wiki_event(db: Session, event: OutboxEvent):
                 state="converged",
             )
     if event.event_type in ("revoked", "deleted"):
-        from app.services.wiki_compiler import WikiCompiler
         from uuid import UUID as _UUID
+
+        from app.services.wiki_compiler import WikiCompiler
 
         WikiCompiler().tombstone_page(db, _UUID(event.aggregate_id))
     if event.event_type == "compile_failed":
@@ -578,8 +583,9 @@ def _handle_kb_event(db: Session, event: OutboxEvent):
         kb_id = payload.get("kb_id", event.aggregate_id)
         tenant_id = payload.get("tenant_id")
         if tenant_id:
-            from app.services.wiki_compiler import WikiCompiler
             from uuid import UUID as _UUID
+
+            from app.services.wiki_compiler import WikiCompiler
 
             WikiCompiler().compile_kb(
                 db,

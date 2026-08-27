@@ -128,3 +128,18 @@ def test_sync_cursor_get_or_create_recovers_from_concurrent_insert():
 
     assert cursor is winner
     assert query.calls == 2
+
+
+def test_interactive_connector_sync_has_only_one_executor():
+    import inspect
+
+    from app.api.v1.endpoints.connectors import trigger_sync
+    from app.tasks.outbox_worker import _handle_connector_event
+
+    endpoint_source = inspect.getsource(trigger_sync)
+    handler_source = inspect.getsource(_handle_connector_event)
+
+    assert 'event_type="sync_requested"' not in endpoint_source
+    assert "return _sync.run_sync(" in endpoint_source
+    assert 'event.event_type == "sync_requested"' in handler_source
+    assert '"created", "sync_requested"' not in handler_source
