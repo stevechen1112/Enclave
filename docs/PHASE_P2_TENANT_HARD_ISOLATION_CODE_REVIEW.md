@@ -1,10 +1,10 @@
 # Phase P2 — 多租戶硬隔離與資料生命週期 Code Review
 
-**Review date:** 2026-08-27  
-**Implementation commit:** `b1b8bb32f87211c97ed8066cd905fd349e5fb379`  
-**Internal implementation gate:** PASS  
-**Code review:** PASS（Critical／High 未處理 finding：0）  
-**Phase gate:** HOLD（尚缺 staging FORCE RLS 全量回歸）  
+**Review date:** 2026-08-27
+**Implementation commit:** `b1b8bb32f87211c97ed8066cd905fd349e5fb379`
+**Internal implementation gate:** PASS
+**Code review:** PASS（Critical／High 未處理 finding：0）
+**Phase gate:** HOLD（尚缺 staging FORCE RLS 全量回歸）
 **P3 entry:** BLOCKED
 
 ## Conclusion
