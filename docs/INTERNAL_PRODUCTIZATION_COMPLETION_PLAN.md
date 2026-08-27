@@ -167,13 +167,15 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 
 **優先級：P1**
 
+**2026-08-28 狀態：** COMPLETE；fresh isolated DB／object／index／configuration restore、N-1 application rollback、10 類 fault injection、retry／dead-letter、5 條 alert fire／recover、機器 evidence gate 與最終 Code Review 全部 PASS。Restore RTO／RPO 為 5／0 秒，objects 168／168、configuration files 18／18、103 tables 與 index inventory 全部一致；1,314 項 backend regression、88 項 frontend tests 與 production build 通過，P5 entry 已開放。詳見 `PHASE_P4_RESILIENCE_DR_CODE_REVIEW.md` 與 `reports/P4_RESILIENCE_EVIDENCE_2026-08-28.json`。
+
 ### 已有基礎
 
 - Backup／restore、rollback verifier、fault recovery 與 sidecar chaos 腳本已存在。
 - Prometheus middleware、alert rules、Sentry integration 與 support bundle 已存在。
 - Rollback evidence template 目前仍是 `NOT_RUN` 空白範本。
 
-### 待完成
+### 完成內容
 
 - 在隔離環境實際執行 DB、object storage、索引與設定的 backup／restore drill。
 - 演練 N-1 application rollback、migration compatibility scan 與新 artifact kind 保護。

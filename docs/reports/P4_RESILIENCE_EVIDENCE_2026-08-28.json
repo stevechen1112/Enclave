@@ -1,0 +1,262 @@
+{
+  "schema_version": 1,
+  "gate": "P4-RESILIENCE-DR",
+  "release_verification": {
+    "release_id": "staging-9168733",
+    "source_commit": "916873350f8fb812635c0a80253b71fb7c9a2e5d",
+    "source_dirty": "false",
+    "deployment_manifest_id": "dm-c5ac1e51fb03da699b1ba384",
+    "schema_head": "p2_tenant_hard_isolation_001",
+    "route_contract_hash": "5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f",
+    "operations_tooling_commit": "300893530ee32989632c76a5b97d9e360952e46f",
+    "evidence_gate_commit": "f09076341153ca32b8c29a0db322b7ad43862fcb",
+    "production_mutated": false
+  },
+  "rollback_evidence": {
+    "deployment": {
+      "manifest_id": "dm-c5ac1e51fb03da699b1ba384",
+      "backend_image": "sha256:12ac029a60ebd6e1ab13b29e3bc4f23ac4e8b50dd5ce9fa63b04f12ac1f8fb0e",
+      "frontend_image": "sha256:54ff1934f312505a5ef71730f74d698bc29e76a72b27ffe4e97fbffb6b7e8851",
+      "worker_image": "sha256:12ac029a60ebd6e1ab13b29e3bc4f23ac4e8b50dd5ce9fa63b04f12ac1f8fb0e",
+      "gateway_image": "sha256:7b000d4f9121806ce727ba59d97671f5d3e005b58e0c0586b214e53dde27ccf0"
+    },
+    "backup_restore": {
+      "database_backup_sha256": "812c601fcd264615ff8584323477567f6e6b2a1c85e2dfc7cbc235754f966d56",
+      "object_backup_sha256": "230392d54d5d60f2e90bcadc7618f921c45ed7fd9136ccda5655f330938563f0",
+      "restore_status": "PASS",
+      "isolated_environment": true,
+      "restore_rto_seconds": 5,
+      "run_id": "3e471c07-e272-4d1b-bdf3-4af0c1f4135e"
+    },
+    "database_downgrade": {
+      "status": "PASS",
+      "from_revision": "b1a38c5aa8ea48fe9c8adac7f180d922305732a7",
+      "to_revision": "7633d423643bdcd4cc4d5e8e944ee2765d82d0de",
+      "new_kind_compatibility_scan": "PASS",
+      "application_rollback_seconds": 41,
+      "schema_was_not_downgraded": true
+    },
+    "object_store": {
+      "inventory_status": "PASS",
+      "protected_kinds": [
+        "derived_artifact",
+        "evidence_locator",
+        "external_connector_lineage",
+        "knowledge_unit_revision",
+        "legacy_document_file",
+        "long_recording_chunk",
+        "source_asset_original"
+      ],
+      "deleted_during_drill": 0,
+      "observed_artifact_kinds": [
+        "audio_event",
+        "extracted_text",
+        "keyframe",
+        "layout_page",
+        "ocr_region",
+        "procedure_candidate",
+        "sop_conflict_report",
+        "speaker_turn",
+        "table",
+        "timeline_alignment",
+        "transcript_segment",
+        "video_scene"
+      ]
+    },
+    "rollback_smoke": {
+      "asset_read": "PASS",
+      "review": "PASS",
+      "sealed_retrieval": "PASS",
+      "tenant_isolation": "PASS",
+      "cross_tenant_asset_result": 404
+    },
+    "operator": "codex-internal-staging",
+    "completed_at": "2026-08-27T20:34:00Z"
+  },
+  "restore_drill": {
+    "status": "PASS",
+    "isolated_environment": true,
+    "source_mutated": false,
+    "run_id": "3e471c07-e272-4d1b-bdf3-4af0c1f4135e",
+    "rto_seconds": 5,
+    "rpo_seconds": 0,
+    "rto_target_seconds": 900,
+    "rpo_target_seconds": 300,
+    "database": {
+      "backup_status": "PASS",
+      "restore_status": "PASS",
+      "sha256": "812c601fcd264615ff8584323477567f6e6b2a1c85e2dfc7cbc235754f966d56",
+      "bytes": 1049024,
+      "table_count": 103
+    },
+    "object_store": {
+      "backup_status": "PASS",
+      "restore_status": "PASS",
+      "sha256": "230392d54d5d60f2e90bcadc7618f921c45ed7fd9136ccda5655f330938563f0",
+      "objects": 168,
+      "bytes": 8589608,
+      "restored_objects": 168,
+      "restored_bytes": 8589608
+    },
+    "index": {
+      "backup_status": "PASS",
+      "restore_status": "PASS",
+      "sha256": "6bfe2f02fed8b4dee71cc44cf05e0429f1502a8d11143bf7b07a05e9a2c59367",
+      "inventory": "83|83|10830"
+    },
+    "configuration": {
+      "backup_status": "PASS",
+      "restore_status": "PASS",
+      "sha256": "1309334882bd9c2102d65c2e68428e7a47073e863e325124bfe46515c7d970e5",
+      "secret_material_included": false,
+      "files": 18,
+      "bytes": 55189,
+      "restored_files": 18,
+      "restored_bytes": 55189
+    }
+  },
+  "fault_injection": [
+    {
+      "scenario": "redis_unavailable",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "recovered",
+      "operator_message": "Redis unavailable is shown as degraded; dependency and overall health return to healthy after restart.",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "worker_unavailable",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "recovered",
+      "operator_message": "Document remains uploading while the worker is unavailable and completes after worker recovery.",
+      "document_id": "690c349f-9683-4bca-95af-fb3033ad17ef",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "asr_provider_unavailable",
+      "status": "PASS",
+      "execution_class": "contract",
+      "terminal_state": "failed_retryable",
+      "operator_message": "ASR provider exceptions propagate to the retry boundary and no false transcript result is returned.",
+      "evidence": "P4 ASR fail-closed contract probe on source 9168733",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "ocr_provider_unavailable",
+      "status": "PASS",
+      "execution_class": "contract",
+      "terminal_state": "degraded",
+      "operator_message": "Cloud OCR failure preserves the original parse with an observable warning instead of inventing OCR content.",
+      "evidence": "tests/test_cloud_ocr_pipeline.py",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "embedding_provider_unavailable",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "recovered",
+      "operator_message": "Document remains in embedding while the provider is paused and completes after provider recovery.",
+      "document_id": "c105aeb5-d7d5-4297-9115-7dea8eea9872",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "object_store_unavailable",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "recovered",
+      "operator_message": "Upload returns 503 with a safe storage-unavailable message and states that data was not published; recovery upload succeeds.",
+      "recovery_asset_id": "be9db83e-e01b-4d0f-bade-d406ec386338",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "clamav_unavailable",
+      "status": "PASS",
+      "execution_class": "contract",
+      "terminal_state": "rejected",
+      "operator_message": "Managed fail-closed mode returns 503 and does not publish an unscanned upload.",
+      "evidence": "tests/test_file_scan.py::test_upload_fail_closed_on_scan_error",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "database_connection_unavailable",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "recovered",
+      "operator_message": "Health returns sanitized 503 and dependency gauge 0; both return to ready after database recovery.",
+      "document_rows_before": 84,
+      "document_rows_after": 84,
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "network_timeout",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "recovered",
+      "operator_message": "A paused embedding endpoint leaves the document visibly in embedding and completes after the network path recovers.",
+      "document_id": "c105aeb5-d7d5-4297-9115-7dea8eea9872",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    },
+    {
+      "scenario": "duplicate_job_delivery",
+      "status": "PASS",
+      "execution_class": "live",
+      "terminal_state": "review_required",
+      "operator_message": "Both duplicate deliveries return the existing review_required result with idempotent=true.",
+      "job_id": "0e575f81-7a32-4aee-8f78-69d1ec9065fd",
+      "recovered": true,
+      "data_loss": 0,
+      "cross_tenant_leak": 0,
+      "false_completion": 0
+    }
+  ],
+  "alert_lifecycle": [
+    {"alert": "HighErrorRate", "fire_status": "PASS", "recover_status": "PASS"},
+    {"alert": "HighLatency", "fire_status": "PASS", "recover_status": "PASS"},
+    {"alert": "ServiceDown", "fire_status": "PASS", "recover_status": "PASS"},
+    {"alert": "DatabaseUnavailable", "fire_status": "PASS", "recover_status": "PASS"},
+    {"alert": "HighConcurrency", "fire_status": "PASS", "recover_status": "PASS"}
+  ],
+  "runtime_verification": {
+    "health_status": "PASS",
+    "release_identity_status": "PASS",
+    "all_required_containers_running": true,
+    "backend_tests": "1309 passed, 12 skipped",
+    "frontend_tests": "88 passed",
+    "frontend_build_modules": 3342,
+    "contract_fault_tests": "122 passed",
+    "alert_rule_tests": "5 fire/recover lifecycles passed",
+    "data_loss": 0,
+    "cross_tenant_leak": 0,
+    "false_completion": 0
+  },
+  "operator": "codex-internal-staging",
+  "completed_at": "2026-08-27T21:18:00Z"
+}
