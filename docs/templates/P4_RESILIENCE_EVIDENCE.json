@@ -3,14 +3,15 @@
   "restore_drill": {
     "status": "NOT_RUN",
     "isolated_environment": false,
+    "source_mutated": null,
     "rto_seconds": null,
     "rpo_seconds": null,
     "rto_target_seconds": 900,
     "rpo_target_seconds": 300,
-    "database": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""},
-    "object_store": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""},
-    "index": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""},
-    "configuration": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": ""}
+    "database": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": "", "table_count": null},
+    "object_store": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": "", "objects": null, "bytes": null, "restored_objects": null, "restored_bytes": null},
+    "index": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": "", "inventory": ""},
+    "configuration": {"backup_status": "NOT_RUN", "restore_status": "NOT_RUN", "sha256": "", "secret_material_included": null, "files": null, "bytes": null, "restored_files": null, "restored_bytes": null}
   },
   "fault_injection": [],
   "alert_lifecycle": [],

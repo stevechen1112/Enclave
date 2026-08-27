@@ -57,6 +57,7 @@ def _complete_evidence() -> dict:
         "restore_drill": {
             "status": "PASS",
             "isolated_environment": True,
+            "source_mutated": False,
             "rto_seconds": 120,
             "rpo_seconds": 1,
             "rto_target_seconds": 900,
@@ -65,21 +66,32 @@ def _complete_evidence() -> dict:
                 "backup_status": "PASS",
                 "restore_status": "PASS",
                 "sha256": "1" * 64,
+                "table_count": 10,
             },
             "object_store": {
                 "backup_status": "PASS",
                 "restore_status": "PASS",
                 "sha256": "2" * 64,
+                "objects": 4,
+                "bytes": 100,
+                "restored_objects": 4,
+                "restored_bytes": 100,
             },
             "index": {
                 "backup_status": "PASS",
                 "restore_status": "PASS",
                 "sha256": "3" * 64,
+                "inventory": "4|4|100",
             },
             "configuration": {
                 "backup_status": "PASS",
                 "restore_status": "PASS",
                 "sha256": "4" * 64,
+                "secret_material_included": False,
+                "files": 3,
+                "bytes": 200,
+                "restored_files": 3,
+                "restored_bytes": 200,
             },
         },
         "fault_injection": [
@@ -162,3 +174,13 @@ def test_restore_target_miss_fails_closed():
     result = evaluate_p4_resilience_evidence(evidence)
     assert result["status"] == "HOLD"
     assert "restore RTO target was not met" in result["errors"]
+
+
+def test_restore_inventory_mismatch_fails_closed():
+    evidence = _complete_evidence()
+    evidence["restore_drill"]["object_store"]["restored_objects"] = 3
+    evidence["restore_drill"]["configuration"]["secret_material_included"] = True
+    result = evaluate_p4_resilience_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "restored object inventory differs from backup" in result["errors"]
+    assert any("secret material" in error for error in result["errors"])

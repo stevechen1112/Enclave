@@ -66,6 +66,8 @@ def evaluate_p4_resilience_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
         or restore.get("isolated_environment") is not True
     ):
         errors.append("fresh isolated restore drill has not passed")
+    if restore.get("source_mutated") is not False:
+        errors.append("restore drill did not attest source_mutated=false")
     for component in ("database", "object_store", "index", "configuration"):
         row = restore.get(component) or {}
         if row.get("backup_status") != "PASS" or row.get("restore_status") != "PASS":
@@ -73,6 +75,40 @@ def evaluate_p4_resilience_evidence(evidence: dict[str, Any]) -> dict[str, Any]:
         digest = str(row.get("sha256") or "")
         if len(digest) != 64 or any(ch not in "0123456789abcdef" for ch in digest):
             errors.append(f"{component} sha256 is invalid")
+    database = restore.get("database") or {}
+    if not isinstance(database.get("table_count"), int) or database["table_count"] <= 0:
+        errors.append("restored database table inventory is missing")
+    objects = restore.get("object_store") or {}
+    object_count = objects.get("objects")
+    object_bytes = objects.get("bytes")
+    if (
+        not isinstance(object_count, int)
+        or object_count < 0
+        or objects.get("restored_objects") != object_count
+        or not isinstance(object_bytes, int)
+        or object_bytes < 0
+        or objects.get("restored_bytes") != object_bytes
+    ):
+        errors.append("restored object inventory differs from backup")
+    index = restore.get("index") or {}
+    if not str(index.get("inventory") or "").strip():
+        errors.append("restored index inventory is missing")
+    configuration = restore.get("configuration") or {}
+    if configuration.get("secret_material_included") is not False:
+        errors.append(
+            "configuration backup contains or did not rule out secret material"
+        )
+    config_files = configuration.get("files")
+    config_bytes = configuration.get("bytes")
+    if (
+        not isinstance(config_files, int)
+        or config_files < 0
+        or configuration.get("restored_files") != config_files
+        or not isinstance(config_bytes, int)
+        or config_bytes < 0
+        or configuration.get("restored_bytes") != config_bytes
+    ):
+        errors.append("restored configuration inventory differs from backup")
     rto = restore.get("rto_seconds")
     rpo = restore.get("rpo_seconds")
     rto_target = restore.get("rto_target_seconds")
