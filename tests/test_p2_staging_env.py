@@ -89,11 +89,15 @@ def test_greenfield_deploy_initializes_owner_and_optional_demo_after_roles():
     assert "  init-superuser:" in compose
     init_service = compose.split("  init-superuser:", 1)[1].split("  init-demo:", 1)[0]
     assert "scripts/init_superuser.py" in init_service
-    assert "DB_ADMIN_ENV_FILE" in init_service
+    assert "MAINTENANCE_ENV_FILE" in init_service
+    assert "DB_ADMIN_ENV_FILE" not in init_service
+    assert "DB_ADMIN_PASSWORD" not in init_service
     assert "  init-demo:" in compose
     demo_service = compose.split("  init-demo:", 1)[1].split("  # ── Redis", 1)[0]
     assert "scripts/init_demo_tenant.py" in demo_service
-    assert "DB_ADMIN_ENV_FILE" in demo_service
+    assert "MAINTENANCE_ENV_FILE" in demo_service
+    assert "DB_ADMIN_ENV_FILE" not in demo_service
+    assert "DB_ADMIN_PASSWORD" not in demo_service
     for workflow in ("deploy-staging.yml", "deploy-production.yml"):
         content = (root / ".github" / "workflows" / workflow).read_text(
             encoding="utf-8"
