@@ -1,4 +1,5 @@
 """Phase 4 — Graph projection service with ACL checks."""
+
 from __future__ import annotations
 
 import logging
@@ -113,7 +114,10 @@ class GraphService:
         return row
 
     def tombstone_by_source_document(
-        self, db: Session, tenant_id: UUID, document_id: UUID,
+        self,
+        db: Session,
+        tenant_id: UUID,
+        document_id: UUID,
     ) -> Dict[str, int]:
         """撤權後 tombstone 源自該文件的 graph entity / 相關 edges。"""
         now = datetime.now(timezone.utc)
@@ -161,7 +165,11 @@ class GraphService:
         # pre-ACL：deny-set 優先於 admin bypass（撤權後不得再遍歷）
         if entity.source_document_id:
             authorizer = get_gateway_authorizer()
-            if authorizer.is_denied(str(entity.source_document_id), authz.subject_id):
+            if authorizer.is_denied(
+                str(entity.source_document_id),
+                authz.subject_id,
+                tenant_id=authz.tenant_id,
+            ):
                 return False
         if authz.has_kb_admin:
             return True
@@ -170,7 +178,12 @@ class GraphService:
             try:
                 from app.services.resource_policy import get_resource_policy
                 from app.models.document import Document
-                doc = db.query(Document).filter(Document.id == entity.source_document_id).first()
+
+                doc = (
+                    db.query(Document)
+                    .filter(Document.id == entity.source_document_id)
+                    .first()
+                )
                 if not doc:
                     return False
                 return get_resource_policy().authorize_document(db, authz, doc)
@@ -192,10 +205,14 @@ class GraphService:
         namespace: str = "weknora",
     ) -> Dict[str, Any]:
         """BFS traversal with pre/post ACL validation."""
-        start = db.query(GraphEntity).filter(
-            GraphEntity.id == start_entity_id,
-            GraphEntity.tenant_id == tenant_id,
-        ).first()
+        start = (
+            db.query(GraphEntity)
+            .filter(
+                GraphEntity.id == start_entity_id,
+                GraphEntity.tenant_id == tenant_id,
+            )
+            .first()
+        )
         if not start or not self._entity_allowed(start, authz, db=db):
             return {"entities": [], "edges": [], "denied": True}
 
@@ -211,13 +228,15 @@ class GraphService:
             if not self._entity_allowed(entity, authz, db=db):
                 continue
             visited.add(entity.id)
-            entities.append({
-                "id": str(entity.id),
-                "name": entity.name,
-                "entity_type": entity.entity_type,
-                "namespace": entity.namespace,
-                "depth": level,
-            })
+            entities.append(
+                {
+                    "id": str(entity.id),
+                    "name": entity.name,
+                    "entity_type": entity.entity_type,
+                    "namespace": entity.namespace,
+                    "depth": level,
+                }
+            )
 
             edge_rows = (
                 db.query(GraphEdge)
@@ -230,14 +249,20 @@ class GraphService:
                 .all()
             )
             for edge in edge_rows:
-                target = db.query(GraphEntity).filter(GraphEntity.id == edge.target_entity_id).first()
+                target = (
+                    db.query(GraphEntity)
+                    .filter(GraphEntity.id == edge.target_entity_id)
+                    .first()
+                )
                 if target and self._entity_allowed(target, authz, db=db):
-                    edges.append({
-                        "source": str(edge.source_entity_id),
-                        "target": str(edge.target_entity_id),
-                        "relation_type": edge.relation_type,
-                        "weight": edge.weight,
-                    })
+                    edges.append(
+                        {
+                            "source": str(edge.source_entity_id),
+                            "target": str(edge.target_entity_id),
+                            "relation_type": edge.relation_type,
+                            "weight": edge.weight,
+                        }
+                    )
                     if target.id not in visited:
                         frontier.append((target, level + 1))
 
@@ -262,12 +287,14 @@ class GraphService:
         results = []
         for entity in q.limit(limit * 2).all():
             if self._entity_allowed(entity, authz, db=db):
-                results.append({
-                    "id": str(entity.id),
-                    "name": entity.name,
-                    "entity_type": entity.entity_type,
-                    "namespace": entity.namespace,
-                })
+                results.append(
+                    {
+                        "id": str(entity.id),
+                        "name": entity.name,
+                        "entity_type": entity.entity_type,
+                        "namespace": entity.namespace,
+                    }
+                )
             if len(results) >= limit:
                 break
         return results

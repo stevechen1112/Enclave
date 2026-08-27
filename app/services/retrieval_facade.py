@@ -4,6 +4,7 @@ P1 — RetrievalFacade
 單一知識讀取入口：強制 AuthorizationContext + Resource PEP + 統一 CitationBuilder。
 下游（KB canonical / Gateway fan-out）不得再各自發明第二套 citation 或略過 authz。
 """
+
 from __future__ import annotations
 
 import logging
@@ -22,7 +23,11 @@ from app.platform.knowledge.providers import (
     KnowledgeProviderFailure,
     KnowledgeProviderRegistry,
 )
-from app.services.catalog_retrieval import CatalogRetriever, RetrievalHit, get_catalog_retriever
+from app.services.catalog_retrieval import (
+    CatalogRetriever,
+    RetrievalHit,
+    get_catalog_retriever,
+)
 from app.services.query_plan import is_inventory_query  # noqa: F401 — re-export 相容
 
 logger = logging.getLogger(__name__)
@@ -48,6 +53,7 @@ class RetrievalResult:
         # P0-1：Context Fitting（feature-flagged）
         if settings.CONTEXT_FITTING_ENABLED:
             from app.services.context_fitting import fit_context
+
             fitted = fit_context(
                 self.results,
                 token_budget=settings.CONTEXT_FITTING_TOKEN_BUDGET,
@@ -59,7 +65,7 @@ class RetrievalResult:
         for i, r in enumerate(self.results):
             text = r.get("text") or r.get("content") or ""
             doc = str(r.get("document_id") or "")[:8]
-            parts.append(f"[來源 {i+1}] (doc:{doc})\n{text}")
+            parts.append(f"[來源 {i + 1}] (doc:{doc})\n{text}")
         return parts
 
 
@@ -90,7 +96,9 @@ class RetrievalFacade:
         回答「有哪些檔」類問題；只回 completed 且未 tombstone 的文件。
         """
         if authz is None:
-            raise ValueError("AuthorizationContext is required for RetrievalFacade.search_catalog")
+            raise ValueError(
+                "AuthorizationContext is required for RetrievalFacade.search_catalog"
+            )
         genre_filter = (filters or {}).get("genres")
         kb_revision_id = (filters or {}).get("kb_revision_id")
         if kb_revision_id is not None and not isinstance(kb_revision_id, UUID):
@@ -100,15 +108,19 @@ class RetrievalFacade:
                 raise ValueError("kb_revision_id must be a UUID") from exc
         kb_revision_ids = []
         for value in (filters or {}).get("kb_revision_ids") or []:
-            try: kb_revision_ids.append(UUID(str(value)))
-            except (TypeError, ValueError) as exc: raise ValueError("kb_revision_ids must contain UUIDs") from exc
+            try:
+                kb_revision_ids.append(UUID(str(value)))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("kb_revision_ids must contain UUIDs") from exc
         return self._catalog.search(
             tenant_id=authz.tenant_id,
             query=query,
             top_k=top_k,
             genre_filter=genre_filter,
             kb_revision_id=kb_revision_id,
-            kb_revision_ids=kb_revision_ids if "kb_revision_ids" in (filters or {}) else None,
+            kb_revision_ids=kb_revision_ids
+            if "kb_revision_ids" in (filters or {})
+            else None,
             authz=authz,
             db=db,
         )
@@ -129,7 +141,9 @@ class RetrievalFacade:
         authz is required — callers must not pass None.
         """
         if authz is None:
-            raise ValueError("AuthorizationContext is required for RetrievalFacade.search")
+            raise ValueError(
+                "AuthorizationContext is required for RetrievalFacade.search"
+            )
         from app.services.kb_retrieval import KnowledgeBaseRetriever
 
         raw = KnowledgeBaseRetriever().search(
@@ -170,7 +184,9 @@ class RetrievalFacade:
                     top_k=top_k,
                 )
                 if settings.KNOWLEDGE_UNIT_READ_MODE == "shadow":
-                    from app.services.knowledge_authority_read import sealed_parity_report
+                    from app.services.knowledge_authority_read import (
+                        sealed_parity_report,
+                    )
 
                     report = sealed_parity_report(
                         legacy_resource_ids=[
@@ -191,7 +207,9 @@ class RetrievalFacade:
                 # During an additive deployment workers may briefly run before
                 # the authority migration. Shadow mode must preserve the legacy
                 # answer path while making the missing projection observable.
-                logger.warning("knowledge authority shadow read unavailable", exc_info=True)
+                logger.warning(
+                    "knowledge authority shadow read unavailable", exc_info=True
+                )
         chunks = (
             authority_chunks
             if settings.KNOWLEDGE_UNIT_READ_MODE == "enforce"
@@ -239,6 +257,9 @@ class RetrievalFacade:
         own_session = db is None
         db = db or SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, authz.tenant_id)
             rows_query = (
                 db.query(DocumentChunk)
                 .join(Document, DocumentChunk.document_id == Document.id)
@@ -251,10 +272,18 @@ class RetrievalFacade:
             if (scope or {}).get("kb_revision_id"):
                 raw_revision_ids.append((scope or {})["kb_revision_id"])
             raw_revision_ids.extend((scope or {}).get("kb_revision_ids") or [])
-            from app.services.document_visibility import apply_document_visibility, deny_set_allows
+            from app.services.document_visibility import (
+                apply_document_visibility,
+                deny_set_allows,
+            )
+
             rows_query = apply_document_visibility(
-                rows_query, authz=authz, db=db,
-                require_completed=not (raw_revision_ids or "kb_revision_ids" in (scope or {})),
+                rows_query,
+                authz=authz,
+                db=db,
+                require_completed=not (
+                    raw_revision_ids or "kb_revision_ids" in (scope or {})
+                ),
             )
             if raw_revision_ids or "kb_revision_ids" in (scope or {}):
                 from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
@@ -263,8 +292,14 @@ class RetrievalFacade:
                 revision_ids = [UUID(str(value)) for value in raw_revision_ids]
                 rows_query = rows_query.join(
                     KnowledgeBaseRevisionDocument,
-                    (KnowledgeBaseRevisionDocument.document_id == DocumentChunk.document_id)
-                    & (KnowledgeBaseRevisionDocument.document_revision == DocumentChunk.document_revision),
+                    (
+                        KnowledgeBaseRevisionDocument.document_id
+                        == DocumentChunk.document_id
+                    )
+                    & (
+                        KnowledgeBaseRevisionDocument.document_revision
+                        == DocumentChunk.document_revision
+                    ),
                 ).filter(
                     KnowledgeBaseRevisionDocument.tenant_id == authz.tenant_id,
                     KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids),
@@ -284,12 +319,16 @@ class RetrievalFacade:
                 else:
                     rows_query = rows_query.filter(False)
             else:
-                rows_query = rows_query.filter(DocumentChunk.document_revision == Document.version)
-            rows = [row for row in (
-                rows_query.order_by(DocumentChunk.chunk_index.asc())
-                .limit(n)
-                .all()
-            ) if deny_set_allows(row.document_id, authz=authz)]
+                rows_query = rows_query.filter(
+                    DocumentChunk.document_revision == Document.version
+                )
+            rows = [
+                row
+                for row in (
+                    rows_query.order_by(DocumentChunk.chunk_index.asc()).limit(n).all()
+                )
+                if deny_set_allows(row.document_id, authz=authz)
+            ]
             return [
                 {
                     "id": str(c.id),
@@ -323,7 +362,9 @@ class RetrievalFacade:
     ) -> RetrievalResult:
         """Async Gateway fan-out search with unified citations."""
         if authz is None:
-            raise ValueError("AuthorizationContext is required for RetrievalFacade.search_gateway")
+            raise ValueError(
+                "AuthorizationContext is required for RetrievalFacade.search_gateway"
+            )
         from app.gateway.runtime import get_configured_gateway_router
 
         response = await get_configured_gateway_router().search(
@@ -342,8 +383,13 @@ class RetrievalFacade:
             getattr(e, "code", None) == "no_adapter" for e in errors
         ):
             raise RuntimeError("gateway_no_adapter")
-        if getattr(response, "status", None) == "error" and not (response.results or []):
-            msgs = "; ".join(getattr(e, "message", str(e)) for e in errors) or "gateway_error"
+        if getattr(response, "status", None) == "error" and not (
+            response.results or []
+        ):
+            msgs = (
+                "; ".join(getattr(e, "message", str(e)) for e in errors)
+                or "gateway_error"
+            )
             raise RuntimeError(msgs)
 
         provider_batch = self._providers.contribute(
@@ -431,9 +477,7 @@ class RetrievalFacade:
         top_k: int,
     ) -> List[ChunkResult]:
         return cls._authority_chunks_from_units(
-            units=cls._authority_units(
-                db=db, authz=authz, scope=scope, query=query
-            ),
+            units=cls._authority_units(db=db, authz=authz, scope=scope, query=query),
             query=query,
             top_k=top_k,
         )
@@ -497,7 +541,9 @@ class RetrievalFacade:
         return cls._dicts_to_chunks(scored[:top_k])
 
     @staticmethod
-    def _filter_gateway_visibility(results, *, authz: AuthorizationContext, scope, db=None):
+    def _filter_gateway_visibility(
+        results, *, authz: AuthorizationContext, scope, db=None
+    ):
         """Revalidate every sidecar hit against canonical document visibility.
 
         Adapters are defense-in-depth, not the policy authority.  When an
@@ -509,11 +555,17 @@ class RetrievalFacade:
         from app.db.session import SessionLocal
         from app.models.document import Document
         from app.services.document_readiness import ready_revision_pairs
-        from app.services.document_visibility import apply_document_visibility, deny_set_allows
+        from app.services.document_visibility import (
+            apply_document_visibility,
+            deny_set_allows,
+        )
 
         own = db is None
         session = db or SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(session, authz.tenant_id)
             by_uuid = {}
             passthrough = []
             for result in results:
@@ -529,7 +581,9 @@ class RetrievalFacade:
             if not by_uuid:
                 return [] if scope_is_explicit else passthrough
             visible_query = apply_document_visibility(
-                session.query(Document.id, Document.version), authz=authz, db=session,
+                session.query(Document.id, Document.version),
+                authz=authz,
+                db=session,
                 require_completed=not scope_is_explicit,
             ).filter(Document.id.in_(list(by_uuid)))
             visible_current = {
@@ -560,14 +614,20 @@ class RetrievalFacade:
                         continue
                     allowed_revisions.setdefault(doc_id, set()).add(int(revision))
             else:
-                allowed_revisions = {doc_id: {revision} for doc_id, revision in visible_current.items()}
+                allowed_revisions = {
+                    doc_id: {revision} for doc_id, revision in visible_current.items()
+                }
 
             kept = []
             for doc_id, doc_results in by_uuid.items():
                 valid_revisions = allowed_revisions.get(doc_id, set())
                 for result in doc_results:
                     meta = result.metadata or {}
-                    raw_revision = result.document_revision or meta.get("document_revision") or meta.get("version")
+                    raw_revision = (
+                        result.document_revision
+                        or meta.get("document_revision")
+                        or meta.get("version")
+                    )
                     if raw_revision is None and len(valid_revisions) == 1:
                         raw_revision = next(iter(valid_revisions))
                         result.document_revision = raw_revision

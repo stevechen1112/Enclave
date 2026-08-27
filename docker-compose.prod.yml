@@ -2,8 +2,9 @@
 # Docker Compose — Production Configuration (On-Premise)
 # ========================================================
 # Prerequisites:
-#   1. Copy .env.production.example → .env.production
-#   2. Fill in ALL values (especially SECRET_KEY, DB password, API keys)
+#   1. Copy .env.production.example, .env.db-admin.example, and
+#      .env.maintenance.example to their non-example names (mode 0600)
+#   2. Fill in ALL values (especially SECRET_KEY, distinct DB passwords, API keys)
 #   3. Core: docker compose -f docker-compose.prod.yml up -d
 #   4. With sidecars (pack=true): also merge compose/sidecars.yml + pack-enabled.env
 #      docker compose --env-file .env.production --env-file compose/image-pins.env \
@@ -29,7 +30,7 @@ services:
         --log-level warning
         --access-log
     restart: always
-    env_file: .env.production
+    env_file: ${APP_ENV_FILE:-.env.production}
     expose:
       - "8000"
     environment:
@@ -88,11 +89,11 @@ services:
       - ./configs/postgresql-tuning.conf:/etc/postgresql/conf.d/tuning.conf:ro
       - ./backups:/backups
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-      - POSTGRES_DB=${POSTGRES_DB:-enclave}
+      - POSTGRES_USER=${DB_ADMIN_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_ADMIN_PASSWORD:?DB_ADMIN_PASSWORD is required}
+      - POSTGRES_DB=${DB_ADMIN_DATABASE:-enclave}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_ADMIN_USER:-postgres} -d ${DB_ADMIN_DATABASE:-enclave}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -111,6 +112,50 @@ services:
         max-size: "50m"
         max-file: "5"
     # No external port exposure in production
+
+  # ── One-shot schema owner operations (never used by web/worker) ──
+  migrate:
+    profiles: ["operations"]
+    image: ${IMAGE_PREFIX:-ghcr.io/enclave}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: alembic upgrade head
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+      - ${DB_ADMIN_ENV_FILE:-.env.db-admin}
+    environment:
+      - APP_ENV=production
+      - POSTGRES_SERVER=${DB_ADMIN_HOST:-db}
+      - POSTGRES_PORT=${DB_ADMIN_PORT:-5432}
+      - POSTGRES_DB=${DB_ADMIN_DATABASE:-enclave}
+      - POSTGRES_USER=${DB_ADMIN_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_ADMIN_PASSWORD:?DB_ADMIN_PASSWORD is required}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  provision-db-roles:
+    profiles: ["operations"]
+    image: ${IMAGE_PREFIX:-ghcr.io/enclave}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python scripts/provision_tenant_database_roles.py
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+      - ${DB_ADMIN_ENV_FILE:-.env.db-admin}
+      - ${MAINTENANCE_ENV_FILE:-.env.maintenance}
+    environment:
+      - APP_ENV=production
+      - DB_ADMIN_HOST=${DB_ADMIN_HOST:-db}
+      - DB_ADMIN_PORT=${DB_ADMIN_PORT:-5432}
+      - DB_ADMIN_DATABASE=${DB_ADMIN_DATABASE:-enclave}
+      - DB_ADMIN_USER=${DB_ADMIN_USER:-postgres}
+      - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD:?DB_ADMIN_PASSWORD is required}
+    depends_on:
+      db:
+        condition: service_healthy
 
   # ── Redis ──
   redis:
@@ -156,7 +201,9 @@ services:
         --concurrency=2
         --max-tasks-per-child=200
     restart: always
-    env_file: .env.production
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+      - ${MAINTENANCE_ENV_FILE:-.env.maintenance}
     environment:
       - APP_ENV=production
       - POSTGRES_SERVER=db
@@ -213,7 +260,7 @@ services:
     # beat 不開 HTTP port，停用映像內建的 curl /health 檢查（否則永遠 unhealthy）
     healthcheck:
       disable: true
-    env_file: .env.production
+    env_file: ${APP_ENV_FILE:-.env.production}
     environment:
       - APP_ENV=production
       - POSTGRES_SERVER=db

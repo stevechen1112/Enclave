@@ -1,4 +1,5 @@
 """Phase 4 — Wiki compilation as derived projection."""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,6 +29,7 @@ class WikiCompiler:
         try:
             from app.gateway.adapters.weknora_http import WeKnoraHTTPAdapter
             from app.gateway.token_provider import build_weknora_token_provider
+
             adapter = WeKnoraHTTPAdapter(
                 base_url=os.getenv("WEKNORA_BASE_URL", "http://weknora:8080"),
                 api_key=os.getenv("WEKNORA_API_KEY", ""),
@@ -35,8 +37,10 @@ class WikiCompiler:
             )
             await adapter.compile_wiki(kb_id)
             pages = await adapter.list_wiki_pages(kb_id)
-            items = pages if isinstance(pages, list) else (
-                (pages or {}).get("pages") or (pages or {}).get("data") or []
+            items = (
+                pages
+                if isinstance(pages, list)
+                else ((pages or {}).get("pages") or (pages or {}).get("data") or [])
             )
             candidates = []
             for page in items:
@@ -50,7 +54,9 @@ class WikiCompiler:
             if not candidates:
                 return None
             # 優先 index 頁，否則取第一個有內容的頁面
-            candidates.sort(key=lambda pd: 0 if "index" in str(pd[0].get("slug", "")) else 1)
+            candidates.sort(
+                key=lambda pd: 0 if "index" in str(pd[0].get("slug", "")) else 1
+            )
             page, data = candidates[0]
             return {
                 "content": data["content"],
@@ -96,14 +102,21 @@ class WikiCompiler:
         if not remote:
             # 禁止占位 published：標記 failed，不寫假內容
             page.status = "failed"
-            page.source_document_ids = source_document_ids or page.source_document_ids or []
+            page.source_document_ids = (
+                source_document_ids or page.source_document_ids or []
+            )
             publish_event(
                 db,
                 aggregate_type="wiki",
                 aggregate_id=str(page.id),
                 event_type="compile_failed",
                 revision=revision_num,
-                payload={"kb_id": str(kb_id), "page_type": page_type, "reason": "weknora_unavailable"},
+                payload={
+                    "tenant_id": str(tenant_id),
+                    "kb_id": str(kb_id),
+                    "page_type": page_type,
+                    "reason": "weknora_unavailable",
+                },
             )
             db.commit()
             db.refresh(page)
@@ -113,8 +126,7 @@ class WikiCompiler:
         if remote.get("title"):
             page.title = remote["title"]
         citation_map = remote.get("citation_map") or [
-            {"document_id": d, "revision": 1}
-            for d in (source_document_ids or [])
+            {"document_id": d, "revision": 1} for d in (source_document_ids or [])
         ]
         content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
         rev = WikiRevision(
@@ -136,7 +148,11 @@ class WikiCompiler:
             aggregate_id=str(page.id),
             event_type="compiled",
             revision=revision_num,
-            payload={"kb_id": str(kb_id), "page_type": page_type},
+            payload={
+                "tenant_id": str(page.tenant_id),
+                "kb_id": str(kb_id),
+                "page_type": page_type,
+            },
         )
         db.commit()
         db.refresh(page)
@@ -157,17 +173,24 @@ class WikiCompiler:
             page.title = title
         current_rev = (
             db.query(WikiRevision)
-            .filter(WikiRevision.wiki_page_id == page.id, WikiRevision.revision == page.active_revision)
+            .filter(
+                WikiRevision.wiki_page_id == page.id,
+                WikiRevision.revision == page.active_revision,
+            )
             .first()
         )
-        if content is not None and content != (current_rev.content if current_rev else ""):
+        if content is not None and content != (
+            current_rev.content if current_rev else ""
+        ):
             revision_num = (page.active_revision or 0) + 1
             rev = WikiRevision(
                 wiki_page_id=page.id,
                 revision=revision_num,
                 content=content,
                 content_hash=hashlib.sha256(content.encode()).hexdigest()[:16],
-                citation_map=list(current_rev.citation_map) if current_rev and current_rev.citation_map else [],
+                citation_map=list(current_rev.citation_map)
+                if current_rev and current_rev.citation_map
+                else [],
                 compile_job_id=f"manual-edit-{editor_id or 'unknown'}",
             )
             db.add(rev)
@@ -180,7 +203,11 @@ class WikiCompiler:
             aggregate_id=str(page.id),
             event_type="edited",
             revision=page.active_revision or 1,
-            payload={"editor_id": editor_id or "", "manual": True},
+            payload={
+                "tenant_id": str(page.tenant_id),
+                "editor_id": editor_id or "",
+                "manual": True,
+            },
         )
         db.commit()
         db.refresh(page)
@@ -236,7 +263,11 @@ class WikiCompiler:
                     aggregate_id=str(page.id),
                     event_type="revoked",
                     revision=(page.active_revision or 0) + 1,
-                    payload={"reason": "source_document_revoked", "document_id": document_id},
+                    payload={
+                        "tenant_id": str(tenant_id),
+                        "reason": "source_document_revoked",
+                        "document_id": document_id,
+                    },
                 )
             else:
                 page.source_document_ids = remaining
@@ -248,7 +279,11 @@ class WikiCompiler:
                     aggregate_id=str(page.id),
                     event_type="stale",
                     revision=(page.active_revision or 0) + 1,
-                    payload={"reason": "source_document_revoked", "document_id": document_id},
+                    payload={
+                        "tenant_id": str(tenant_id),
+                        "reason": "source_document_revoked",
+                        "document_id": document_id,
+                    },
                 )
         if tombstoned or stale:
             db.commit()
@@ -273,12 +308,18 @@ class WikiCompiler:
                     )
                     recompiled += 1
                 except Exception as exc:
-                    logger.warning("wiki recompile after revoke failed page=%s: %s", page.id, exc)
+                    logger.warning(
+                        "wiki recompile after revoke failed page=%s: %s", page.id, exc
+                    )
 
         return {"tombstoned": tombstoned, "stale": stale, "recompiled": recompiled}
 
     def search_pages(
-        self, db: Session, tenant_id: UUID, query: str, limit: int = 10,
+        self,
+        db: Session,
+        tenant_id: UUID,
+        query: str,
+        limit: int = 10,
     ) -> List[WikiPage]:
         return (
             db.query(WikiPage)

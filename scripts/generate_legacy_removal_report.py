@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.db.session import SessionLocal
+from app.db.session import MaintenanceSessionLocal
 from app.services.legacy_retirement import build_signed_removal_report
 
 
@@ -27,7 +27,7 @@ def main() -> int:
             "LEGACY_REMOVAL_REPORT_KEY (>=32 characters) is required", file=sys.stderr
         )
         return 2
-    with SessionLocal() as db:
+    with MaintenanceSessionLocal() as db:
         report = build_signed_removal_report(db, signing_key=signing_key)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

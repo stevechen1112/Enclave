@@ -2,6 +2,7 @@
 
 把 chat 從「單次 retrieve」改為依 QueryPlan 逐步執行臂並留下 trace。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -40,7 +41,10 @@ class MultiStepOrchestrator:
 
         facade = get_retrieval_facade()
         from app.services.kb_scope_policy import resolve_kb_revision_scope
-        self._filter_dict = resolve_kb_revision_scope(authz=authz, requested=filter_dict, db=db)
+
+        self._filter_dict = resolve_kb_revision_scope(
+            authz=authz, requested=filter_dict, db=db
+        )
         plan = plan or build_query_plan(question)
         arms = arms_for_plan(plan)
         plan.arms = list(arms)
@@ -58,7 +62,10 @@ class MultiStepOrchestrator:
                 arms = ["catalog"] + list(arms)
         # 跨語條款文件：即使非 translate 意圖也掛 compiled 臂讀投影
         ql = (question or "").casefold()
-        if any(k in ql for k in ("eti", "base code", "緬甸", "burmese")) and "compiled" not in arms:
+        if (
+            any(k in ql for k in ("eti", "base code", "緬甸", "burmese"))
+            and "compiled" not in arms
+        ):
             arms = list(arms) + ["compiled"]
 
         trace = RetrievalTraceView(
@@ -100,16 +107,16 @@ class MultiStepOrchestrator:
                 for p in meta.get("providers_called") or []:
                     if p not in providers_called:
                         providers_called.append(p)
-                fusion_meta.update({k: v for k, v in meta.items() if k != "providers_called"})
+                fusion_meta.update(
+                    {k: v for k, v in meta.items() if k != "providers_called"}
+                )
             elif arm == "compiled":
                 await self._run_compiled(
                     authz, question, clause_projections, trace, db=db
                 )
             elif arm == "pageindex":
                 # P2-4：PageIndex 長文件臂（feature-flagged）
-                await self._run_pageindex(
-                    authz, question, chunk_results, trace, db=db
-                )
+                await self._run_pageindex(authz, question, chunk_results, trace, db=db)
             elif arm in {"structured", "procedure"}:
                 await self._run_projection(
                     arm, authz, question, plan, chunk_results, trace, db=db
@@ -136,7 +143,9 @@ class MultiStepOrchestrator:
             )
             has_evidence = False
             trace.refusal = refusal
-        elif has_evidence and amount_question_lacks_numeric_evidence(question, chunk_results):
+        elif has_evidence and amount_question_lacks_numeric_evidence(
+            question, chunk_results
+        ):
             # 已命中檔名／文件時，金額常在非 top-k chunk（表尾總價）→ 先擴文件頭再判定
             chunk_results = await self._expand_chunks_for_amount(
                 facade, authz, chunk_results, catalog_hits, db=db
@@ -164,7 +173,9 @@ class MultiStepOrchestrator:
                         }
                     )[:8],
                 )
-        elif has_evidence and guarantee_question_lacks_evidence(question, chunk_results):
+        elif has_evidence and guarantee_question_lacks_evidence(
+            question, chunk_results
+        ):
             refusal = build_refusal(
                 question=question,
                 plan_intent=plan.intent,
@@ -207,13 +218,25 @@ class MultiStepOrchestrator:
             **fusion_meta,
         }
 
-    async def _run_projection(self, arm, authz, question, plan, out, trace, *, db=None) -> None:
+    async def _run_projection(
+        self, arm, authz, question, plan, out, trace, *, db=None
+    ) -> None:
         from app.db.session import SessionLocal
-        from app.services.projection_retrieval import load_procedure_evidence, load_structured_evidence
+        from app.services.projection_retrieval import (
+            load_procedure_evidence,
+            load_structured_evidence,
+        )
 
         session = db or SessionLocal()
         try:
-            loader = load_structured_evidence if arm == "structured" else load_procedure_evidence
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(session, authz.tenant_id)
+            loader = (
+                load_structured_evidence
+                if arm == "structured"
+                else load_procedure_evidence
+            )
             rows = loader(
                 db=session,
                 authz=authz,
@@ -252,7 +275,11 @@ class MultiStepOrchestrator:
             if fn and fn not in filenames:
                 filenames.append(fn)
         for h in catalog_hits:
-            fn = h.get("filename") if isinstance(h, dict) else getattr(h, "filename", None)
+            fn = (
+                h.get("filename")
+                if isinstance(h, dict)
+                else getattr(h, "filename", None)
+            )
             if fn and fn not in filenames:
                 filenames.append(fn)
         if not filenames:
@@ -307,7 +334,9 @@ class MultiStepOrchestrator:
             if tenant_id is None:
                 return False
             scope = getattr(self, "_filter_dict", None) or {}
-            revision_ids = [UUID(str(value)) for value in (scope.get("kb_revision_ids") or [])]
+            revision_ids = [
+                UUID(str(value)) for value in (scope.get("kb_revision_ids") or [])
+            ]
             return get_catalog_retriever().filename_token_hit(
                 tenant_id=tenant_id,
                 tokens=tokens,
@@ -320,7 +349,9 @@ class MultiStepOrchestrator:
             logger.debug("catalog index pre-check skipped: %s", exc)
             return False
 
-    async def _run_catalog(self, facade, authz, queries, out, trace, *, db=None) -> None:
+    async def _run_catalog(
+        self, facade, authz, queries, out, trace, *, db=None
+    ) -> None:
         seen = set()
         loop = asyncio.get_event_loop()
         for q in queries:
@@ -344,14 +375,26 @@ class MultiStepOrchestrator:
                     out.append(row)
                     if h.filename:
                         titles.append(h.filename)
-                trace.add_step(arm="catalog", query=q, hit_count=len(titles), hit_titles=titles)
+                trace.add_step(
+                    arm="catalog", query=q, hit_count=len(titles), hit_titles=titles
+                )
             except Exception as exc:
                 logger.warning("catalog step failed: %s", exc)
                 trace.add_step(arm="catalog", query=q, hit_count=0, error=str(exc))
 
     async def _run_chunk(
-        self, facade, authz, queries, out, trace, *, top_k, use_gateway,
-        plan=None, question: str = "", catalog_hits: Optional[List[Dict[str, Any]]] = None,
+        self,
+        facade,
+        authz,
+        queries,
+        out,
+        trace,
+        *,
+        top_k,
+        use_gateway,
+        plan=None,
+        question: str = "",
+        catalog_hits: Optional[List[Dict[str, Any]]] = None,
         db=None,
     ) -> Dict[str, Any]:
         meta = {
@@ -376,7 +419,11 @@ class MultiStepOrchestrator:
 
             toks = [t for t in _filename_tokens(question) if len(t) >= 2]
             for h in catalog_hits:
-                fn = h.get("filename") if isinstance(h, dict) else getattr(h, "filename", None)
+                fn = (
+                    h.get("filename")
+                    if isinstance(h, dict)
+                    else getattr(h, "filename", None)
+                )
                 if not fn:
                     continue
                 fn_l = fn.casefold()
@@ -395,12 +442,17 @@ class MultiStepOrchestrator:
         if mentioned:
             before = len(out)
             await self._run_scoped_chunk(
-                facade, authz, mentioned, question or (queries[0] if queries else ""),
-                out, trace, top_k=top_k, seen=seen, db=db,
+                facade,
+                authz,
+                mentioned,
+                question or (queries[0] if queries else ""),
+                out,
+                trace,
+                top_k=top_k,
+                seen=seen,
+                db=db,
             )
-            hit_names = {
-                r.get("filename") for r in out[before:] if r.get("filename")
-            }
+            hit_names = {r.get("filename") for r in out[before:] if r.get("filename")}
             # soft：子查詢標題只要被某命中檔名包含，即算取到
             still_missing = []
             for fn in mentioned:
@@ -425,7 +477,19 @@ class MultiStepOrchestrator:
             elif scoped_ok or len(out) > before:
                 # 金額題：把含報價數字的段落提前，避免成效／ROAS 雜訊佔滿上下文（Z4-009）
                 q = question or ""
-                if any(a in q for a in ("金額", "總價", "報價", "價位", "價格", "多少錢", "費用", "月費")):
+                if any(
+                    a in q
+                    for a in (
+                        "金額",
+                        "總價",
+                        "報價",
+                        "價位",
+                        "價格",
+                        "多少錢",
+                        "費用",
+                        "月費",
+                    )
+                ):
                     from app.services.refusal import _AMOUNT_IN_TEXT
 
                     priced = []
@@ -434,7 +498,17 @@ class MultiStepOrchestrator:
                         blob = r.get("content") or ""
                         if _AMOUNT_IN_TEXT.search(blob) and any(
                             k in blob
-                            for k in ("報價", "月費", "總計", "未稅", "含稅", "金額", "NT$", "元", "電商方案")
+                            for k in (
+                                "報價",
+                                "月費",
+                                "總計",
+                                "未稅",
+                                "含稅",
+                                "金額",
+                                "NT$",
+                                "元",
+                                "電商方案",
+                            )
                         ):
                             priced.append(r)
                         else:
@@ -489,7 +563,11 @@ class MultiStepOrchestrator:
                         continue
                     seen.add(key)
                     c = all_citations[i] if i < len(all_citations) else None
-                    filename = (r.get("metadata") or {}).get("filename", "") or r.get("filename") or ""
+                    filename = (
+                        (r.get("metadata") or {}).get("filename", "")
+                        or r.get("filename")
+                        or ""
+                    )
                     row = {
                         "id": r.get("id"),
                         "content": r.get("content") or r.get("text") or "",
@@ -521,15 +599,22 @@ class MultiStepOrchestrator:
                     for p in getattr(audit, "providers_called", None) or []:
                         if p not in meta["providers_called"]:
                             meta["providers_called"].append(p)
-                    meta["fusion_policy_version"] = getattr(audit, "fusion_policy_version", "") or meta["fusion_policy_version"]
-                    meta["query_domain"] = getattr(audit, "query_domain", "") or meta["query_domain"]
+                    meta["fusion_policy_version"] = (
+                        getattr(audit, "fusion_policy_version", "")
+                        or meta["fusion_policy_version"]
+                    )
+                    meta["query_domain"] = (
+                        getattr(audit, "query_domain", "") or meta["query_domain"]
+                    )
                     meta["dropped_non_citable"] = (
                         getattr(audit, "dropped_non_citable", 0) or 0
                     ) + int(meta.get("dropped_non_citable") or 0)
                 gw_status = getattr(retrieved, "gateway_status", None)
                 if gw_status == "partial":
                     meta["degraded"] = True
-                trace.add_step(arm="chunk", query=q, hit_count=len(titles), hit_titles=titles)
+                trace.add_step(
+                    arm="chunk", query=q, hit_count=len(titles), hit_titles=titles
+                )
             except Exception as exc:
                 logger.warning("chunk step failed: %s", exc)
                 meta["degraded"] = True
@@ -545,18 +630,33 @@ class MultiStepOrchestrator:
                     titles = []
                     for r in retrieved.results or []:
                         filename = r.get("filename") or ""
-                        out.append(dict(r) if isinstance(r, dict) else {
-                            "content": getattr(r, "content", ""),
-                            "document_id": getattr(r, "document_id", None),
-                            "score": getattr(r, "score", 0),
-                            "filename": filename,
-                        })
+                        out.append(
+                            dict(r)
+                            if isinstance(r, dict)
+                            else {
+                                "content": getattr(r, "content", ""),
+                                "document_id": getattr(r, "document_id", None),
+                                "score": getattr(r, "score", 0),
+                                "filename": filename,
+                            }
+                        )
                         if filename:
                             titles.append(filename)
                     meta["providers_called"] = ["document"]
-                    trace.add_step(arm="chunk", query=q, hit_count=len(titles), hit_titles=titles, error=str(exc))
+                    trace.add_step(
+                        arm="chunk",
+                        query=q,
+                        hit_count=len(titles),
+                        hit_titles=titles,
+                        error=str(exc),
+                    )
                 except Exception as exc2:
-                    trace.add_step(arm="chunk", query=q, hit_count=0, error=f"{exc}; fallback={exc2}")
+                    trace.add_step(
+                        arm="chunk",
+                        query=q,
+                        hit_count=0,
+                        error=f"{exc}; fallback={exc2}",
+                    )
         return meta
 
     async def _run_scoped_chunk(
@@ -588,16 +688,26 @@ class MultiStepOrchestrator:
                 retrieved = await loop.run_in_executor(
                     None,
                     lambda f=fn: facade.search(
-                        authz=authz, query=clean_query, top_k=scoped_k,
+                        authz=authz,
+                        query=clean_query,
+                        top_k=scoped_k,
                         # hybrid：scoped 內仍需 BM25 關鍵字訊號，否則
                         # 「單價/MOQ」這類詞在純語意下贏不了產品概述 chunk
                         # （2026-08-06 線上報價問答根因）
-                        mode="hybrid", scope={**base_scope, "filename": f}, db=db,
+                        mode="hybrid",
+                        scope={**base_scope, "filename": f},
+                        db=db,
                     ),
                 )
                 hits = [
-                    r for r in (retrieved.results or [])
-                    if ((r.get("metadata") or {}).get("filename") or r.get("filename") or "") == fn
+                    r
+                    for r in (retrieved.results or [])
+                    if (
+                        (r.get("metadata") or {}).get("filename")
+                        or r.get("filename")
+                        or ""
+                    )
+                    == fn
                 ]
                 if not hits:
                     want = _ud.normalize("NFKC", fn).casefold().replace(" ", "")
@@ -614,7 +724,11 @@ class MultiStepOrchestrator:
                     )
                     matched_name = None
                     for r in broad.results or []:
-                        cand = (r.get("metadata") or {}).get("filename") or r.get("filename") or ""
+                        cand = (
+                            (r.get("metadata") or {}).get("filename")
+                            or r.get("filename")
+                            or ""
+                        )
                         cand_n = _ud.normalize("NFKC", cand).casefold().replace(" ", "")
                         if not cand_n:
                             continue
@@ -624,10 +738,24 @@ class MultiStepOrchestrator:
                                 if len(want) < suf_len:
                                     continue
                                 suf = want[-suf_len:]
-                                if suf in {"股份有限公司", "有限公司", "企業社", "工作室"}:
+                                if suf in {
+                                    "股份有限公司",
+                                    "有限公司",
+                                    "企業社",
+                                    "工作室",
+                                }:
                                     continue
                                 if not any(
-                                    k in suf for k in ("報價", "設計", "提案", "合約", "契約", "企劃", "委任")
+                                    k in suf
+                                    for k in (
+                                        "報價",
+                                        "設計",
+                                        "提案",
+                                        "合約",
+                                        "契約",
+                                        "企劃",
+                                        "委任",
+                                    )
                                 ):
                                     continue
                                 if suf in cand_n:
@@ -641,20 +769,34 @@ class MultiStepOrchestrator:
                         retrieved = await loop.run_in_executor(
                             None,
                             lambda f=matched_name: facade.search(
-                                authz=authz, query=clean_query, top_k=scoped_k,
-                                mode="semantic", scope={**base_scope, "filename": f}, db=db,
+                                authz=authz,
+                                query=clean_query,
+                                top_k=scoped_k,
+                                mode="semantic",
+                                scope={**base_scope, "filename": f},
+                                db=db,
                             ),
                         )
                         hits = [
-                            r for r in (retrieved.results or [])
-                            if ((r.get("metadata") or {}).get("filename") or r.get("filename") or "")
+                            r
+                            for r in (retrieved.results or [])
+                            if (
+                                (r.get("metadata") or {}).get("filename")
+                                or r.get("filename")
+                                or ""
+                            )
                             == matched_name
                         ]
                         if not hits:
                             # scope 仍空時，至少收下檔名命中的 broad 列
                             hits = [
-                                r for r in (broad.results or [])
-                                if ((r.get("metadata") or {}).get("filename") or r.get("filename") or "")
+                                r
+                                for r in (broad.results or [])
+                                if (
+                                    (r.get("metadata") or {}).get("filename")
+                                    or r.get("filename")
+                                    or ""
+                                )
                                 == matched_name
                             ]
                 # 文件頭部（chunk 0..1）恆常附上：標題/表頭/基本資料固定在
@@ -671,9 +813,15 @@ class MultiStepOrchestrator:
                 )
                 head_new = []
                 for h in head:
-                    hkey = h.get("id") or f"{h.get('document_id')}:{h.get('chunk_index')}"
+                    hkey = (
+                        h.get("id") or f"{h.get('document_id')}:{h.get('chunk_index')}"
+                    )
                     if hkey in seen or any(
-                        (r.get("id") or f"{r.get('document_id')}:{r.get('chunk_index')}") == hkey
+                        (
+                            r.get("id")
+                            or f"{r.get('document_id')}:{r.get('chunk_index')}"
+                        )
+                        == hkey
                         for r in hits
                     ):
                         continue
@@ -681,30 +829,38 @@ class MultiStepOrchestrator:
                 hits = head_new + hits
                 titles = []
                 for r in hits:
-                    key = r.get("id") or f"{r.get('document_id')}:{r.get('chunk_index')}"
+                    key = (
+                        r.get("id") or f"{r.get('document_id')}:{r.get('chunk_index')}"
+                    )
                     if key in seen:
                         continue
                     seen.add(key)
-                    out.append({
-                        "id": r.get("id"),
-                        "content": r.get("content") or r.get("text") or "",
-                        "score": r.get("score"),
-                        "document_id": r.get("document_id"),
-                        "filename": resolved_fn,
-                        "chunk_index": r.get("chunk_index")
+                    out.append(
+                        {
+                            "id": r.get("id"),
+                            "content": r.get("content") or r.get("text") or "",
+                            "score": r.get("score"),
+                            "document_id": r.get("document_id"),
+                            "filename": resolved_fn,
+                            "chunk_index": r.get("chunk_index")
                             if r.get("chunk_index") is not None
                             else (r.get("metadata") or {}).get("chunk_index"),
-                        "source": r.get("source") or "filename_scoped",
-                        "citations": [],
-                    })
+                            "source": r.get("source") or "filename_scoped",
+                            "citations": [],
+                        }
+                    )
                     titles.append(resolved_fn)
                 trace.add_step(
-                    arm="chunk_scoped", query=f"《{fn}》→{resolved_fn} {query}",
-                    hit_count=len(titles), hit_titles=titles,
+                    arm="chunk_scoped",
+                    query=f"《{fn}》→{resolved_fn} {query}",
+                    hit_count=len(titles),
+                    hit_titles=titles,
                 )
             except Exception as exc:
                 logger.warning("scoped chunk step failed for %s: %s", fn, exc)
-                trace.add_step(arm="chunk_scoped", query=f"《{fn}》", hit_count=0, error=str(exc))
+                trace.add_step(
+                    arm="chunk_scoped", query=f"《{fn}》", hit_count=0, error=str(exc)
+                )
 
     async def _run_compiled(self, authz, question, out, trace, *, db=None) -> None:
         try:
@@ -713,6 +869,9 @@ class MultiStepOrchestrator:
 
             session = db or SessionLocal()
             try:
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(session, authz.tenant_id)
                 projs = load_clause_projections_for_query(
                     db=session,
                     tenant_id=authz.tenant_id,
@@ -738,6 +897,7 @@ class MultiStepOrchestrator:
     async def _run_pageindex(self, authz, question, out, trace, *, db=None) -> None:
         """P2-4：PageIndex 長文件臂（feature-flagged）。"""
         from app.config import settings
+
         if not settings.PAGEINDEX_ENABLED:
             return
         try:
@@ -747,21 +907,32 @@ class MultiStepOrchestrator:
 
             session = db or SessionLocal()
             try:
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(session, authz.tenant_id)
                 from app.models.document import Document
                 from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
-                from app.services.document_visibility import apply_document_visibility, deny_set_allows
+                from app.services.document_visibility import (
+                    apply_document_visibility,
+                    deny_set_allows,
+                )
+
                 # 查詢所有 pageindex_tree artifacts
-                artifact_query = session.query(DocumentArtifact).join(
-                    Document, Document.id == DocumentArtifact.document_id
-                ).filter(
+                artifact_query = (
+                    session.query(DocumentArtifact)
+                    .join(Document, Document.id == DocumentArtifact.document_id)
+                    .filter(
                         DocumentArtifact.artifact_type == "pageindex_tree",
                         DocumentArtifact.status == "active",
+                    )
                 )
                 scope = getattr(self, "_filter_dict", None) or {}
                 raw_revision_ids = scope.get("kb_revision_ids") or []
                 revision_scoped = bool(raw_revision_ids) or "kb_revision_ids" in scope
                 artifact_query = apply_document_visibility(
-                    artifact_query, authz=authz, db=session,
+                    artifact_query,
+                    authz=authz,
+                    db=session,
                     require_completed=not revision_scoped,
                 )
                 if raw_revision_ids or "kb_revision_ids" in scope:
@@ -770,16 +941,26 @@ class MultiStepOrchestrator:
 
                     artifact_query = artifact_query.join(
                         KnowledgeBaseRevisionDocument,
-                        (KnowledgeBaseRevisionDocument.document_id == DocumentArtifact.document_id)
-                        & (KnowledgeBaseRevisionDocument.document_revision == DocumentArtifact.revision),
-                    ).filter(KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids))
+                        (
+                            KnowledgeBaseRevisionDocument.document_id
+                            == DocumentArtifact.document_id
+                        )
+                        & (
+                            KnowledgeBaseRevisionDocument.document_revision
+                            == DocumentArtifact.revision
+                        ),
+                    ).filter(
+                        KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids)
+                    )
                     ready_pairs = ready_revision_pairs(
                         session,
                         tenant_id=authz.tenant_id,
                         kb_revision_ids=revision_ids,
                     )
                 else:
-                    artifact_query = artifact_query.filter(DocumentArtifact.revision == Document.version)
+                    artifact_query = artifact_query.filter(
+                        DocumentArtifact.revision == Document.version
+                    )
                     ready_pairs = None
                 artifacts = [
                     artifact
@@ -799,6 +980,7 @@ class MultiStepOrchestrator:
                     if not tree_data.get("pages"):
                         continue
                     from app.services.pageindex import PageIndexTree
+
                     tree = PageIndexTree(
                         document_id=tree_data.get("document_id", ""),
                         total_pages=tree_data.get("total_pages", 0),

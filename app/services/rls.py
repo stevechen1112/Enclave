@@ -6,15 +6,16 @@
    租戶列（policy 比對 NULL 不成立），而不是看到全部。
 2. **transaction-scoped**：一律用 ``set_config(..., is_local=true)``，
    連線歸還 pool 後 context 自動消失，杜絕跨請求殘留。
-3. **bypass 僅限平台維運**：``apply_rls_bypass`` 只允許用在「驗證 JWT 後的
-   email→user 查找」與 migration／跨租戶彙總；``apply_rls_context`` 會
-   主動關閉 bypass，避免殘留。
+3. **bypass 僅限平台維運**：``apply_rls_bypass`` 僅供獨立維運身分執行
+   migration／跨租戶 retention 等作業；普通請求與登入流程不可使用。
 4. **分階段**：``RLS_ENFORCEMENT_ENABLED=false``（預設）時 policy 已建立
    但表 owner 不受 FORCE 約束（shadow）；enforce 由 migration 讀同名
    環境變數決定是否 ``FORCE ROW LEVEL SECURITY``。
 """
+
 from __future__ import annotations
 
+import json
 import logging
 from contextlib import contextmanager
 from typing import Any, Dict, Iterator, List, Optional
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 TENANT_GUC = "app.tenant_id"
 BYPASS_GUC = "app.bypass_rls"
+BYPASS_ROLE = "enclave_rls_bypass"
 
 
 def _is_postgres(db: Session) -> bool:
@@ -50,10 +52,10 @@ def apply_rls_context(db: Session, tenant_id: UUID) -> bool:
     """
     if not isinstance(tenant_id, UUID):
         raise TypeError(f"tenant_id must be UUID, got {type(tenant_id).__name__}")
-    db.info[_INFO_TENANT_KEY] = str(tenant_id)
-    db.info.pop(_INFO_BYPASS_KEY, None)
     if not _is_postgres(db):
         return False
+    db.info[_INFO_TENANT_KEY] = str(tenant_id)
+    db.info.pop(_INFO_BYPASS_KEY, None)
     register_session_events()
     _set_gucs(db, str(tenant_id), bypass=False)
     return True
@@ -109,22 +111,57 @@ def register_session_events() -> None:
     _events_registered = True
 
 
-def apply_rls_bypass(db: Session) -> bool:
+def apply_rls_bypass(
+    db: Session,
+    *,
+    actor_identity: str,
+    operation: str,
+    reason: str,
+    correlation_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> bool:
     """平台維運專用：本 transaction 內跳過 RLS。
 
-    合法用途僅兩種（ADR-012 措施 3）：
-    1. JWT 驗證通過後的 email→user 查找（users 表在 RLS 下需跨租戶讀）
-    2. migration／跨租戶彙總等平台維運任務
-    使用後必須盡快 ``apply_rls_context`` 接管（會自動關閉 bypass）。
+    合法用途僅限 migration／跨租戶 retention 等平台維運任務。
+    登入流程改由只回傳 tenant UUID 的 SECURITY DEFINER function
+    建立 context，不再使用 bypass。
     bypass 會記入 ``db.info`` 隨 commit 後的新 transaction 重設——
     這是刻意為之：平台維運任務（如 audit）跨多個 commit 仍需 bypass；
     請勿在一般請求路徑使用。
     """
-    db.info[_INFO_BYPASS_KEY] = True
     if not _is_postgres(db):
         return False
+    if not actor_identity.strip() or not operation.strip() or not reason.strip():
+        raise ValueError("bypass audit actor, operation, and reason are required")
     register_session_events()
+    authorised = db.execute(
+        text("SELECT pg_has_role(current_user, :role, 'member')"),
+        {"role": BYPASS_ROLE},
+    ).scalar()
+    if authorised is not True:
+        raise PermissionError(
+            "database identity is not authorised for tenant RLS bypass"
+        )
     db.execute(text(f"SELECT set_config('{BYPASS_GUC}', 'on', true)"))
+    db.execute(
+        text(
+            """
+            INSERT INTO platform_maintenance_audit
+                (actor_identity, operation, reason, correlation_id, metadata_json)
+            VALUES
+                (:actor_identity, :operation, :reason, :correlation_id,
+                 CAST(:metadata_json AS json))
+            """
+        ),
+        {
+            "actor_identity": actor_identity,
+            "operation": operation,
+            "reason": reason,
+            "correlation_id": correlation_id,
+            "metadata_json": json.dumps(metadata or {}, sort_keys=True),
+        },
+    )
+    db.info[_INFO_BYPASS_KEY] = True
     return True
 
 
@@ -132,9 +169,48 @@ def current_rls_context(db: Session) -> Optional[str]:
     """回傳目前 transaction 的租戶 context（未設定回 None）。"""
     if not _is_postgres(db):
         return None
-    return db.execute(
-        text(f"SELECT current_setting('{TENANT_GUC}', true)")
+    return db.execute(text(f"SELECT current_setting('{TENANT_GUC}', true)")).scalar()
+
+
+def resolve_login_tenant(db: Session, email: str) -> UUID | None:
+    """Resolve only the tenant UUID needed to establish pre-login RLS context.
+
+    PostgreSQL grants the fixed SECURITY DEFINER function only to the
+    ``enclave_application`` marker role.  It never returns password hashes or a
+    cross-tenant user row.  Non-PostgreSQL unit tests deliberately return no
+    result; callers fail authentication closed.
+    """
+    if not _is_postgres(db) or not email.strip():
+        return None
+    normalised_email = email.strip().lower()
+    resolver_exists = db.execute(
+        text("SELECT to_regprocedure('public.enclave_resolve_login_tenant(text)')")
     ).scalar()
+    if resolver_exists:
+        value = db.execute(
+            text("SELECT public.enclave_resolve_login_tenant(:email)"),
+            {"email": normalised_email},
+        ).scalar()
+    else:
+        # Base.metadata-only test databases do not contain migration functions.
+        # Permit the narrow fallback only for a PostgreSQL superuser; ordinary
+        # application roles fail closed and must use the audited migration DDL.
+        is_superuser = db.execute(
+            text(
+                "SELECT rolsuper FROM pg_catalog.pg_roles WHERE rolname = current_user"
+            )
+        ).scalar()
+        if is_superuser is not True:
+            raise RuntimeError("secure login tenant resolver is not installed")
+        value = db.execute(
+            text(
+                "SELECT tenant_id FROM public.users WHERE lower(email) = :email LIMIT 1"
+            ),
+            {"email": normalised_email},
+        ).scalar()
+    if value is None:
+        return None
+    return value if isinstance(value, UUID) else UUID(str(value))
 
 
 @contextmanager
@@ -189,7 +265,12 @@ def audit_tenant_visibility(db: Session) -> List[Dict[str, Any]]:
     # 無論先前有無 context，結束前都必須關閉 bypass——否則同一 transaction
     # 後續查詢會跨租戶讀取（code review 發現的洩漏路徑）。
     prior = current_rls_context(db)
-    apply_rls_bypass(db)
+    apply_rls_bypass(
+        db,
+        actor_identity="tenant-visibility-audit",
+        operation="audit_tenant_visibility",
+        reason="Compare RLS-visible rows with maintenance totals",
+    )
     try:
         totals = {
             table: db.execute(text(f'SELECT count(*) FROM "{table}"')).scalar()  # noqa: S608

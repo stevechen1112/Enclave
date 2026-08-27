@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from app.celery_app import celery_app
-from app.db.session import SessionLocal
+from app.db.session import MaintenanceSessionLocal, SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -21,11 +21,17 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name="tasks.purge_mka_retention", bind=True, max_retries=2)
 def purge_mka_retention(self):
     """硬刪過期語音轉寫 session；回傳刪除統計供 audit。"""
-    db = SessionLocal()
+    db = MaintenanceSessionLocal()
     try:
         from app.services.rls import apply_rls_bypass
 
-        apply_rls_bypass(db)
+        apply_rls_bypass(
+            db,
+            actor_identity="celery:purge_mka_retention",
+            operation="purge_mka_retention",
+            reason="Apply configured cross-tenant retention policies",
+            correlation_id=str(getattr(self.request, "id", "") or "") or None,
+        )
         from app.services.audio_retention import (
             purge_expired_knowledge_captures,
             purge_expired_transcripts,

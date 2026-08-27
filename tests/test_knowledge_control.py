@@ -577,7 +577,7 @@ async def test_freshness_scan_marks_overdue_without_changing_document(client, su
     finally:
         setup.close()
 
-    monkeypatch.setattr(kb_maintenance_tasks, "SessionLocal", Session)
+    monkeypatch.setattr(kb_maintenance_tasks, "MaintenanceSessionLocal", Session)
     assert kb_maintenance_tasks.refresh_knowledge_freshness_task.run(str(tenant_id)) >= 1
     verify = Session()
     try:

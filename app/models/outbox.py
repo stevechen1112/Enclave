@@ -7,12 +7,14 @@ Phase 0 — Event Sourcing & Consistency Infrastructure
   - SyncCursor：Connector 增量同步游標
   - DeadLetterEvent：失敗事件不丟失
 """
+
 import uuid
 
 from sqlalchemy import (
     JSON,
     Column,
     DateTime,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -28,6 +30,7 @@ from app.db.base_class import Base
 #  OutboxEvent
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class OutboxEvent(Base):
     """
     交易性 Outbox — 與業務資料在同一 DB 交易中提交。
@@ -42,13 +45,22 @@ class OutboxEvent(Base):
     __tablename__ = "outbox_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    aggregate_type = Column(String, nullable=False, index=True)  # document | permission | kb | tenant
-    aggregate_id = Column(String, nullable=False, index=True)    # UUID of the changed entity
-    event_type = Column(String, nullable=False)                   # created | updated | deleted | revoked
-    revision = Column(Integer, nullable=False)                    # monotonic revision number
-    payload = Column(JSON, nullable=False, default=dict)          # event payload
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
+    aggregate_type = Column(
+        String, nullable=False, index=True
+    )  # document | permission | kb | tenant
+    aggregate_id = Column(
+        String, nullable=False, index=True
+    )  # UUID of the changed entity
+    event_type = Column(String, nullable=False)  # created | updated | deleted | revoked
+    revision = Column(Integer, nullable=False)  # monotonic revision number
+    payload = Column(JSON, nullable=False, default=dict)  # event payload
     idempotency_key = Column(String, nullable=False)
-    status = Column(String, default="pending")  # pending | processing | completed | failed
+    status = Column(
+        String, default="pending"
+    )  # pending | processing | completed | failed
     attempts = Column(Integer, default=0)
     next_retry_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
@@ -57,7 +69,7 @@ class OutboxEvent(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
-        UniqueConstraint("idempotency_key", name="uq_outbox_idempotency"),
+        UniqueConstraint("tenant_id", "idempotency_key", name="uq_outbox_idempotency"),
         Index("ix_outbox_status", "status"),
     )
 
@@ -65,6 +77,7 @@ class OutboxEvent(Base):
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ProjectionStatus
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class ProjectionStatus(Base):
     """
@@ -78,13 +91,20 @@ class ProjectionStatus(Base):
     __tablename__ = "projection_status"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    resource_type = Column(String, nullable=False)  # document | chunk | wiki_page | graph_entity
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
+    resource_type = Column(
+        String, nullable=False
+    )  # document | chunk | wiki_page | graph_entity
     resource_id = Column(String, nullable=False, index=True)
     provider = Column(String, nullable=False)  # ragflow | weknora | pipeshub
     provider_instance_id = Column(String, nullable=True)
     desired_revision = Column(Integer, nullable=False)
     applied_revision = Column(Integer, nullable=False, default=0)
-    state = Column(String, default="pending")  # pending | in_progress | converged | diverged | error
+    state = Column(
+        String, default="pending"
+    )  # pending | in_progress | converged | diverged | error
     last_error = Column(Text, nullable=True)
     last_verified_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -95,6 +115,7 @@ class ProjectionStatus(Base):
         # NULLS NOT DISTINCT enforced in migration p1_dd_m04
         Index(
             "uq_projection_status_resource_provider",
+            "tenant_id",
             "resource_type",
             "resource_id",
             "provider",
@@ -109,6 +130,7 @@ class ProjectionStatus(Base):
 #  SyncCursor
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class SyncCursor(Base):
     """
     Connector 增量同步游標。
@@ -120,10 +142,17 @@ class SyncCursor(Base):
     __tablename__ = "sync_cursors"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
     connector_instance_id = Column(String, nullable=False)
-    connector_type = Column(String, nullable=False)  # google_drive | sharepoint | nas_smb | ...
+    connector_type = Column(
+        String, nullable=False
+    )  # google_drive | sharepoint | nas_smb | ...
     cursor = Column(Text, nullable=True)  # opaque cursor from source system
-    watermark = Column(DateTime(timezone=True), nullable=True)  # last synced event timestamp
+    watermark = Column(
+        DateTime(timezone=True), nullable=True
+    )  # last synced event timestamp
     last_success_at = Column(DateTime(timezone=True), nullable=True)
     sync_state = Column(JSON, default=dict)  # additional state (e.g., page tokens)
 
@@ -131,13 +160,16 @@ class SyncCursor(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     __table_args__ = (
-        UniqueConstraint("connector_instance_id", name="uq_sync_cursor_instance"),
+        UniqueConstraint(
+            "tenant_id", "connector_instance_id", name="uq_sync_cursor_instance"
+        ),
     )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  DeadLetterEvent
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class DeadLetterEvent(Base):
     """
@@ -147,6 +179,9 @@ class DeadLetterEvent(Base):
     __tablename__ = "dead_letter_events"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
     original_event_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     aggregate_type = Column(String, nullable=False)
     aggregate_id = Column(String, nullable=False)

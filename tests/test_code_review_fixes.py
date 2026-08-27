@@ -85,10 +85,13 @@ class TestDeployStopBeforeMigrate:
         for name in ("deploy-production.yml", "deploy-staging.yml"):
             text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
             stop_idx = text.find("stop web worker worker-beat")
-            mig_idx = text.find("alembic upgrade head")
+            mig_idx = text.find("run --rm -T migrate")
+            provision_idx = text.find("run --rm -T provision-db-roles")
             up_idx = text.find("up -d --no-build --remove-orphans")
-            assert stop_idx != -1 and mig_idx != -1 and up_idx != -1, name
-            assert stop_idx < mig_idx < up_idx, name
+            assert all(
+                index != -1 for index in (stop_idx, mig_idx, provision_idx, up_idx)
+            ), name
+            assert stop_idx < mig_idx < provision_idx < up_idx, name
 
 
 class TestCredentialVaultEncryption:

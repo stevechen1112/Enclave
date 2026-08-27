@@ -1,4 +1,5 @@
 """Phase 3 — Connector sync orchestration (NAS local + PipesHub + ACL)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 def _mock_allowed(config: Dict[str, Any]) -> bool:
     """生產環境禁止 mock；開發需明確 allow_mock / PIPESHUB_ALLOW_MOCK。"""
     from app.config import settings
+
     if settings.is_production:
         return False
     if str(config.get("allow_mock", "")).lower() == "true":
@@ -38,15 +40,21 @@ class ConnectorSyncService:
         self._manager = ConnectorManager()
         self._principal_service = ExternalPrincipalService()
 
-    def _get_or_create_cursor(self, db: Session, connector: ConnectorInstance) -> SyncCursor:
+    def _get_or_create_cursor(
+        self, db: Session, connector: ConnectorInstance
+    ) -> SyncCursor:
         cursor = (
             db.query(SyncCursor)
-            .filter(SyncCursor.connector_instance_id == str(connector.id))
+            .filter(
+                SyncCursor.tenant_id == connector.tenant_id,
+                SyncCursor.connector_instance_id == str(connector.id),
+            )
             .first()
         )
         if cursor:
             return cursor
         cursor = SyncCursor(
+            tenant_id=connector.tenant_id,
             connector_instance_id=str(connector.id),
             connector_type=connector.connector_type,
             sync_state={},
@@ -56,7 +64,9 @@ class ConnectorSyncService:
         return cursor
 
     async def _fetch_remote_sync(
-        self, connector: ConnectorInstance, full_reindex: bool = False,
+        self,
+        connector: ConnectorInstance,
+        full_reindex: bool = False,
     ) -> Dict[str, Any]:
         config = dict(connector.config_json or {})
         config["connector_instance_id"] = str(connector.id)
@@ -67,6 +77,7 @@ class ConnectorSyncService:
         root_path = config.get("root_path") or config.get("share_path")
         if connector.connector_type in ("nas_smb", "local_fs") and root_path:
             from app.services.nas_local_connector import scan_local_nas
+
             return scan_local_nas(
                 str(root_path),
                 max_files=int(config.get("max_files", 200)),
@@ -79,6 +90,7 @@ class ConnectorSyncService:
         if os.getenv("PIPESHUB_ENABLED", "").lower() == "true":
             from app.gateway.adapters.pipeshub_http import PipesHubHTTPAdapter
             from app.gateway.token_provider import build_pipeshub_token_provider
+
             adapter = PipesHubHTTPAdapter(
                 base_url=os.getenv("PIPESHUB_BASE_URL", "http://pipeshub-api:3000"),
                 api_key=os.getenv("PIPESHUB_API_KEY", ""),
@@ -87,7 +99,9 @@ class ConnectorSyncService:
             return await adapter.sync_connector(connector.connector_type, config)
 
         # 3) 明確 mock（僅非生產）
-        if _mock_allowed(config) and (config.get("mock_resources") or config.get("mock_acl_entries")):
+        if _mock_allowed(config) and (
+            config.get("mock_resources") or config.get("mock_acl_entries")
+        ):
             return {
                 "status": "completed",
                 "mode": "local_mock",
@@ -122,9 +136,14 @@ class ConnectorSyncService:
             if not src or not Path(src).is_file():
                 # P3-1：雲端 resource 無本機 file_path，嘗試下載
                 if settings.CONNECTOR_MATERIALIZE_ENABLED:
-                    from app.services.connector_materialize import get_resource_downloader
+                    from app.services.connector_materialize import (
+                        get_resource_downloader,
+                    )
+
                     downloader = get_resource_downloader()
-                    downloaded = downloader.resolve_and_download(item, str(connector.tenant_id))
+                    downloaded = downloader.resolve_and_download(
+                        item, str(connector.tenant_id)
+                    )
                     if downloaded:
                         src = downloaded
                         item["file_path"] = downloaded  # 更新 item 供後續使用
@@ -133,7 +152,10 @@ class ConnectorSyncService:
                 else:
                     continue
             src_path = Path(src)
-            content_hash = item.get("content_hash") or hashlib.sha256(src_path.read_bytes()).hexdigest()
+            content_hash = (
+                item.get("content_hash")
+                or hashlib.sha256(src_path.read_bytes()).hexdigest()
+            )
 
             existing = (
                 db.query(Document)
@@ -215,7 +237,9 @@ class ConnectorSyncService:
         """
         from app.crud import crud_document
 
-        live_ids = {r["source_record_id"] for r in resources if r.get("source_record_id")}
+        live_ids = {
+            r["source_record_id"] for r in resources if r.get("source_record_id")
+        }
         hash_to_record = {
             r["content_hash"]: r["source_record_id"]
             for r in resources
@@ -241,10 +265,16 @@ class ConnectorSyncService:
             new_id = hash_to_record.get(doc.content_hash or "")
             if new_id and new_id != doc.source_record_id:
                 doc.source_record_id = new_id
-                doc.external_version = str(int(doc.external_version or 0) + 1) if str(doc.external_version or "").isdigit() else "renamed"
+                doc.external_version = (
+                    str(int(doc.external_version or 0) + 1)
+                    if str(doc.external_version or "").isdigit()
+                    else "renamed"
+                )
                 renamed += 1
                 continue
-            if crud_document.tombstone(db, document_id=doc.id, reason="connector_deleted"):
+            if crud_document.tombstone(
+                db, document_id=doc.id, reason="connector_deleted"
+            ):
                 tombstoned += 1
         if tombstoned or renamed:
             db.commit()
@@ -258,7 +288,11 @@ class ConnectorSyncService:
         materialize: bool = True,
         uploaded_by: Optional[UUID] = None,
     ) -> Dict[str, Any]:
-        connector = db.query(ConnectorInstance).filter(ConnectorInstance.id == connector_id).first()
+        connector = (
+            db.query(ConnectorInstance)
+            .filter(ConnectorInstance.id == connector_id)
+            .first()
+        )
         if not connector:
             return {"status": "error", "error": "connector_not_found"}
         if connector.status == "paused":
@@ -266,7 +300,9 @@ class ConnectorSyncService:
 
         cursor_row = self._get_or_create_cursor(db, connector)
         try:
-            result = asyncio.run(self._fetch_remote_sync(connector, full_reindex=full_reindex))
+            result = asyncio.run(
+                self._fetch_remote_sync(connector, full_reindex=full_reindex)
+            )
         except Exception as exc:
             connector.last_error = str(exc)[:500]
             db.commit()
@@ -330,9 +366,13 @@ class ConnectorSyncService:
                 e.setdefault("mapped_subject_type", "user")
                 mapped_entries.append(e)
             acl_entries = mapped_entries
-            self._principal_service.apply_acl_entries(db, connector.tenant_id, acl_entries)
+            self._principal_service.apply_acl_entries(
+                db, connector.tenant_id, acl_entries
+            )
         elif acl_entries:
-            self._principal_service.apply_acl_entries(db, connector.tenant_id, acl_entries)
+            self._principal_service.apply_acl_entries(
+                db, connector.tenant_id, acl_entries
+            )
 
         count = self._manager.record_sync(db, connector_id, resources)
 
@@ -344,7 +384,10 @@ class ConnectorSyncService:
         doc_ids: List[str] = []
         if materialize and resources:
             doc_ids = self.materialize_to_documents(
-                db, connector, resources, uploaded_by=uploaded_by,
+                db,
+                connector,
+                resources,
+                uploaded_by=uploaded_by,
             )
 
         new_cursor = result.get("cursor")
@@ -366,7 +409,9 @@ class ConnectorSyncService:
             aggregate_type="connector",
             aggregate_id=str(connector_id),
             event_type="sync_completed",
-            revision=int(cursor_row.watermark.timestamp()) if cursor_row.watermark else 1,
+            revision=int(cursor_row.watermark.timestamp())
+            if cursor_row.watermark
+            else 1,
             payload={
                 "tenant_id": str(connector.tenant_id),
                 "resource_count": count,
@@ -387,9 +432,16 @@ class ConnectorSyncService:
         }
 
     def rotate_credential_ref(
-        self, db: Session, connector_id: UUID, credential_ref: str,
+        self,
+        db: Session,
+        connector_id: UUID,
+        credential_ref: str,
     ) -> Optional[ConnectorInstance]:
-        row = db.query(ConnectorInstance).filter(ConnectorInstance.id == connector_id).first()
+        row = (
+            db.query(ConnectorInstance)
+            .filter(ConnectorInstance.id == connector_id)
+            .first()
+        )
         if not row:
             return None
         row.credential_ref = credential_ref
@@ -399,14 +451,21 @@ class ConnectorSyncService:
             aggregate_id=str(connector_id),
             event_type="credential_rotated",
             revision=1,
-            payload={"credential_ref": credential_ref},
+            payload={
+                "tenant_id": str(row.tenant_id),
+                "credential_ref": credential_ref,
+            },
         )
         db.commit()
         db.refresh(row)
         return row
 
     def delete_connector(self, db: Session, connector_id: UUID) -> bool:
-        row = db.query(ConnectorInstance).filter(ConnectorInstance.id == connector_id).first()
+        row = (
+            db.query(ConnectorInstance)
+            .filter(ConnectorInstance.id == connector_id)
+            .first()
+        )
         if not row:
             return False
         row.status = "deleted"
@@ -422,8 +481,15 @@ class ConnectorSyncService:
         return True
 
     def sample_acl(
-        self, db: Session, tenant_id: UUID, source_record_id: str, limit: int = 20,
+        self,
+        db: Session,
+        tenant_id: UUID,
+        source_record_id: str,
+        limit: int = 20,
     ) -> List[dict]:
         return self._principal_service.sample_acl_for_source(
-            db, tenant_id, source_record_id, limit=limit,
+            db,
+            tenant_id,
+            source_record_id,
+            limit=limit,
         )

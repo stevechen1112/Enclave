@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "identity_tables": {
+    "tenants": {
+      "tenant_identity_column": "id"
+    }
+  },
+  "platform_global_tables": [
+    "feature_flags"
+  ],
+  "nullable_global_read_tables": [
+    "approval_policies",
+    "form_definitions",
+    "integrityreports",
+    "job_modules",
+    "kbbackups",
+    "knowledge_evaluation_runs",
+    "mka_task_definitions",
+    "rule_sets"
+  ],
+  "inherited_tenant_tables": {
+    "document_artifacts": {
+      "parent_table": "documents",
+      "child_column": "document_id",
+      "parent_column": "id"
+    },
+    "knowledge_base_members": {
+      "parent_table": "knowledge_bases",
+      "child_column": "kb_id",
+      "parent_column": "id"
+    },
+    "knowledge_base_revisions": {
+      "parent_table": "knowledge_bases",
+      "child_column": "kb_id",
+      "parent_column": "id"
+    },
+    "knowledge_evaluation_case_results": {
+      "parent_table": "knowledge_evaluation_runs",
+      "child_column": "run_id",
+      "parent_column": "id"
+    },
+    "knowledge_evaluation_human_reviews": {
+      "parent_table": "knowledge_evaluation_case_results",
+      "child_column": "case_result_id",
+      "parent_column": "id"
+    },
+    "messages": {
+      "parent_table": "conversations",
+      "child_column": "conversation_id",
+      "parent_column": "id"
+    },
+    "wiki_revisions": {
+      "parent_table": "wiki_pages",
+      "child_column": "wiki_page_id",
+      "parent_column": "id"
+    }
+  }
+}

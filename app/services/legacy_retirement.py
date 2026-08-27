@@ -40,7 +40,12 @@ def build_signed_removal_report(
             "removal report signing key must contain at least 32 characters"
         )
     now = now or datetime.now(UTC)
-    apply_rls_bypass(db)
+    apply_rls_bypass(
+        db,
+        actor_identity="legacy-retirement-service",
+        operation="build_signed_removal_report",
+        reason="Aggregate deprecation evidence across active tenants",
+    )
     tenant_ids = [
         str(row[0])
         for row in db.query(Tenant.id).filter(Tenant.status == "active").all()

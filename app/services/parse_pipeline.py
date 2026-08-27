@@ -1,4 +1,5 @@
 """Phase 2 — Parse pipeline orchestrating native + RAGFlow paths."""
+
 from __future__ import annotations
 
 import hashlib
@@ -13,7 +14,10 @@ from uuid import UUID
 from app.schemas.parse_artifact import ParseArtifact, ParseChunk
 from app.services.parse_router import ParseRoute, classify_document
 from app.services.document_parser import DocumentParser
-from app.services.content_reference import build_content_reference, resolve_content_bytes
+from app.services.content_reference import (
+    build_content_reference,
+    resolve_content_bytes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +86,12 @@ def _looks_dirty_ocr(text: str) -> bool:
         if useful / len(t) < 0.28:
             return True
         words = re.findall(r"[A-Za-z\u4e00-\u9fff\u1000-\u109f]{2,}", t)
-        singles = re.findall(r"(?<![A-Za-z\u4e00-\u9fff])[A-Za-z](?![A-Za-z\u4e00-\u9fff])", t)
-        if len(singles) >= 12 and (not words or len(singles) / max(len(words), 1) >= 1.5):
+        singles = re.findall(
+            r"(?<![A-Za-z\u4e00-\u9fff])[A-Za-z](?![A-Za-z\u4e00-\u9fff])", t
+        )
+        if len(singles) >= 12 and (
+            not words or len(singles) / max(len(words), 1) >= 1.5
+        ):
             return True
     return False
 
@@ -135,7 +143,9 @@ def _enforce_scan_delivery(
         )
     if _scan_route(route) and not artifact.ocr_used:
         stripped = (text or "").strip()
-        if len(stripped) < int(os.getenv("CLOUD_OCR_TRIGGER_MIN_CHARS", "200")) or _looks_dirty_ocr(stripped):
+        if len(stripped) < int(
+            os.getenv("CLOUD_OCR_TRIGGER_MIN_CHARS", "200")
+        ) or _looks_dirty_ocr(stripped):
             raise ScanParseDeliveryError(
                 f"scan parse undelivered: route={route.value} parser={artifact.parser} "
                 f"ocr_used=false with empty/dirty text"
@@ -161,6 +171,9 @@ async def _parse_via_ragflow(
 
         db = SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, tenant_id)
             dataset_id = resolve_ragflow_dataset_id(db, tenant_id)
         finally:
             db.close()
@@ -212,7 +225,9 @@ async def _parse_via_ragflow(
         raise RuntimeError(result.get("error", "ragflow ingest failed"))
 
     ragflow_doc_ids = result.get("ragflow_doc_ids") or []
-    job_id = result.get("job_id") or (ragflow_doc_ids[0] if ragflow_doc_ids else "pending")
+    job_id = result.get("job_id") or (
+        ragflow_doc_ids[0] if ragflow_doc_ids else "pending"
+    )
 
     # DeepDOC on multi-page scans often exceeds 60s; default ~3 minutes.
     poll_attempts = int(os.getenv("RAGFLOW_PARSE_POLL_ATTEMPTS", "36"))
@@ -231,6 +246,7 @@ async def _parse_via_ragflow(
         bbox = None
         if isinstance(bbox_raw, dict):
             from app.schemas.parse_artifact import BBox
+
             bbox = BBox(
                 x=float(bbox_raw.get("x", 0)),
                 y=float(bbox_raw.get("y", 0)),
@@ -250,15 +266,21 @@ async def _parse_via_ragflow(
     # Label by what RAGFlow actually ran. The dataset's layout_recognize is the only
     # source of truth; the Enclave route only expresses intent.
     dataset_config = await adapter.get_dataset_config()
-    layout_actual = dataset_config.get("layout_recognize") if dataset_config.get("status") == "ok" else None
+    layout_actual = (
+        dataset_config.get("layout_recognize")
+        if dataset_config.get("status") == "ok"
+        else None
+    )
     engine_label, layout_ocr_capable = _engine_label_for_layout(layout_actual)
 
     warnings: List[Any] = list(parse_result.get("warnings") or [])
     if dataset_config.get("status") != "ok":
-        warnings.append({
-            "code": "ragflow_dataset_config_unavailable",
-            "error": str(dataset_config.get("error"))[:200],
-        })
+        warnings.append(
+            {
+                "code": "ragflow_dataset_config_unavailable",
+                "error": str(dataset_config.get("error"))[:200],
+            }
+        )
 
     if not chunks:
         # RAGFlow produced nothing usable; label honestly as native fallback.
@@ -271,10 +293,12 @@ async def _parse_via_ragflow(
             # would bypass the cloud OCR rescue in _finish. Empty text keeps the
             # text_fallback label so the rescue/delivery gate decides the outcome.
             text = ""
-            warnings.append({
-                "code": "native_fallback_parse_failed",
-                "error": str(exc)[:300],
-            })
+            warnings.append(
+                {
+                    "code": "native_fallback_parse_failed",
+                    "error": str(exc)[:300],
+                }
+            )
         chunks = [ParseChunk(text=text[:8000], chunk_index=0)]
         engine_label = "native/text_fallback"
         ocr_used = False
@@ -294,7 +318,8 @@ async def _parse_via_ragflow(
         confidence=confidence,
         elapsed_ms=elapsed_ms,
         ocr_used=ocr_used,
-        vlm_used=route == ParseRoute.RAGFLOW_VLM and engine_label.startswith("ragflow/"),
+        vlm_used=route == ParseRoute.RAGFLOW_VLM
+        and engine_label.startswith("ragflow/"),
         warnings=warnings,
         provider="ragflow",
         provider_resource_ids=[str(x) for x in ragflow_doc_ids if x],
@@ -329,7 +354,9 @@ def _maybe_enhance_with_cloud_ocr(
     try:
         result = cloud_ocr.transcribe(file_path, (file_type or "").lower().strip())
     except Exception as exc:
-        artifact.warnings.append({"code": "cloud_ocr_failed", "error": str(exc)[:200], "trigger": reason})
+        artifact.warnings.append(
+            {"code": "cloud_ocr_failed", "error": str(exc)[:200], "trigger": reason}
+        )
         return text, metadata, artifact
 
     metadata["cloud_ocr"] = {
@@ -346,7 +373,11 @@ def _maybe_enhance_with_cloud_ocr(
     # adopt non-empty cloud text that is cleaner or not shorter than half.
     cloud_len = len(result.text.strip())
     primary_len = len((text or "").strip())
-    cloud_cleaner = reason == "dirty_ocr_heuristic" and cloud_len >= 40 and not _looks_dirty_ocr(result.text)
+    cloud_cleaner = (
+        reason == "dirty_ocr_heuristic"
+        and cloud_len >= 40
+        and not _looks_dirty_ocr(result.text)
+    )
     adopt = cloud_len > 0 and (
         cloud_len > primary_len
         or cloud_cleaner
@@ -356,19 +387,23 @@ def _maybe_enhance_with_cloud_ocr(
         )
     )
     if not adopt:
-        artifact.warnings.append({"code": "cloud_ocr_no_better_yield", "trigger": reason})
+        artifact.warnings.append(
+            {"code": "cloud_ocr_no_better_yield", "trigger": reason}
+        )
         return text, metadata, artifact
 
     artifact.parser = f"cloud/{result.provider}:{result.model}"
     artifact.ocr_used = True
     artifact.chunks = [ParseChunk(text=result.text, chunk_index=0)]
-    artifact.warnings.append({
-        "code": "cloud_ocr_adopted",
-        "original_engine": original_engine,
-        "original_chars": primary_len,
-        "cloud_chars": cloud_len,
-        "trigger": reason,
-    })
+    artifact.warnings.append(
+        {
+            "code": "cloud_ocr_adopted",
+            "original_engine": original_engine,
+            "original_chars": primary_len,
+            "cloud_chars": cloud_len,
+            "trigger": reason,
+        }
+    )
     metadata["parse_engine"] = artifact.parser
     metadata["ocr_used"] = True
     return result.text, metadata, artifact
@@ -383,7 +418,12 @@ def _finish(
     route: ParseRoute,
 ) -> Tuple[str, Dict[str, Any], ParseArtifact]:
     text, metadata, artifact = _maybe_enhance_with_cloud_ocr(
-        file_path, file_type, text, metadata, artifact, route,
+        file_path,
+        file_type,
+        text,
+        metadata,
+        artifact,
+        route,
     )
     metadata["parse_engine"] = artifact.parser
     metadata["ocr_used"] = artifact.ocr_used
@@ -414,11 +454,19 @@ def parse_document(
     force_ragflow = os.getenv("RAGFLOW_FORCE_PARSE", "").lower() == "true"
     ragflow_error: Optional[str] = None
 
-    if route in (ParseRoute.RAGFLOW_DEEPDOC, ParseRoute.RAGFLOW_VLM) and os.getenv("RAGFLOW_ENABLED", "").lower() == "true":
+    if (
+        route in (ParseRoute.RAGFLOW_DEEPDOC, ParseRoute.RAGFLOW_VLM)
+        and os.getenv("RAGFLOW_ENABLED", "").lower() == "true"
+    ):
         try:
             artifact = asyncio.run(
                 _parse_via_ragflow(
-                    file_path, file_type, document_id, revision, content_hash, route,
+                    file_path,
+                    file_type,
+                    document_id,
+                    revision,
+                    content_hash,
+                    route,
                     tenant_id=tenant_id,
                 )
             )
@@ -433,7 +481,9 @@ def parse_document(
                 "elapsed_ms": artifact.elapsed_ms,
                 "ragflow_already_ingested": bool(artifact.provider_resource_ids),
                 "ragflow_doc_ids": list(artifact.provider_resource_ids),
-                "layout_recognize_actual": artifact.metadata.get("layout_recognize_actual"),
+                "layout_recognize_actual": artifact.metadata.get(
+                    "layout_recognize_actual"
+                ),
                 "chunk_method_actual": artifact.metadata.get("chunk_method_actual"),
             }
             return _finish(file_path, file_type, text, metadata, artifact, route)
@@ -442,7 +492,9 @@ def parse_document(
         except Exception as exc:
             if force_ragflow:
                 raise RuntimeError(f"RAGFlow parse required but failed: {exc}") from exc
-            logger.warning("RAGFlow parse failed, attempting native+cloud rescue: %s", exc)
+            logger.warning(
+                "RAGFlow parse failed, attempting native+cloud rescue: %s", exc
+            )
             ragflow_error = str(exc)[:300]
 
     # Structured tables (xlsx/csv/xls) are intentionally routed to native even when
@@ -453,14 +505,18 @@ def parse_document(
         and route not in (ParseRoute.NATIVE_STRUCTURED,)
         and ragflow_error is None
     ):
-        raise RuntimeError("RAGFLOW_FORCE_PARSE=true but document was not routed to RAGFlow")
+        raise RuntimeError(
+            "RAGFLOW_FORCE_PARSE=true but document was not routed to RAGFlow"
+        )
 
     warnings: List[Any] = []
     # P3-4：Docling Parser（feature-flagged，條件式採用）
     docling_text = ""
     from app.config import settings
+
     if settings.DOCLING_ENABLED:
         from app.services.docling_ablation import DoclingParser
+
         docling = DoclingParser()
         if docling.is_available():
             try:
@@ -468,7 +524,9 @@ def parse_document(
                 if docling_result.success and docling_result.text:
                     docling_text = docling_result.text
                     metadata["docling_used"] = True
-                    metadata["docling_elapsed_ms"] = int(docling_result.elapsed_seconds * 1000)
+                    metadata["docling_elapsed_ms"] = int(
+                        docling_result.elapsed_seconds * 1000
+                    )
                     metadata["docling_tables"] = len(docling_result.tables)
             except Exception as exc:
                 logger.warning("Docling parse failed: %s", exc)
@@ -493,7 +551,9 @@ def parse_document(
             "quality_score": 0.0,
             "native_error": str(exc)[:300],
         }
-        warnings.append({"code": "native_parse_quality_rejected", "error": str(exc)[:300]})
+        warnings.append(
+            {"code": "native_parse_quality_rejected", "error": str(exc)[:300]}
+        )
     if ragflow_error is not None:
         metadata["ragflow_error"] = ragflow_error
         warnings.append({"code": "ragflow_exception_native_rescue"})
@@ -513,6 +573,8 @@ def parse_document(
         ocr_used=bool(metadata.get("ocr_used", False)),
         warnings=warnings,
     )
-    metadata["parse_route"] = route.value if _scan_route(route) else ParseRoute.NATIVE_FAST.value
+    metadata["parse_route"] = (
+        route.value if _scan_route(route) else ParseRoute.NATIVE_FAST.value
+    )
     metadata["content_hash"] = content_hash
     return _finish(file_path, file_type, text_content, metadata, artifact, route)

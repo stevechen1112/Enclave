@@ -40,6 +40,7 @@ from app.models.outbox import (
     OutboxEvent, ProjectionStatus, SyncCursor, DeadLetterEvent,
 )
 from app.models.gateway_resource import GatewayResource
+from app.models.maintenance_audit import PlatformMaintenanceAudit
 from app.models.connector import (
     ConnectorInstance, ExternalPrincipal, SourceAclEntry, ConnectorResource,
 )

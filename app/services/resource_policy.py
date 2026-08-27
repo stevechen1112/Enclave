@@ -8,6 +8,7 @@ Deny precedence (ADR-004):
           AND department_policy_allows
           AND source_acl_allows_if_connector
 """
+
 from __future__ import annotations
 
 import logging
@@ -42,7 +43,11 @@ class ResourcePolicyService:
             return False
         if not authz.can_access_document(document.tenant_id, document.department_id):
             return False
-        if require_content_access and document.source_system and document.source_record_id:
+        if (
+            require_content_access
+            and document.source_system
+            and document.source_record_id
+        ):
             return self.authorize_source_record(
                 db,
                 authz,
@@ -103,10 +108,17 @@ class ResourcePolicyService:
             logger.warning("source ACL lookup failed, deny: %s", exc)
             return False
 
-    def is_denied(self, db: Session, authz: AuthorizationContext, document_id: str) -> bool:
+    def is_denied(
+        self, db: Session, authz: AuthorizationContext, document_id: str
+    ) -> bool:
         try:
             from app.gateway.authorization import get_gateway_authorizer
-            return get_gateway_authorizer().is_denied(document_id, authz.subject_id)
+
+            return get_gateway_authorizer().is_denied(
+                document_id,
+                authz.subject_id,
+                tenant_id=authz.tenant_id,
+            )
         except Exception as exc:
             logger.warning("deny-set lookup failed, fail closed: %s", exc)
             return True

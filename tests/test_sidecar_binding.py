@@ -232,6 +232,12 @@ class TestLiveBindingSeed(unittest.TestCase):
         if "is_demo" not in columns:
             engine.dispose()
             self.skipTest("live PostgreSQL has not applied the Demo isolation migration")
+        sync_columns = {
+            column["name"] for column in inspect(engine).get_columns("sync_cursors")
+        }
+        if "tenant_id" not in sync_columns:
+            engine.dispose()
+            self.skipTest("live PostgreSQL has not applied the P2 tenant hard-isolation schema")
         connection = engine.connect()
         transaction = connection.begin()
         db = Session(bind=connection)

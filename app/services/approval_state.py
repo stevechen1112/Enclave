@@ -14,6 +14,7 @@ P1-3：Review/Approval 狀態機 — 擴展現有 ApprovalGate。
 
 本模組提供擴展的狀態機，解決上述問題。
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class ApprovalState(str, Enum):
     """簽核狀態機。"""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -41,7 +43,11 @@ class ApprovalTransition:
     """狀態轉換規則（冪等檢查）。"""
 
     ALLOWED = {
-        ApprovalState.PENDING: {ApprovalState.APPROVED, ApprovalState.REJECTED, ApprovalState.EXPIRED},
+        ApprovalState.PENDING: {
+            ApprovalState.APPROVED,
+            ApprovalState.REJECTED,
+            ApprovalState.EXPIRED,
+        },
         ApprovalState.APPROVED: {ApprovalState.EXECUTED, ApprovalState.FAILED},
         ApprovalState.REJECTED: set(),  # 終態
         ApprovalState.EXPIRED: set(),  # 終態
@@ -57,12 +63,14 @@ class ApprovalTransition:
 @dataclass
 class ApprovalContext:
     """簽核上下文。"""
+
     request_id: UUID
     tool_name: str
     tool_risk: str
     actor_id: UUID
     actor_name: str
     action_summary: str
+    tenant_id: Optional[UUID] = None
     target_system: str = ""
     impact_scope: str = ""
     tool_args: Dict[str, Any] = field(default_factory=dict)
@@ -101,6 +109,7 @@ class ApprovalContext:
             "tool_risk": self.tool_risk,
             "actor_id": str(self.actor_id),
             "actor_name": self.actor_name,
+            "tenant_id": str(self.tenant_id) if self.tenant_id else None,
             "action_summary": self.action_summary,
             "target_system": self.target_system,
             "impact_scope": self.impact_scope,
@@ -132,8 +141,17 @@ class ApprovalStateMachine:
 
     def __init__(self, timeout_hours: int = 24, escalation_hours: int = 48):
         from app.config import settings
-        self.timeout_hours = timeout_hours if timeout_hours is not None else settings.AGENT_APPROVAL_TIMEOUT_HOURS
-        self.escalation_hours = escalation_hours if escalation_hours is not None else settings.AGENT_APPROVAL_ESCALATION_HOURS
+
+        self.timeout_hours = (
+            timeout_hours
+            if timeout_hours is not None
+            else settings.AGENT_APPROVAL_TIMEOUT_HOURS
+        )
+        self.escalation_hours = (
+            escalation_hours
+            if escalation_hours is not None
+            else settings.AGENT_APPROVAL_ESCALATION_HOURS
+        )
         self._pending: Dict[UUID, ApprovalContext] = {}
 
     def create_request(
@@ -147,6 +165,7 @@ class ApprovalStateMachine:
         target_system: str = "",
         impact_scope: str = "",
         confirm_fields: Optional[List[Dict[str, Any]]] = None,
+        tenant_id: Optional[UUID] = None,
     ) -> ApprovalContext:
         """建立簽核請求。"""
         ctx = ApprovalContext(
@@ -156,6 +175,7 @@ class ApprovalStateMachine:
             actor_id=actor_id,
             actor_name=actor_name,
             action_summary=action_summary,
+            tenant_id=tenant_id,
             tool_args=tool_args or {},
             target_system=target_system,
             impact_scope=impact_scope,
@@ -284,13 +304,17 @@ class ApprovalStateMachine:
                 ctx.state = ApprovalState.EXPIRED
                 self._persist(ctx)
                 expired.append(ctx)
-                logger.warning(f"Approval {ctx.request_id} expired (timeout {self.timeout_hours}h)")
+                logger.warning(
+                    f"Approval {ctx.request_id} expired (timeout {self.timeout_hours}h)"
+                )
         return expired
 
     def get_pending(self) -> List[ApprovalContext]:
         """取得所有 pending 請求。"""
         self.check_expired()  # 順便清理過期
-        return [ctx for ctx in self._pending.values() if ctx.state == ApprovalState.PENDING]
+        return [
+            ctx for ctx in self._pending.values() if ctx.state == ApprovalState.PENDING
+        ]
 
     def get_request(self, request_id: UUID) -> Optional[ApprovalContext]:
         """取得單一請求。"""
@@ -304,21 +328,29 @@ class ApprovalStateMachine:
 
     def _persist(self, ctx: ApprovalContext) -> None:
         """持久化到 DB（fail-closed）。"""
+        if ctx.tenant_id is None:
+            logger.warning("Approval request has no tenant context; persistence denied")
+            return
         try:
             from app.db.session import SessionLocal
             from app.models.agent_approval import AgentApprovalRequest
 
             db = SessionLocal()
             try:
-                existing = db.query(AgentApprovalRequest).filter(
-                    AgentApprovalRequest.id == ctx.request_id
-                ).first()
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(db, ctx.tenant_id)
+                existing = (
+                    db.query(AgentApprovalRequest)
+                    .filter(AgentApprovalRequest.id == ctx.request_id)
+                    .first()
+                )
 
                 if existing is None:
                     # 新建
                     record = AgentApprovalRequest(
                         id=ctx.request_id,
-                        tenant_id=ctx.actor_id,  # 簡化：用 actor_id 關聯
+                        tenant_id=ctx.tenant_id,
                         actor_id=ctx.actor_id,
                         tool_name=ctx.tool_name,
                         tool_risk=ctx.tool_risk,
@@ -329,7 +361,11 @@ class ApprovalStateMachine:
                         policy_snapshot=ctx.policy_snapshot,
                         status=ctx.state.value,
                         approved_by=UUID(ctx.approved_by) if ctx.approved_by else None,
-                        approved_at=datetime.fromtimestamp(ctx.approved_at, tz=timezone.utc) if ctx.approved_at else None,
+                        approved_at=datetime.fromtimestamp(
+                            ctx.approved_at, tz=timezone.utc
+                        )
+                        if ctx.approved_at
+                        else None,
                         reason=ctx.rejection_reason or None,
                         execution_result=ctx.execution_result,
                     )
@@ -340,7 +376,9 @@ class ApprovalStateMachine:
                     if ctx.approved_by:
                         existing.approved_by = UUID(ctx.approved_by)
                     if ctx.approved_at:
-                        existing.approved_at = datetime.fromtimestamp(ctx.approved_at, tz=timezone.utc)
+                        existing.approved_at = datetime.fromtimestamp(
+                            ctx.approved_at, tz=timezone.utc
+                        )
                     if ctx.rejection_reason:
                         existing.reason = ctx.rejection_reason
                     if ctx.execution_result:

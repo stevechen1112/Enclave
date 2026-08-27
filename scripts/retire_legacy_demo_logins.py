@@ -21,7 +21,7 @@ if str(ROOT) not in sys.path:
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
-from app.db.session import SessionLocal
+from app.db.session import MaintenanceSessionLocal
 from app.models.user import User
 from app.services.rls import apply_rls_bypass
 
@@ -38,7 +38,12 @@ CONFIRM_DISABLE = "retire-legacy-demo-logins"
 
 
 def audit_legacy_demo_logins(db: Session) -> list[dict[str, object]]:
-    apply_rls_bypass(db)
+    apply_rls_bypass(
+        db,
+        actor_identity="operator:retire_legacy_demo_logins",
+        operation="audit_legacy_demo_logins",
+        reason="Inspect allowlisted retired demo identities",
+    )
     rows = db.query(User).filter(User.email.in_(LEGACY_DEMO_EMAILS)).all()
     return [
         {
@@ -54,7 +59,12 @@ def audit_legacy_demo_logins(db: Session) -> list[dict[str, object]]:
 
 
 def disable_legacy_demo_logins(db: Session) -> list[dict[str, object]]:
-    apply_rls_bypass(db)
+    apply_rls_bypass(
+        db,
+        actor_identity="operator:retire_legacy_demo_logins",
+        operation="disable_legacy_demo_logins",
+        reason="Disable allowlisted retired demo identities after explicit confirmation",
+    )
     rows = db.query(User).filter(User.email.in_(LEGACY_DEMO_EMAILS)).all()
     if any(user.is_superuser for user in rows):
         raise RuntimeError("refusing to modify a platform superuser")
@@ -75,7 +85,7 @@ def main() -> int:
     if args.action == "disable" and args.confirm_disable != CONFIRM_DISABLE:
         parser.error(f"disable requires --confirm-disable {CONFIRM_DISABLE}")
 
-    db = SessionLocal()
+    db = MaintenanceSessionLocal()
     try:
         result = (
             disable_legacy_demo_logins(db)

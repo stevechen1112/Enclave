@@ -31,8 +31,10 @@ class Settings(BaseSettings):
 
     # ── First superuser (used by scripts/initial_data.py) ──
     FIRST_SUPERUSER_EMAIL: str = "admin@example.com"
-    FIRST_SUPERUSER_PASSWORD: str = ""  # Must be set via FIRST_SUPERUSER_PASSWORD in .env
-    
+    FIRST_SUPERUSER_PASSWORD: str = (
+        ""  # Must be set via FIRST_SUPERUSER_PASSWORD in .env
+    )
+
     # CORS
     BACKEND_CORS_ORIGINS: str = ""
 
@@ -52,20 +54,27 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
     POSTGRES_DB: str = "enclave"
-    
+    # Dedicated NO-BYPASSRLS login that is a member of enclave_rls_bypass.
+    # It is used only by explicitly audited cross-tenant maintenance jobs.
+    MAINTENANCE_POSTGRES_USER: str = ""
+    MAINTENANCE_POSTGRES_PASSWORD: str = ""
+    # File watcher is a tenant-scoped integration. Never infer the first tenant.
+    AGENT_WATCH_TENANT_ID: str = ""
+    AGENT_WATCH_USER_ID: str = ""
+
     # Redis
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
-    
+
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
-    
+
     # OpenAI（用於 Generation 回答生成 + HyDE 查詢擴展）
     OPENAI_API_KEY: str = ""
     OPENAI_MODEL: str = "gpt-5.6-luna"  # 問答／生成主模型（可被 .env 覆寫）
-    OPENAI_TEMPERATURE: float = 0.3     # 回答生成溫度（低 = 更精確）
-    OPENAI_MAX_TOKENS: int = 4000       # gpt-5 系含 reasoning；過低會吃光額度導致空回答
+    OPENAI_TEMPERATURE: float = 0.3  # 回答生成溫度（低 = 更精確）
+    OPENAI_MAX_TOKENS: int = 4000  # gpt-5 系含 reasoning；過低會吃光額度導致空回答
 
     # Voyage AI + pgvector
     VOYAGE_API_KEY: str = ""
@@ -83,7 +92,7 @@ class Settings(BaseSettings):
     LLAMAPARSE_RESULT_TYPE: str = "markdown"
     LLAMAPARSE_LANGUAGE: str = "zh-TW"
     LLAMAPARSE_AUTO_MODE: bool = True
-    
+
     # File Storage（ADR-011：StorageBackend 抽象）
     UPLOAD_DIR: str = "./uploads"
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
@@ -94,7 +103,9 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str = ""
     S3_REGION: str = "auto"
     S3_PRESIGN_EXPIRES: int = 3600
-    STORAGE_DELETE_ON_REVOKE: bool = False  # 撤權時是否實體刪除物件（預設保留 tombstone 行為）
+    STORAGE_DELETE_ON_REVOKE: bool = (
+        False  # 撤權時是否實體刪除物件（預設保留 tombstone 行為）
+    )
 
     # Tenant RLS（ADR-012）：false=shadow（policy 已建、owner 不受 FORCE 約束）；
     # true=enforce（migration 需以同名環境變數重跑才會 FORCE ROW LEVEL SECURITY）
@@ -102,7 +113,7 @@ class Settings(BaseSettings):
     # Canonical KnowledgeUnit serving cutover: shadow compares authority with
     # legacy retrieval; enforce serves only active release memberships.
     KNOWLEDGE_UNIT_READ_MODE: str = "shadow"  # shadow | enforce
-    
+
     # Document Processing
     CHUNK_SIZE: int = 1000  # tokens
     CHUNK_OVERLAP: int = 150  # tokens
@@ -114,21 +125,31 @@ class Settings(BaseSettings):
     OCR_LANGS: str = "chi_tra+eng"
 
     # Retrieval
-    RETRIEVAL_MODE: str = "hybrid"         # semantic / keyword / hybrid
-    RETRIEVAL_MIN_SCORE: float = 0.0       # 最低相似度閾值
-    RETRIEVAL_RERANK: bool = True          # 是否啟用重排序
-    RETRIEVAL_CACHE_TTL: int = 300         # 快取秒數
-    RETRIEVAL_TOP_K: int = 5               # 預設返回數量
+    RETRIEVAL_MODE: str = "hybrid"  # semantic / keyword / hybrid
+    RETRIEVAL_MIN_SCORE: float = 0.0  # 最低相似度閾值
+    RETRIEVAL_RERANK: bool = True  # 是否啟用重排序
+    RETRIEVAL_CACHE_TTL: int = 300  # 快取秒數
+    RETRIEVAL_TOP_K: int = 5  # 預設返回數量
 
     # P0-1：Parent Document / Sibling Expansion / Context Fitting
     # 借鑑 OpenDocuments 的 parent-doc.ts / retriever.ts / context-window.ts
     # 預設關閉，需通過 ablation 證明增量後才開啟
-    PARENT_DOC_ENABLED: bool = False          # 命中 chunk 後，若 parent_chunk_id 非空，改回傳 parent text
-    SIBLING_EXPANSION_ENABLED: bool = False   # 命中 chunk 後，附加相鄰 chunk_index ± 1 的 sibling
-    SIBLING_EXPANSION_WINDOW: int = 1          # 每側擴展幾個 sibling（1 = 前後各 1 個）
-    SIBLING_SCORE_DISCOUNT: float = 0.85      # sibling 的 score 乘以此折扣（避免 sibling 壓過原始命中）
-    CONTEXT_FITTING_ENABLED: bool = False      # 依 token 預算裁切 context，避免 parent/sibling 擴展後超窗
-    CONTEXT_FITTING_TOKEN_BUDGET: int = 6000   # context 總 token 預算（不含 citation 標記）
+    PARENT_DOC_ENABLED: bool = (
+        False  # 命中 chunk 後，若 parent_chunk_id 非空，改回傳 parent text
+    )
+    SIBLING_EXPANSION_ENABLED: bool = (
+        False  # 命中 chunk 後，附加相鄰 chunk_index ± 1 的 sibling
+    )
+    SIBLING_EXPANSION_WINDOW: int = 1  # 每側擴展幾個 sibling（1 = 前後各 1 個）
+    SIBLING_SCORE_DISCOUNT: float = (
+        0.85  # sibling 的 score 乘以此折扣（避免 sibling 壓過原始命中）
+    )
+    CONTEXT_FITTING_ENABLED: bool = (
+        False  # 依 token 預算裁切 context，避免 parent/sibling 擴展後超窗
+    )
+    CONTEXT_FITTING_TOKEN_BUDGET: int = (
+        6000  # context 總 token 預算（不含 citation 標記）
+    )
     CONTEXT_FITTING_MODEL: str = "voyage-4-lite"  # tokenizer 估算用模型名（僅作粗估）
 
     # Source-grounded 逐字溯源驗證（生成之後、輸出之前的稽核層）
@@ -136,7 +157,9 @@ class Settings(BaseSettings):
     # shadow = 照常輸出，事後稽核並記錄（收集數據用，不影響使用者）
     # enforce = 先緩衝回答，通過稽核才輸出；失敗則約束式重新生成一次，再失敗則結構化拒答
     SOURCE_VERIFY_MODE: str = "off"
-    SOURCE_VERIFY_USE_INTERNAL_LLM: bool = True  # 稽核走內部 LLM（本地 Ollama），失敗退回主 LLM
+    SOURCE_VERIFY_USE_INTERNAL_LLM: bool = (
+        True  # 稽核走內部 LLM（本地 Ollama），失敗退回主 LLM
+    )
     SOURCE_VERIFY_MODEL: str = ""  # 稽核專用模型覆寫；空字串 = 沿用內部模型設定
 
     # Legacy vertical rules live behind a compatibility-pack boundary.  Keep
@@ -147,22 +170,26 @@ class Settings(BaseSettings):
     # ── P1：製造業產品工作層 ──
     # Voice / STT / TTS Interaction Gateway（稽核文件 §6.7、§10 P1）
     # 借鑑 WeKnora ASR 入庫 pipeline，但 Enclave 自建 voice-first Interaction Gateway
-    VOICE_STT_ENABLED: bool = False          # 語音轉文字（STT）入口
-    VOICE_TTS_ENABLED: bool = False          # 文字轉語音（TTS）輸出
-    VOICE_STT_PROVIDER: str = "openai"       # openai | azure | local
-    VOICE_TTS_PROVIDER: str = "openai"       # openai | azure | local
-    VOICE_STT_MODEL: str = "gpt-transcribe"         # 2026 最高精度 STT（gpt-transcribe 精度最高，gpt-4o-mini-transcribe CP 最佳）
-    VOICE_TTS_MODEL: str = "gpt-4o-mini-tts"         # 2026 最新 TTS（GPT-4o mini 驅動，語調自然）
-    VOICE_TTS_VOICE: str = "alloy"            # TTS 語音（alloy/echo/fable/onyx/nova/shimmer）
-    VOICE_MAX_AUDIO_SECONDS: int = 120       # 單次語音輸入上限（秒）
-    VOICE_MAX_AUDIO_BYTES: int = 25 * 1024 * 1024  # 上傳位元組上限（120 秒無損 WAV 立體聲約 21MB）
+    VOICE_STT_ENABLED: bool = False  # 語音轉文字（STT）入口
+    VOICE_TTS_ENABLED: bool = False  # 文字轉語音（TTS）輸出
+    VOICE_STT_PROVIDER: str = "openai"  # openai | azure | local
+    VOICE_TTS_PROVIDER: str = "openai"  # openai | azure | local
+    VOICE_STT_MODEL: str = "gpt-transcribe"  # 2026 最高精度 STT（gpt-transcribe 精度最高，gpt-4o-mini-transcribe CP 最佳）
+    VOICE_TTS_MODEL: str = (
+        "gpt-4o-mini-tts"  # 2026 最新 TTS（GPT-4o mini 驅動，語調自然）
+    )
+    VOICE_TTS_VOICE: str = "alloy"  # TTS 語音（alloy/echo/fable/onyx/nova/shimmer）
+    VOICE_MAX_AUDIO_SECONDS: int = 120  # 單次語音輸入上限（秒）
+    VOICE_MAX_AUDIO_BYTES: int = (
+        25 * 1024 * 1024
+    )  # 上傳位元組上限（120 秒無損 WAV 立體聲約 21MB）
     # 長訪談採分段上傳，與上列短語音 API 分開，避免放寬短語音的攻擊面。
     LONG_INTERVIEW_MAX_SECONDS: int = 60 * 60
     LONG_INTERVIEW_CHUNK_MAX_BYTES: int = 8 * 1024 * 1024
     LONG_INTERVIEW_CHUNK_MAX_SECONDS: int = 90
     LONG_INTERVIEW_MAX_CHUNKS: int = 240
-    VOICE_DRAFT_FIRST: bool = True           # 音訊轉寫先進 draft，不可直接回答（§6.8 驗收）
-    VOICE_STT_COST_PER_SECOND: float = 0.0   # STT 每秒成本（依部署方案設定；§13.4 COGS）
+    VOICE_DRAFT_FIRST: bool = True  # 音訊轉寫先進 draft，不可直接回答（§6.8 驗收）
+    VOICE_STT_COST_PER_SECOND: float = 0.0  # STT 每秒成本（依部署方案設定；§13.4 COGS）
     VOICE_REALTIME_ENABLED: bool = False
     VOICE_REALTIME_MODEL: str = "gpt-realtime-2.1"
     VOICE_REALTIME_VOICE: str = "marin"
@@ -189,13 +216,15 @@ class Settings(BaseSettings):
     # 完成不等於 LLM 生成 Markdown，而是 schema + required fields + deterministic calculations
     FIXED_FORM_ENABLED: bool = False
     FIXED_FORM_REQUIRE_APPROVAL: bool = True  # 正式表單需簽核
-    FIXED_FORM_VERSIONED: bool = True        # 表單版本化
+    FIXED_FORM_VERSIONED: bool = True  # 表單版本化
 
     # Agent runtime（稽核文件 §6.3、§6.5）
     AGENT_MAX_ITERATIONS: int = 10
     AGENT_APPROVAL_TIMEOUT_HOURS: int = 24
     AGENT_APPROVAL_ESCALATION_HOURS: int = 48
-    AGENT_APPROVAL_REQUIRE_FOR_MUTATING: bool = True  # mutating tool 預設需 approval（§6.8）
+    AGENT_APPROVAL_REQUIRE_FOR_MUTATING: bool = (
+        True  # mutating tool 預設需 approval（§6.8）
+    )
 
     # 職能模組 Router（稽核文件 §10 P1）
     MODULE_ROUTER_ENABLED: bool = True
@@ -207,42 +236,44 @@ class Settings(BaseSettings):
     # Know-how Card（稽核文件 §7.4 P0、§11.4）
     # 老師傅 know-how 應在 Enclave 原生建立知識卡與治理
     KNOWHOW_CARD_ENABLED: bool = False
-    KNOWHOW_DRAFT_ISOLATION: bool = True     # draft 不可被 RetrievalFacade 命中（§7.5 驗收）
-    KNOWHOW_REQUIRE_REVIEW: bool = True      # 需人工審核才索引
+    KNOWHOW_DRAFT_ISOLATION: bool = (
+        True  # draft 不可被 RetrievalFacade 命中（§7.5 驗收）
+    )
+    KNOWHOW_REQUIRE_REVIEW: bool = True  # 需人工審核才索引
     KNOWHOW_SOP_CONFLICT_CHECK: bool = True  # SOP 與 know-how 衝突時 SOP 優先
 
     # PageIndex 長文件（稽核文件 §7.4 P2、§11.5）
     # 只適用長設備手冊、20 頁以上 manual，預設 OFF
     PAGEINDEX_ENABLED: bool = False
-    PAGEINDEX_THRESHOLD: int = 20            # 頁數門檻
+    PAGEINDEX_THRESHOLD: int = 20  # 頁數門檻
     PAGEINDEX_ABLATION_REQUIRED: bool = True  # 需 ablation 證明增量才進 fan-out
 
     # Semantic Lint（稽核文件 §7.4，借鑑 OpenKB linter.py）
-    WIKI_LINT_ENABLED: bool = False          # Wiki 編譯後 semantic lint
+    WIKI_LINT_ENABLED: bool = False  # Wiki 編譯後 semantic lint
 
     # ── P3：需求驅動整合 ──
     # Connector Materialize（稽核文件 §9.3、§9.4）
     # 雲端 connector resource 下載到本機再進 canonical
     CONNECTOR_MATERIALIZE_ENABLED: bool = False  # 雲端 resource 下載到本機
-    CONNECTOR_MATERIALIZE_TIMEOUT: int = 300     # 下載超時（秒）
-    CONNECTOR_MATERIALIZE_MAX_SIZE: int = 100     # 單檔上限（MB）
+    CONNECTOR_MATERIALIZE_TIMEOUT: int = 300  # 下載超時（秒）
+    CONNECTOR_MATERIALIZE_MAX_SIZE: int = 100  # 單檔上限（MB）
 
     # Read-only FastMCP Server（稽核文件 §8.2 P1）
     # 借鑑 OpenRAG src/mcp_http/server.py
-    MCP_SERVER_ENABLED: bool = False            # Enclave read-only FastMCP server
+    MCP_SERVER_ENABLED: bool = False  # Enclave read-only FastMCP server
     MCP_SERVER_HOST: str = "0.0.0.0"
     MCP_SERVER_PORT: int = 9000
 
     # MCP Client + Allowlist + ApprovalGate（稽核文件 §8.2 P2）
-    MCP_CLIENT_ENABLED: bool = False            # 連接外部 MCP server
-    MCP_CLIENT_ALLOWLIST: str = ""              # 允許的 MCP server（逗號分隔）
-    MCP_CLIENT_REQUIRE_APPROVAL: bool = True   # mutating tool 需 approval
+    MCP_CLIENT_ENABLED: bool = False  # 連接外部 MCP server
+    MCP_CLIENT_ALLOWLIST: str = ""  # 允許的 MCP server（逗號分隔）
+    MCP_CLIENT_REQUIRE_APPROVAL: bool = True  # mutating tool 需 approval
 
     # Docling Parser Ablation（稽核文件 §8.3）
     # 條件式採用 — 先 ablation 證明增量
-    DOCLING_ENABLED: bool = False               # Docling Serve 整合
+    DOCLING_ENABLED: bool = False  # Docling Serve 整合
     DOCLING_BASE_URL: str = "http://docling-serve:5001"
-    DOCLING_TIMEOUT: int = 120                   # 解析超時（秒）
+    DOCLING_TIMEOUT: int = 120  # 解析超時（秒）
 
     # ── CG-AUTH-SSO：email 驗證與 MFA ──
     # 開啟後，email_verified=false 的用戶不可聊天（其餘 API 不受限）
@@ -285,18 +316,20 @@ class Settings(BaseSettings):
     CLAMAV_FAIL_CLOSED: bool = True  # 掃毒服務不可用時拒絕上傳
 
     # LLM Provider (llm_provider: openai | gemini | ollama)
-    LLM_PROVIDER: str = "openai"           # openai = 呼叫 OpenAI API；gemini = Google Gemini；ollama = 本機 LLM
+    LLM_PROVIDER: str = (
+        "openai"  # openai = 呼叫 OpenAI API；gemini = Google Gemini；ollama = 本機 LLM
+    )
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "llama3.2"
     # 資料夾掃描預覽專用 Ollama（輕量摘要，走 host.docker.internal 穿透 Docker）
     OLLAMA_SCAN_URL: str = "http://host.docker.internal:11434"
     OLLAMA_SCAN_MODEL: str = "gemma3:27b"
     # 資料夾掃描摘要 LLM 提供商（ollama | gemini | openai）
-    SCAN_LLM_PROVIDER: str = "ollama"         # 無 GPU 時改為 gemini 走雲端
+    SCAN_LLM_PROVIDER: str = "ollama"  # 無 GPU 時改為 gemini 走雲端
     SCAN_GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"  # 掃描摘要用 Gemini 模型
-    SCAN_OPENAI_MODEL: str = "gpt-4o-mini"    # 掃描摘要用 OpenAI 模型
+    SCAN_OPENAI_MODEL: str = "gpt-4o-mini"  # 掃描摘要用 OpenAI 模型
     # 內部任務 LLM（分類、改寫等非使用者面向任務，可用較輕量的本地模型省錢）
-    INTERNAL_LLM_PROVIDER: str = "ollama"     # ollama | gemini | openai
+    INTERNAL_LLM_PROVIDER: str = "ollama"  # ollama | gemini | openai
     INTERNAL_OLLAMA_MODEL: str = "gemma3:27b"  # 內部任務使用的 Ollama 模型
     INTERNAL_GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"  # 內部任務 Gemini 模型
     INTERNAL_OPENAI_MODEL: str = "gpt-4o-mini"  # 內部任務 OpenAI 模型
@@ -320,15 +353,15 @@ class Settings(BaseSettings):
     ADMIN_TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
 
     # Phase 10 — Agent 主動索引設定
-    AGENT_WATCH_ENABLED: bool = False       # 是否啟用資料夾監控 Agent
-    AGENT_WATCH_FOLDERS: str = ""          # 逗號分隔的監控資料夾路徑
-    AGENT_SCAN_INTERVAL: int = 60           # 掃描間隔（秒）
-    AGENT_BATCH_HOUR: int = 2               # 排程批次處理時間（凌晨幾點）
-    AGENT_MAX_CPU_PERCENT: float = 50.0     # 批次處理 CPU 上限
+    AGENT_WATCH_ENABLED: bool = False  # 是否啟用資料夾監控 Agent
+    AGENT_WATCH_FOLDERS: str = ""  # 逗號分隔的監控資料夾路徑
+    AGENT_SCAN_INTERVAL: int = 60  # 掃描間隔（秒）
+    AGENT_BATCH_HOUR: int = 2  # 排程批次處理時間（凌晨幾點）
+    AGENT_MAX_CPU_PERCENT: float = 50.0  # 批次處理 CPU 上限
 
     # Phase 11 — 內容生成設定
-    GENERATION_MAX_TOKENS: int = 3000       # 生成文件最大 token
-    GENERATION_TEMPERATURE: float = 0.4     # 生成文件 temperature（略高於問答）
+    GENERATION_MAX_TOKENS: int = 3000  # 生成文件最大 token
+    GENERATION_TEMPERATURE: float = 0.4  # 生成文件 temperature（略高於問答）
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -369,7 +402,10 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "DEMO_TENANT_ID must identify the canonical synthetic Demo tenant"
                 )
-            if self.DEMO_ADMIN_EMAIL.strip().lower() != "admin-door@demo.enclave.invalid":
+            if (
+                self.DEMO_ADMIN_EMAIL.strip().lower()
+                != "admin-door@demo.enclave.invalid"
+            ):
                 raise ValueError(
                     "DEMO_ADMIN_EMAIL must identify the canonical internal Demo admin"
                 )
@@ -394,13 +430,20 @@ class Settings(BaseSettings):
                 raise ValueError(
                     f"SECRET_KEY is insecure ('{self.SECRET_KEY[:8]}…'). "
                     "Set a strong random key (≥ 32 chars) in .env or environment. "
-                    f"Hint: python -c \"import secrets; print(secrets.token_urlsafe(48))\""
+                    f'Hint: python -c "import secrets; print(secrets.token_urlsafe(48))"'
                 )
             # ── Database password ──
             if self.POSTGRES_PASSWORD in ("postgres", ""):
                 raise ValueError(
                     "POSTGRES_PASSWORD is set to default 'postgres'. "
                     "Set a strong password in .env or environment."
+                )
+            if bool(self.MAINTENANCE_POSTGRES_USER) != bool(
+                self.MAINTENANCE_POSTGRES_PASSWORD
+            ):
+                raise ValueError(
+                    "MAINTENANCE_POSTGRES_USER and MAINTENANCE_POSTGRES_PASSWORD "
+                    "must be configured together"
                 )
             # ── Superuser credentials ──
             if self.FIRST_SUPERUSER_EMAIL == "admin@example.com":
@@ -441,5 +484,6 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.APP_ENV == "development"
+
 
 settings = Settings()

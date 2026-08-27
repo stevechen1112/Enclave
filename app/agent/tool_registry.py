@@ -28,29 +28,33 @@ logger = logging.getLogger(__name__)
 # 基礎型別定義
 # ─────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ToolParam:
     """描述工具的單一輸入參數。"""
+
     name: str
-    type: str                           # "string" | "integer" | "number" | "boolean" | "array" | "object"
+    type: str  # "string" | "integer" | "number" | "boolean" | "array" | "object"
     description: str
     required: bool = True
-    enum: Optional[List[str]] = None    # 限制可選值
-    default: Any = None                 # 選填參數的預設值
+    enum: Optional[List[str]] = None  # 限制可選值
+    default: Any = None  # 選填參數的預設值
 
 
 @dataclass
 class ToolResult:
     """工具執行結果。"""
+
     success: bool
-    data: Any = None                    # 成功時的回傳資料（任意可 JSON 序列化的結構）
-    error: Optional[str] = None         # 失敗時的錯誤訊息
+    data: Any = None  # 成功時的回傳資料（任意可 JSON 序列化的結構）
+    error: Optional[str] = None  # 失敗時的錯誤訊息
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 # ─────────────────────────────────────────────────────────────
 # Tool 抽象基類
 # ─────────────────────────────────────────────────────────────
+
 
 class Tool(ABC):
     """
@@ -114,6 +118,7 @@ class Tool(ABC):
 # ─────────────────────────────────────────────────────────────
 # ToolRegistry — 全域工具管理器
 # ─────────────────────────────────────────────────────────────
+
 
 class ToolRegistry:
     """
@@ -185,6 +190,7 @@ class ToolRegistry:
 # 內建工具：KBSearchTool
 # ─────────────────────────────────────────────────────────────
 
+
 class KBSearchTool(Tool):
     """
     知識庫語意搜尋工具。
@@ -223,6 +229,7 @@ class KBSearchTool(Tool):
 
         if not self._retriever:
             from app.services.kb_retrieval import KnowledgeBaseRetriever
+
             self._retriever = KnowledgeBaseRetriever()
 
         top_k = min(max(1, int(top_k)), 20)
@@ -261,6 +268,7 @@ class KBSearchTool(Tool):
 # ─────────────────────────────────────────────────────────────
 # 內建工具：DocumentListTool
 # ─────────────────────────────────────────────────────────────
+
 
 class DocumentListTool(Tool):
     """
@@ -307,6 +315,9 @@ class DocumentListTool(Tool):
         limit = min(max(1, int(limit)), 100)
         db = SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, self.tenant_id)
             query = db.query(Document).filter(
                 Document.tenant_id == self.tenant_id,
                 Document.status == "completed",
@@ -318,8 +329,8 @@ class DocumentListTool(Tool):
                     pass
                 elif dept_ids:
                     query = query.filter(
-                        (Document.department_id.is_(None)) |
-                        (Document.department_id.in_(dept_ids))
+                        (Document.department_id.is_(None))
+                        | (Document.department_id.in_(dept_ids))
                     )
                 else:
                     query = query.filter(Document.department_id.is_(None))
@@ -335,7 +346,9 @@ class DocumentListTool(Tool):
                             "filename": d.filename,
                             "file_type": d.file_type,
                             "chunk_count": d.chunk_count,
-                            "created_at": d.created_at.isoformat() if d.created_at else None,
+                            "created_at": d.created_at.isoformat()
+                            if d.created_at
+                            else None,
                         }
                         for d in docs
                     ],
@@ -365,11 +378,15 @@ def get_registry() -> ToolRegistry:
     return _global_registry
 
 
-def build_tenant_registry(tenant_id: UUID, kb_retriever=None, authz=None) -> ToolRegistry:
+def build_tenant_registry(
+    tenant_id: UUID, kb_retriever=None, authz=None
+) -> ToolRegistry:
     """
     為指定租戶建立工具 Registry，並預先載入內建工具。
     """
     registry = ToolRegistry()
-    registry.register(KBSearchTool(tenant_id=tenant_id, kb_retriever=kb_retriever, authz=authz))
+    registry.register(
+        KBSearchTool(tenant_id=tenant_id, kb_retriever=kb_retriever, authz=authz)
+    )
     registry.register(DocumentListTool(tenant_id=tenant_id, authz=authz))
     return registry

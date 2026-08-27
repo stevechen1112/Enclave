@@ -7,6 +7,7 @@ Phase 1 — Gateway Contract Tests
   - Authorizer 授權決策
   - Resilience（Circuit Breaker + Retry）
 """
+
 import asyncio
 import uuid
 import pytest
@@ -15,10 +16,16 @@ from app.gateway.contracts import SearchDomain, ChunkResult
 from app.gateway.router import GatewayRouter
 from app.gateway.authorization import GatewayAuthorizer
 from app.gateway.adapters.base import MockAdapter, BaseAdapter
-from app.gateway.resilience import CircuitBreaker, RetryConfig, with_retry, CircuitOpenError
+from app.gateway.resilience import (
+    CircuitBreaker,
+    RetryConfig,
+    with_retry,
+    CircuitOpenError,
+)
 
 
 # ── Helpers ──
+
 
 def _make_authz(role="employee", is_superuser=False):
     """建立測試用 AuthorizationContext。"""
@@ -34,6 +41,7 @@ def _make_authz(role="employee", is_superuser=False):
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Adapter Contract Tests
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestMockAdapter:
     """MockAdapter 實作所有 BaseAdapter 契約。"""
@@ -123,6 +131,7 @@ class TestMockAdapter:
 #  Authorizer Tests
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestGatewayAuthorizer:
     """GatewayAuthorizer 授權決策。"""
 
@@ -154,17 +163,25 @@ class TestGatewayAuthorizer:
         authorizer = GatewayAuthorizer()
         resource_id = "doc-123"
         subject_id = uuid.uuid4()
+        tenant_id = uuid.uuid4()
 
-        assert authorizer.is_denied(resource_id, subject_id) is False
+        assert (
+            authorizer.is_denied(resource_id, subject_id, tenant_id=tenant_id) is False
+        )
         authorizer.add_deny_entry(resource_id, subject_id)
-        assert authorizer.is_denied(resource_id, subject_id) is True
-        authorizer.remove_deny_entry(resource_id, subject_id)
-        assert authorizer.is_denied(resource_id, subject_id) is False
+        assert (
+            authorizer.is_denied(resource_id, subject_id, tenant_id=tenant_id) is True
+        )
+        authorizer.remove_deny_entry(resource_id, subject_id, tenant_id=tenant_id)
+        assert (
+            authorizer.is_denied(resource_id, subject_id, tenant_id=tenant_id) is False
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Router Tests
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestGatewayRouter:
     """GatewayRouter 路由與聚合。"""
@@ -236,6 +253,7 @@ class TestGatewayRouter:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Resilience Tests
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestCircuitBreaker:
     """Circuit Breaker 狀態轉換。"""
@@ -350,6 +368,7 @@ class TestRetry:
 
 
 # ── Async helpers ──
+
 
 async def _raise_async(exc: Exception):
     raise exc

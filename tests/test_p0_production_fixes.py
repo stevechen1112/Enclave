@@ -1,4 +1,5 @@
 """Regression tests for P0 production defects found in plan audit."""
+
 from __future__ import annotations
 
 import uuid
@@ -31,7 +32,14 @@ class TestPipesHubAsyncResyncNoFalseComplete:
                 return False
 
             async def get(self, *a, **k):
-                return FakeResp(200, {"data": [{"connectorId": "c1", "connectorType": "SHAREPOINT ONLINE"}]})
+                return FakeResp(
+                    200,
+                    {
+                        "data": [
+                            {"connectorId": "c1", "connectorType": "SHAREPOINT ONLINE"}
+                        ]
+                    },
+                )
 
             async def post(self, *a, **k):
                 return FakeResp(202, {"ok": True})
@@ -64,14 +72,20 @@ class TestConnectorSyncSkipsEmptyReconcile:
             db.add(tenant)
             db.flush()
             conn = ConnectorInstance(
-                tenant_id=tenant.id, connector_type="sharepoint", name="sp",
-                config_json={"site_url": "https://x"}, status="active",
+                tenant_id=tenant.id,
+                connector_type="sharepoint",
+                name="sp",
+                config_json={"site_url": "https://x"},
+                status="active",
             )
             db.add(conn)
             db.flush()
             doc = Document(
-                tenant_id=tenant.id, filename="keep.pdf", file_type="pdf",
-                status="completed", source_system="sharepoint",
+                tenant_id=tenant.id,
+                filename="keep.pdf",
+                file_type="pdf",
+                status="completed",
+                source_system="sharepoint",
                 source_record_id="rec-1",
             )
             db.add(doc)
@@ -102,6 +116,7 @@ class TestOutboxResolvesProviderId:
         from app.db.base_class import Base
         from sqlalchemy.orm import sessionmaker
         from app.models.outbox import OutboxEvent
+        from app.models.tenant import Tenant
         from app.gateway.resource_registry import ResourceRegistry
         from app.tasks.outbox_worker import _resolve_provider_resource_id
 
@@ -109,9 +124,13 @@ class TestOutboxResolvesProviderId:
         Session = sessionmaker(bind=test_engine)
         db = Session()
         try:
+            tenant = Tenant(id=uuid.uuid4(), name="registry", status="active")
+            db.add(tenant)
+            db.flush()
             enclave_id = str(uuid.uuid4())
             ResourceRegistry().upsert_mapping(
                 db,
+                tenant_id=tenant.id,
                 enclave_resource_type="document",
                 enclave_resource_id=enclave_id,
                 enclave_revision=1,
@@ -121,11 +140,12 @@ class TestOutboxResolvesProviderId:
             )
             db.commit()
             event = OutboxEvent(
+                tenant_id=tenant.id,
                 aggregate_type="document",
                 aggregate_id=enclave_id,
                 event_type="deleted",
                 revision=2,
-                payload={},
+                payload={"tenant_id": str(tenant.id)},
                 idempotency_key=f"document:{enclave_id}:deleted:2",
                 status="pending",
             )
@@ -153,12 +173,17 @@ class TestGraphAclNotAllowAll:
             db.flush()
             svc = GraphService()
             ent = svc.upsert_entity(
-                db, tenant_id=tenant.id, name="orphan", entity_type="thing",
+                db,
+                tenant_id=tenant.id,
+                name="orphan",
+                entity_type="thing",
             )
             db.commit()
             authz = AuthorizationContext(
-                tenant_id=tenant.id, subject_id=uuid.uuid4(),
-                role_ids=["employee"], policy_revision=1,
+                tenant_id=tenant.id,
+                subject_id=uuid.uuid4(),
+                role_ids=["employee"],
+                policy_revision=1,
             )
             assert svc._entity_allowed(ent, authz, db=db) is False
             hits = svc.search_entities(db, tenant.id, "orphan", authz)
@@ -194,9 +219,12 @@ class TestPipesHubPollAfterResync:
             async def get(self, url, **k):
                 calls["n"] += 1
                 if "connectors" in url and "records" in url:
-                    return FakeResp(200, {
-                        "data": [{"id": "r1", "name": "Doc", "checksum": "abc"}],
-                    })
+                    return FakeResp(
+                        200,
+                        {
+                            "data": [{"id": "r1", "name": "Doc", "checksum": "abc"}],
+                        },
+                    )
                 return FakeResp(404, {})
 
             async def post(self, *a, **k):
@@ -206,9 +234,11 @@ class TestPipesHubPollAfterResync:
             "app.gateway.adapters.pipeshub_http.make_httpx_client",
             lambda **kw: FakeClient(),
         )
+
         # bypass instance resolve by injecting id
         async def resolve(*a, **k):
             return "c1"
+
         monkeypatch.setattr(adapter, "_resolve_pipeshub_connector_id", resolve)
         monkeypatch.setenv("PIPESHUB_POLL_AFTER_RESYNC", "true")
         result = await adapter.sync_connector(
@@ -222,13 +252,20 @@ class TestPipesHubPollAfterResync:
 
 class TestOAuthTokenExchangeHelper:
     def test_token_endpoint_and_missing_secret(self):
-        from app.services.connector_schemas import oauth_token_endpoint, exchange_oauth_code
+        from app.services.connector_schemas import (
+            oauth_token_endpoint,
+            exchange_oauth_code,
+        )
+
         assert "microsoftonline" in oauth_token_endpoint("sharepoint", {})
         assert "googleapis" in oauth_token_endpoint("google_drive", {})
         with pytest.raises(ValueError, match="client_id"):
             exchange_oauth_code(
-                "sharepoint", code="x", redirect_uri="http://cb",
-                client_id="", client_secret="",
+                "sharepoint",
+                code="x",
+                redirect_uri="http://cb",
+                client_id="",
+                client_secret="",
             )
 
 
@@ -239,11 +276,15 @@ class TestDocumentProcessedOutboxCommits:
         from sqlalchemy.orm import sessionmaker
         from app.services.outbox_events import publish_event
         from app.models.outbox import OutboxEvent
+        from app.models.tenant import Tenant
 
         Base.metadata.create_all(bind=test_engine)
         Session = sessionmaker(bind=test_engine)
         db = Session()
         try:
+            tenant = Tenant(id=uuid.uuid4(), name="outbox-commit", status="active")
+            db.add(tenant)
+            db.flush()
             doc_id = str(uuid.uuid4())
             publish_event(
                 db,
@@ -251,13 +292,11 @@ class TestDocumentProcessedOutboxCommits:
                 aggregate_id=doc_id,
                 event_type="document_processed",
                 revision=1,
-                payload={"tenant_id": str(uuid.uuid4())},
+                payload={"tenant_id": str(tenant.id)},
             )
             db.commit()
             found = (
-                db.query(OutboxEvent)
-                .filter(OutboxEvent.aggregate_id == doc_id)
-                .first()
+                db.query(OutboxEvent).filter(OutboxEvent.aggregate_id == doc_id).first()
             )
             assert found is not None
             assert found.event_type == "document_processed"

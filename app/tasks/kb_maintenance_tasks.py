@@ -7,6 +7,7 @@ Tasks:
   - integrity_check_task     P13-6  Scan for orphan chunks / missing embeddings
   - detect_knowledge_gaps    P13-4  Scan recent low-confidence answers
 """
+
 import gzip
 import json
 import logging
@@ -19,9 +20,29 @@ from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.celery_app import celery_app
-from app.db.session import SessionLocal
+from app.db.session import MaintenanceSessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+def _apply_maintenance_scope(
+    db: Session,
+    *,
+    tenant_id: str | uuid.UUID | None,
+    actor_identity: str,
+    operation: str,
+) -> None:
+    from app.services.rls import apply_rls_bypass, apply_rls_context
+
+    if tenant_id:
+        apply_rls_context(db, uuid.UUID(str(tenant_id)))
+        return
+    apply_rls_bypass(
+        db,
+        actor_identity=actor_identity,
+        operation=operation,
+        reason="Execute explicitly scheduled platform-wide knowledge maintenance",
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -41,12 +62,25 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
     from app.models.kb_maintenance import KBBackup
     from app.models.document import Document, DocumentChunk
 
-    db: Session = SessionLocal()
+    db: Session = MaintenanceSessionLocal()
     try:
+        _apply_maintenance_scope(
+            db,
+            tenant_id=None,
+            actor_identity="celery:kb_backup",
+            operation="resolve_backup_scope",
+        )
         backup = db.query(KBBackup).filter(KBBackup.id == uuid.UUID(backup_id)).first()
         if not backup:
             logger.error("KBBackup %s not found", backup_id)
             return
+        if backup.tenant_id:
+            _apply_maintenance_scope(
+                db,
+                tenant_id=backup.tenant_id,
+                actor_identity="celery:kb_backup",
+                operation="backup_tenant_knowledge",
+            )
 
         os.makedirs(BACKUP_DIR, exist_ok=True)
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -61,20 +95,22 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
         docs = docs_q.all()
         doc_records = []
         for d in docs:
-            doc_records.append({
-                "id": str(d.id),
-                "tenant_id": str(d.tenant_id),
-                "filename": d.filename,
-                "file_type": d.file_type,
-                "file_path": d.file_path,
-                "file_size": d.file_size,
-                "version": d.version,
-                "status": d.status,
-                "chunk_count": d.chunk_count,
-                "department_id": str(d.department_id) if d.department_id else None,
-                "created_at": d.created_at.isoformat() if d.created_at else None,
-                "updated_at": d.updated_at.isoformat() if d.updated_at else None,
-            })
+            doc_records.append(
+                {
+                    "id": str(d.id),
+                    "tenant_id": str(d.tenant_id),
+                    "filename": d.filename,
+                    "file_type": d.file_type,
+                    "file_path": d.file_path,
+                    "file_size": d.file_size,
+                    "version": d.version,
+                    "status": d.status,
+                    "chunk_count": d.chunk_count,
+                    "department_id": str(d.department_id) if d.department_id else None,
+                    "created_at": d.created_at.isoformat() if d.created_at else None,
+                    "updated_at": d.updated_at.isoformat() if d.updated_at else None,
+                }
+            )
 
         # 2. Export chunk metadata (without embedding vectors for size)
         chunks_q = db.query(
@@ -91,15 +127,17 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
         chunks = chunks_q.all()
         chunk_records = []
         for c in chunks:
-            chunk_records.append({
-                "id": str(c.id),
-                "document_id": str(c.document_id),
-                "document_revision": c.document_revision,
-                "chunk_index": c.chunk_index,
-                "text": c.text,
-                "chunk_hash": c.chunk_hash,
-                "metadata_json": c.metadata_json,
-            })
+            chunk_records.append(
+                {
+                    "id": str(c.id),
+                    "document_id": str(c.document_id),
+                    "document_revision": c.document_revision,
+                    "chunk_index": c.chunk_index,
+                    "text": c.text,
+                    "chunk_hash": c.chunk_hash,
+                    "metadata_json": c.metadata_json,
+                }
+            )
 
         manifest = {
             "backup_id": backup_id,
@@ -111,7 +149,11 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
         }
 
         # Write compressed JSON files
-        for name, data in [("manifest", manifest), ("documents", doc_records), ("chunks", chunk_records)]:
+        for name, data in [
+            ("manifest", manifest),
+            ("documents", doc_records),
+            ("chunks", chunk_records),
+        ]:
             path = os.path.join(archive_dir, f"{name}.json.gz")
             with gzip.open(path, "wt", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False)
@@ -147,13 +189,19 @@ def kb_backup_task(self, backup_id: str, backup_type: str = "full"):
 
         logger.info(
             "KB backup %s complete: %d docs, %d chunks, %d files, %s bytes",
-            backup_id, len(doc_records), len(chunk_records), copied_count, total_size,
+            backup_id,
+            len(doc_records),
+            len(chunk_records),
+            copied_count,
+            total_size,
         )
 
     except Exception as exc:
         db.rollback()
         try:
-            backup = db.query(KBBackup).filter(KBBackup.id == uuid.UUID(backup_id)).first()
+            backup = (
+                db.query(KBBackup).filter(KBBackup.id == uuid.UUID(backup_id)).first()
+            )
             if backup:
                 backup.status = "failed"
                 backup.error_message = str(exc)[:500]
@@ -177,12 +225,25 @@ def kb_restore_task(self, backup_id: str):
     from app.models.kb_maintenance import KBBackup
     from app.models.document import Document, DocumentChunk
 
-    db: Session = SessionLocal()
+    db: Session = MaintenanceSessionLocal()
     try:
+        _apply_maintenance_scope(
+            db,
+            tenant_id=None,
+            actor_identity="celery:kb_restore",
+            operation="resolve_restore_scope",
+        )
         backup = db.query(KBBackup).filter(KBBackup.id == uuid.UUID(backup_id)).first()
         if not backup or not backup.file_path:
             logger.error("KBBackup %s not found or no file_path", backup_id)
             return
+        if backup.tenant_id:
+            _apply_maintenance_scope(
+                db,
+                tenant_id=backup.tenant_id,
+                actor_identity="celery:kb_restore",
+                operation="restore_tenant_knowledge",
+            )
 
         archive_dir = backup.file_path
 
@@ -213,7 +274,15 @@ def kb_restore_task(self, backup_id: str):
             existing = db.query(Document).filter(Document.id == doc_id).first()
             if existing:
                 # Update in place
-                for key in ["filename", "file_type", "file_path", "file_size", "version", "status", "chunk_count"]:
+                for key in [
+                    "filename",
+                    "file_type",
+                    "file_path",
+                    "file_size",
+                    "version",
+                    "status",
+                    "chunk_count",
+                ]:
                     if dr.get(key) is not None:
                         setattr(existing, key, dr[key])
             else:
@@ -240,7 +309,9 @@ def kb_restore_task(self, backup_id: str):
             if backup_tenant and chunk_tenant_id and chunk_tenant_id != backup_tenant:
                 continue
 
-            existing = db.query(DocumentChunk).filter(DocumentChunk.id == chunk_id).first()
+            existing = (
+                db.query(DocumentChunk).filter(DocumentChunk.id == chunk_id).first()
+            )
             if not existing:
                 chunk = DocumentChunk(
                     id=chunk_id,
@@ -259,7 +330,9 @@ def kb_restore_task(self, backup_id: str):
 
         logger.info(
             "KB restore from %s complete: %d docs, %d new chunks",
-            backup_id, restored_docs, restored_chunks,
+            backup_id,
+            restored_docs,
+            restored_chunks,
         )
 
     except Exception as exc:
@@ -289,8 +362,14 @@ def integrity_check_task(self, tenant_id: str | None = None):
     from app.models.kb_maintenance import IntegrityReport
     from app.models.document import Document, DocumentChunk
 
-    db: Session = SessionLocal()
+    db: Session = MaintenanceSessionLocal()
     try:
+        _apply_maintenance_scope(
+            db,
+            tenant_id=tenant_id,
+            actor_identity="celery:integrity_check",
+            operation="scan_knowledge_integrity",
+        )
         report = IntegrityReport(
             tenant_id=uuid.UUID(tenant_id) if tenant_id else None,
         )
@@ -309,9 +388,7 @@ def integrity_check_task(self, tenant_id: str | None = None):
 
         # Orphan chunks: chunks whose document no longer exists
         orphan_q = base_chunk_q.filter(
-            ~DocumentChunk.document_id.in_(
-                db.query(Document.id)
-            )
+            ~DocumentChunk.document_id.in_(db.query(Document.id))
         )
         orphan_count = orphan_q.count()
 
@@ -334,7 +411,8 @@ def integrity_check_task(self, tenant_id: str | None = None):
             "stale_threshold_days": STALE_THRESHOLD_DAYS,
             "orphan_chunk_ids": [str(c.id) for c in orphan_q.limit(100).all()],
             "failed_doc_ids": [
-                str(d.id) for d in base_doc_q.filter(Document.status == "failed").limit(100).all()
+                str(d.id)
+                for d in base_doc_q.filter(Document.status == "failed").limit(100).all()
             ],
         }
 
@@ -351,7 +429,12 @@ def integrity_check_task(self, tenant_id: str | None = None):
 
         logger.info(
             "Integrity check complete: %d docs, %d chunks, %d orphans, %d missing emb, %d failed, %d stale",
-            total_docs, total_chunks, orphan_count, missing_emb, failed_docs, stale_docs,
+            total_docs,
+            total_chunks,
+            orphan_count,
+            missing_emb,
+            failed_docs,
+            stale_docs,
         )
         return str(report.id)
 
@@ -379,12 +462,20 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
     from app.models.kb_maintenance import KnowledgeGap
     from app.models.chat import RetrievalTrace, Message
 
-    db: Session = SessionLocal()
+    db: Session = MaintenanceSessionLocal()
     try:
+        _apply_maintenance_scope(
+            db,
+            tenant_id=tenant_id,
+            actor_identity="celery:detect_knowledge_gaps",
+            operation="detect_knowledge_gaps",
+        )
         since = datetime.now(timezone.utc) - timedelta(days=days)
 
         q = db.query(RetrievalTrace).filter(
-            RetrievalTrace.created_at >= since if hasattr(RetrievalTrace, "created_at") else True,
+            RetrievalTrace.created_at >= since
+            if hasattr(RetrievalTrace, "created_at")
+            else True,
         )
         if tenant_id:
             q = q.filter(RetrievalTrace.tenant_id == uuid.UUID(tenant_id))
@@ -395,7 +486,9 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
             # Compute average confidence from sources
             scores = []
             for src in sources:
-                score = src.get("score") or src.get("confidence") or src.get("similarity")
+                score = (
+                    src.get("score") or src.get("confidence") or src.get("similarity")
+                )
                 if score is not None:
                     scores.append(float(score))
 
@@ -404,25 +497,38 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
                 continue
 
             # Get the user query from the Message
-            msg = db.query(Message).filter(
-                Message.id == trace.message_id,
-                Message.role == "user",
-            ).first()
+            msg = (
+                db.query(Message)
+                .filter(
+                    Message.id == trace.message_id,
+                    Message.role == "user",
+                )
+                .first()
+            )
             if not msg:
                 # Try to get the previous user message in the conversation
-                msg = db.query(Message).filter(
-                    Message.conversation_id == trace.conversation_id,
-                    Message.role == "user",
-                ).order_by(Message.created_at.desc()).first()
+                msg = (
+                    db.query(Message)
+                    .filter(
+                        Message.conversation_id == trace.conversation_id,
+                        Message.role == "user",
+                    )
+                    .order_by(Message.created_at.desc())
+                    .first()
+                )
 
             query_text = msg.content if msg else "Unknown query"
 
             # Avoid duplicates: check if similar gap exists recently
-            existing = db.query(KnowledgeGap).filter(
-                KnowledgeGap.tenant_id == trace.tenant_id,
-                KnowledgeGap.query_text == query_text,
-                KnowledgeGap.status == "open",
-            ).first()
+            existing = (
+                db.query(KnowledgeGap)
+                .filter(
+                    KnowledgeGap.tenant_id == trace.tenant_id,
+                    KnowledgeGap.query_text == query_text,
+                    KnowledgeGap.status == "open",
+                )
+                .first()
+            )
             if existing:
                 existing.occurrence_count = int(existing.occurrence_count or 1) + 1
                 existing.last_seen_at = datetime.now(timezone.utc)
@@ -430,18 +536,27 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
 
             from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
             from app.models.user import User
+
             active_revision = (
                 db.query(KnowledgeBaseRevision)
                 .join(KnowledgeBase, KnowledgeBaseRevision.kb_id == KnowledgeBase.id)
-                .filter(KnowledgeBase.tenant_id == trace.tenant_id, KnowledgeBaseRevision.status == "active")
+                .filter(
+                    KnowledgeBase.tenant_id == trace.tenant_id,
+                    KnowledgeBaseRevision.status == "active",
+                )
                 .order_by(KnowledgeBaseRevision.activated_at.desc())
                 .first()
             )
-            owner = db.query(User).filter(
-                User.tenant_id == trace.tenant_id,
-                User.is_active.is_(True),
-                User.role.in_(["owner", "admin"]),
-            ).order_by(User.is_superuser.desc(), User.created_at.asc()).first()
+            owner = (
+                db.query(User)
+                .filter(
+                    User.tenant_id == trace.tenant_id,
+                    User.is_active.is_(True),
+                    User.role.in_(["owner", "admin"]),
+                )
+                .order_by(User.is_superuser.desc(), User.created_at.asc())
+                .first()
+            )
 
             gap = KnowledgeGap(
                 tenant_id=trace.tenant_id,
@@ -449,7 +564,9 @@ def detect_knowledge_gaps_task(self, tenant_id: str | None = None, days: int = 7
                 confidence_score=round(avg_score, 4),
                 conversation_id=trace.conversation_id,
                 message_id=trace.message_id,
-                knowledge_base_revision_id=active_revision.id if active_revision else None,
+                knowledge_base_revision_id=active_revision.id
+                if active_revision
+                else None,
                 owner_id=owner.id if owner else None,
                 gap_type="no_evidence" if not sources else "low_confidence",
                 occurrence_count=1,
@@ -476,17 +593,27 @@ def refresh_knowledge_freshness_task(self, tenant_id: str | None = None):
     from app.models.document import Document
     from app.models.knowledge_engine import KnowledgeFreshnessState
 
-    db: Session = SessionLocal()
+    db: Session = MaintenanceSessionLocal()
     try:
+        _apply_maintenance_scope(
+            db,
+            tenant_id=tenant_id,
+            actor_identity="celery:refresh_knowledge_freshness",
+            operation="refresh_knowledge_freshness",
+        )
         now = datetime.now(timezone.utc)
         query = db.query(Document)
         if tenant_id:
             query = query.filter(Document.tenant_id == uuid.UUID(tenant_id))
         changed = 0
         for document in query.all():
-            row = db.query(KnowledgeFreshnessState).filter(
-                KnowledgeFreshnessState.document_id == document.id,
-            ).first()
+            row = (
+                db.query(KnowledgeFreshnessState)
+                .filter(
+                    KnowledgeFreshnessState.document_id == document.id,
+                )
+                .first()
+            )
             if row is None:
                 row = KnowledgeFreshnessState(
                     tenant_id=document.tenant_id,
@@ -497,16 +624,26 @@ def refresh_knowledge_freshness_task(self, tenant_id: str | None = None):
             reasons = []
             state = "current"
             if document.tombstoned_at is not None:
-                state = "revoked"; reasons.append("source_tombstoned")
+                state = "revoked"
+                reasons.append("source_tombstoned")
             elif document.status == "failed":
-                state = "failed"; reasons.append("processing_failed")
+                state = "failed"
+                reasons.append("processing_failed")
             elif row.review_due_at is not None and row.review_due_at <= now:
-                state = "review_overdue"; reasons.append("review_due_at_passed")
-            elif document.source_system and document.updated_at and document.updated_at <= now - timedelta(days=2):
-                state = "sync_stale"; reasons.append("connector_not_updated_for_48h")
+                state = "review_overdue"
+                reasons.append("review_due_at_passed")
+            elif (
+                document.source_system
+                and document.updated_at
+                and document.updated_at <= now - timedelta(days=2)
+            ):
+                state = "sync_stale"
+                reasons.append("connector_not_updated_for_48h")
             row.state = state
             row.reasons = reasons
-            row.upstream_sync_at = document.updated_at if document.source_system else row.upstream_sync_at
+            row.upstream_sync_at = (
+                document.updated_at if document.source_system else row.upstream_sync_at
+            )
             changed += 1
         db.commit()
         return changed

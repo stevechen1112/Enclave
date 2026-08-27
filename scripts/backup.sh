@@ -11,15 +11,15 @@
 #   ./scripts/backup.sh --direct          # alias for --db-only via pg_dump
 #
 # Environment:
-#   BACKUP_DIR, RETENTION_DAYS, POSTGRES_USER, POSTGRES_DB, COMPOSE_SERVICE
+#   BACKUP_DIR, RETENTION_DAYS, DB_ADMIN_USER, DB_ADMIN_DATABASE, COMPOSE_SERVICE
 # ========================================================
 
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
-POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_DB="${POSTGRES_DB:-enclave}"
+BACKUP_DB_USER="${DB_ADMIN_USER:-${POSTGRES_USER:-postgres}}"
+BACKUP_DB_NAME="${DB_ADMIN_DATABASE:-${POSTGRES_DB:-enclave}}"
 COMPOSE_SERVICE="${COMPOSE_SERVICE:-db}"
 MODE="${1:-}"
 
@@ -46,7 +46,7 @@ echo "════════════════════════�
 echo "  Enclave DB-only Backup — $(date '+%Y-%m-%d %H:%M:%S')"
 echo "════════════════════════════════════════════"
 echo "  Mode:      ${MODE}"
-echo "  Database:  ${POSTGRES_DB}"
+echo "  Database:  ${BACKUP_DB_NAME}"
 echo "  Output:    ${BACKUP_FILE}"
 echo "════════════════════════════════════════════"
 
@@ -55,8 +55,8 @@ echo "▸ Creating database dump..."
 
 if [[ "${MODE}" == "--direct" ]]; then
     pg_dump \
-        -U "${POSTGRES_USER}" \
-        -d "${POSTGRES_DB}" \
+        -U "${BACKUP_DB_USER}" \
+        -d "${BACKUP_DB_NAME}" \
         --format=plain \
         --no-owner \
         --no-privileges \
@@ -67,8 +67,8 @@ else
     # --db-only via compose
     docker compose exec -T "${COMPOSE_SERVICE}" \
         pg_dump \
-        -U "${POSTGRES_USER}" \
-        -d "${POSTGRES_DB}" \
+        -U "${BACKUP_DB_USER}" \
+        -d "${BACKUP_DB_NAME}" \
         --format=plain \
         --no-owner \
         --no-privileges \

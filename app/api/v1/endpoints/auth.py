@@ -45,10 +45,9 @@ def _resolve_demo_user(
 ) -> tuple[User, dict[str, Any]]:
     """Resolve an allowlisted demo identity and fail closed on configuration drift."""
     from app.models.mka import JobRole, UserJobRoleAssignment
-    from app.services.rls import apply_rls_bypass
+    from app.services.rls import apply_rls_context
 
     spec = DEMO_PERSONAS[persona]
-    apply_rls_bypass(db)
     try:
         demo_tenant_id = UUID(settings.DEMO_TENANT_ID)
     except (TypeError, ValueError, AttributeError) as exc:
@@ -56,6 +55,7 @@ def _resolve_demo_user(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Demo tenant is not configured",
         ) from exc
+    apply_rls_context(db, demo_tenant_id)
     tenant = (
         db.query(Tenant)
         .filter(
@@ -192,11 +192,17 @@ def login_access_token(
     - 已啟用 MFA：回 200 + mfa_required + partial_token（scope=mfa_pending，不可呼叫其他 API）
     - MFA_ENFORCE_OWNER 且 owner 未設定 MFA：回 mfa_enroll_required + partial_token（scope=mfa_enroll）
     """
-    # ADR-012：users 表在 RLS 下受租戶 policy 約束；登入時尚無租戶 context，
-    # email 查找必須走平台維運 bypass 通道，否則 enforce 階段登入完全失效。
-    from app.services.rls import apply_rls_bypass
+    # P2：SECURITY DEFINER helper 只解析 tenant UUID，隨即切入該租戶 RLS。
+    from app.services.rls import apply_rls_context, resolve_login_tenant
 
-    apply_rls_bypass(db)
+    tenant_id = resolve_login_tenant(db, form_data.username)
+    if tenant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    apply_rls_context(db, tenant_id)
     user = crud_user.authenticate(
         db, email=form_data.username, password=form_data.password
     )
@@ -240,11 +246,18 @@ def _user_from_partial(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or expired partial token",
         )
-    from app.services.rls import apply_rls_bypass
+    from app.services.rls import apply_rls_context
 
-    apply_rls_bypass(db)
+    try:
+        tenant_id = UUID(str(payload.get("tenant_id") or ""))
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired partial token",
+        ) from exc
+    apply_rls_context(db, tenant_id)
     user = crud_user.get_by_email(db, email=payload.get("sub", ""))
-    if not user or not user.is_active:
+    if not user or user.tenant_id != tenant_id or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
@@ -364,9 +377,12 @@ def verify_email(body: VerifyEmailRequest, db: Session = Depends(deps.get_db)) -
             status_code=400, detail="Invalid or expired verification token"
         )
 
-    from app.services.rls import apply_rls_bypass
+    from app.services.rls import apply_rls_context, resolve_login_tenant
 
-    apply_rls_bypass(db)
+    tenant_id = resolve_login_tenant(db, email)
+    if tenant_id is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    apply_rls_context(db, tenant_id)
     user = crud_user.get_by_email(db, email=email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

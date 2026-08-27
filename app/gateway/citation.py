@@ -4,6 +4,7 @@ Phase 1 — Citation Builder
 Normalize lineage from chunk/wiki/graph results into unified Citation objects.
 Optionally enrich from Enclave Document / GatewayResource registry.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -43,7 +44,13 @@ class CitationBuilder:
             content_hash = (
                 meta.get("content_hash")
                 or meta.get("chunk_hash")
-                or (hashlib.sha256((r.content or "").encode("utf-8", errors="replace")).hexdigest() if r.content else None)
+                or (
+                    hashlib.sha256(
+                        (r.content or "").encode("utf-8", errors="replace")
+                    ).hexdigest()
+                    if r.content
+                    else None
+                )
             )
 
             citations.append(
@@ -57,7 +64,8 @@ class CitationBuilder:
                     canonical_resource_id=str(
                         meta.get("canonical_resource_id")
                         or (doc_id if doc_id and doc_id.int != 0 else "")
-                    ) or None,
+                    )
+                    or None,
                     artifact_id=r.id or meta.get("artifact_id"),
                     artifact_type=r.result_type or meta.get("artifact_type") or "chunk",
                     source_system=meta.get("source_system"),
@@ -67,14 +75,18 @@ class CitationBuilder:
                     bbox=meta.get("bbox"),
                     section=meta.get("section"),
                     provider=r.provider or meta.get("provider") or "enclave",
-                    provider_version=r.provider_version or meta.get("provider_version") or "",
+                    provider_version=r.provider_version
+                    or meta.get("provider_version")
+                    or "",
                     acl_revision=acl_revision,
                     retrieval_score=r.score,
                 )
             )
         return citations
 
-    def completeness(self, citations: List[Citation], object_level: bool = True) -> dict:
+    def completeness(
+        self, citations: List[Citation], object_level: bool = True
+    ) -> dict:
         """
         Lineage completeness metrics for GA gate.
 
@@ -84,16 +96,20 @@ class CitationBuilder:
         """
         if not citations:
             return {"total": 0, "complete": 0, "rate": 1.0, "missing": []}
-        required = ["canonical_resource_identity", "document_revision", "provider", "acl_revision"]
+        required = [
+            "canonical_resource_identity",
+            "document_revision",
+            "provider",
+            "acl_revision",
+        ]
         if object_level:
             required.append("content_hash")
         complete = 0
         missing = []
         for c in citations:
             bad = []
-            if (
-                not c.canonical_resource_id
-                and (not c.canonical_document_id or c.canonical_document_id.int == 0)
+            if not c.canonical_resource_id and (
+                not c.canonical_document_id or c.canonical_document_id.int == 0
             ):
                 bad.append(
                     "canonical_document_id"
@@ -108,8 +124,17 @@ class CitationBuilder:
                 bad.append("acl_revision")
             if object_level and not c.content_hash:
                 bad.append("content_hash")
-            if object_level and c.source_system and c.source_system not in (
-                "enclave_upload", "file", "upload", None, "",
+            if (
+                object_level
+                and c.source_system
+                and c.source_system
+                not in (
+                    "enclave_upload",
+                    "file",
+                    "upload",
+                    None,
+                    "",
+                )
             ):
                 if not c.source_record_id:
                     bad.append("source_record_id")
@@ -141,7 +166,9 @@ class CitationBuilder:
                 try:
                     digest = hashlib.sha256(str(value).encode("utf-8")).digest()
                     # Keep the public contract as a positive signed 32-bit int.
-                    return (int.from_bytes(digest[:4], byteorder="big") % 2_000_000_000) + 1
+                    return (
+                        int.from_bytes(digest[:4], byteorder="big") % 2_000_000_000
+                    ) + 1
                 except Exception:
                     continue
         return 1
@@ -149,19 +176,28 @@ class CitationBuilder:
     def _enrich_from_db(self, db, doc_id: UUID, meta: dict) -> dict:
         try:
             from app.models.document import Document
+
             doc = db.query(Document).filter(Document.id == doc_id).first()
             if not doc:
                 return meta
-            meta.setdefault("source_system", getattr(doc, "source_system", None) or getattr(doc, "source_type", None))
+            meta.setdefault(
+                "source_system",
+                getattr(doc, "source_system", None)
+                or getattr(doc, "source_type", None),
+            )
             meta.setdefault("source_record_id", getattr(doc, "source_record_id", None))
             meta.setdefault("content_hash", getattr(doc, "content_hash", None))
             if not meta.get("content_hash"):
                 # Prefer any chunk_hash from this document as lineage fingerprint
                 try:
                     from app.models.document import DocumentChunk
+
                     ch = (
                         db.query(DocumentChunk.chunk_hash)
-                        .filter(DocumentChunk.document_id == doc_id, DocumentChunk.chunk_hash.isnot(None))
+                        .filter(
+                            DocumentChunk.document_id == doc_id,
+                            DocumentChunk.chunk_hash.isnot(None),
+                        )
                         .first()
                     )
                     if ch and ch[0]:
@@ -175,11 +211,19 @@ class CitationBuilder:
                 meta.setdefault("document_revision", doc.version)
             try:
                 from app.gateway.resource_registry import ResourceRegistry
-                mappings = ResourceRegistry().list_mappings(db, str(doc_id))
+
+                mappings = ResourceRegistry().list_mappings(
+                    db, doc.tenant_id, str(doc_id)
+                )
                 if mappings:
                     meta.setdefault("provider_mappings", mappings)
-                    active = next((m for m in mappings if m.get("state") == "active"), mappings[0])
-                    meta.setdefault("artifact_id", active.get("provider_resource_id") or meta.get("artifact_id"))
+                    active = next(
+                        (m for m in mappings if m.get("state") == "active"), mappings[0]
+                    )
+                    meta.setdefault(
+                        "artifact_id",
+                        active.get("provider_resource_id") or meta.get("artifact_id"),
+                    )
                     if active.get("enclave_revision"):
                         meta.setdefault("document_revision", active["enclave_revision"])
             except Exception:

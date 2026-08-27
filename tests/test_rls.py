@@ -6,6 +6,7 @@
    完全相同的 policy，驗證 CG-RLS 閘門的核心攻擊面——
    raw SQL 跨租戶讀取、無 context 查詢、跨租戶寫入、bypass 通道。
 """
+
 import os
 import sys
 import unittest
@@ -35,7 +36,7 @@ def _fake_pg_session():
     def _execute(stmt, params=None):
         db.executed.append((str(stmt), params))
         result = MagicMock()
-        result.scalar.return_value = None
+        result.scalar.return_value = True if "pg_has_role" in str(stmt) else None
         return result
 
     db.execute.side_effect = _execute
@@ -71,8 +72,17 @@ class TestApplyContext(unittest.TestCase):
 
     def test_bypass_sets_guc(self):
         db = _fake_pg_session()
-        self.assertTrue(apply_rls_bypass(db))
-        self.assertIn(f"set_config('{BYPASS_GUC}', 'on', true)", db.executed[0][0])
+        self.assertTrue(
+            apply_rls_bypass(
+                db,
+                actor_identity="test-operator",
+                operation="test_bypass",
+                reason="verify audited bypass",
+            )
+        )
+        self.assertIn("pg_has_role", db.executed[0][0])
+        self.assertIn(f"set_config('{BYPASS_GUC}', 'on', true)", db.executed[1][0])
+        self.assertIn("platform_maintenance_audit", db.executed[2][0])
 
 
 class TestTaskSession(unittest.TestCase):
@@ -86,7 +96,7 @@ class TestTaskSession(unittest.TestCase):
 
 
 class TestDepsWiring(unittest.TestCase):
-    """get_current_user：JWT 通過後先 bypass 查找、再以用戶租戶接管。"""
+    """get_current_user：JWT tenant claim 先建立 context，再查找用戶。"""
 
     def test_bypass_then_context(self):
         from app.api import deps
@@ -97,22 +107,27 @@ class TestDepsWiring(unittest.TestCase):
         user.tenant_id = TENANT_A
         token = MagicMock()
 
-        with patch.object(deps.jwt, "decode", return_value={"sub": "a@b.c"}), \
-             patch.object(deps.crud_user, "get_by_email", return_value=user):
+        with (
+            patch.object(
+                deps.jwt,
+                "decode",
+                return_value={"sub": "a@b.c", "tenant_id": str(TENANT_A)},
+            ),
+            patch.object(deps.crud_user, "get_by_email", return_value=user),
+        ):
             result = deps.get_current_user(db=db, token=token)
 
         self.assertIs(result, user)
         sqls = [s for s, _ in db.executed]
         params = [p for _, p in db.executed]
-        self.assertIn(f"set_config('{BYPASS_GUC}', 'on', true)", sqls[0])
-        self.assertIn(f"set_config('{BYPASS_GUC}'", sqls[1])
-        self.assertEqual(params[1]["bv"], "off")
-        self.assertIn(f"set_config('{TENANT_GUC}'", sqls[2])
-        self.assertEqual(params[2]["tid"], str(TENANT_A))
+        self.assertIn(f"set_config('{BYPASS_GUC}'", sqls[0])
+        self.assertEqual(params[0]["bv"], "off")
+        self.assertIn(f"set_config('{TENANT_GUC}'", sqls[1])
+        self.assertEqual(params[1]["tid"], str(TENANT_A))
 
 
-class TestLoginBypass(unittest.TestCase):
-    """login 端點：users 表在 RLS 下，email 查找必須先走 bypass（enforce 前提）。"""
+class TestLoginTenantResolution(unittest.TestCase):
+    """login 端點：只解析 tenant UUID，隨即以 RLS context 驗證密碼。"""
 
     def test_login_applies_bypass_before_authenticate(self):
         from app.api.v1.endpoints import auth
@@ -128,13 +143,22 @@ class TestLoginBypass(unittest.TestCase):
         form.username = "a@b.c"
         form.password = "pw"
 
-        with patch.object(auth.crud_user, "authenticate", return_value=user) as auth_mock, \
-             patch.object(auth.security, "create_access_token", return_value="tok"):
+        import app.services.rls as rls
+
+        with (
+            patch.object(rls, "resolve_login_tenant", return_value=TENANT_A),
+            patch.object(
+                auth.crud_user, "authenticate", return_value=user
+            ) as auth_mock,
+            patch.object(auth.security, "create_access_token", return_value="tok"),
+        ):
             result = auth.login_access_token(db=db, form_data=form)
 
         self.assertEqual(result["access_token"], "tok")
-        # bypass 必須發生在 authenticate 之前
-        self.assertIn(f"set_config('{BYPASS_GUC}', 'on', true)", db.executed[0][0])
+        # tenant context 必須發生在 authenticate 之前
+        self.assertIn(f"set_config('{BYPASS_GUC}'", db.executed[0][0])
+        self.assertEqual(db.executed[0][1]["bv"], "off")
+        self.assertIn(f"set_config('{TENANT_GUC}'", db.executed[1][0])
         auth_mock.assert_called_once()
 
 
@@ -208,7 +232,9 @@ class TestAuditBypassLeak(unittest.TestCase):
             sql = str(stmt)
             db.executed.append((sql, params))
             result = MagicMock()
-            if "current_setting" in sql:
+            if "pg_has_role" in sql:
+                result.scalar.return_value = True
+            elif "current_setting" in sql:
                 result.scalar.return_value = prior
             elif "information_schema" in sql:
                 result.fetchall.return_value = []  # 無 RLS 表 → 直接走到 finally
@@ -225,7 +251,8 @@ class TestAuditBypassLeak(unittest.TestCase):
         db = self._audit_db(prior=None)
         audit_tenant_visibility(db)
         bypass_off = [
-            s for s, p in db.executed
+            s
+            for s, p in db.executed
             if f"set_config('{BYPASS_GUC}'" in s and p and p.get("bv") == "off"
         ]
         self.assertTrue(bypass_off, "無 prior context 時 bypass 未被關閉")
@@ -237,7 +264,8 @@ class TestAuditBypassLeak(unittest.TestCase):
         audit_tenant_visibility(db)
         self.assertEqual(db.info.get(_INFO_TENANT_KEY), str(TENANT_A))
         restores = [
-            p for s, p in db.executed
+            p
+            for s, p in db.executed
             if f"set_config('{TENANT_GUC}'" in s and p and p.get("tid") == str(TENANT_A)
         ]
         self.assertTrue(restores, "prior tenant context 未被還原")
@@ -297,9 +325,7 @@ class TestLivePolicyEnforcement(unittest.TestCase):
         admin = psycopg2.connect(PG_DSN)
         admin.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         cur = admin.cursor()
-        cur.execute(
-            "SELECT 1 FROM pg_roles WHERE rolname = %s", (cls._ROLE,)
-        )
+        cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (cls._ROLE,))
         if not cur.fetchone():
             cur.execute(f"CREATE ROLE {cls._ROLE} LOGIN PASSWORD %s", (cls._ROLE_PW,))
         cur.execute(f"GRANT USAGE ON SCHEMA public TO {cls._ROLE}")
@@ -340,16 +366,21 @@ class TestLivePolicyEnforcement(unittest.TestCase):
             (str(TENANT_A), str(TENANT_A)),
         )
         cur.execute(
-            "INSERT INTO _rls_probe (tenant_id, val) VALUES (%s, 'b1')", (str(TENANT_B),)
+            "INSERT INTO _rls_probe (tenant_id, val) VALUES (%s, 'b1')",
+            (str(TENANT_B),),
         )
         cur.execute(f"GRANT SELECT, INSERT, UPDATE ON _rls_probe TO {self._ROLE}")
-        cur.execute(f"GRANT USAGE, SELECT ON SEQUENCE _rls_probe_id_seq TO {self._ROLE}")
+        cur.execute(
+            f"GRANT USAGE, SELECT ON SEQUENCE _rls_probe_id_seq TO {self._ROLE}"
+        )
         cur.close()
         admin.close()
 
         # 受測連線：非 superuser，FORCE RLS 對其生效
-        dsn = PG_DSN.replace("postgresql://postgres:postgres@",
-                             f"postgresql://{self._ROLE}:{self._ROLE_PW}@")
+        dsn = PG_DSN.replace(
+            "postgresql://postgres:postgres@",
+            f"postgresql://{self._ROLE}:{self._ROLE_PW}@",
+        )
         self.conn = psycopg2.connect(dsn)
         self.conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
 
@@ -390,7 +421,9 @@ class TestLivePolicyEnforcement(unittest.TestCase):
         self.assertEqual(self._select_with_context(uuid.uuid4()), [])
 
     def test_bypass_channel_sees_all(self):
-        self.assertEqual(self._select_with_context(None, bypass=True), ["a1", "a2", "b1"])
+        self.assertEqual(
+            self._select_with_context(None, bypass=True), ["a1", "a2", "b1"]
+        )
 
     def test_cross_tenant_write_blocked(self):
         # WITH CHECK：context=A 時寫入 tenant_id=B 必須被拒
@@ -420,8 +453,10 @@ class TestLivePolicyEnforcement(unittest.TestCase):
         from sqlalchemy import create_engine, text as sa_text
         from sqlalchemy.orm import sessionmaker
 
-        dsn = PG_DSN.replace("postgresql://postgres:postgres@",
-                             f"postgresql://{self._ROLE}:{self._ROLE_PW}@")
+        dsn = PG_DSN.replace(
+            "postgresql://postgres:postgres@",
+            f"postgresql://{self._ROLE}:{self._ROLE_PW}@",
+        )
         engine = create_engine(dsn)
         SF = sessionmaker(bind=engine)
         db = SF()

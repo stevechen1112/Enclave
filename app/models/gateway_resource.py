@@ -3,9 +3,10 @@ Phase 1 — Gateway Resource Registry
 
 Object-level ID mapping between Enclave canonical resources and downstream providers.
 """
+
 import uuid
 
-from sqlalchemy import Column, DateTime, Index, Integer, String, func
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.db.base_class import Base
@@ -17,7 +18,12 @@ class GatewayResource(Base):
     __tablename__ = "gateway_resources"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    enclave_resource_type = Column(String, nullable=False)  # document | chunk | wiki_page | graph_entity
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
+    enclave_resource_type = Column(
+        String, nullable=False
+    )  # document | chunk | wiki_page | graph_entity
     enclave_resource_id = Column(String, nullable=False, index=True)
     enclave_revision = Column(Integer, nullable=False, default=1)
     provider = Column(String, nullable=False)  # enclave | ragflow | weknora | pipeshub
@@ -35,6 +41,7 @@ class GatewayResource(Base):
     __table_args__ = (
         Index(
             "uq_gateway_resource_mapping_nulls",
+            "tenant_id",
             "enclave_resource_type",
             "enclave_resource_id",
             "provider",

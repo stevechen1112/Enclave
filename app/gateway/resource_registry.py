@@ -3,11 +3,13 @@ Phase 1 — Gateway Resource Registry
 
 Persist and resolve object-level ID mappings between Enclave and providers.
 """
+
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from uuid import UUID
 
 from sqlalchemy.orm import Session
 
@@ -22,6 +24,7 @@ class ResourceRegistry:
     def upsert_mapping(
         self,
         db: Session,
+        tenant_id: UUID,
         enclave_resource_type: str,
         enclave_resource_id: str,
         enclave_revision: int,
@@ -36,6 +39,7 @@ class ResourceRegistry:
         existing = (
             db.query(GatewayResource)
             .filter(
+                GatewayResource.tenant_id == tenant_id,
                 GatewayResource.enclave_resource_type == enclave_resource_type,
                 GatewayResource.enclave_resource_id == enclave_resource_id,
                 GatewayResource.provider == provider,
@@ -55,6 +59,7 @@ class ResourceRegistry:
             return existing
 
         row = GatewayResource(
+            tenant_id=tenant_id,
             enclave_resource_type=enclave_resource_type,
             enclave_resource_id=enclave_resource_id,
             enclave_revision=enclave_revision,
@@ -73,11 +78,13 @@ class ResourceRegistry:
     def tombstone(
         self,
         db: Session,
+        tenant_id: UUID,
         enclave_resource_type: str,
         enclave_resource_id: str,
         provider: Optional[str] = None,
     ) -> int:
         q = db.query(GatewayResource).filter(
+            GatewayResource.tenant_id == tenant_id,
             GatewayResource.enclave_resource_type == enclave_resource_type,
             GatewayResource.enclave_resource_id == enclave_resource_id,
         )
@@ -94,6 +101,7 @@ class ResourceRegistry:
     def get_provider_resource_id(
         self,
         db: Session,
+        tenant_id: UUID,
         enclave_resource_type: str,
         enclave_resource_id: str,
         provider: str,
@@ -101,6 +109,7 @@ class ResourceRegistry:
         row = (
             db.query(GatewayResource)
             .filter(
+                GatewayResource.tenant_id == tenant_id,
                 GatewayResource.enclave_resource_type == enclave_resource_type,
                 GatewayResource.enclave_resource_id == enclave_resource_id,
                 GatewayResource.provider == provider,
@@ -113,11 +122,15 @@ class ResourceRegistry:
     def list_mappings(
         self,
         db: Session,
+        tenant_id: UUID,
         enclave_resource_id: str,
     ) -> list[Dict[str, Any]]:
         rows = (
             db.query(GatewayResource)
-            .filter(GatewayResource.enclave_resource_id == enclave_resource_id)
+            .filter(
+                GatewayResource.tenant_id == tenant_id,
+                GatewayResource.enclave_resource_id == enclave_resource_id,
+            )
             .all()
         )
         return [

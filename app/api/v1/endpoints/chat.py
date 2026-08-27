@@ -24,7 +24,9 @@ from app.schemas.chat import (
 )
 from app.services.chat_orchestrator import ChatOrchestrator
 from app.api.v1.endpoints.audit import log_usage
-from app.crud import crud_tenant  # top-level import — avoid repeated in-function imports
+from app.crud import (
+    crud_tenant,
+)  # top-level import — avoid repeated in-function imports
 
 router = APIRouter()
 
@@ -86,6 +88,7 @@ def _finalize_chat_usage(
         ),
     )
 
+
 # Module-level singleton: ChatOrchestrator initialises LLM/embedding clients once
 # at import time rather than on every request (avoids repeated OpenAI client construction).
 _orchestrator: Optional[ChatOrchestrator] = None
@@ -113,6 +116,7 @@ def _resolve_conversation(db: Session, request: ChatRequest, current_user: User)
 
 
 # ──────────── T7-1: SSE 串流端點 ────────────
+
 
 @router.post("/chat/stream")
 async def chat_stream(
@@ -172,6 +176,7 @@ async def chat_stream(
     # SSE generator 在 endpoint return 後才執行；get_current_user 的 Session 會先關閉，
     # 導致 current_user 變成 DetachedInstance。必須在此先物化 AuthZ 與純量 ID。
     from app.core.authorization import AuthorizationContext
+
     authz = AuthorizationContext.from_user(current_user)
     tenant_id = current_user.tenant_id
     user_id = current_user.id
@@ -181,7 +186,9 @@ async def chat_stream(
     _assert_chat_module_access(db, current_user, getattr(request, "module_key", None))
     from app.services.job_context import build_effective_job_context
 
-    _job_role_keys = list(build_effective_job_context(db, current_user).active_job_role_keys)
+    _job_role_keys = list(
+        build_effective_job_context(db, current_user).active_job_role_keys
+    )
 
     async def event_generator():
         start_time = time.time()
@@ -198,6 +205,9 @@ async def chat_stream(
         # SSE generator 在 endpoint return 後才執行，request-scoped db 已關閉；
         # 所有 DB 操作必須使用這裡新開的 session。
         stream_db = SessionLocal()
+        from app.services.rls import apply_rls_context
+
+        apply_rls_context(stream_db, tenant_id)
 
         lf_handle = start_chat_trace(
             user_id=user_id,
@@ -212,14 +222,19 @@ async def chat_stream(
             yield _sse({"type": "status", "content": "正在搜尋可存取知識…"})
 
             # P1-4：職能模組 Router + SceneContext → 檢索 filter
-            from app.services.scene_scope import scene_question_hint, scene_to_filter_dict
+            from app.services.scene_scope import (
+                scene_question_hint,
+                scene_to_filter_dict,
+            )
 
             module_key = getattr(request, "module_key", None)
             module_scope, module_label = _module_retrieval_scope(
                 stream_db, authz, module_key, job_role_keys=_job_role_keys
             )
             if module_label:
-                yield _sse({"type": "status", "content": f"已切換至 {module_label} 模組"})
+                yield _sse(
+                    {"type": "status", "content": f"已切換至 {module_label} 模組"}
+                )
 
             scene_filter = scene_to_filter_dict(getattr(request, "scene_context", None))
             filter_dict = {**module_scope, **scene_filter}
@@ -306,7 +321,11 @@ async def chat_stream(
             # 輸入估算：問題 + 系統 prompt（~600 tokens） + context（從 context_parts 粗估）
             context_text_len = sum(len(p) for p in ctx.get("context_parts", []))
             SYSTEM_PROMPT_TOKENS = 600
-            input_tokens = SYSTEM_PROMPT_TOKENS + len(request.question) // 2 + context_text_len // 2
+            input_tokens = (
+                SYSTEM_PROMPT_TOKENS
+                + len(request.question) // 2
+                + context_text_len // 2
+            )
             output_tokens = len(clean_answer) // 2
             if ctx.get("labor_law_raw") and ctx["labor_law_raw"].get("usage"):
                 usage = ctx["labor_law_raw"]["usage"]
@@ -332,11 +351,13 @@ async def chat_stream(
             )
             finalize_chat_trace(lf_handle)
 
-            yield _sse({
-                "type": "done",
-                "message_id": str(assistant_message.id),
-                "conversation_id": str(conversation_id_val),
-            })
+            yield _sse(
+                {
+                    "type": "done",
+                    "message_id": str(assistant_message.id),
+                    "conversation_id": str(conversation_id_val),
+                }
+            )
 
         except Exception as e:
             logger.exception("chat_stream event_generator 錯誤: %s", e)
@@ -344,7 +365,6 @@ async def chat_stream(
             yield _sse({"type": "error", "content": f"處理失敗：{str(e)}"})
         finally:
             stream_db.close()
-
 
     headers = {
         "Cache-Control": "no-cache",
@@ -372,8 +392,7 @@ async def chat(
     """
     if not request.question.strip():
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="問題不能為空"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="問題不能為空"
         )
 
     conversation = _resolve_conversation(db, request, current_user)
@@ -392,17 +411,14 @@ async def chat(
             db,
             user_id=current_user.id,
             tenant_id=current_user.tenant_id,
-            title=request.question[:50]  # 使用問題前 50 字作為標題
+            title=request.question[:50],  # 使用問題前 50 字作為標題
         )
-    
+
     # 2. 儲存用戶訊息
     user_message = crud_chat.create_message(
-        db,
-        conversation_id=conversation.id,
-        role="user",
-        content=request.question
+        db, conversation_id=conversation.id, role="user", content=request.question
     )
-    
+
     # 3. 取得歷史對話（T7-2）
     history = _get_history(db, conversation.id, exclude_message_id=user_message.id)
 
@@ -420,7 +436,9 @@ async def chat(
     _assert_chat_module_access(db, current_user, getattr(request, "module_key", None))
     from app.services.job_context import build_effective_job_context
 
-    _job_role_keys = list(build_effective_job_context(db, current_user).active_job_role_keys)
+    _job_role_keys = list(
+        build_effective_job_context(db, current_user).active_job_role_keys
+    )
     lf_handle = start_chat_trace(
         user_id=current_user.id,
         tenant_id=current_user.tenant_id,
@@ -461,13 +479,10 @@ async def chat(
         },
         top_k=request.top_k,
     )
-    
+
     # 5. 儲存助手回應
     assistant_message = crud_chat.create_message(
-        db,
-        conversation_id=conversation.id,
-        role="assistant",
-        content=result["answer"]
+        db, conversation_id=conversation.id, role="assistant", content=result["answer"]
     )
 
     # 5b. 持久化證據（與 SSE 路徑對齊；否則歷史對話右側證據欄永遠空白）
@@ -479,24 +494,30 @@ async def chat(
         sources_json=result.get("sources") or [],
         providers_called=(result.get("retrieval") or {}).get("providers_called"),
     )
-    
+
     # 6. 記錄用量
     # 輸入估算：系統 prompt（~600 tokens） + 問題 + context
     context_text_len = sum(
-        len(p) for p in (result.get("company_policy") and
-            [result["company_policy"].get("content", "")] or [])
+        len(p)
+        for p in (
+            result.get("company_policy")
+            and [result["company_policy"].get("content", "")]
+            or []
+        )
     )
     SYSTEM_PROMPT_TOKENS = 600
-    input_tokens = SYSTEM_PROMPT_TOKENS + len(request.question) // 2 + context_text_len // 2
+    input_tokens = (
+        SYSTEM_PROMPT_TOKENS + len(request.question) // 2 + context_text_len // 2
+    )
     output_tokens = len(result["answer"]) // 2
     pinecone_queries = 1 if result.get("company_policy") else 0
-    
+
     # 從 labor_law 獲取實際 token 數（如果有）
     if result.get("labor_law") and result["labor_law"].get("usage"):
         usage = result["labor_law"]["usage"]
         input_tokens = usage.get("input_tokens", input_tokens)
         output_tokens = usage.get("output_tokens", output_tokens)
-    
+
     _finalize_chat_usage(
         db,
         usage_record_id,
@@ -527,7 +548,7 @@ async def chat(
         labor_law=result.get("labor_law"),
         sources=result["sources"],
         notes=result["notes"],
-        disclaimer=result["disclaimer"]
+        disclaimer=result["disclaimer"],
     )
 
 
@@ -544,12 +565,13 @@ def list_conversations(
         user_id=current_user.id,
         tenant_id=current_user.tenant_id,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
     return conversations
 
 
 # ──────────── T7-13: 對話搜尋 (must be BEFORE /conversations/{conversation_id}) ────────────
+
 
 @router.get("/conversations/search")
 async def search_conversations(
@@ -579,14 +601,10 @@ def get_conversation(
     """獲取特定對話"""
     conversation = crud_chat.get_conversation(db, conversation_id=conversation_id)
     if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="對話不存在"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="對話不存在")
     if conversation.user_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="無權訪問此對話"
+            status_code=status.HTTP_403_FORBIDDEN, detail="無權訪問此對話"
         )
     return conversation
 
@@ -603,16 +621,12 @@ def get_conversation_messages(
     """獲取對話的訊息歷史"""
     conversation = crud_chat.get_conversation(db, conversation_id=conversation_id)
     if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="對話不存在"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="對話不存在")
     if conversation.user_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="無權訪問此對話"
+            status_code=status.HTTP_403_FORBIDDEN, detail="無權訪問此對話"
         )
-    
+
     messages = crud_chat.get_conversation_messages(
         db, conversation_id=conversation_id, skip=skip, limit=limit
     )
@@ -648,21 +662,18 @@ def delete_conversation(
     """刪除對話"""
     conversation = crud_chat.get_conversation(db, conversation_id=conversation_id)
     if not conversation:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="對話不存在"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="對話不存在")
     if conversation.user_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="無權刪除此對話"
+            status_code=status.HTTP_403_FORBIDDEN, detail="無權刪除此對話"
         )
-    
+
     crud_chat.delete_conversation(db, conversation_id=conversation_id)
     return {"message": "對話已刪除", "conversation_id": str(conversation_id)}
 
 
 # ──────────── T7-5: Feedback 回饋系統 ────────────
+
 
 @router.post("/feedback", response_model=FeedbackResponse)
 async def submit_feedback(
@@ -713,13 +724,17 @@ async def feedback_stats(
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """取得回饋統計（管理員）"""
-    if current_user.role not in ("owner", "admin", "hr") and not current_user.is_superuser:
+    if (
+        current_user.role not in ("owner", "admin", "hr")
+        and not current_user.is_superuser
+    ):
         raise HTTPException(status_code=403, detail="僅管理員可查看回饋統計")
     stats = crud_chat.get_feedback_stats(db, tenant_id=current_user.tenant_id)
     return stats
 
 
 # ──────────── T7-11: 對話匯出 ────────────
+
 
 @router.get("/conversations/{conversation_id}/export")
 async def export_conversation(
@@ -756,6 +771,7 @@ async def export_conversation(
 
 # ──────────── T7-12: RAG 品質儀表板 ────────────
 
+
 @router.get("/dashboard/rag")
 async def rag_dashboard(
     *,
@@ -771,7 +787,10 @@ async def rag_dashboard(
 
 # ──────────── 內部 helper ────────────
 
-def _assert_chat_module_access(db: Session, current_user: User, module_key: Optional[str]) -> None:
+
+def _assert_chat_module_access(
+    db: Session, current_user: User, module_key: Optional[str]
+) -> None:
     """明確指定 module_key 時的直接 URL 授權（/ask?module= 不只隱藏選單）。
 
     必須在 SSE 回應開始前呼叫，才能正確回 403。
@@ -791,7 +810,9 @@ def _assert_chat_module_access(db: Session, current_user: User, module_key: Opti
 
 
 def _module_retrieval_scope(
-    db: Session, authz: Any, module_key: Optional[str],
+    db: Session,
+    authz: Any,
+    module_key: Optional[str],
     job_role_keys: Optional[List[str]] = None,
 ) -> tuple:
     """僅在請求明確帶 module_key 時才套用該模組的檢索範圍。
@@ -814,9 +835,11 @@ def _module_retrieval_scope(
         )
         if name != module_key:
             continue
-        label = getattr(m, "label", None) or (
-            m.get("name") if isinstance(m, dict) else None
-        ) or name
+        label = (
+            getattr(m, "label", None)
+            or (m.get("name") if isinstance(m, dict) else None)
+            or name
+        )
         return module_router.get_retrieval_scope(name, authz) or {}, label
     return {}, None
 
@@ -843,17 +866,18 @@ def _get_history(
         history.append({"role": msg.role, "content": msg.content})
 
     # 最多保留最近 max_turns * 2 條（user+assistant 為一輪）
-    return history[-(max_turns * 2):]
+    return history[-(max_turns * 2) :]
 
 
 def _parse_suggestions(text: str) -> List[str]:
     """解析 LLM 回答中的 [建議問題] 區塊（T7-6）。"""
     import re
+
     marker = "[建議問題]"
     idx = text.find(marker)
     if idx == -1:
         return []
-    block = text[idx + len(marker):]
+    block = text[idx + len(marker) :]
     suggestions = re.findall(r"\d+\.\s*(.+)", block)
     return [s.strip() for s in suggestions if s.strip()][:3]
 
@@ -865,4 +889,3 @@ def _strip_suggestions(text: str) -> str:
     if idx == -1:
         return text
     return text[:idx].rstrip()
-

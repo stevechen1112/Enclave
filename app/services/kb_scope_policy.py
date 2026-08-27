@@ -1,11 +1,16 @@
 """Resolve user-visible active KB revisions before any retrieval arm runs."""
+
 from __future__ import annotations
 
 from typing import Any, Optional
 from uuid import UUID
 
 from app.db.session import SessionLocal
-from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseMember, KnowledgeBaseRevision
+from app.models.knowledge_base import (
+    KnowledgeBase,
+    KnowledgeBaseMember,
+    KnowledgeBaseRevision,
+)
 
 
 def _can_access(kb: KnowledgeBase, authz) -> bool:
@@ -19,13 +24,17 @@ def _can_access(kb: KnowledgeBase, authz) -> bool:
         "department": set(authz.department_ids),
         "group": set(authz.group_ids),
     }
-    matching = [m for m in members if m.subject_id in subjects.get(m.subject_type, set())]
+    matching = [
+        m for m in members if m.subject_id in subjects.get(m.subject_type, set())
+    ]
     if any(m.effect == "deny" for m in matching):
         return False
     return any(m.effect == "allow" for m in matching)
 
 
-def resolve_kb_revision_scope(*, authz, requested: Optional[dict[str, Any]], db=None) -> dict[str, Any]:
+def resolve_kb_revision_scope(
+    *, authz, requested: Optional[dict[str, Any]], db=None
+) -> dict[str, Any]:
     scope = dict(requested or {})
     raw_ids = []
     if scope.get("kb_revision_id"):
@@ -33,16 +42,26 @@ def resolve_kb_revision_scope(*, authz, requested: Optional[dict[str, Any]], db=
     raw_ids.extend(scope.get("kb_revision_ids") or [])
     requested_ids = set()
     for value in raw_ids:
-        try: requested_ids.add(UUID(str(value)))
+        try:
+            requested_ids.add(UUID(str(value)))
         except (TypeError, ValueError):
-            scope.pop("kb_revision_id", None); scope["kb_revision_ids"] = []
+            scope.pop("kb_revision_id", None)
+            scope["kb_revision_ids"] = []
             return scope
 
-    own = db is None; session = db or SessionLocal()
+    own = db is None
+    session = db or SessionLocal()
     try:
-        base_query = session.query(KnowledgeBaseRevision).join(KnowledgeBase).filter(
-            KnowledgeBase.tenant_id == authz.tenant_id,
-            KnowledgeBase.status == "active",
+        from app.services.rls import apply_rls_context
+
+        apply_rls_context(session, authz.tenant_id)
+        base_query = (
+            session.query(KnowledgeBaseRevision)
+            .join(KnowledgeBase)
+            .filter(
+                KnowledgeBase.tenant_id == authz.tenant_id,
+                KnowledgeBase.status == "active",
+            )
         )
         if requested_ids:
             query = base_query.filter(KnowledgeBaseRevision.id.in_(requested_ids))
@@ -52,9 +71,12 @@ def resolve_kb_revision_scope(*, authz, requested: Optional[dict[str, Any]], db=
                 query = query.filter(KnowledgeBaseRevision.status == "active")
         else:
             query = base_query.filter(KnowledgeBaseRevision.status == "active")
-        allowed = [revision.id for revision in query.all() if _can_access(revision.kb, authz)]
+        allowed = [
+            revision.id for revision in query.all() if _can_access(revision.kb, authz)
+        ]
     finally:
-        if own: session.close()
+        if own:
+            session.close()
 
     scope.pop("kb_revision_id", None)
     scope["kb_revision_ids"] = [str(value) for value in sorted(allowed, key=str)]

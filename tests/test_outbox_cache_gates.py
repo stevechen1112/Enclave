@@ -1,4 +1,5 @@
 """Outbox idempotency + ACL cache epoch behavior tests."""
+
 from __future__ import annotations
 
 import uuid
@@ -8,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.db.base_class import Base
 from app.models.outbox import OutboxEvent, ProjectionStatus
+from app.models.tenant import Tenant
 from app.services.outbox_events import publish_event
 from app.tasks.outbox_worker import _handle_document_event
 
@@ -15,6 +17,7 @@ from app.tasks.outbox_worker import _handle_document_event
 @pytest.fixture
 def db_session(test_engine):
     import app.models  # noqa: F401
+
     Base.metadata.create_all(bind=test_engine)
     Session = sessionmaker(bind=test_engine)
     db = Session()
@@ -23,7 +26,10 @@ def db_session(test_engine):
 
 
 def test_publish_event_idempotent(db_session):
-    key_payload = {"tenant_id": str(uuid.uuid4())}
+    tenant = Tenant(id=uuid.uuid4(), name="outbox-idempotency", status="active")
+    db_session.add(tenant)
+    db_session.flush()
+    key_payload = {"tenant_id": str(tenant.id)}
     agg = str(uuid.uuid4())
     e1 = publish_event(
         db_session,
@@ -54,12 +60,16 @@ def test_publish_event_idempotent(db_session):
 
 def test_document_projection_skip_when_already_converged(db_session, monkeypatch):
     agg = str(uuid.uuid4())
+    tenant = Tenant(id=uuid.uuid4(), name="projection-convergence", status="active")
+    db_session.add(tenant)
+    db_session.flush()
     event = OutboxEvent(
+        tenant_id=tenant.id,
         aggregate_type="document",
         aggregate_id=agg,
         event_type="created",
         revision=3,
-        payload={"tenant_id": str(uuid.uuid4()), "content_hash": "abc"},
+        payload={"tenant_id": str(tenant.id), "content_hash": "abc"},
         idempotency_key=f"document:{agg}:created:3",
         status="pending",
     )
@@ -67,6 +77,7 @@ def test_document_projection_skip_when_already_converged(db_session, monkeypatch
     for provider in ("enclave", "ragflow", "weknora", "pipeshub"):
         db_session.add(
             ProjectionStatus(
+                tenant_id=tenant.id,
                 resource_type="document",
                 resource_id=agg,
                 provider=provider,
@@ -151,11 +162,19 @@ def test_cache_key_includes_filter_dict():
     tenant = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
     k_unscoped = r._cache_key(tenant, "q", "hybrid", 5, 0.0)
-    k_scoped = r._cache_key(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "a.pdf"})
-    k_scoped_other = r._cache_key(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "b.pdf"})
+    k_scoped = r._cache_key(
+        tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "a.pdf"}
+    )
+    k_scoped_other = r._cache_key(
+        tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "b.pdf"}
+    )
     # 鍵序無關：相同條件不同順序應產生相同鍵
     k_scoped_reordered = r._cache_key(
-        tenant, "q", "hybrid", 5, 0.0,
+        tenant,
+        "q",
+        "hybrid",
+        5,
+        0.0,
         filter_dict={"filename": "a.pdf"},
     )
 
@@ -183,10 +202,23 @@ def test_cache_scoped_unscoped_no_collision():
     r._redis = FakeRedis()
     tenant = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
-    r._cache_set(tenant, "q", "hybrid", 5, 0.0, [{"content": "scoped"}], filter_dict={"filename": "a.pdf"})
+    r._cache_set(
+        tenant,
+        "q",
+        "hybrid",
+        5,
+        0.0,
+        [{"content": "scoped"}],
+        filter_dict={"filename": "a.pdf"},
+    )
     # 非 scoped 讀取不得命中 scoped 條目
     assert r._cache_get(tenant, "q", "hybrid", 5, 0.0) is None
     # scoped 讀取命中自己的條目
-    assert r._cache_get(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "a.pdf"}) == [{"content": "scoped"}]
+    assert r._cache_get(
+        tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "a.pdf"}
+    ) == [{"content": "scoped"}]
     # 不同檔名的 scoped 讀取不得命中
-    assert r._cache_get(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "b.pdf"}) is None
+    assert (
+        r._cache_get(tenant, "q", "hybrid", 5, 0.0, filter_dict={"filename": "b.pdf"})
+        is None
+    )

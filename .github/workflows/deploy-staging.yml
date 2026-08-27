@@ -154,6 +154,7 @@ jobs:
           script: |
             set -e
             cd /opt/enclave
+            export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance
 
             export IMAGE_PREFIX="${{ env.IMAGE_PREFIX }}"
             export IMAGE_TAG="${{ env.SOURCE_SHA }}"
@@ -167,7 +168,8 @@ jobs:
 
             # 縮短舊程式與新 schema 重疊：先停 app 層，migrate，再起全栈
             docker compose -f docker-compose.prod.yml stop web worker worker-beat || true
-            docker compose -f docker-compose.prod.yml run --rm -T web alembic upgrade head
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T migrate
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T provision-db-roles
             docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
             # Health：必須經 edge 對外路徑（容器內 8000 僅診斷）

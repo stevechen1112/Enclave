@@ -96,6 +96,10 @@ jobs:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: enclave_test
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/enclave_test
+      RLS_ENFORCEMENT_ENABLED: "true"
+      P2_ADMIN_DSN: postgresql://postgres:postgres@localhost:5432/enclave_p2_test
+      P2_APP_DSN: postgresql://enclave_app_ci:p2_app_ci_pw@localhost:5432/enclave_p2_test
+      P2_MAINTENANCE_DSN: postgresql://enclave_maintenance_ci:p2_maintenance_ci_pw@localhost:5432/enclave_p2_test
       REDIS_HOST: localhost
       REDIS_PORT: 6379
       SECRET_KEY: ci-test-secret-key-at-least-32-characters
@@ -125,10 +129,59 @@ jobs:
       - name: Run database migrations
         run: alembic upgrade head
 
+      - name: Build isolated FORCE-RLS test database
+        shell: bash
+        run: |
+          psql postgresql://postgres:postgres@localhost:5432/postgres \
+            -v ON_ERROR_STOP=1 \
+            -c "CREATE DATABASE enclave_p2_test OWNER postgres"
+          POSTGRES_DB=enclave_p2_test RLS_ENFORCEMENT_ENABLED=true alembic upgrade head
+
+      - name: Provision production-like tenant database roles
+        run: >-
+          python scripts/provision_tenant_database_roles.py
+          --admin-dsn "$P2_ADMIN_DSN"
+          --application-role enclave_app_ci
+          --application-password p2_app_ci_pw
+          --maintenance-role enclave_maintenance_ci
+          --maintenance-password p2_maintenance_ci_pw
+
+      - name: Tenant RLS catalog and role gate
+        run: >-
+          python scripts/tenant_security_gate.py
+          --dsn "$P2_ADMIN_DSN"
+          --app-role enclave_app_ci
+          --maintenance-role enclave_maintenance_ci
+          --require-force
+          --output artifacts/security/p2_tenant_security_report.json
+
+      - name: Tenant session context static gate
+        run: >-
+          python scripts/tenant_session_context_gate.py
+          --output artifacts/security/p2_tenant_session_context.json
+
+      - name: Production-like cross-tenant attack matrix
+        run: python -m pytest tests/test_p2_rls_hard_isolation.py -q
+        env:
+          P2_SHADOW_REPORT_OUTPUT: artifacts/security/p2_rls_shadow_report.json
+
+      - name: Upload tenant isolation evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: p2-tenant-security-evidence
+          path: |
+            artifacts/security/p2_tenant_security_report.json
+            artifacts/security/p2_rls_shadow_report.json
+            artifacts/security/p2_tenant_session_context.json
+          retention-days: 30
+
       - name: Product architecture and tenant-isolation gates
         run: >-
           python -m pytest
           tests/test_tenant_isolation.py
+          tests/test_tenant_security_gate.py
+          tests/test_tenant_session_context_gate.py
+          tests/test_p2_tenant_boundary_matrix.py
           tests/test_retrieval_facade_architecture.py
           tests/test_deprecation_gates.py
           tests/test_phase_m_rollback.py

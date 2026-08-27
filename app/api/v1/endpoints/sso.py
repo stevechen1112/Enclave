@@ -6,6 +6,7 @@
 - 預設不自動開戶（auto_create_user=False）：email 無對應既有帳號 → 403
 - 帳號 tenant_id 與 state tenant_id 不一致 → 403（防跨租戶帳號連結攻擊）
 """
+
 from __future__ import annotations
 
 import base64
@@ -40,6 +41,7 @@ router = APIRouter()
 
 
 # ── internal helpers ────────────────────────────────────────────
+
 
 def _sign_state(payload: dict) -> str:
     """Create an HMAC-signed, base64url-encoded state token."""
@@ -101,7 +103,9 @@ def _fetch_idp_email(provider: str, tokens: dict) -> Optional[str]:
                     return None
                 return info.get("email")
             if provider in ("microsoft", "azure"):
-                resp = client.get("https://graph.microsoft.com/v1.0/me", headers=headers)
+                resp = client.get(
+                    "https://graph.microsoft.com/v1.0/me", headers=headers
+                )
                 if resp.status_code != 200:
                     return None
                 info = resp.json()
@@ -121,6 +125,7 @@ def _fetch_idp_email(provider: str, tokens: dict) -> Optional[str]:
 
 # ── endpoints ───────────────────────────────────────────────────
 
+
 @router.post("/state", response_model=SSOStateResponse)
 def create_sso_state(
     body: SSOStateRequest,
@@ -131,13 +136,15 @@ def create_sso_state(
     Verifies that the requested provider is enabled for the tenant
     before issuing a state token.
     """
-    # 登入前呼叫、無租戶 context：RLS 下需 bypass 才能讀 SSO 設定
-    from app.services.rls import apply_rls_bypass
+    # Request 明確帶 tenant UUID；先建立該租戶 RLS context 再讀設定。
+    from app.services.rls import apply_rls_context
 
-    apply_rls_bypass(db)
+    apply_rls_context(db, body.tenant_id)
     cfg = _get_cfg(db, body.tenant_id, body.provider)
     if cfg is None:
-        raise HTTPException(status_code=404, detail="SSO provider not found or not enabled")
+        raise HTTPException(
+            status_code=404, detail="SSO provider not found or not enabled"
+        )
 
     state_payload = {
         "tenant_id": str(body.tenant_id),
@@ -154,7 +161,7 @@ async def sso_callback(
     db: Session = Depends(get_db),
 ) -> dict:
     """Handle OAuth callback — verify state, exchange code, issue Enclave JWT."""
-    from app.services.rls import apply_rls_bypass
+    from app.services.rls import apply_rls_context
 
     # 1. Verify state token
     state_data = _verify_state(body.state)
@@ -166,16 +173,20 @@ async def sso_callback(
         raise HTTPException(status_code=400, detail="State tenant mismatch")
     if state_data.get("provider") != body.provider:
         raise HTTPException(status_code=400, detail="State provider mismatch")
+    apply_rls_context(db, body.tenant_id)
 
     # 3. PKCE: code_verifier is required
     if not body.code_verifier:
-        raise HTTPException(status_code=400, detail="code_verifier is required for PKCE")
+        raise HTTPException(
+            status_code=400, detail="code_verifier is required for PKCE"
+        )
 
     # 4. Exchange authorization code
-    apply_rls_bypass(db)  # 登入前流程，讀 SSO 設定與 user 皆需 bypass
     cfg = _get_cfg(db, body.tenant_id, body.provider)
     if cfg is None:
-        raise HTTPException(status_code=404, detail="SSO provider not found or not enabled")
+        raise HTTPException(
+            status_code=404, detail="SSO provider not found or not enabled"
+        )
 
     provider = body.provider
     client_id = cfg.client_id
@@ -216,7 +227,9 @@ async def sso_callback(
         ms_tenant = os.getenv("SSO_MS_TENANT", "common")
         token_url = f"https://login.microsoftonline.com/{ms_tenant}/oauth2/v2.0/token"
     else:
-        raise HTTPException(status_code=400, detail=f"Unsupported SSO provider: {provider}")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported SSO provider: {provider}"
+        )
 
     data = {
         "grant_type": "authorization_code",
@@ -230,7 +243,9 @@ async def sso_callback(
         async with httpx.AsyncClient(timeout=20.0) as client:
             resp = await client.post(token_url, data=data)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"token_exchange_failed: {exc}") from exc
+        raise HTTPException(
+            status_code=502, detail=f"token_exchange_failed: {exc}"
+        ) from exc
 
     if resp.status_code != 200:
         raise HTTPException(
@@ -244,7 +259,10 @@ async def sso_callback(
     if not email:
         raise HTTPException(
             status_code=400,
-            detail={"error": "idp_email_unavailable", "message": "IdP 未提供已驗證的 email"},
+            detail={
+                "error": "idp_email_unavailable",
+                "message": "IdP 未提供已驗證的 email",
+            },
         )
     email = email.strip().lower()
 
@@ -252,7 +270,9 @@ async def sso_callback(
     if cfg.allowed_domains:
         domain = email.rsplit("@", 1)[-1]
         if domain not in [d.lower() for d in cfg.allowed_domains]:
-            raise HTTPException(status_code=403, detail="Email domain not allowed for this tenant")
+            raise HTTPException(
+                status_code=403, detail="Email domain not allowed for this tenant"
+            )
 
     # 7. 帳號連結：只連結既有帳號；auto_create_user 開啟時才自動開戶
     user = crud_user.get_by_email(db, email=email)
@@ -274,7 +294,9 @@ async def sso_callback(
 
     # 8. 防跨租戶帳號連結：帳號必須屬於 state 指定的租戶
     if str(user.tenant_id) != str(body.tenant_id):
-        raise HTTPException(status_code=403, detail="Account does not belong to this tenant")
+        raise HTTPException(
+            status_code=403, detail="Account does not belong to this tenant"
+        )
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Inactive user")
 
@@ -287,6 +309,7 @@ async def sso_callback(
 
 
 # ── 租戶 SSO 設定管理（owner/admin）─────────────────────────────
+
 
 @router.get("/config", response_model=list[SSOConfigPublic])
 def list_sso_configs(
@@ -310,7 +333,9 @@ def upsert_sso_config(
 ) -> TenantSSOConfig:
     """建立或更新租戶的 SSO 設定（僅 owner/admin）。"""
     if current_user.role not in ("owner", "admin"):
-        raise HTTPException(status_code=403, detail="Only owner/admin can configure SSO")
+        raise HTTPException(
+            status_code=403, detail="Only owner/admin can configure SSO"
+        )
     if provider != body.provider:
         raise HTTPException(status_code=400, detail="provider mismatch")
 

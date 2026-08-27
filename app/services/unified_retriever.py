@@ -5,6 +5,7 @@ Phase 5 — Unified Retrieval & Answer Generation
 
 禁止讓三個下游各自生成答案後再拼接。
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -71,6 +72,7 @@ class UnifiedRetriever:
 
         # 6. 統一 CitationBuilder（P1：禁止第二套 citation 組裝）
         from app.gateway.citation import CitationBuilder
+
         citations = CitationBuilder().build(
             final_results,
             acl_revision=getattr(authz, "policy_revision", 1) or 1,
@@ -112,9 +114,9 @@ class UnifiedRetriever:
 
         for r in results:
             # 以 content hash 的前 64 位元作為去重鍵
-            content_hash = hashlib.sha256(
-                (r.content or "")[:500].encode()
-            ).hexdigest()[:16]
+            content_hash = hashlib.sha256((r.content or "")[:500].encode()).hexdigest()[
+                :16
+            ]
 
             dedup_key = f"{r.document_id}:{content_hash}"
             if dedup_key not in seen:
@@ -124,14 +126,21 @@ class UnifiedRetriever:
         return unique
 
     def _post_authorize(
-        self, results: List[ChunkResult], authz: AuthorizationContext,
+        self,
+        results: List[ChunkResult],
+        authz: AuthorizationContext,
     ) -> List[ChunkResult]:
         """後授權驗證：防禦性檢查 + deny set。"""
         from app.gateway.authorization import get_gateway_authorizer
+
         authorizer = get_gateway_authorizer()
         validated = []
         for r in results:
-            if r.document_id and authorizer.is_denied(r.document_id, authz.subject_id):
+            if r.document_id and authorizer.is_denied(
+                r.document_id,
+                authz.subject_id,
+                tenant_id=authz.tenant_id,
+            ):
                 continue
             validated.append(r)
         return validated
@@ -140,16 +149,20 @@ class UnifiedRetriever:
         """從檢索結果建立引用清單。"""
         citations = []
         for i, r in enumerate(results):
-            citations.append(Citation(
-                citation_id=f"cite-{i}",
-                canonical_document_id=UUID(r.document_id) if r.document_id else UUID(int=0),
-                document_revision=1,
-                artifact_id=r.id,
-                artifact_type=r.result_type,
-                provider=r.provider,
-                provider_version=r.provider_version,
-                retrieval_score=r.score,
-            ))
+            citations.append(
+                Citation(
+                    citation_id=f"cite-{i}",
+                    canonical_document_id=UUID(r.document_id)
+                    if r.document_id
+                    else UUID(int=0),
+                    document_revision=1,
+                    artifact_id=r.id,
+                    artifact_type=r.result_type,
+                    provider=r.provider,
+                    provider_version=r.provider_version,
+                    retrieval_score=r.score,
+                )
+            )
         return citations
 
 
@@ -174,7 +187,7 @@ class UnifiedRetrievalResult:
         """將結果轉為 LLM context 片段。"""
         parts = []
         for i, r in enumerate(self.results):
-            source = f"[來源 {i+1}]"
+            source = f"[來源 {i + 1}]"
             if r.document_id:
                 source += f" (doc:{r.document_id[:8]})"
             parts.append(f"{source}\n{r.content}")

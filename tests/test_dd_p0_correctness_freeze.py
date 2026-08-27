@@ -1,4 +1,5 @@
 """DD P0 Correctness Freeze regressions (C01/C02/H01/H05/H09/H12)."""
+
 from __future__ import annotations
 
 import uuid
@@ -96,15 +97,20 @@ class TestH01GenerateDocumentAcl:
 class TestH05OutboxClaim:
     def test_claim_marks_processing(self, db_session):
         from app.models.outbox import OutboxEvent
+        from app.models.tenant import Tenant
         from app.tasks.outbox_worker import _claim_outbox_events
 
         agg = str(uuid.uuid4())
+        tenant = Tenant(id=uuid.uuid4(), name="outbox-claim", status="active")
+        db_session.add(tenant)
+        db_session.flush()
         ev = OutboxEvent(
+            tenant_id=tenant.id,
             aggregate_type="document",
             aggregate_id=agg,
             event_type="document_processed",
             revision=1,
-            payload={"tenant_id": str(uuid.uuid4())},
+            payload={"tenant_id": str(tenant.id)},
             idempotency_key=f"k-{uuid.uuid4()}",
             status="pending",
         )
@@ -125,19 +131,21 @@ class TestH09CreatedNoIngest:
         from app.models.outbox import OutboxEvent
         from app.tasks.outbox_worker import _dispatch_to_provider
 
+        tenant_id = uuid.uuid4()
         event = OutboxEvent(
+            tenant_id=tenant_id,
             aggregate_type="document",
             aggregate_id=str(uuid.uuid4()),
             event_type="created",
             revision=1,
-            payload={"tenant_id": str(uuid.uuid4()), "file_path": "/tmp/x.pdf"},
+            payload={"tenant_id": str(tenant_id), "file_path": "/tmp/x.pdf"},
             idempotency_key=f"k-{uuid.uuid4()}",
             status="processing",
         )
         adapter = MagicMock()
         adapter.ingest = MagicMock()
         result = await _dispatch_to_provider(
-            "ragflow", adapter, event, _authz(uuid.uuid4()), db=None
+            "ragflow", adapter, event, _authz(tenant_id), db=None
         )
         assert result["status"] == "skipped"
         assert result["reason"] == "created_no_content_projection"
@@ -146,20 +154,26 @@ class TestH09CreatedNoIngest:
     @pytest.mark.asyncio
     async def test_pending_uses_reconcile_not_ingest(self, db_session):
         from app.models.outbox import OutboxEvent, ProjectionStatus
+        from app.models.tenant import Tenant
         from app.tasks.outbox_worker import _dispatch_to_provider
 
         agg = str(uuid.uuid4())
+        tenant = Tenant(id=uuid.uuid4(), name="pending-projection", status="active")
+        db_session.add(tenant)
+        db_session.flush()
         event = OutboxEvent(
+            tenant_id=tenant.id,
             aggregate_type="document",
             aggregate_id=agg,
             event_type="document_processed",
             revision=2,
-            payload={"tenant_id": str(uuid.uuid4()), "file_path": "/tmp/x.pdf"},
+            payload={"tenant_id": str(tenant.id), "file_path": "/tmp/x.pdf"},
             idempotency_key=f"k-{uuid.uuid4()}",
             status="processing",
         )
         db_session.add(
             ProjectionStatus(
+                tenant_id=tenant.id,
                 resource_type="document",
                 resource_id=agg,
                 provider="ragflow",
@@ -178,7 +192,7 @@ class TestH09CreatedNoIngest:
         adapter.reconcile = _rec
         adapter.ingest = MagicMock()
         result = await _dispatch_to_provider(
-            "ragflow", adapter, event, _authz(uuid.uuid4()), db=db_session
+            "ragflow", adapter, event, _authz(tenant.id), db=db_session
         )
         assert result.get("converged") is True
         adapter.ingest.assert_not_called()
@@ -188,13 +202,15 @@ class TestH09CreatedNoIngest:
         from app.models.outbox import OutboxEvent
         from app.tasks.outbox_worker import _dispatch_to_provider
 
+        tenant_id = uuid.uuid4()
         event = OutboxEvent(
+            tenant_id=tenant_id,
             aggregate_type="document",
             aggregate_id=str(uuid.uuid4()),
             event_type="document_processed",
             revision=1,
             payload={
-                "tenant_id": str(uuid.uuid4()),
+                "tenant_id": str(tenant_id),
                 "ragflow_already_ingested": True,
                 "ragflow_doc_ids": ["rf-1"],
             },
@@ -211,7 +227,7 @@ class TestH09CreatedNoIngest:
         adapter.reconcile = _rec
         adapter.ingest = MagicMock()
         await _dispatch_to_provider(
-            "ragflow", adapter, event, _authz(uuid.uuid4()), db=db_session
+            "ragflow", adapter, event, _authz(tenant_id), db=db_session
         )
         assert len(calls) == 1
         assert calls[0]["resource_id"] == "rf-1"
@@ -221,14 +237,19 @@ class TestH09CreatedNoIngest:
 class TestH06WikiFailureNotCompleted:
     def test_wiki_compiled_failure_raises(self, db_session, monkeypatch):
         from app.models.outbox import OutboxEvent
+        from app.models.tenant import Tenant
         from app.tasks import outbox_worker as ow
 
+        tenant = Tenant(id=uuid.uuid4(), name="wiki-outbox", status="active")
+        db_session.add(tenant)
+        db_session.flush()
         event = OutboxEvent(
+            tenant_id=tenant.id,
             aggregate_type="wiki",
             aggregate_id=str(uuid.uuid4()),
             event_type="compiled",
             revision=1,
-            payload={"kb_id": str(uuid.uuid4())},
+            payload={"tenant_id": str(tenant.id), "kb_id": str(uuid.uuid4())},
             idempotency_key=f"k-{uuid.uuid4()}",
             status="processing",
         )
@@ -253,7 +274,9 @@ class TestH06WikiFailureNotCompleted:
 
 
 class TestH12ReviewQueueWired:
-    def test_watcher_enqueue_when_review_enabled(self, db_session, monkeypatch, tmp_path):
+    def test_watcher_enqueue_when_review_enabled(
+        self, db_session, monkeypatch, tmp_path
+    ):
         from app.models.tenant import Tenant
         from app.models.review_item import ReviewItem
         from app.tasks.document_tasks import watcher_ingest_file_task

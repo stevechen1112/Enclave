@@ -13,6 +13,7 @@
 import logging
 import time
 from sqlalchemy import create_engine, event
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
 from app.config import settings
 
@@ -88,6 +89,49 @@ def _on_checkout(dbapi_conn, connection_rec, connection_proxy):
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+_maintenance_engine = None
+_maintenance_session_factory = None
+
+
+def MaintenanceSessionLocal():
+    """Return a session authenticated as the audited maintenance identity.
+
+    The maintenance login is deliberately separate from the web/ordinary worker
+    login.  It has no PostgreSQL ``BYPASSRLS`` attribute; membership in the
+    narrow ``enclave_rls_bypass`` marker role is still required by policy.
+    """
+    global _maintenance_engine, _maintenance_session_factory
+    if (
+        not settings.MAINTENANCE_POSTGRES_USER
+        or not settings.MAINTENANCE_POSTGRES_PASSWORD
+    ):
+        raise RuntimeError(
+            "dedicated maintenance database credentials are not configured"
+        )
+    if _maintenance_session_factory is None:
+        maintenance_url = URL.create(
+            "postgresql",
+            username=settings.MAINTENANCE_POSTGRES_USER,
+            password=settings.MAINTENANCE_POSTGRES_PASSWORD,
+            host=settings.POSTGRES_SERVER,
+            port=settings.POSTGRES_PORT,
+            database=settings.POSTGRES_DB,
+        )
+        _maintenance_engine = create_engine(
+            maintenance_url,
+            pool_pre_ping=True,
+            pool_size=2,
+            max_overflow=2,
+            pool_timeout=POOL_TIMEOUT,
+            pool_recycle=POOL_RECYCLE,
+        )
+        _maintenance_session_factory = sessionmaker(
+            autocommit=False,
+            autoflush=False,
+            bind=_maintenance_engine,
+        )
+    return _maintenance_session_factory()
 
 
 # ---------------------------------------------------------------------------

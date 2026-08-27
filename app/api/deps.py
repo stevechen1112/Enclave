@@ -51,21 +51,25 @@ def get_current_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="MFA challenge required",
         )
-    # ADR-012：RLS 下 users 表受租戶 policy 約束，email→user 查找需短暫 bypass；
-    # JWT 已驗證通過，bypass 僅涵蓋這一次查找，找到後立即以該用戶租戶接管 context。
-    from app.services.rls import apply_rls_bypass, apply_rls_context
+    # P2：JWT 必須攜帶 tenant_id；先設定 RLS，再讀取該租戶 user。
+    # 不再讓一般 application role 使用跨租戶 bypass。
+    from app.services.rls import apply_rls_context
 
-    apply_rls_bypass(db)
+    if token_data.tenant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    apply_rls_context(db, token_data.tenant_id)
     user = crud_user.get_by_email(db, email=token_data.sub)
-    if not user:
+    if not user or user.tenant_id != token_data.tenant_id:
         # Return 401 rather than 404 to avoid leaking whether an e-mail is registered
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    # 之後本 request 的所有查詢受此租戶約束（apply_rls_context 會關閉 bypass）
-    apply_rls_context(db, user.tenant_id)
     if request is not None:
         request.state.current_user = user
     return user
@@ -80,7 +84,8 @@ def get_current_active_user(
 
 
 def get_current_user_optional(
-    db: Session = Depends(get_db), token: Optional[str] = Depends(reusable_oauth2_optional)
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(reusable_oauth2_optional),
 ) -> Optional[User]:
     """無 token 或 token 無效時回傳 None（供 MFA setup 等雙身分端點使用）。"""
     if not token:
@@ -94,13 +99,14 @@ def get_current_user_optional(
         return None
     if payload.get("scope"):
         return None
-    from app.services.rls import apply_rls_bypass, apply_rls_context
+    from app.services.rls import apply_rls_context
 
-    apply_rls_bypass(db)
-    user = crud_user.get_by_email(db, email=token_data.sub)
-    if not user:
+    if token_data.tenant_id is None:
         return None
-    apply_rls_context(db, user.tenant_id)
+    apply_rls_context(db, token_data.tenant_id)
+    user = crud_user.get_by_email(db, email=token_data.sub)
+    if not user or user.tenant_id != token_data.tenant_id:
+        return None
     return user
 
 
@@ -115,6 +121,9 @@ def get_current_verified_user(
     if settings.EMAIL_VERIFICATION_ENABLED and not current_user.email_verified:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail={"error": "email_not_verified", "message": "請先完成 Email 驗證再使用問答功能"},
+            detail={
+                "error": "email_not_verified",
+                "message": "請先完成 Email 驗證再使用問答功能",
+            },
         )
     return current_user

@@ -54,10 +54,38 @@ def test_staging_and_prod_migrate_before_up():
     for wf in ("deploy-production.yml", "deploy-staging.yml"):
         text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
         stop_idx = text.find("stop web worker worker-beat")
-        run_idx = text.find("alembic upgrade head")
+        run_idx = text.find("run --rm -T migrate")
+        provision_idx = text.find("run --rm -T provision-db-roles")
         up_idx = text.find("up -d --no-build --remove-orphans")
-        assert stop_idx != -1 and run_idx != -1 and up_idx != -1, wf
-        assert stop_idx < run_idx < up_idx, f"{wf}: stop → migrate → up"
+        assert all(
+            index != -1 for index in (stop_idx, run_idx, provision_idx, up_idx)
+        ), wf
+        assert stop_idx < run_idx < provision_idx < up_idx, (
+            f"{wf}: stop → migrate → provision → up"
+        )
+
+
+def test_database_credentials_are_split_by_runtime_identity():
+    compose = (ROOT / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    web = compose.split("  web:", 1)[1].split("  db:", 1)[0]
+    migrate = compose.split("  migrate:", 1)[1].split("  provision-db-roles:", 1)[0]
+    provision = compose.split("  provision-db-roles:", 1)[1].split("  redis:", 1)[0]
+    worker = compose.split("  worker:", 1)[1].split("  worker-beat:", 1)[0]
+
+    assert ".env.production" in web
+    assert ".env.db-admin" not in web
+    assert ".env.maintenance" not in web
+    assert ".env.db-admin" in migrate
+    assert ".env.db-admin" in provision and ".env.maintenance" in provision
+    assert ".env.maintenance" in worker and ".env.db-admin" not in worker
+
+    application_example = (ROOT / ".env.production.example").read_text(
+        encoding="utf-8"
+    )
+    assert "DB_ADMIN_PASSWORD=" not in application_example
+    assert "MAINTENANCE_POSTGRES_PASSWORD=" not in application_example
+    assert (ROOT / ".env.db-admin.example").is_file()
+    assert (ROOT / ".env.maintenance.example").is_file()
 
 
 def test_mobile_marked_experimental():

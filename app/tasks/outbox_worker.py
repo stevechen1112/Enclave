@@ -4,6 +4,7 @@ Phase 0 — Outbox Worker (Celery Task)
 從 outbox_events 表中讀取待處理事件，分派到對應的 Adapter。
 實作 at-least-once delivery + 冪等性 + dead-letter。
 """
+
 import asyncio
 import logging
 import os
@@ -14,7 +15,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.celery_app import celery_app
-from app.db.session import SessionLocal
+from app.db.session import MaintenanceSessionLocal
 from app.models.outbox import OutboxEvent, DeadLetterEvent, ProjectionStatus
 from app.core.authorization import AuthorizationContext
 from app.gateway.adapter_factory import build_projection_adapters, PROJECTION_PROVIDERS
@@ -40,7 +41,12 @@ def _get_projection_adapters() -> Dict[str, Any]:
 
 def _authz_from_payload(payload: Dict[str, Any]) -> AuthorizationContext:
     tenant_id = UUID(payload.get("tenant_id", "00000000-0000-0000-0000-000000000000"))
-    subject_id = UUID(payload.get("uploaded_by", payload.get("subject_id", "00000000-0000-0000-0000-000000000001")))
+    subject_id = UUID(
+        payload.get(
+            "uploaded_by",
+            payload.get("subject_id", "00000000-0000-0000-0000-000000000001"),
+        )
+    )
     return AuthorizationContext(
         tenant_id=tenant_id,
         subject_id=subject_id,
@@ -52,6 +58,7 @@ def _authz_from_payload(payload: Dict[str, Any]) -> AuthorizationContext:
 
 def _upsert_projection_status(
     db: Session,
+    tenant_id: UUID,
     resource_type: str,
     resource_id: str,
     provider: str,
@@ -63,6 +70,7 @@ def _upsert_projection_status(
     row = (
         db.query(ProjectionStatus)
         .filter(
+            ProjectionStatus.tenant_id == tenant_id,
             ProjectionStatus.resource_type == resource_type,
             ProjectionStatus.resource_id == resource_id,
             ProjectionStatus.provider == provider,
@@ -79,6 +87,7 @@ def _upsert_projection_status(
         return row
 
     row = ProjectionStatus(
+        tenant_id=tenant_id,
         resource_type=resource_type,
         resource_id=resource_id,
         provider=provider,
@@ -102,7 +111,11 @@ def _resolve_provider_resource_id(
     if provider == "enclave":
         return event.aggregate_id
     mapped = _registry.get_provider_resource_id(
-        db, event.aggregate_type, event.aggregate_id, provider,
+        db,
+        event.tenant_id,
+        event.aggregate_type,
+        event.aggregate_id,
+        provider,
     )
     return mapped or event.aggregate_id
 
@@ -121,7 +134,11 @@ async def _dispatch_to_provider(
 
     # DD-H09：created 不投影內容（檔案可能尚未就緒）；僅 document_processed / updated 可 ingest
     if event.event_type == "created":
-        return {"status": "skipped", "reason": "created_no_content_projection", "provider": provider}
+        return {
+            "status": "skipped",
+            "reason": "created_no_content_projection",
+            "provider": provider,
+        }
 
     if event.event_type in ("updated", "document_processed"):
         # DD-H09：parse 路徑已 ingest 過 → 只 reconcile／對齊 mapping，禁止再 POST
@@ -130,10 +147,9 @@ async def _dispatch_to_provider(
             and payload.get("ragflow_already_ingested")
             and db is not None
         ):
-            provider_rid = (
-                (payload.get("ragflow_doc_ids") or [None])[0]
-                or _resolve_provider_resource_id(db, provider, event)
-            )
+            provider_rid = (payload.get("ragflow_doc_ids") or [None])[
+                0
+            ] or _resolve_provider_resource_id(db, provider, event)
             return await adapter.reconcile(
                 resource_type=event.aggregate_type,
                 resource_id=provider_rid,
@@ -144,6 +160,7 @@ async def _dispatch_to_provider(
             pending = (
                 db.query(ProjectionStatus)
                 .filter(
+                    ProjectionStatus.tenant_id == event.tenant_id,
                     ProjectionStatus.resource_type == event.aggregate_type,
                     ProjectionStatus.resource_id == event.aggregate_id,
                     ProjectionStatus.provider == provider,
@@ -160,7 +177,11 @@ async def _dispatch_to_provider(
                 )
             # mapping 已存在（parse 寫入）→ reconcile
             mapped = _registry.get_provider_resource_id(
-                db, event.aggregate_type, event.aggregate_id, provider,
+                db,
+                event.tenant_id,
+                event.aggregate_type,
+                event.aggregate_id,
+                provider,
             )
             if mapped:
                 return await adapter.reconcile(
@@ -179,6 +200,7 @@ async def _dispatch_to_provider(
                 resolve_ragflow_dataset_id,
                 resolve_weknora_kb_id,
             )
+
             event_tenant = payload.get("tenant_id")
             if event_tenant:
                 if not meta.get("dataset_id"):
@@ -200,7 +222,9 @@ async def _dispatch_to_provider(
         )
 
     provider_resource_id = (
-        _resolve_provider_resource_id(db, provider, event) if db is not None else aggregate_id
+        _resolve_provider_resource_id(db, provider, event)
+        if db is not None
+        else aggregate_id
     )
 
     if event.event_type in ("deleted", "revoked", "document_revoked"):
@@ -226,6 +250,7 @@ def _run_async(coro):
         loop = asyncio.get_event_loop()
         if loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor() as pool:
                 return pool.submit(asyncio.run, coro).result()
         return loop.run_until_complete(coro)
@@ -245,7 +270,10 @@ def _claim_outbox_events(db: Session) -> list:
         .filter(
             (
                 OutboxEvent.status.in_(["pending", "failed"])
-                & ((OutboxEvent.next_retry_at.is_(None)) | (OutboxEvent.next_retry_at <= now))
+                & (
+                    (OutboxEvent.next_retry_at.is_(None))
+                    | (OutboxEvent.next_retry_at <= now)
+                )
             )
             | (
                 (OutboxEvent.status == "processing")
@@ -276,17 +304,28 @@ def _claim_outbox_events(db: Session) -> list:
 @celery_app.task(name="tasks.process_outbox", bind=True, max_retries=0)
 def process_outbox_batch(self):
     """定期輪詢 outbox_events，處理一批已 claim 的事件。"""
-    db: Session = SessionLocal()
+    db: Session = MaintenanceSessionLocal()
     try:
+        from app.services.rls import apply_rls_bypass, apply_rls_context
+
+        apply_rls_bypass(
+            db,
+            actor_identity="celery:process_outbox",
+            operation="claim_outbox_batch",
+            reason="Claim pending tenant outbox events before tenant-scoped dispatch",
+            correlation_id=str(getattr(self.request, "id", "") or "") or None,
+        )
         events = _claim_outbox_events(db)
         if not events:
             return {"processed": 0}
+        claimed = [(event.id, event.tenant_id) for event in events]
         db.commit()  # commit claim so other workers skip locked rows
 
         processed = 0
-        for event in events:
+        for event_id, tenant_id in claimed:
+            apply_rls_context(db, tenant_id)
             # Re-attach claimed event in a short transaction per event
-            event = db.query(OutboxEvent).filter(OutboxEvent.id == event.id).first()
+            event = db.query(OutboxEvent).filter(OutboxEvent.id == event_id).first()
             if not event:
                 continue
             try:
@@ -326,7 +365,9 @@ def _dispatch_event(db: Session, event: OutboxEvent):
     if handler:
         handler(db, event)
     else:
-        logger.warning("No handler for aggregate_type=%s, marking completed", event.aggregate_type)
+        logger.warning(
+            "No handler for aggregate_type=%s, marking completed", event.aggregate_type
+        )
         event.status = "completed"
 
     db.flush()
@@ -345,6 +386,7 @@ def _handle_document_event(db: Session, event: OutboxEvent):
         existing_proj = (
             db.query(ProjectionStatus)
             .filter(
+                ProjectionStatus.tenant_id == event.tenant_id,
                 ProjectionStatus.resource_type == event.aggregate_type,
                 ProjectionStatus.resource_id == event.aggregate_id,
                 ProjectionStatus.provider == provider,
@@ -353,10 +395,16 @@ def _handle_document_event(db: Session, event: OutboxEvent):
             )
             .first()
         )
-        if existing_proj and event.event_type not in ("deleted", "revoked", "document_revoked"):
+        if existing_proj and event.event_type not in (
+            "deleted",
+            "revoked",
+            "document_revoked",
+        ):
             continue
         try:
-            result = _run_async(_dispatch_to_provider(provider, adapter, event, authz, db=db))
+            result = _run_async(
+                _dispatch_to_provider(provider, adapter, event, authz, db=db)
+            )
             # Fail-closed: HTTP/stub error payloads must not mark converged
             if isinstance(result, dict):
                 if result.get("status") == "error":
@@ -364,14 +412,23 @@ def _handle_document_event(db: Session, event: OutboxEvent):
                 if event.event_type == "reconcile" and result.get("converged") is False:
                     raise RuntimeError(result.get("error") or "not_converged")
                 # DD-H09：created 略過內容投影 — 不可寫成 converged，否則 document_processed 會被跳過
-                if result.get("status") == "skipped" and result.get("reason") == "created_no_content_projection":
+                if (
+                    result.get("status") == "skipped"
+                    and result.get("reason") == "created_no_content_projection"
+                ):
                     continue
             applied_revision = event.revision
             if event.event_type in ("deleted", "revoked", "document_revoked"):
                 if isinstance(result, dict) and result.get("status") == "error":
                     raise RuntimeError(result.get("error") or "delete_failed")
                 state = "tombstoned"
-                _registry.tombstone(db, event.aggregate_type, event.aggregate_id, provider=provider)
+                _registry.tombstone(
+                    db,
+                    event.tenant_id,
+                    event.aggregate_type,
+                    event.aggregate_id,
+                    provider=provider,
+                )
             else:
                 provider_rid = None
                 result_status = None
@@ -388,19 +445,20 @@ def _handle_document_event(db: Session, event: OutboxEvent):
                     state = "converged"
                 _registry.upsert_mapping(
                     db,
+                    tenant_id=event.tenant_id,
                     enclave_resource_type=event.aggregate_type,
                     enclave_resource_id=event.aggregate_id,
                     enclave_revision=event.revision,
                     provider=provider,
-                    provider_resource_id=provider_rid or (
-                        event.aggregate_id if provider == "enclave" else None
-                    ),
+                    provider_resource_id=provider_rid
+                    or (event.aggregate_id if provider == "enclave" else None),
                     provider_revision=applied_revision,
                     checksum=payload.get("content_hash"),
                     state="active" if state == "converged" else "pending",
                 )
             _upsert_projection_status(
                 db,
+                tenant_id=event.tenant_id,
                 resource_type=event.aggregate_type,
                 resource_id=event.aggregate_id,
                 provider=provider,
@@ -409,10 +467,16 @@ def _handle_document_event(db: Session, event: OutboxEvent):
                 state=state,
             )
         except Exception as exc:
-            logger.error("Projection dispatch failed provider=%s event=%s: %s", provider, event.id, exc)
+            logger.error(
+                "Projection dispatch failed provider=%s event=%s: %s",
+                provider,
+                event.id,
+                exc,
+            )
             errors.append(f"{provider}:{exc}")
             _upsert_projection_status(
                 db,
+                tenant_id=event.tenant_id,
                 resource_type=event.aggregate_type,
                 resource_id=event.aggregate_id,
                 provider=provider,
@@ -437,6 +501,7 @@ def _handle_document_event(db: Session, event: OutboxEvent):
 
 def _handle_permission_event(db: Session, event: OutboxEvent):
     from app.gateway.authorization import GatewayAuthorizer
+
     authorizer = GatewayAuthorizer()
     payload = event.payload or {}
     resource_id = payload.get("document_id", event.aggregate_id)
@@ -444,6 +509,7 @@ def _handle_permission_event(db: Session, event: OutboxEvent):
     tenant_id = payload.get("tenant_id")
     if subject_id and event.event_type in ("revoked", "deleted"):
         from uuid import UUID
+
         authorizer.add_deny_entry(
             str(resource_id),
             UUID(subject_id),
@@ -458,6 +524,7 @@ def _handle_connector_event(db: Session, event: OutboxEvent):
         try:
             from app.services.connector_sync import ConnectorSyncService
             from uuid import UUID as _UUID
+
             ConnectorSyncService().run_sync(db, _UUID(event.aggregate_id))
         except Exception as exc:
             logger.error("Connector outbox handler failed: %s", exc)
@@ -472,6 +539,7 @@ def _handle_wiki_event(db: Session, event: OutboxEvent):
             from app.gateway.adapters.weknora_http import WeKnoraHTTPAdapter
             from app.gateway.token_provider import build_weknora_token_provider
             from uuid import UUID as _UUID
+
             adapter = WeKnoraHTTPAdapter(
                 base_url=os.getenv("WEKNORA_BASE_URL", "http://localhost:8081"),
                 api_key=os.getenv("WEKNORA_API_KEY", ""),
@@ -485,6 +553,7 @@ def _handle_wiki_event(db: Session, event: OutboxEvent):
                 raise RuntimeError(result.get("error") or "wiki_compile_failed")
             _upsert_projection_status(
                 db,
+                tenant_id=event.tenant_id,
                 resource_type="wiki",
                 resource_id=event.aggregate_id,
                 provider="weknora",
@@ -495,6 +564,7 @@ def _handle_wiki_event(db: Session, event: OutboxEvent):
     if event.event_type in ("revoked", "deleted"):
         from app.services.wiki_compiler import WikiCompiler
         from uuid import UUID as _UUID
+
         WikiCompiler().tombstone_page(db, _UUID(event.aggregate_id))
     if event.event_type == "compile_failed":
         event.status = "completed"
@@ -510,8 +580,12 @@ def _handle_kb_event(db: Session, event: OutboxEvent):
         if tenant_id:
             from app.services.wiki_compiler import WikiCompiler
             from uuid import UUID as _UUID
+
             WikiCompiler().compile_kb(
-                db, _UUID(tenant_id), _UUID(kb_id), page_type="summary",
+                db,
+                _UUID(tenant_id),
+                _UUID(kb_id),
+                page_type="summary",
             )
     event.status = "completed"
 
@@ -526,6 +600,7 @@ def _handle_failure(db: Session, event: OutboxEvent, error_message: str):
 
     if event.attempts >= MAX_RETRIES:
         dlq = DeadLetterEvent(
+            tenant_id=event.tenant_id,
             original_event_id=event.id,
             aggregate_type=event.aggregate_type,
             aggregate_id=event.aggregate_id,
@@ -536,12 +611,20 @@ def _handle_failure(db: Session, event: OutboxEvent, error_message: str):
         )
         db.add(dlq)
         event.status = "dead"
-        logger.warning("Event %s moved to dead-letter after %s attempts", event.id, event.attempts)
+        logger.warning(
+            "Event %s moved to dead-letter after %s attempts", event.id, event.attempts
+        )
     else:
         backoff_idx = min(event.attempts - 1, len(RETRY_BACKOFF_SECONDS) - 1)
         delay = RETRY_BACKOFF_SECONDS[backoff_idx]
         event.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
-        logger.info("Event %s will retry in %ss (attempt %s/%s)", event.id, delay, event.attempts, MAX_RETRIES)
+        logger.info(
+            "Event %s will retry in %ss (attempt %s/%s)",
+            event.id,
+            delay,
+            event.attempts,
+            MAX_RETRIES,
+        )
 
 
 # 向後相容：publish_event 本體移至 app.services.outbox_events（避免循環匯入）

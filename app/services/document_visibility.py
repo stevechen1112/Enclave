@@ -4,6 +4,7 @@ The knowledge runtime has several physical readers (chunks, catalog, compiled
 artifacts and PageIndex).  Keeping tenant/department/source ACL logic here
 prevents a secondary arm from becoming an authorization bypass.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import and_, or_
@@ -26,7 +27,10 @@ def apply_document_visibility(query_obj, *, authz, db, require_completed: bool =
     departments = authz.department_filter_ids()
     if departments:
         query_obj = query_obj.filter(
-            or_(Document.department_id.is_(None), Document.department_id.in_(departments))
+            or_(
+                Document.department_id.is_(None),
+                Document.department_id.in_(departments),
+            )
         )
     else:
         query_obj = query_obj.filter(Document.department_id.is_(None))
@@ -76,6 +80,8 @@ def deny_set_allows(document_id, *, authz) -> bool:
     try:
         from app.gateway.authorization import get_gateway_authorizer
 
-        return not get_gateway_authorizer().is_denied(str(document_id), authz.subject_id)
+        return not get_gateway_authorizer().is_denied(
+            str(document_id), authz.subject_id, tenant_id=authz.tenant_id
+        )
     except Exception:
         return False

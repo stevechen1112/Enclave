@@ -34,9 +34,18 @@ from app.models.connector import SourceAclEntry, ExternalPrincipal
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_uuid(value: Any) -> Optional[UUID]:
+    try:
+        return UUID(str(value))
+    except (TypeError, ValueError, AttributeError):
+        return None
+
+
 # ── 可選依賴 ──
 try:
     import voyageai as _voyageai_lib
+
     _HAS_VOYAGE = True
 except ImportError:
     _HAS_VOYAGE = False
@@ -44,24 +53,28 @@ except ImportError:
 # ── 可選依賴 ──
 try:
     import redis as redis_lib
+
     _HAS_REDIS = True
 except ImportError:
     _HAS_REDIS = False
 
 try:
     from rank_bm25 import BM25Okapi
+
     _HAS_BM25 = True
 except ImportError:
     _HAS_BM25 = False
 
 try:
     import jieba
+
     _HAS_JIEBA = True
 except ImportError:
     _HAS_JIEBA = False
 
 try:
     import openai as openai_lib
+
     _HAS_OPENAI = True
 except ImportError:
     _HAS_OPENAI = False
@@ -80,7 +93,9 @@ class KnowledgeBaseRetriever:
     def __init__(self):
         runtime = resolve_runtime_profiles_no_db()
         embed_cfg = runtime.get("embedding", {})
-        self._embedding_provider = str(embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))).lower()
+        self._embedding_provider = str(
+            embed_cfg.get("provider", getattr(settings, "EMBEDDING_PROVIDER", "voyage"))
+        ).lower()
         _default_model = (
             settings.VOYAGE_MODEL
             if self._embedding_provider == "voyage"
@@ -92,7 +107,9 @@ class KnowledgeBaseRetriever:
             self.voyage_client = None  # not needed
         else:
             if not settings.VOYAGE_API_KEY:
-                raise ValueError("VOYAGE_API_KEY 未設定（或改用 EMBEDDING_PROVIDER=ollama）")
+                raise ValueError(
+                    "VOYAGE_API_KEY 未設定（或改用 EMBEDDING_PROVIDER=ollama）"
+                )
             self.voyage_client = _voyageai_lib.Client(api_key=settings.VOYAGE_API_KEY)
 
         # OpenAI client（用於 HyDE 查詢擴展）
@@ -117,7 +134,9 @@ class KnowledgeBaseRetriever:
                 logger.warning("Redis 連線失敗，檢索快取已停用")
                 self._redis = None
 
-    def _apply_source_acl_filter(self, query_obj, tenant_id: UUID, authz: AuthorizationContext, db):
+    def _apply_source_acl_filter(
+        self, query_obj, tenant_id: UUID, authz: AuthorizationContext, db
+    ):
         """
         Filter connector-sourced documents by source ACL projection.
 
@@ -176,8 +195,8 @@ class KnowledgeBaseRetriever:
             return query_obj
         if dept_ids:
             return query_obj.filter(
-                (Document.department_id.is_(None)) |
-                (Document.department_id.in_(dept_ids))
+                (Document.department_id.is_(None))
+                | (Document.department_id.in_(dept_ids))
             )
         return query_obj.filter(Document.department_id.is_(None))
 
@@ -195,25 +214,40 @@ class KnowledgeBaseRetriever:
         raw_revision_ids.extend((filter_dict or {}).get("kb_revision_ids") or [])
         if not raw_revision_ids and "kb_revision_ids" not in (filter_dict or {}):
             return query_obj.filter(DocumentChunk.document_revision == Document.version)
-        from app.models.knowledge_engine import DocumentProfile, KnowledgeBaseRevisionDocument
+        from app.models.knowledge_engine import (
+            DocumentProfile,
+            KnowledgeBaseRevisionDocument,
+        )
+
         try:
             revision_uuids = [UUID(str(value)) for value in raw_revision_ids]
         except (TypeError, ValueError):
             return query_obj.filter(False)
         if not revision_uuids:
             return query_obj.filter(False)
-        member_exists = db.query(KnowledgeBaseRevisionDocument.id).filter(
-            KnowledgeBaseRevisionDocument.tenant_id == DocumentChunk.tenant_id,
-            KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_uuids),
-            KnowledgeBaseRevisionDocument.document_id == DocumentChunk.document_id,
-            KnowledgeBaseRevisionDocument.document_revision == DocumentChunk.document_revision,
-        ).correlate(DocumentChunk).exists()
-        profile_ready = db.query(DocumentProfile.id).filter(
-            DocumentProfile.tenant_id == DocumentChunk.tenant_id,
-            DocumentProfile.document_id == DocumentChunk.document_id,
-            DocumentProfile.document_revision == DocumentChunk.document_revision,
-            DocumentProfile.answer_ready.is_(True),
-        ).correlate(DocumentChunk).exists()
+        member_exists = (
+            db.query(KnowledgeBaseRevisionDocument.id)
+            .filter(
+                KnowledgeBaseRevisionDocument.tenant_id == DocumentChunk.tenant_id,
+                KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_uuids),
+                KnowledgeBaseRevisionDocument.document_id == DocumentChunk.document_id,
+                KnowledgeBaseRevisionDocument.document_revision
+                == DocumentChunk.document_revision,
+            )
+            .correlate(DocumentChunk)
+            .exists()
+        )
+        profile_ready = (
+            db.query(DocumentProfile.id)
+            .filter(
+                DocumentProfile.tenant_id == DocumentChunk.tenant_id,
+                DocumentProfile.document_id == DocumentChunk.document_id,
+                DocumentProfile.document_revision == DocumentChunk.document_revision,
+                DocumentProfile.answer_ready.is_(True),
+            )
+            .correlate(DocumentChunk)
+            .exists()
+        )
         return query_obj.filter(
             member_exists,
             profile_ready,
@@ -233,7 +267,9 @@ class KnowledgeBaseRetriever:
         take that immutable revision offline.  Tombstones are still filtered
         separately and revoke every revision immediately.
         """
-        if "kb_revision_ids" not in (filter_dict or {}) and not (filter_dict or {}).get("kb_revision_id"):
+        if "kb_revision_ids" not in (filter_dict or {}) and not (filter_dict or {}).get(
+            "kb_revision_id"
+        ):
             return query_obj.filter(Document.status == "completed")
         return query_obj
 
@@ -277,8 +313,22 @@ class KnowledgeBaseRetriever:
 
         # 1. 快取檢查（ACL-aware：包含 policy_fingerprint 與 filter_dict）
         if use_cache and self._redis:
-            cached = self._cache_get(effective_tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict)
+            cached = self._cache_get(
+                effective_tenant_id,
+                query,
+                mode,
+                top_k,
+                min_score,
+                authz,
+                filter_dict=filter_dict,
+            )
             if cached is not None:
+                # Cache invalidation is best effort.  Always revalidate against
+                # the authoritative tombstone state so a stale Redis entry can
+                # never resurrect a revoked document.
+                cached = self._filter_live_documents(cached, effective_tenant_id)
+                if authz is not None and cached:
+                    cached = self._filter_denied(cached, authz)
                 return cached
 
         # 1.5 Query Expansion（HyDE 假設文件生成）
@@ -288,7 +338,13 @@ class KnowledgeBaseRetriever:
 
         # 2. 執行檢索（傳遞 authz 做 ACL 過濾）
         if mode == "keyword":
-            results = self._keyword_search(effective_tenant_id, query, top_k=top_k * 2, authz=authz, filter_dict=filter_dict)
+            results = self._keyword_search(
+                effective_tenant_id,
+                query,
+                top_k=top_k * 2,
+                authz=authz,
+                filter_dict=filter_dict,
+            )
         elif mode == "hybrid":
             semantic_query = expanded_query or query
             results = self._hybrid_search(
@@ -302,7 +358,11 @@ class KnowledgeBaseRetriever:
         else:  # semantic
             search_query = expanded_query or query
             results = self._semantic_search(
-                effective_tenant_id, search_query, top_k=top_k * 2, filter_dict=filter_dict, authz=authz,
+                effective_tenant_id,
+                search_query,
+                top_k=top_k * 2,
+                filter_dict=filter_dict,
+                authz=authz,
             )
 
         # 3. 閾值過濾
@@ -324,24 +384,88 @@ class KnowledgeBaseRetriever:
 
         # 6. 寫入快取（ACL-aware）
         if use_cache and self._redis:
-            self._cache_set(effective_tenant_id, query, mode, top_k, min_score, results, authz, filter_dict=filter_dict)
+            self._cache_set(
+                effective_tenant_id,
+                query,
+                mode,
+                top_k,
+                min_score,
+                results,
+                authz,
+                filter_dict=filter_dict,
+            )
 
         return results
 
-    def _filter_denied(self, results: List[Dict[str, Any]], authz: AuthorizationContext) -> List[Dict[str, Any]]:
+    def _filter_denied(
+        self, results: List[Dict[str, Any]], authz: AuthorizationContext
+    ) -> List[Dict[str, Any]]:
         try:
             from app.gateway.authorization import get_gateway_authorizer
+
             authorizer = get_gateway_authorizer()
             kept = []
             for r in results:
                 doc_id = r.get("document_id")
-                if doc_id and authorizer.is_denied(str(doc_id), authz.subject_id):
+                if doc_id and authorizer.is_denied(
+                    str(doc_id), authz.subject_id, tenant_id=authz.tenant_id
+                ):
                     continue
                 kept.append(r)
             return kept
         except Exception as exc:
             logger.warning("deny-set filter failed, fail closed empty: %s", exc)
             return []
+
+    def _filter_live_documents(
+        self,
+        results: List[Dict[str, Any]],
+        tenant_id: UUID,
+    ) -> List[Dict[str, Any]]:
+        """Revalidate cached hits against tenant ownership and tombstones.
+
+        Any database/context failure is fail-closed.  This is intentionally a
+        database check rather than another cache lookup: revocation must remain
+        effective even when epoch invalidation or Redis deletion failed.
+        """
+        document_ids: set[UUID] = set()
+        for result in results:
+            try:
+                document_ids.add(UUID(str(result.get("document_id"))))
+            except (TypeError, ValueError, AttributeError):
+                continue
+        if not document_ids:
+            return []
+
+        db = SessionLocal()
+        try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, tenant_id)
+            live_ids = {
+                row[0]
+                for row in (
+                    db.query(Document.id)
+                    .filter(
+                        Document.tenant_id == tenant_id,
+                        Document.id.in_(document_ids),
+                        Document.tombstoned_at.is_(None),
+                    )
+                    .all()
+                )
+            }
+            return [
+                result
+                for result in results
+                if _safe_uuid(result.get("document_id")) in live_ids
+            ]
+        except Exception as exc:
+            logger.warning(
+                "cached result revalidation failed, fail closed empty: %s", exc
+            )
+            return []
+        finally:
+            db.close()
 
     def _apply_parent_and_sibling(
         self,
@@ -381,16 +505,23 @@ class KnowledgeBaseRetriever:
         # 查詢 DB 取得 parent 和 sibling chunks
         db = SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, tenant_id)
             # 取得所有相關的 chunk
             fetched_chunks = (
                 db.query(DocumentChunk)
                 .filter(
                     DocumentChunk.tenant_id == tenant_id,
-                    DocumentChunk.id.in_([UUID(cid) for cid in chunk_ids_to_fetch if cid]),
+                    DocumentChunk.id.in_(
+                        [UUID(cid) for cid in chunk_ids_to_fetch if cid]
+                    ),
                 )
                 .all()
             )
-            chunk_by_id: Dict[str, DocumentChunk] = {str(c.id): c for c in fetched_chunks}
+            chunk_by_id: Dict[str, DocumentChunk] = {
+                str(c.id): c for c in fetched_chunks
+            }
 
             # 若啟用 sibling，批次查詢相鄰 chunks（避免 N+1 DB query）
             sibling_map: Dict[str, List[Dict[str, Any]]] = {}
@@ -405,7 +536,9 @@ class KnowledgeBaseRetriever:
                     chunk_index = r.get("chunk_index", -1)
                     if not chunk_id or not doc_id or chunk_index < 0:
                         continue
-                    sibling_indices = list(range(max(0, chunk_index - window), chunk_index + window + 1))
+                    sibling_indices = list(
+                        range(max(0, chunk_index - window), chunk_index + window + 1)
+                    )
                     sibling_indices = [i for i in sibling_indices if i != chunk_index]
                     if not sibling_indices:
                         continue
@@ -431,7 +564,9 @@ class KnowledgeBaseRetriever:
                     )
                     # ACL 過濾 sibling（含部門 ACL + tombstone）
                     if authz:
-                        siblings = [s for s in siblings if self._chunk_acl_ok(s, authz, db)]
+                        siblings = [
+                            s for s in siblings if self._chunk_acl_ok(s, authz, db)
+                        ]
                     all_siblings_by_doc[doc_key] = siblings
 
                 # 構建 sibling_map
@@ -442,7 +577,9 @@ class KnowledgeBaseRetriever:
                     chunk_index = r.get("chunk_index", -1)
                     if not chunk_id or chunk_index < 0:
                         continue
-                    doc_siblings = all_siblings_by_doc.get((doc_id, document_revision), [])
+                    doc_siblings = all_siblings_by_doc.get(
+                        (doc_id, document_revision), []
+                    )
                     sibling_map[chunk_id] = [
                         {
                             "id": str(s.id),
@@ -453,7 +590,9 @@ class KnowledgeBaseRetriever:
                             "filename": r.get("filename", ""),
                             "chunk_index": s.chunk_index,
                             "metadata": s.metadata_json or {},
-                            "parent_chunk_id": str(s.parent_chunk_id) if s.parent_chunk_id else None,
+                            "parent_chunk_id": str(s.parent_chunk_id)
+                            if s.parent_chunk_id
+                            else None,
                             "source": "sibling",
                         }
                         for s in doc_siblings
@@ -475,12 +614,17 @@ class KnowledgeBaseRetriever:
                             "filename": r.get("filename", ""),
                             "chunk_index": parent_chunk.chunk_index,
                             "metadata": parent_chunk.metadata_json or {},
-                            "parent_chunk_id": str(parent_chunk.parent_chunk_id) if parent_chunk.parent_chunk_id else None,
+                            "parent_chunk_id": str(parent_chunk.parent_chunk_id)
+                            if parent_chunk.parent_chunk_id
+                            else None,
                             "source": "parent",
                         }
 
             # 合併
-            from app.services.context_fitting import merge_parent_and_chunks, expand_siblings
+            from app.services.context_fitting import (
+                merge_parent_and_chunks,
+                expand_siblings,
+            )
 
             merged = merge_parent_and_chunks(results, parent_map)
             merged = expand_siblings(
@@ -493,12 +637,16 @@ class KnowledgeBaseRetriever:
             return merged
 
         except Exception as exc:
-            logger.warning("parent/sibling expansion failed, returning original results: %s", exc)
+            logger.warning(
+                "parent/sibling expansion failed, returning original results: %s", exc
+            )
             return results
         finally:
             db.close()
 
-    def _chunk_acl_ok(self, chunk: DocumentChunk, authz: AuthorizationContext, db) -> bool:
+    def _chunk_acl_ok(
+        self, chunk: DocumentChunk, authz: AuthorizationContext, db
+    ) -> bool:
         """檢查 chunk 是否通過 ACL（用於 sibling 過濾）。
 
         包含：
@@ -515,8 +663,13 @@ class KnowledgeBaseRetriever:
             # deny-set 檢查
             try:
                 from app.gateway.authorization import get_gateway_authorizer
+
                 authorizer = get_gateway_authorizer()
-                if authorizer.is_denied(str(chunk.document_id), authz.subject_id):
+                if authorizer.is_denied(
+                    str(chunk.document_id),
+                    authz.subject_id,
+                    tenant_id=authz.tenant_id,
+                ):
                     return False
             except Exception:
                 # authorizer 不可用時 fail-closed
@@ -540,6 +693,9 @@ class KnowledgeBaseRetriever:
         """獲取租戶知識庫統計資訊（從 PostgreSQL 查詢）"""
         db = SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, tenant_id)
             vector_count = (
                 db.query(DocumentChunk)
                 .filter(
@@ -583,6 +739,9 @@ class KnowledgeBaseRetriever:
 
         db = SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(db, tenant_id)
             # 1. 取得查詢向量（Ollama / Voyage 自動切換；§7.2 query embedding cache）
             query_embedding = embed_query_cached(query)
 
@@ -590,7 +749,9 @@ class KnowledgeBaseRetriever:
             query_obj = (
                 db.query(
                     DocumentChunk,
-                    DocumentChunk.embedding.cosine_distance(query_embedding).label("distance"),
+                    DocumentChunk.embedding.cosine_distance(query_embedding).label(
+                        "distance"
+                    ),
                 )
                 .join(Document, DocumentChunk.document_id == Document.id)
                 .filter(
@@ -604,7 +765,9 @@ class KnowledgeBaseRetriever:
             # Phase 0: 部門 ACL 過濾
             if authz:
                 query_obj = self._apply_department_acl_filter(query_obj, authz)
-                query_obj = self._apply_source_acl_filter(query_obj, tenant_id, authz, db)
+                query_obj = self._apply_source_acl_filter(
+                    query_obj, tenant_id, authz, db
+                )
             query_obj = self._apply_kb_revision_scope(query_obj, filter_dict, db)
 
             # ── filter_dict：metadata 過濾 ──
@@ -625,35 +788,42 @@ class KnowledgeBaseRetriever:
                         query_obj = query_obj.filter(
                             func.json_extract_path_text(
                                 DocumentChunk.metadata_json, key
-                            ) == str(value)
+                            )
+                            == str(value)
                         )
 
-            query_obj = (
-                query_obj
-                .order_by(DocumentChunk.embedding.cosine_distance(query_embedding))
-                .limit(top_k)
-            )
+            query_obj = query_obj.order_by(
+                DocumentChunk.embedding.cosine_distance(query_embedding)
+            ).limit(top_k)
 
             results = []
             doc_map: Dict[UUID, str] = {}
             for chunk, distance in query_obj.all():
                 if chunk.document_id not in doc_map:
-                    doc = db.query(Document).filter(Document.id == chunk.document_id).first()
+                    doc = (
+                        db.query(Document)
+                        .filter(Document.id == chunk.document_id)
+                        .first()
+                    )
                     doc_map[chunk.document_id] = doc.filename if doc else ""
 
                 score = round(1.0 - distance, 4)  # cosine similarity
-                results.append({
-                    "id": str(chunk.id),
-                    "score": score,
-                    "content": chunk.text or "",
-                    "document_id": str(chunk.document_id),
-                    "document_revision": chunk.document_revision,
-                    "filename": doc_map.get(chunk.document_id, ""),
-                    "chunk_index": chunk.chunk_index,
-                    "metadata": chunk.metadata_json or {},
-                    "parent_chunk_id": str(chunk.parent_chunk_id) if chunk.parent_chunk_id else None,
-                    "source": "semantic",
-                })
+                results.append(
+                    {
+                        "id": str(chunk.id),
+                        "score": score,
+                        "content": chunk.text or "",
+                        "document_id": str(chunk.document_id),
+                        "document_revision": chunk.document_revision,
+                        "filename": doc_map.get(chunk.document_id, ""),
+                        "chunk_index": chunk.chunk_index,
+                        "metadata": chunk.metadata_json or {},
+                        "parent_chunk_id": str(chunk.parent_chunk_id)
+                        if chunk.parent_chunk_id
+                        else None,
+                        "source": "semantic",
+                    }
+                )
 
             return results
         except Exception as e:
@@ -682,6 +852,9 @@ class KnowledgeBaseRetriever:
         try:
             db = SessionLocal()
             try:
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(db, tenant_id)
                 chunks_q = (
                     db.query(DocumentChunk)
                     .join(Document, DocumentChunk.document_id == Document.id)
@@ -694,29 +867,58 @@ class KnowledgeBaseRetriever:
                 # Phase 0: 部門 ACL 過濾
                 if authz:
                     chunks_q = self._apply_department_acl_filter(chunks_q, authz)
-                    chunks_q = self._apply_source_acl_filter(chunks_q, tenant_id, authz, db)
+                    chunks_q = self._apply_source_acl_filter(
+                        chunks_q, tenant_id, authz, db
+                    )
                 chunks_q = self._apply_kb_revision_scope(chunks_q, filter_dict, db)
                 if filter_dict:
                     for key, value in filter_dict.items():
                         if key in {"kb_revision_id", "kb_revision_ids"}:
                             continue
                         if isinstance(value, list):
-                            chunks_q = chunks_q.filter(func.json_extract_path_text(DocumentChunk.metadata_json, key).in_([str(v) for v in value]))
+                            chunks_q = chunks_q.filter(
+                                func.json_extract_path_text(
+                                    DocumentChunk.metadata_json, key
+                                ).in_([str(v) for v in value])
+                            )
                         else:
-                            chunks_q = chunks_q.filter(func.json_extract_path_text(DocumentChunk.metadata_json, key) == str(value))
+                            chunks_q = chunks_q.filter(
+                                func.json_extract_path_text(
+                                    DocumentChunk.metadata_json, key
+                                )
+                                == str(value)
+                            )
                 from app.services.lexical_index import search as search_lexical
-                ranked = search_lexical(db, tenant_id=tenant_id, query=query, top_k=top_k, base_query=chunks_q)
+
+                ranked = search_lexical(
+                    db,
+                    tenant_id=tenant_id,
+                    query=query,
+                    top_k=top_k,
+                    base_query=chunks_q,
+                )
                 if not ranked:
                     return []
                 doc_ids = list({c.document_id for c, _ in ranked})
                 docs = db.query(Document).filter(Document.id.in_(doc_ids)).all()
                 doc_map = {d.id: d.filename for d in docs}
-                return [{"id": str(chunk.id), "score": round(score, 4), "content": chunk.text or "",
-                    "document_id": str(chunk.document_id), "filename": doc_map.get(chunk.document_id, ""),
-                    "document_revision": chunk.document_revision,
-                    "chunk_index": chunk.chunk_index, "metadata": chunk.metadata_json or {},
-                    "parent_chunk_id": str(chunk.parent_chunk_id) if chunk.parent_chunk_id else None,
-                    "source": "keyword"} for chunk, score in ranked]
+                return [
+                    {
+                        "id": str(chunk.id),
+                        "score": round(score, 4),
+                        "content": chunk.text or "",
+                        "document_id": str(chunk.document_id),
+                        "filename": doc_map.get(chunk.document_id, ""),
+                        "document_revision": chunk.document_revision,
+                        "chunk_index": chunk.chunk_index,
+                        "metadata": chunk.metadata_json or {},
+                        "parent_chunk_id": str(chunk.parent_chunk_id)
+                        if chunk.parent_chunk_id
+                        else None,
+                        "source": "keyword",
+                    }
+                    for chunk, score in ranked
+                ]
             finally:
                 db.close()
         except Exception as e:
@@ -730,7 +932,9 @@ class KnowledgeBaseRetriever:
             # jieba 精確模式：「勞動基準法」→「勞動」「基準」「法」
             # 比逐字分詞精確度高很多
             tokens = list(jieba.cut(text, cut_all=False))
-            return [t.strip().lower() for t in tokens if t.strip() and len(t.strip()) > 0]
+            return [
+                t.strip().lower() for t in tokens if t.strip() and len(t.strip()) > 0
+            ]
 
         # Fallback：逐字 + 英文按詞
         tokens: List[str] = []
@@ -770,9 +974,15 @@ class KnowledgeBaseRetriever:
         Phase 0：傳遞 authz 到子檢索方法。
         """
         semantic_results = self._semantic_search(
-            tenant_id, semantic_query, top_k=top_k, filter_dict=filter_dict, authz=authz,
+            tenant_id,
+            semantic_query,
+            top_k=top_k,
+            filter_dict=filter_dict,
+            authz=authz,
         )
-        keyword_results = self._keyword_search(tenant_id, keyword_query, top_k=top_k, authz=authz, filter_dict=filter_dict)
+        keyword_results = self._keyword_search(
+            tenant_id, keyword_query, top_k=top_k, authz=authz, filter_dict=filter_dict
+        )
 
         # 如果只有一種來源有結果，直接返回
         if not keyword_results:
@@ -878,27 +1088,47 @@ class KnowledgeBaseRetriever:
         # 提取查詢中的人名 / 員工編號 / 關鍵實體
         query_entities: List[str] = []
         # 中文姓名（2~3 字）
-        for name_match in re.finditer(r'[\u4e00-\u9fff]{2,4}', query):
+        for name_match in re.finditer(r"[\u4e00-\u9fff]{2,4}", query):
             candidate = name_match.group()
-            if candidate not in ('什麼', '多少', '如何', '可以', '是否', '哪些',
-                                 '怎麼', '目前', '現在', '需要', '公司', '員工',
-                                 '今年', '年度', '等級', '部門', '超過', '金額',
-                                 '結果', '代表', '上限', '其中'):
+            if candidate not in (
+                "什麼",
+                "多少",
+                "如何",
+                "可以",
+                "是否",
+                "哪些",
+                "怎麼",
+                "目前",
+                "現在",
+                "需要",
+                "公司",
+                "員工",
+                "今年",
+                "年度",
+                "等級",
+                "部門",
+                "超過",
+                "金額",
+                "結果",
+                "代表",
+                "上限",
+                "其中",
+            ):
                 query_entities.append(candidate)
         # 員工編號 E001~E999
-        for eid_match in re.finditer(r'E\d{3}', query, re.IGNORECASE):
+        for eid_match in re.finditer(r"E\d{3}", query, re.IGNORECASE):
             query_entities.append(eid_match.group().upper())
 
         scored: List[tuple] = []
-        max_rrf = max((r.get('score', 0) for r in results), default=1.0) or 1.0
+        max_rrf = max((r.get("score", 0) for r in results), default=1.0) or 1.0
 
         for r in results:
-            content = r.get('content', '')
-            filename = r.get('filename', '')
-            full_text = content + ' ' + filename
+            content = r.get("content", "")
+            filename = r.get("filename", "")
+            full_text = content + " " + filename
 
             # (1) 原始分數正規化 0~1
-            rrf_norm = r.get('score', 0) / max_rrf
+            rrf_norm = r.get("score", 0) / max_rrf
 
             # (2) 詞級關鍵字重疊率
             content_tokens = set(self._tokenize(full_text))
@@ -923,8 +1153,8 @@ class KnowledgeBaseRetriever:
         reranked_results: List[Dict[str, Any]] = []
         for final_score, r in scored[:top_k]:
             item = r.copy()
-            item['score'] = round(final_score, 4)
-            item['reranked'] = True
+            item["score"] = round(final_score, 4)
+            item["reranked"] = True
             reranked_results.append(item)
 
         logger.info(f"本地重排序完成：{len(results)} → {len(reranked_results)} 筆")
@@ -966,6 +1196,7 @@ class KnowledgeBaseRetriever:
         filt = self._filter_fragment(filter_dict)
         # P0-1：快取鍵包含 feature flag 狀態，避免切換 flag 時用到舊快取
         from app.config import settings
+
         flag_fragment = (
             f"p{int(settings.PARENT_DOC_ENABLED)}"
             f"s{int(settings.SIBLING_EXPANSION_ENABLED)}"
@@ -988,7 +1219,9 @@ class KnowledgeBaseRetriever:
         if not self._redis:
             return None
         try:
-            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict)
+            key = self._cache_key(
+                tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict
+            )
             cached = self._redis.get(key)
             if cached:
                 logger.debug(f"快取命中: {key}")
@@ -1011,12 +1244,16 @@ class KnowledgeBaseRetriever:
         if not self._redis:
             return
         try:
-            key = self._cache_key(tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict)
+            key = self._cache_key(
+                tenant_id, query, mode, top_k, min_score, authz, filter_dict=filter_dict
+            )
             self._redis.setex(key, self._CACHE_TTL, json.dumps(results, default=str))
         except Exception:
             pass
 
-    def invalidate_cache(self, tenant_id: UUID, policy_fingerprint: Optional[str] = None):
+    def invalidate_cache(
+        self, tenant_id: UUID, policy_fingerprint: Optional[str] = None
+    ):
         """
         精確失效檢索快取。
 

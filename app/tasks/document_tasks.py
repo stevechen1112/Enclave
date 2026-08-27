@@ -496,6 +496,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 rid = str(payload["ragflow_doc_ids"][0])
                 ResourceRegistry().upsert_mapping(
                     db,
+                    tenant_id=UUID(tenant_id),
                     enclave_resource_type="document",
                     enclave_resource_id=document_id,
                     enclave_revision=doc.version or 1,
@@ -508,6 +509,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 existing = (
                     db.query(ProjectionStatus)
                     .filter(
+                        ProjectionStatus.tenant_id == UUID(tenant_id),
                         ProjectionStatus.resource_type == "document",
                         ProjectionStatus.resource_id == document_id,
                         ProjectionStatus.provider == "ragflow",
@@ -520,6 +522,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 else:
                     db.add(
                         ProjectionStatus(
+                            tenant_id=UUID(tenant_id),
                             resource_type="document",
                             resource_id=document_id,
                             provider="ragflow",
@@ -613,6 +616,9 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
     ingestion_job_id = None
 
     try:
+        from app.services.rls import apply_rls_context
+
+        apply_rls_context(db, UUID(tenant_id))
         doc = crud_document.get(db, document_id=UUID(document_id))
         if not doc:
             raise ValueError("文件記錄不存在")
@@ -888,6 +894,9 @@ def watcher_ingest_file_task(
     """
     db = SessionLocal()
     try:
+        from app.services.rls import apply_rls_context
+
+        apply_rls_context(db, UUID(tenant_id))
         path = Path(file_path)
         if not path.exists():
             return {"status": "skipped", "reason": "file_not_found", "path": file_path}
@@ -968,7 +977,9 @@ def watcher_ingest_file_task(
                 try:
                     from app.gateway.authorization import get_gateway_authorizer
 
-                    get_gateway_authorizer().clear_resource_deny(str(existing.id))
+                    get_gateway_authorizer().clear_resource_deny(
+                        str(existing.id), tenant_id=existing.tenant_id
+                    )
                 except Exception as exc:
                     logger.warning(
                         "[WatcherTask] clear deny after restore failed: %s", exc
@@ -1025,6 +1036,9 @@ def watcher_delete_file_task(self, file_path: str, tenant_id: str):
     """
     db = SessionLocal()
     try:
+        from app.services.rls import apply_rls_context
+
+        apply_rls_context(db, UUID(tenant_id))
         from app.models.document import Document
 
         existing = (

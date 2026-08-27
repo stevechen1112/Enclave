@@ -4,6 +4,7 @@ Phase 1 — Gateway Router
 請求路由：依查詢類型（SearchDomain）分派到對應 Adapter。
 支援多領域並行查詢與結果聚合。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,8 +15,13 @@ from uuid import UUID
 
 from app.core.authorization import AuthorizationContext
 from app.gateway.contracts import (
-    SearchRequest, SearchDomain, ChunkResult,
-    GatewayResponse, GatewayError, AuditTrail, SidecarAuthError,
+    SearchRequest,
+    SearchDomain,
+    ChunkResult,
+    GatewayResponse,
+    GatewayError,
+    AuditTrail,
+    SidecarAuthError,
 )
 from app.gateway.authorization import GatewayAuthorizer, PolicyDecision
 from app.gateway.aggregator import ResultAggregator
@@ -81,10 +87,12 @@ class GatewayRouter:
                 status="error",
                 provider="enclave",
                 provider_version="1.0",
-                errors=[GatewayError(
-                    code="auth_error",
-                    message=decision.reason,
-                )],
+                errors=[
+                    GatewayError(
+                        code="auth_error",
+                        message=decision.reason,
+                    )
+                ],
                 audit_trail=AuditTrail(
                     operation="search",
                     decisions=[f"denied:{decision.reason}"],
@@ -113,10 +121,18 @@ class GatewayRouter:
         tasks = []
         for d in adapter_domains:
             adapter = self._adapters.get(d)
-            if adapter and hasattr(adapter, 'search'):
-                tasks.append(self._query_adapter(
-                    adapter, d, authz, query, top_k, scope, request_id,
-                ))
+            if adapter and hasattr(adapter, "search"):
+                tasks.append(
+                    self._query_adapter(
+                        adapter,
+                        d,
+                        authz,
+                        query,
+                        top_k,
+                        scope,
+                        request_id,
+                    )
+                )
 
         if not tasks:
             # 無可用 Adapter — 回退到 Enclave 主索引（由呼叫方處理）
@@ -126,10 +142,12 @@ class GatewayRouter:
                 provider="enclave",
                 provider_version="1.0",
                 results=[],
-                errors=[GatewayError(
-                    code="no_adapter",
-                    message=f"No adapter available for domain={domain.value}",
-                )],
+                errors=[
+                    GatewayError(
+                        code="no_adapter",
+                        message=f"No adapter available for domain={domain.value}",
+                    )
+                ],
                 audit_trail=AuditTrail(operation="search"),
             )
 
@@ -142,22 +160,28 @@ class GatewayRouter:
                 # A5: auth failure is not retryable and must be loud.
                 logger.error(
                     "SIDECAR_AUTH_FAILURE provider=%s status=%s request_id=%s",
-                    result.provider, result.status_code, request_id,
+                    result.provider,
+                    result.status_code,
+                    request_id,
                 )
-                errors.append(GatewayError(
-                    code="auth_error",
-                    message=str(result),
-                    provider=domain_name,
-                    retryable=False,
-                    details={"http_status": result.status_code},
-                ))
+                errors.append(
+                    GatewayError(
+                        code="auth_error",
+                        message=str(result),
+                        provider=domain_name,
+                        retryable=False,
+                        details={"http_status": result.status_code},
+                    )
+                )
             elif isinstance(result, Exception):
-                errors.append(GatewayError(
-                    code="adapter_error",
-                    message=str(result),
-                    provider=domain_name,
-                    retryable=True,
-                ))
+                errors.append(
+                    GatewayError(
+                        code="adapter_error",
+                        message=str(result),
+                        provider=domain_name,
+                        retryable=True,
+                    )
+                )
             elif isinstance(result, dict):
                 providers_called.append(domain_name)
                 provider_latencies[domain_name] = result.get("latency_ms", 0)
@@ -169,7 +193,11 @@ class GatewayRouter:
         # 5.5 後授權：deny set 立即排除；connector 必須 object-level source_record ACL
         filtered = []
         for r in aggregated:
-            if r.document_id and self.authorizer.is_denied(str(r.document_id), authz.subject_id):
+            if r.document_id and self.authorizer.is_denied(
+                str(r.document_id),
+                authz.subject_id,
+                tenant_id=authz.tenant_id,
+            ):
                 continue
             provider = (r.provider or "").lower()
             meta = r.metadata or {}
@@ -183,7 +211,10 @@ class GatewayRouter:
                 source_system = meta.get("source_system")
                 source_record_id = meta.get("source_record_id")
                 if not self.authorizer.authorize_source_record(
-                    authz, source_system, source_record_id, db=db,
+                    authz,
+                    source_system,
+                    source_record_id,
+                    db=db,
                 ):
                     continue
             filtered.append(r)
@@ -233,7 +264,11 @@ class GatewayRouter:
         """將 SearchDomain 解析為 Adapter domain 名稱列表。"""
         if domain == SearchDomain.HYBRID:
             # 並行查詢所有可用 Adapter
-            return [d for d in ["document", "wiki", "graph", "connector"] if d in self._adapters]
+            return [
+                d
+                for d in ["document", "wiki", "graph", "connector"]
+                if d in self._adapters
+            ]
         return [domain.value]
 
     async def _query_adapter(
@@ -267,4 +302,5 @@ class GatewayRouter:
 
 def _generate_request_id() -> str:
     import uuid
+
     return str(uuid.uuid4())

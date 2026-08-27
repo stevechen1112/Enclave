@@ -9,6 +9,7 @@
 - 每筆命中投影為 RetrievalHit，`granularity='catalog'`、
   `authority_class='primary_document'`、`citation_ok=True`（必有 document_id+filename）。
 """
+
 from __future__ import annotations
 
 import logging
@@ -29,9 +30,10 @@ AUTHORITY_EXTERNAL = "external_context"
 @dataclass
 class RetrievalHit:
     """多粒度統一命中物件（FOUNDATION 計畫 §2.2）。"""
-    granularity: str           # catalog | chunk | compiled
-    provider: str              # enclave | ragflow | weknora | pipeshub | ...
-    authority_class: str       # primary_document | compiled_knowledge | external_context
+
+    granularity: str  # catalog | chunk | compiled
+    provider: str  # enclave | ragflow | weknora | pipeshub | ...
+    authority_class: str  # primary_document | compiled_knowledge | external_context
     document_id: Optional[str]
     filename: Optional[str]
     chunk_index: Optional[int]
@@ -62,16 +64,77 @@ _CJK_AFTER_HINT = re.compile(
     r"(?:含有?|出現|包含|關於|關鍵字)\s*[「『\"']?([\u4e00-\u9fffA-Za-z0-9\-_]{2,8})"
 )
 # 盤點／問句虛詞：不可當檔名過濾條件，否則會誤殺或過寬
-_FILENAME_STOP = frozenset({
-    "哪些", "列出", "盤點", "清單", "列表", "有什麼", "有哪些", "全部", "文件", "檔案",
-    "檔名", "標題", "明顯", "出現", "客戶", "資料", "這批", "裡面", "以及", "或是",
-    "請問", "什麼", "含有", "包含", "關於", "相關", "可以", "是否", "如何", "多少",
-    "雙方", "標的", "類型", "內容", "主軸", "金額", "報價", "合約", "提案", "方案",
-    "總價", "比較", "哪份", "請列", "至少", "三個", "兩個", "一份", "那個",
-    "這個", "那些", "目前", "參考", "根據", "說明", "無法", "判讀", "標註",
-    "列客戶", "或檔名", "資料裡", "的客戶",
-    "談的是", "有無", "或品項", "怎麼寫", "是什麼",
-})
+_FILENAME_STOP = frozenset(
+    {
+        "哪些",
+        "列出",
+        "盤點",
+        "清單",
+        "列表",
+        "有什麼",
+        "有哪些",
+        "全部",
+        "文件",
+        "檔案",
+        "檔名",
+        "標題",
+        "明顯",
+        "出現",
+        "客戶",
+        "資料",
+        "這批",
+        "裡面",
+        "以及",
+        "或是",
+        "請問",
+        "什麼",
+        "含有",
+        "包含",
+        "關於",
+        "相關",
+        "可以",
+        "是否",
+        "如何",
+        "多少",
+        "雙方",
+        "標的",
+        "類型",
+        "內容",
+        "主軸",
+        "金額",
+        "報價",
+        "合約",
+        "提案",
+        "方案",
+        "總價",
+        "比較",
+        "哪份",
+        "請列",
+        "至少",
+        "三個",
+        "兩個",
+        "一份",
+        "那個",
+        "這個",
+        "那些",
+        "目前",
+        "參考",
+        "根據",
+        "說明",
+        "無法",
+        "判讀",
+        "標註",
+        "列客戶",
+        "或檔名",
+        "資料裡",
+        "的客戶",
+        "談的是",
+        "有無",
+        "或品項",
+        "怎麼寫",
+        "是什麼",
+    }
+)
 
 
 def _filename_tokens(query: str) -> list[str]:
@@ -136,19 +199,32 @@ class CatalogRetriever:
         own_session = db is None
         session = db or SessionLocal()
         try:
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(session, tenant_id)
             from app.services.document_visibility import apply_document_visibility
 
-            revision_ids = list(kb_revision_ids or ([] if kb_revision_id is None else [kb_revision_id]))
+            revision_ids = list(
+                kb_revision_ids or ([] if kb_revision_id is None else [kb_revision_id])
+            )
             revision_scoped = bool(revision_ids) or kb_revision_ids is not None
-            docs_query = session.query(Document, Document.version.label("visible_revision"))
+            docs_query = session.query(
+                Document, Document.version.label("visible_revision")
+            )
             if authz is None:
-                raise ValueError("AuthorizationContext is required for catalog retrieval")
+                raise ValueError(
+                    "AuthorizationContext is required for catalog retrieval"
+                )
             docs_query = apply_document_visibility(
-                docs_query, authz=authz, db=session, require_completed=not revision_scoped
+                docs_query,
+                authz=authz,
+                db=session,
+                require_completed=not revision_scoped,
             )
             if revision_ids or kb_revision_ids is not None:
                 from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
                 from app.services.document_readiness import ready_revision_pairs
+
                 if not revision_ids:
                     docs_query = docs_query.filter(False)
                 docs_query = docs_query.join(
@@ -159,7 +235,10 @@ class CatalogRetriever:
                     KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids),
                 )
                 docs_query = docs_query.with_entities(
-                    Document, KnowledgeBaseRevisionDocument.document_revision.label("visible_revision")
+                    Document,
+                    KnowledgeBaseRevisionDocument.document_revision.label(
+                        "visible_revision"
+                    ),
                 )
                 ready_pairs = ready_revision_pairs(
                     session, tenant_id=tenant_id, kb_revision_ids=revision_ids
@@ -167,7 +246,8 @@ class CatalogRetriever:
             else:
                 ready_pairs = None
             docs = [
-                row for row in docs_query.all()
+                row
+                for row in docs_query.all()
                 if ready_pairs is None or (row[0].id, int(row[1])) in ready_pairs
             ]
         finally:
@@ -179,6 +259,7 @@ class CatalogRetriever:
 
         hits: List[RetrievalHit] = []
         from app.services.document_visibility import deny_set_allows
+
         for d, visible_revision in docs:
             if not deny_set_allows(d.id, authz=authz):
                 continue
@@ -188,25 +269,31 @@ class CatalogRetriever:
             if hinted_genres or tokens:
                 if not genre_hit and not token_hits:
                     continue
-                score = 0.6 * genre_hit + 0.4 * min(len(token_hits), 1) + 0.1 * len(token_hits)
+                score = (
+                    0.6 * genre_hit
+                    + 0.4 * min(len(token_hits), 1)
+                    + 0.1 * len(token_hits)
+                )
             else:
                 # 無任何領域暗示的純盤點（「有哪些文件」）→ 全量列出
                 score = 0.5
-            hits.append(RetrievalHit(
-                granularity="catalog",
-                provider="enclave",
-                authority_class=AUTHORITY_PRIMARY,
-                document_id=str(d.id),
-                filename=d.filename,
-                chunk_index=None,
-                score=round(float(score), 4),
-                content_or_summary=(
-                    f"文件：{d.filename}（類型：{d.genre or 'other'}，"
-                    "狀態：已完成入庫）"
-                ),
-                citation_ok=True,
-                document_revision=int(visible_revision),
-            ))
+            hits.append(
+                RetrievalHit(
+                    granularity="catalog",
+                    provider="enclave",
+                    authority_class=AUTHORITY_PRIMARY,
+                    document_id=str(d.id),
+                    filename=d.filename,
+                    chunk_index=None,
+                    score=round(float(score), 4),
+                    content_or_summary=(
+                        f"文件：{d.filename}（類型：{d.genre or 'other'}，"
+                        "狀態：已完成入庫）"
+                    ),
+                    citation_ok=True,
+                    document_revision=int(visible_revision),
+                )
+            )
 
         hits.sort(key=lambda h: h.score, reverse=True)
         return hits[:top_k]
@@ -242,18 +329,30 @@ class CatalogRetriever:
         own_session = db is None
         session = db or SessionLocal()
         try:
-            from app.services.document_visibility import apply_document_visibility, deny_set_allows
+            from app.services.rls import apply_rls_context
+
+            apply_rls_context(session, tenant_id)
+            from app.services.document_visibility import (
+                apply_document_visibility,
+                deny_set_allows,
+            )
+
             if authz is None:
                 return False
-            revision_ids = list(kb_revision_ids or ([] if kb_revision_id is None else [kb_revision_id]))
+            revision_ids = list(
+                kb_revision_ids or ([] if kb_revision_id is None else [kb_revision_id])
+            )
             revision_scoped = bool(revision_ids) or kb_revision_ids is not None
             query_obj = apply_document_visibility(
-                session.query(Document.id), authz=authz, db=session,
+                session.query(Document.id),
+                authz=authz,
+                db=session,
                 require_completed=not revision_scoped,
             ).filter(or_(*clauses))
             if revision_ids or kb_revision_ids is not None:
                 from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
                 from app.services.document_readiness import apply_answer_ready_filter
+
                 if not revision_ids:
                     query_obj = query_obj.filter(False)
                 query_obj = apply_answer_ready_filter(
@@ -269,7 +368,10 @@ class CatalogRetriever:
                     KnowledgeBaseRevisionDocument.tenant_id == tenant_id,
                     KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids),
                 )
-            return any(deny_set_allows(row[0], authz=authz) for row in query_obj.limit(100).all())
+            return any(
+                deny_set_allows(row[0], authz=authz)
+                for row in query_obj.limit(100).all()
+            )
         finally:
             if own_session:
                 session.close()

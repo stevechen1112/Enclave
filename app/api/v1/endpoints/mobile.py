@@ -9,6 +9,7 @@ Provides APIs consumed exclusively by the mobile client:
   - POST /security/events       → report security events from mobile client
   - GET  /security/cert-fingerprint → return server TLS cert SHA-256 for pinning
 """
+
 import hashlib
 import ssl
 import uuid
@@ -31,6 +32,7 @@ router = APIRouter()
 
 # ─── Schemas ────────────────────────────────────────────────────────────────────
 
+
 class PushTokenIn(BaseModel):
     push_token: str  # Expo push token, e.g. "ExponentPushToken[...]"
     device_platform: Optional[str] = None  # "ios" | "android"
@@ -48,6 +50,7 @@ class CertFingerprintOut(BaseModel):
 
 # ─── Token Refresh ──────────────────────────────────────────────────────────────
 
+
 @router.post("/auth/refresh-token", response_model=dict)
 def refresh_token(
     request: Request,
@@ -60,12 +63,15 @@ def refresh_token(
     """
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     new_token = security.create_access_token(
-        current_user.email, expires_delta=access_token_expires
+        current_user.email,
+        expires_delta=access_token_expires,
+        tenant_id=current_user.tenant_id,
     )
     return {"access_token": new_token, "token_type": "bearer"}
 
 
 # ─── Token Revocation (best-effort audit log) ──────────────────────────────────
+
 
 @router.post("/auth/revoke-token", status_code=204)
 def revoke_token(
@@ -93,6 +99,7 @@ def revoke_token(
 
 
 # ─── Push Token Management ──────────────────────────────────────────────────────
+
 
 @router.post("/users/me/push-token", status_code=204)
 def register_push_token(
@@ -147,6 +154,7 @@ def unregister_push_token(
 
 # ─── Security Events ────────────────────────────────────────────────────────────
 
+
 @router.post("/security/events", status_code=204)
 def report_security_event(
     body: SecurityEventIn,
@@ -176,6 +184,7 @@ def report_security_event(
 
 
 # ─── Certificate Fingerprint ────────────────────────────────────────────────────
+
 
 @router.get("/security/cert-fingerprint", response_model=CertFingerprintOut)
 def get_cert_fingerprint():

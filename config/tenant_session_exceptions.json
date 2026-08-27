@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "exceptions": {
+    "app/api/deps.py:get_db:SessionLocal": "FastAPI request-session factory; authenticated dependencies apply tenant context before tenant-owned queries.",
+    "app/gateway/adapters/enclave.py:probe_database:SessionLocal": "Database liveness probe executes SELECT 1 only.",
+    "app/services/deployment.py:generate_support_bundle:SessionLocal": "Platform support-bundle health probe executes SELECT 1 only.",
+    "app/services/deployment_mode.py:resolve_runtime_profiles_no_db:SessionLocal": "Reads the platform-global deployment configuration only.",
+    "app/services/specialist_gate.py:specialist_retrieval_enabled:SessionLocal": "Reads the platform-global feature_flags table only."
+  }
+}

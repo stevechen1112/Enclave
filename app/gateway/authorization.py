@@ -12,6 +12,7 @@ Deny precedence（ADR-004）：
           AND resource_not_tombstoned
           AND policy_revision_is_current
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PolicyDecision:
     """單一授權決策。"""
+
     allowed: bool
     reason: str
     policy_revision: int
@@ -147,9 +149,13 @@ class GatewayAuthorizer:
         resource_id: str,
     ) -> PolicyDecision:
         """授權刪除請求。"""
-        return self.authorize_ingest(authz, UUID(resource_id) if resource_id else UUID(int=0))
+        return self.authorize_ingest(
+            authz, UUID(resource_id) if resource_id else UUID(int=0)
+        )
 
-    def add_deny_entry(self, resource_id: str, subject_id: UUID, tenant_id: Optional[UUID] = None):
+    def add_deny_entry(
+        self, resource_id: str, subject_id: UUID, tenant_id: Optional[UUID] = None
+    ):
         """Immediately deny one subject for a resource (memory + persistent)."""
         if resource_id not in self._deny_cache:
             self._deny_cache[resource_id] = set()
@@ -158,19 +164,40 @@ class GatewayAuthorizer:
             try:
                 from app.db.session import SessionLocal
                 from app.services.policy_deny import add_deny
+                from app.services.rls import apply_rls_context
+
                 db = SessionLocal()
                 try:
-                    add_deny(db, tenant_id, "document", resource_id, subject_id, reason="revoked")
+                    apply_rls_context(db, tenant_id)
+                    add_deny(
+                        db,
+                        tenant_id,
+                        "document",
+                        resource_id,
+                        subject_id,
+                        reason="revoked",
+                    )
                     db.commit()
                 finally:
                     db.close()
             except Exception as exc:
                 logger.warning("Failed to persist deny entry: %s", exc)
-        logger.info("Deny entry added: resource=%s, subject=%s", resource_id, subject_id)
+        logger.info(
+            "Deny entry added: resource=%s, subject=%s", resource_id, subject_id
+        )
 
-    def deny_resource(self, resource_id: str, tenant_id: Optional[UUID] = None, reason: str = "revoked"):
+    def deny_resource(
+        self,
+        resource_id: str,
+        tenant_id: Optional[UUID] = None,
+        reason: str = "revoked",
+        db=None,
+    ):
         """Deny-first: block ALL subjects for this resource until cleared."""
-        from app.services.policy_deny import RESOURCE_WIDE_DENY_SUBJECT, add_resource_deny
+        from app.services.policy_deny import (
+            RESOURCE_WIDE_DENY_SUBJECT,
+            add_resource_deny,
+        )
 
         if resource_id not in self._deny_cache:
             self._deny_cache[resource_id] = set()
@@ -178,24 +205,45 @@ class GatewayAuthorizer:
         if tenant_id:
             try:
                 from app.db.session import SessionLocal
-                db = SessionLocal()
+                from app.services.rls import apply_rls_context
+
+                owned_session = db is None
+                session = db or SessionLocal()
                 try:
-                    add_resource_deny(db, tenant_id, "document", resource_id, reason=reason)
-                    db.commit()
+                    apply_rls_context(session, tenant_id)
+                    add_resource_deny(
+                        session,
+                        tenant_id,
+                        "document",
+                        resource_id,
+                        reason=reason,
+                    )
+                    session.commit()
                 finally:
-                    db.close()
+                    if owned_session:
+                        session.close()
             except Exception as exc:
                 logger.warning("Failed to persist resource deny: %s", exc)
-        logger.info("Resource-wide deny added: resource=%s reason=%s", resource_id, reason)
+        logger.info(
+            "Resource-wide deny added: resource=%s reason=%s", resource_id, reason
+        )
 
-    def clear_resource_deny(self, resource_id: str):
+    def clear_resource_deny(self, resource_id: str, tenant_id: Optional[UUID] = None):
         """Clear memory + persistent denies for a resource (e.g. re-ingest after revoke)."""
         self._deny_cache.pop(resource_id, None)
+        if tenant_id is None:
+            logger.warning(
+                "Persistent resource deny not cleared without tenant context"
+            )
+            return
         try:
             from app.db.session import SessionLocal
             from app.services.policy_deny import clear_resource_denies
+            from app.services.rls import apply_rls_context
+
             db = SessionLocal()
             try:
+                apply_rls_context(db, tenant_id)
                 clear_resource_denies(db, "document", resource_id)
                 db.commit()
             finally:
@@ -203,14 +251,25 @@ class GatewayAuthorizer:
         except Exception as exc:
             logger.warning("Failed to clear resource deny: %s", exc)
 
-    def remove_deny_entry(self, resource_id: str, subject_id: UUID):
+    def remove_deny_entry(
+        self,
+        resource_id: str,
+        subject_id: UUID,
+        tenant_id: Optional[UUID] = None,
+    ):
         if resource_id in self._deny_cache:
             self._deny_cache[resource_id].discard(subject_id)
+        if tenant_id is None:
+            logger.warning("Persistent deny entry not removed without tenant context")
+            return
         try:
             from app.db.session import SessionLocal
             from app.services.policy_deny import remove_deny
+            from app.services.rls import apply_rls_context
+
             db = SessionLocal()
             try:
+                apply_rls_context(db, tenant_id)
                 remove_deny(db, "document", resource_id, subject_id)
                 db.commit()
             finally:
@@ -218,17 +277,32 @@ class GatewayAuthorizer:
         except Exception:
             pass
 
-    def is_denied(self, resource_id: str, subject_id: UUID) -> bool:
+    def is_denied(
+        self,
+        resource_id: str,
+        subject_id: UUID,
+        tenant_id: Optional[UUID] = None,
+    ) -> bool:
         from app.services.policy_deny import RESOURCE_WIDE_DENY_SUBJECT
 
         denied_subjects = self._deny_cache.get(resource_id, set())
-        if subject_id in denied_subjects or RESOURCE_WIDE_DENY_SUBJECT in denied_subjects:
+        if (
+            subject_id in denied_subjects
+            or RESOURCE_WIDE_DENY_SUBJECT in denied_subjects
+        ):
+            return True
+        if tenant_id is None:
+            # A persistent lookup without tenant context becomes an accidental
+            # allow once FORCE RLS is enabled.  Fail closed instead.
             return True
         try:
             from app.db.session import SessionLocal
             from app.services.policy_deny import is_denied
+            from app.services.rls import apply_rls_context
+
             db = SessionLocal()
             try:
+                apply_rls_context(db, tenant_id)
                 return is_denied(db, "document", resource_id, subject_id)
             finally:
                 db.close()
@@ -246,16 +320,24 @@ class GatewayAuthorizer:
     ) -> bool:
         """Object-level connector ACL. Missing IDs → fail closed."""
         from app.services.resource_policy import get_resource_policy
+
         if db is not None:
             return get_resource_policy().authorize_source_record(
-                db, authz, source_system=source_system, source_record_id=source_record_id,
+                db,
+                authz,
+                source_system=source_system,
+                source_record_id=source_record_id,
             )
         try:
             from app.db.session import SessionLocal
+            from app.services.rls import apply_rls_context
+
             session = SessionLocal()
             try:
+                apply_rls_context(session, authz.tenant_id)
                 return get_resource_policy().authorize_source_record(
-                    session, authz,
+                    session,
+                    authz,
                     source_system=source_system,
                     source_record_id=source_record_id,
                 )
@@ -265,7 +347,9 @@ class GatewayAuthorizer:
             logger.warning("Source ACL check failed, fail closed: %s", exc)
             return False
 
-    def _check_source_acl(self, authz: AuthorizationContext, source_systems: list) -> bool:
+    def _check_source_acl(
+        self, authz: AuthorizationContext, source_systems: list
+    ) -> bool:
         """
         Scope-level gate when search requests connector domains.
         Still fail-closed without mapped principal; object-level checks happen post-filter.
@@ -277,8 +361,11 @@ class GatewayAuthorizer:
         try:
             from app.db.session import SessionLocal
             from app.models.connector import ExternalPrincipal
+            from app.services.rls import apply_rls_context
+
             db = SessionLocal()
             try:
+                apply_rls_context(db, authz.tenant_id)
                 principal = (
                     db.query(ExternalPrincipal.id)
                     .filter(
@@ -301,10 +388,12 @@ class GatewayAuthorizer:
         try:
             from app.db.session import SessionLocal
             from app.models.knowledge_base import KnowledgeBaseMember
+            from app.services.rls import apply_rls_context
             from uuid import UUID as _UUID
 
             db = SessionLocal()
             try:
+                apply_rls_context(db, authz.tenant_id)
                 for kb_id in kb_ids:
                     kb_uuid = _UUID(str(kb_id))
                     member = (
@@ -324,7 +413,9 @@ class GatewayAuthorizer:
                             .filter(
                                 KnowledgeBaseMember.kb_id == kb_uuid,
                                 KnowledgeBaseMember.subject_type == "department",
-                                KnowledgeBaseMember.subject_id.in_(authz.department_ids),
+                                KnowledgeBaseMember.subject_id.in_(
+                                    authz.department_ids
+                                ),
                                 KnowledgeBaseMember.effect == "allow",
                             )
                             .first()

@@ -196,6 +196,7 @@ def test_public_demo_assets_do_not_reintroduce_shared_credentials():
 
 def test_legacy_demo_logins_are_retired_without_deleting_history(test_engine):
     from app.core.security import get_password_hash
+    from app.models.maintenance_audit import PlatformMaintenanceAudit
     from app.models.tenant import Tenant
     from app.models.user import User
     from scripts.retire_legacy_demo_logins import (
@@ -203,6 +204,7 @@ def test_legacy_demo_logins_are_retired_without_deleting_history(test_engine):
         disable_legacy_demo_logins,
     )
 
+    PlatformMaintenanceAudit.__table__.create(bind=test_engine, checkfirst=True)
     Session = sessionmaker(bind=test_engine)
     db = Session()
     try:

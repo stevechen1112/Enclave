@@ -10,6 +10,7 @@ Examples:
   python scripts/ops_lifecycle.py install --profile lite
   python scripts/ops_lifecycle.py remove --profile lite
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,7 +31,9 @@ ARTIFACTS = ROOT / "artifacts" / "ops"
 COMPOSE_FILE = ROOT / "docker-compose.profiles.yml"
 
 
-def _run(cmd: list[str], cwd: Path | None = None, input_text: str | None = None) -> subprocess.CompletedProcess:
+def _run(
+    cmd: list[str], cwd: Path | None = None, input_text: str | None = None
+) -> subprocess.CompletedProcess:
     print("+", " ".join(cmd))
     return subprocess.run(
         cmd,
@@ -63,13 +66,17 @@ def _docker_db_container() -> str | None:
 
 def _write_log(action: str, payload: dict) -> Path:
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-    path = ARTIFACTS / f"{action}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    path = (
+        ARTIFACTS
+        / f"{action}_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.json"
+    )
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
 
 
 def cmd_preflight(profile: str) -> int:
     from app.services.deployment import DeploymentProfile, run_preflight
+
     result = run_preflight(DeploymentProfile(profile))
     payload = {
         "action": "preflight",
@@ -96,8 +103,8 @@ def cmd_backup() -> int:
     db_ok = False
     mode = "none"
     stderr = ""
-    user = os.getenv("POSTGRES_USER", "postgres")
-    dbname = os.getenv("POSTGRES_DB", "enclave")
+    user = os.getenv("DB_ADMIN_USER", os.getenv("POSTGRES_USER", "postgres"))
+    dbname = os.getenv("DB_ADMIN_DATABASE", os.getenv("POSTGRES_DB", "enclave"))
 
     container = _docker_db_container()
     if container:
@@ -111,9 +118,19 @@ def cmd_backup() -> int:
     if not db_ok:
         mode = "compose"
         compose = [
-            "docker", "compose", "-f", str(COMPOSE_FILE), "--profile", "lite",
-            "exec", "-T", "db",
-            "pg_dump", "-U", user, dbname,
+            "docker",
+            "compose",
+            "-f",
+            str(COMPOSE_FILE),
+            "--profile",
+            "lite",
+            "exec",
+            "-T",
+            "db",
+            "pg_dump",
+            "-U",
+            user,
+            dbname,
         ]
         proc = _run(compose)
         stderr = proc.stderr or stderr
@@ -125,17 +142,29 @@ def cmd_backup() -> int:
         mode = "pg_dump"
         pg_dump = [
             "pg_dump",
-            "-h", os.getenv("POSTGRES_SERVER", "localhost"),
-            "-p", os.getenv("POSTGRES_PORT", "5435"),
-            "-U", user,
-            "-d", dbname,
-            "-f", str(out),
+            "-h",
+            os.getenv("DB_ADMIN_HOST", os.getenv("POSTGRES_SERVER", "localhost")),
+            "-p",
+            os.getenv("DB_ADMIN_PORT", os.getenv("POSTGRES_PORT", "5435")),
+            "-U",
+            user,
+            "-d",
+            dbname,
+            "-f",
+            str(out),
         ]
         env = os.environ.copy()
-        env["PGPASSWORD"] = os.getenv("POSTGRES_PASSWORD", "postgres")
+        env["PGPASSWORD"] = os.getenv(
+            "DB_ADMIN_PASSWORD", os.getenv("POSTGRES_PASSWORD", "postgres")
+        )
         print("+", " ".join(pg_dump))
         proc2 = subprocess.run(
-            pg_dump, env=env, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            pg_dump,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
         )
         db_ok = proc2.returncode == 0 and out.exists() and out.stat().st_size > 0
         stderr = (proc2.stderr or stderr or "")[:500]
@@ -144,7 +173,9 @@ def cmd_backup() -> int:
     uploads_ok = False
     if uploads_dir.is_dir():
         with tarfile.open(uploads_tar, "w:gz") as tar:
-            tar.add(str(uploads_dir), arcname="uploads", filter=_exclude_credential_paths)
+            tar.add(
+                str(uploads_dir), arcname="uploads", filter=_exclude_credential_paths
+            )
         uploads_ok = uploads_tar.exists()
     else:
         uploads_tar.write_bytes(b"")  # empty placeholder marker
@@ -200,32 +231,56 @@ def cmd_restore(sql_path: str, uploads_tar: str = "") -> int:
 
     path = Path(sql_path)
     if not path.is_file():
-        payload = {"action": "restore", "status": "error", "error": f"missing {sql_path}"}
+        payload = {
+            "action": "restore",
+            "status": "error",
+            "error": f"missing {sql_path}",
+        }
         _write_log("restore", payload)
         print("restore error: file missing")
         return 1
     compose = [
-        "docker", "compose", "-f", str(COMPOSE_FILE), "--profile", "lite",
-        "exec", "-T", "db",
-        "psql", "-U", os.getenv("POSTGRES_USER", "postgres"),
-        "-d", os.getenv("POSTGRES_DB", "enclave"),
+        "docker",
+        "compose",
+        "-f",
+        str(COMPOSE_FILE),
+        "--profile",
+        "lite",
+        "exec",
+        "-T",
+        "db",
+        "psql",
+        "-U",
+        os.getenv("DB_ADMIN_USER", os.getenv("POSTGRES_USER", "postgres")),
+        "-d",
+        os.getenv("DB_ADMIN_DATABASE", os.getenv("POSTGRES_DB", "enclave")),
     ]
     print("+", " ".join(compose), "<", str(path))
     proc = subprocess.run(
-        compose, cwd=str(ROOT), input=path.read_text(encoding="utf-8", errors="replace"),
-        capture_output=True, text=True,
+        compose,
+        cwd=str(ROOT),
+        input=path.read_text(encoding="utf-8", errors="replace"),
+        capture_output=True,
+        text=True,
     )
     ok = proc.returncode == 0
     if not ok:
         env = os.environ.copy()
-        env["PGPASSWORD"] = os.getenv("POSTGRES_PASSWORD", "postgres")
+        env["PGPASSWORD"] = os.getenv(
+            "DB_ADMIN_PASSWORD", os.getenv("POSTGRES_PASSWORD", "postgres")
+        )
         psql = [
             "psql",
-            "-h", os.getenv("POSTGRES_SERVER", "localhost"),
-            "-p", os.getenv("POSTGRES_PORT", "5435"),
-            "-U", os.getenv("POSTGRES_USER", "postgres"),
-            "-d", os.getenv("POSTGRES_DB", "enclave"),
-            "-f", str(path),
+            "-h",
+            os.getenv("DB_ADMIN_HOST", os.getenv("POSTGRES_SERVER", "localhost")),
+            "-p",
+            os.getenv("DB_ADMIN_PORT", os.getenv("POSTGRES_PORT", "5435")),
+            "-U",
+            os.getenv("DB_ADMIN_USER", os.getenv("POSTGRES_USER", "postgres")),
+            "-d",
+            os.getenv("DB_ADMIN_DATABASE", os.getenv("POSTGRES_DB", "enclave")),
+            "-f",
+            str(path),
         ]
         proc = subprocess.run(psql, env=env, capture_output=True, text=True)
         ok = proc.returncode == 0
@@ -235,7 +290,9 @@ def cmd_restore(sql_path: str, uploads_tar: str = "") -> int:
     tar_path = Path(uploads_tar) if uploads_tar else None
     if tar_path is None:
         # Convention: enclave_TS.sql → uploads_TS.tgz
-        candidate = path.parent / path.name.replace("enclave_", "uploads_").replace(".sql", ".tgz")
+        candidate = path.parent / path.name.replace("enclave_", "uploads_").replace(
+            ".sql", ".tgz"
+        )
         if candidate.is_file():
             tar_path = candidate
     if tar_path and tar_path.is_file() and tar_path.stat().st_size > 0:
@@ -296,6 +353,7 @@ def _profile_env(profile: str) -> dict:
     env = os.environ.copy()
     try:
         from app.services.deployment import DeploymentProfile, PROFILES
+
         cfg = PROFILES[DeploymentProfile(profile)]
         env.update(cfg.env_vars)
     except Exception:
@@ -320,14 +378,22 @@ def cmd_install(profile: str) -> int:
         print("install aborted: preflight failed")
         return pf
     env = _profile_env(profile)
-    print(f"install profile={profile} packs="
-          f"ragflow={env.get('RAGFLOW_ENABLED')} "
-          f"pipeshub={env.get('PIPESHUB_ENABLED')} "
-          f"weknora={env.get('WEKNORA_ENABLED')}")
+    print(
+        f"install profile={profile} packs="
+        f"ragflow={env.get('RAGFLOW_ENABLED')} "
+        f"pipeshub={env.get('PIPESHUB_ENABLED')} "
+        f"weknora={env.get('WEKNORA_ENABLED')}"
+    )
     proc = subprocess.run(
         [
-            "docker", "compose", "-f", str(COMPOSE_FILE),
-            "--profile", profile, "up", "-d",
+            "docker",
+            "compose",
+            "-f",
+            str(COMPOSE_FILE),
+            "--profile",
+            profile,
+            "up",
+            "-d",
         ],
         cwd=str(ROOT),
         capture_output=True,
@@ -373,31 +439,53 @@ def cmd_remove(profile: str, volumes: bool) -> int:
 
 
 def cmd_status(profile: str) -> int:
-    proc = _run([
-        "docker", "compose", "-f", str(COMPOSE_FILE),
-        "--profile", profile, "ps",
-    ])
+    proc = _run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(COMPOSE_FILE),
+            "--profile",
+            profile,
+            "ps",
+        ]
+    )
     print(proc.stdout or proc.stderr)
-    _write_log("status", {
-        "action": "status",
-        "profile": profile,
-        "returncode": proc.returncode,
-        "stdout": (proc.stdout or "")[:4000],
-    })
+    _write_log(
+        "status",
+        {
+            "action": "status",
+            "profile": profile,
+            "returncode": proc.returncode,
+            "stdout": (proc.stdout or "")[:4000],
+        },
+    )
     return proc.returncode
 
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Enclave ops lifecycle")
-    p.add_argument("action", choices=[
-        "preflight", "backup", "restore", "upgrade", "rollback", "install", "remove", "status",
-    ])
+    p.add_argument(
+        "action",
+        choices=[
+            "preflight",
+            "backup",
+            "restore",
+            "upgrade",
+            "rollback",
+            "install",
+            "remove",
+            "status",
+        ],
+    )
     p.add_argument("--profile", default="lite")
     p.add_argument("--revision", default="head")
     p.add_argument("--steps", type=int, default=1)
     p.add_argument("--volumes", action="store_true")
     p.add_argument("--sql", default="", help="SQL dump path for restore")
-    p.add_argument("--uploads-tar", default="", help="Optional uploads_*.tgz for restore")
+    p.add_argument(
+        "--uploads-tar", default="", help="Optional uploads_*.tgz for restore"
+    )
     args = p.parse_args()
 
     if args.action == "preflight":

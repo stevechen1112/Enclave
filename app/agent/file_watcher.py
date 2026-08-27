@@ -33,9 +33,25 @@ DEBOUNCE_SECONDS = 5.0
 
 # 支援的副檔名（與 document_parser.py 一致）
 SUPPORTED_EXTENSIONS = {
-    ".pdf", ".docx", ".doc", ".txt", ".xlsx", ".xls",
-    ".csv", ".html", ".htm", ".md", ".rtf", ".json",
-    ".jpg", ".jpeg", ".png", ".tiff", ".bmp", ".pptx", ".ppt",
+    ".pdf",
+    ".docx",
+    ".doc",
+    ".txt",
+    ".xlsx",
+    ".xls",
+    ".csv",
+    ".html",
+    ".htm",
+    ".md",
+    ".rtf",
+    ".json",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".tiff",
+    ".bmp",
+    ".pptx",
+    ".ppt",
 }
 
 
@@ -43,31 +59,34 @@ SUPPORTED_EXTENSIONS = {
 # 取得預設租戶 / 用戶（地端單一組織模式）
 # ─────────────────────────────────────────────────────────────
 
+
 def _get_default_tenant_and_user() -> Tuple[Optional[str], Optional[str]]:
-    """從 DB 取得預設 tenant_id 和 admin user_id。"""
+    """Resolve the explicitly configured tenant-scoped watcher identity."""
+    try:
+        tenant_id = UUID(settings.AGENT_WATCH_TENANT_ID)
+        user_id = UUID(settings.AGENT_WATCH_USER_ID)
+    except (TypeError, ValueError, AttributeError):
+        logger.warning(
+            "[Agent] AGENT_WATCH_TENANT_ID and AGENT_WATCH_USER_ID must be explicit UUIDs"
+        )
+        return None, None
     db = SessionLocal()
     try:
-        from app.models.tenant import Tenant
         from app.models.user import User
+        from app.services.rls import apply_rls_context
 
-        tenant = db.query(Tenant).filter(Tenant.status == "active").first()
-        if not tenant:
-            logger.warning("[Agent] 找不到 active tenant，無法啟動 file watcher")
-            return None, None
-
+        apply_rls_context(db, tenant_id)
         user = (
             db.query(User)
-            .filter(User.tenant_id == tenant.id, User.role == "admin")
+            .filter(User.tenant_id == tenant_id, User.id == user_id)
             .first()
         )
         if not user:
-            # fallback：取任意屬於此 tenant 的用戶
-            user = db.query(User).filter(User.tenant_id == tenant.id).first()
-        if not user:
-            logger.warning("[Agent] 找不到系統用戶，無法建立文件記錄")
-            return str(tenant.id), None
-
-        return str(tenant.id), str(user.id)
+            logger.warning(
+                "[Agent] configured watcher identity does not exist in tenant"
+            )
+            return None, None
+        return str(tenant_id), str(user.id)
     finally:
         db.close()
 
@@ -75,6 +94,7 @@ def _get_default_tenant_and_user() -> Tuple[Optional[str], Optional[str]]:
 # ─────────────────────────────────────────────────────────────
 # watchdog 事件處理器（含防抖）
 # ─────────────────────────────────────────────────────────────
+
 
 class _FileChangeHandler(FileSystemEventHandler):
     """接收 watchdog 事件，防抖後觸發 Celery 任務。"""
@@ -155,6 +175,7 @@ class _FileChangeHandler(FileSystemEventHandler):
 # FolderWatcher — 主要對外介面
 # ─────────────────────────────────────────────────────────────
 
+
 class FolderWatcher:
     """監控多個資料夾，有檔案異動時觸發知識庫索引任務。"""
 
@@ -200,7 +221,9 @@ class FolderWatcher:
             return False
 
         self._observer.start()
-        logger.info(f"[Agent] 檔案監控已啟動（{activated} 個資料夾，防抖 {DEBOUNCE_SECONDS}s）")
+        logger.info(
+            f"[Agent] 檔案監控已啟動（{activated} 個資料夾，防抖 {DEBOUNCE_SECONDS}s）"
+        )
         return True
 
     def stop(self) -> None:

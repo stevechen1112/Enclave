@@ -6,6 +6,7 @@ Agent 工具預設拒絕；每個工具需聲明 read/write、risk level、scope
 
 不向前端輸出模型私有 chain-of-thought；僅輸出可解釋的進度摘要、工具動作與結果。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 #  Tool Risk Classification
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class ToolRisk(str, Enum):
     READ_ONLY = "read_only"
     LOW_RISK_WRITE = "low_risk_write"
@@ -45,6 +47,7 @@ class ToolCategory(str, Enum):
 @dataclass
 class ToolDefinition:
     """工具定義 — 每個 Agent 工具必須聲明以下屬性。"""
+
     name: str
     description: str
     risk: ToolRisk = ToolRisk.READ_ONLY
@@ -59,9 +62,11 @@ class ToolDefinition:
 #  Agent Events (SSE)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class AgentEvent:
     """Agent 執行事件 — 透過 SSE 推送給前端。"""
+
     type: str  # status | tool_call | tool_result | approval_required | final_answer | error
     content: str = ""
     tool_name: Optional[str] = None
@@ -73,6 +78,7 @@ class AgentEvent:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  ReAct Loop
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class ReActLoop:
     """
@@ -98,6 +104,7 @@ class ReActLoop:
         # P1-3：新 ApprovalStateMachine（冪等、可 resume、超時 fail-closed）
         # 與舊 ApprovalGate 並存，逐步遷移
         from app.config import settings
+
         self._use_new_approval = settings.AGENT_APPROVAL_REQUIRE_FOR_MUTATING
 
     async def run(
@@ -165,6 +172,7 @@ class ReActLoop:
     ) -> Dict[str, Any]:
         if tool.name == "kb_search":
             from app.services.retrieval_facade import get_retrieval_facade
+
             loop = asyncio.get_event_loop()
             retrieved = await loop.run_in_executor(
                 None,
@@ -193,15 +201,16 @@ class ReActLoop:
             from app.db.session import SessionLocal
             from app.models.document import Document
             from sqlalchemy import or_
+
             db = SessionLocal()
             try:
-                q = (
-                    db.query(Document)
-                    .filter(
-                        Document.tenant_id == authz.tenant_id,
-                        Document.tombstoned_at.is_(None),
-                        Document.status == "completed",
-                    )
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(db, authz.tenant_id)
+                q = db.query(Document).filter(
+                    Document.tenant_id == authz.tenant_id,
+                    Document.tombstoned_at.is_(None),
+                    Document.status == "completed",
                 )
                 if not authz.is_superuser:
                     if authz.department_ids:
@@ -222,12 +231,15 @@ class ReActLoop:
         # P3-3：MCP Client — 連接外部 MCP server 執行工具
         if tool.name.startswith("mcp:"):
             from app.services.mcp_client import get_mcp_client
+
             parts = tool.name[4:].split("/", 1)
             if len(parts) == 2:
                 server_name, remote_tool = parts
                 client = get_mcp_client()
                 try:
-                    return client.call_tool(server_name, remote_tool, {"query": query}, authz)
+                    return client.call_tool(
+                        server_name, remote_tool, {"query": query}, authz
+                    )
                 except Exception as exc:
                     return {"status": "error", "error": str(exc)}
 
@@ -248,6 +260,7 @@ class ReActLoop:
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Tool Registry
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class ToolRegistry:
     """
@@ -307,9 +320,11 @@ class ToolRegistry:
 #  Approval Gate
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class ApprovalRequest:
     """審批請求。"""
+
     request_id: str
     tool_name: str
     tool_risk: ToolRisk
@@ -337,7 +352,9 @@ class ApprovalGate:
         self.escalation_hours = escalation_hours
         self._pending: Dict[str, ApprovalRequest] = {}
 
-    async def check_approval(self, tool: ToolDefinition, authz: AuthorizationContext) -> bool:
+    async def check_approval(
+        self, tool: ToolDefinition, authz: AuthorizationContext
+    ) -> bool:
         """
         檢查工具是否需要審批。
 
@@ -377,8 +394,12 @@ class ApprovalGate:
         try:
             from app.db.session import SessionLocal
             from app.models.agent_approval import AgentApprovalRequest as ApprovalModel
+
             db = SessionLocal()
             try:
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(db, tenant_id)
                 row = (
                     db.query(ApprovalModel)
                     .filter(
@@ -401,20 +422,28 @@ class ApprovalGate:
         try:
             from app.db.session import SessionLocal
             from app.models.agent_approval import AgentApprovalRequest as ApprovalModel
+
             db = SessionLocal()
             try:
-                db.add(ApprovalModel(
-                    tenant_id=authz.tenant_id,
-                    actor_id=authz.subject_id,
-                    tool_name=req.tool_name,
-                    tool_risk=req.tool_risk.value if hasattr(req.tool_risk, "value") else str(req.tool_risk),
-                    tool_category=req.target_system,
-                    action_summary=req.action_summary,
-                    target_system=req.target_system,
-                    impact_scope=req.impact_scope,
-                    policy_snapshot=req.policy_snapshot,
-                    status="pending",
-                ))
+                from app.services.rls import apply_rls_context
+
+                apply_rls_context(db, authz.tenant_id)
+                db.add(
+                    ApprovalModel(
+                        tenant_id=authz.tenant_id,
+                        actor_id=authz.subject_id,
+                        tool_name=req.tool_name,
+                        tool_risk=req.tool_risk.value
+                        if hasattr(req.tool_risk, "value")
+                        else str(req.tool_risk),
+                        tool_category=req.target_system,
+                        action_summary=req.action_summary,
+                        target_system=req.target_system,
+                        impact_scope=req.impact_scope,
+                        policy_snapshot=req.policy_snapshot,
+                        status="pending",
+                    )
+                )
                 db.commit()
             finally:
                 db.close()

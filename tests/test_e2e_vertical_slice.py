@@ -9,6 +9,7 @@ Phase 1 垂直切片 E2E 測試 — 完整資料流驗證
 
 這是計畫要求的「第一個垂直切片」，通過後才進入更多 Connector、Wiki/Graph 與 Agent 擴張。
 """
+
 import uuid
 import pytest
 import httpx
@@ -28,6 +29,7 @@ from app.gateway.contracts import SearchDomain
 #  Fixtures
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def _make_authz(tenant_id, user_id, role="employee", dept_ids=None, is_superuser=False):
     return AuthorizationContext(
         tenant_id=tenant_id,
@@ -43,6 +45,7 @@ def _make_authz(tenant_id, user_id, role="employee", dept_ids=None, is_superuser
 #  Step 1: Document Upload → Canonical Store
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestVerticalSliceUpload:
     """Step 1: 文件上傳 → Enclave canonical document。"""
 
@@ -51,17 +54,24 @@ class TestVerticalSliceUpload:
         db = SessionLocal()
         try:
             tid, kid, did = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-            db.add_all([
-                Tenant(id=tid, name="VSlice Tenant", status="active"),
-                KnowledgeBase(id=kid, tenant_id=tid, name="VSlice KB"),
-            ])
+            db.add_all(
+                [
+                    Tenant(id=tid, name="VSlice Tenant", status="active"),
+                    KnowledgeBase(id=kid, tenant_id=tid, name="VSlice KB"),
+                ]
+            )
             db.flush()
 
             doc = Document(
-                id=did, tenant_id=tid, knowledge_base_id=kid,
-                filename="employee_handbook.pdf", file_type="pdf",
-                status="uploaded", content_hash="sha256:abc123",
-                source_system="enclave_upload", source_record_id="upload-001",
+                id=did,
+                tenant_id=tid,
+                knowledge_base_id=kid,
+                filename="employee_handbook.pdf",
+                file_type="pdf",
+                status="uploaded",
+                content_hash="sha256:abc123",
+                source_system="enclave_upload",
+                source_record_id="upload-001",
             )
             db.add(doc)
             db.commit()
@@ -81,27 +91,38 @@ class TestVerticalSliceUpload:
         db = SessionLocal()
         try:
             tid, kid, did = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-            db.add_all([
-                Tenant(id=tid, name="Lineage Tenant", status="active"),
-                KnowledgeBase(id=kid, tenant_id=tid, name="Lineage KB"),
-            ])
+            db.add_all(
+                [
+                    Tenant(id=tid, name="Lineage Tenant", status="active"),
+                    KnowledgeBase(id=kid, tenant_id=tid, name="Lineage KB"),
+                ]
+            )
             db.flush()
             doc = Document(
-                id=did, tenant_id=tid, knowledge_base_id=kid,
-                filename="spec.pdf", file_type="pdf", status="uploaded",
-                content_hash="sha256:def456", source_system="sharepoint",
+                id=did,
+                tenant_id=tid,
+                knowledge_base_id=kid,
+                filename="spec.pdf",
+                file_type="pdf",
+                status="uploaded",
+                content_hash="sha256:def456",
+                source_system="sharepoint",
                 source_record_id="sp://site/doc/123",
             )
             db.add(doc)
             db.commit()
 
             # 追溯鏈: tenant → kb → source → document
-            fetched = db.query(Document).filter(
-                Document.tenant_id == tid,
-                Document.knowledge_base_id == kid,
-                Document.source_system == "sharepoint",
-                Document.id == did,
-            ).first()
+            fetched = (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == tid,
+                    Document.knowledge_base_id == kid,
+                    Document.source_system == "sharepoint",
+                    Document.id == did,
+                )
+                .first()
+            )
             assert fetched is not None
             assert fetched.source_record_id == "sp://site/doc/123"
         finally:
@@ -113,6 +134,7 @@ class TestVerticalSliceUpload:
 #  Step 2: RAGFlow Parse → ParseArtifact
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestVerticalSliceParse:
     """Step 2: RAGFlow 解析 → ParseArtifact。"""
 
@@ -120,6 +142,7 @@ class TestVerticalSliceParse:
         """RAGFlow adapter 提供正確的 capabilities。"""
         import asyncio
         from app.gateway.adapters.ragflow_http import RAGFlowHTTPAdapter
+
         adapter = RAGFlowHTTPAdapter(base_url="http://localhost:9380")
 
         # 驗證 adapter 可正確建立
@@ -155,15 +178,21 @@ class TestVerticalSliceParse:
         """解析失敗不重複寫入（idempotency key 驗證）。"""
         from app.gateway.adapters.ragflow_http import RAGFlowHTTPAdapter
         import asyncio
+
         adapter = RAGFlowHTTPAdapter(base_url="http://localhost:9380")
         tid, did = uuid.uuid4(), uuid.uuid4()
         authz = _make_authz(tid, uuid.uuid4(), role="admin", is_superuser=True)
 
         # ingest 是 async，用 asyncio.run 執行
         async def _run():
-            r1 = await adapter.ingest(did, 1, "file:///test.pdf", "sha256:same", "pdf", authz)
-            r2 = await adapter.ingest(did, 1, "file:///test.pdf", "sha256:same", "pdf", authz)
+            r1 = await adapter.ingest(
+                did, 1, "file:///test.pdf", "sha256:same", "pdf", authz
+            )
+            r2 = await adapter.ingest(
+                did, 1, "file:///test.pdf", "sha256:same", "pdf", authz
+            )
             return r1, r2
+
         result1, result2 = asyncio.run(_run())
         assert result1 is not None
         assert result2 is not None
@@ -173,12 +202,14 @@ class TestVerticalSliceParse:
 #  Step 3: Enclave Index/Search → Authorized Answer with Citation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestVerticalSliceSearch:
     """Step 3: Enclave 索引/搜尋 → 授權回答含引用。"""
 
     def test_search_requires_authorization_context(self):
         """搜尋必須接受 AuthorizationContext，不只 tenant_id。"""
         from app.services.kb_retrieval import KnowledgeBaseRetriever
+
         retriever = KnowledgeBaseRetriever()
         tid, uid = uuid.uuid4(), uuid.uuid4()
         authz = _make_authz(tid, uid, role="employee", dept_ids=[uuid.uuid4()])
@@ -194,6 +225,7 @@ class TestVerticalSliceSearch:
     def test_citation_contains_required_fields(self):
         """每個 Citation 至少包含 canonical_document_id、revision、provider、content_hash。"""
         from app.gateway.contracts import Citation
+
         doc_id = uuid.uuid4()
         citation = Citation(
             citation_id="cite-001",
@@ -219,11 +251,14 @@ class TestVerticalSliceSearch:
         """Gateway 搜尋回傳含 audit trail 的結果。"""
         from app.gateway.router import GatewayRouter
         from app.gateway.adapters.base import MockAdapter
+
         router = GatewayRouter()
         router.register_adapter("document", MockAdapter(domain="document"))
         authz = _make_authz(uuid.uuid4(), uuid.uuid4(), role="admin", is_superuser=True)
 
-        response = await router.search(authz=authz, query="員工手冊", domain=SearchDomain.DOCUMENT)
+        response = await router.search(
+            authz=authz, query="員工手冊", domain=SearchDomain.DOCUMENT
+        )
         assert response.status == "success"
         # MockAdapter 回傳空結果，但 audit_trail 應存在
         assert response.audit_trail is not None
@@ -235,16 +270,31 @@ class TestVerticalSliceSearch:
         from app.services.unified_retriever import UnifiedRetriever
         from app.gateway.router import GatewayRouter
         from app.gateway.contracts import ChunkResult
+
         router = GatewayRouter()
         retriever = UnifiedRetriever(router)
 
         doc_id = str(uuid.uuid4())
         # 相同 document_id + 相同內容 → 去重
         chunks = [
-            ChunkResult(id="1", content="相同內容", score=0.9, result_type="chunk",
-                        document_id=doc_id, provider="ragflow", provider_version="1.0"),
-            ChunkResult(id="2", content="相同內容", score=0.8, result_type="chunk",
-                        document_id=doc_id, provider="weknora", provider_version="1.0"),
+            ChunkResult(
+                id="1",
+                content="相同內容",
+                score=0.9,
+                result_type="chunk",
+                document_id=doc_id,
+                provider="ragflow",
+                provider_version="1.0",
+            ),
+            ChunkResult(
+                id="2",
+                content="相同內容",
+                score=0.8,
+                result_type="chunk",
+                document_id=doc_id,
+                provider="weknora",
+                provider_version="1.0",
+            ),
         ]
         deduped = retriever._deduplicate(chunks)
         assert len(deduped) == 1
@@ -253,10 +303,24 @@ class TestVerticalSliceSearch:
         # 不同 document_id + 相同內容 → 不去重（不同文件）
         doc_id2 = str(uuid.uuid4())
         chunks2 = [
-            ChunkResult(id="3", content="相同內容", score=0.9, result_type="chunk",
-                        document_id=doc_id, provider="ragflow", provider_version="1.0"),
-            ChunkResult(id="4", content="相同內容", score=0.8, result_type="chunk",
-                        document_id=doc_id2, provider="weknora", provider_version="1.0"),
+            ChunkResult(
+                id="3",
+                content="相同內容",
+                score=0.9,
+                result_type="chunk",
+                document_id=doc_id,
+                provider="ragflow",
+                provider_version="1.0",
+            ),
+            ChunkResult(
+                id="4",
+                content="相同內容",
+                score=0.8,
+                result_type="chunk",
+                document_id=doc_id2,
+                provider="weknora",
+                provider_version="1.0",
+            ),
         ]
         deduped2 = retriever._deduplicate(chunks2)
         assert len(deduped2) == 2  # 不同文件，不去重
@@ -266,6 +330,7 @@ class TestVerticalSliceSearch:
 #  Step 4: Revoke/Delete → Immediate Deny + Projection Cleanup + Audit
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestVerticalSliceRevoke:
     """Step 4: 撤權/刪除 → 立即拒絕 + projection 清理 + 稽核。"""
 
@@ -274,34 +339,50 @@ class TestVerticalSliceRevoke:
         db = SessionLocal()
         try:
             tid, kid, did = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-            db.add_all([
-                Tenant(id=tid, name="Revoke Tenant", status="active"),
-                KnowledgeBase(id=kid, tenant_id=tid, name="Revoke KB"),
-            ])
+            db.add_all(
+                [
+                    Tenant(id=tid, name="Revoke Tenant", status="active"),
+                    KnowledgeBase(id=kid, tenant_id=tid, name="Revoke KB"),
+                ]
+            )
             db.flush()
             doc = Document(
-                id=did, tenant_id=tid, knowledge_base_id=kid,
-                filename="secret.pdf", file_type="pdf", status="completed",
+                id=did,
+                tenant_id=tid,
+                knowledge_base_id=kid,
+                filename="secret.pdf",
+                file_type="pdf",
+                status="completed",
                 content_hash="sha256:secret",
             )
             db.add(doc)
             db.commit()
 
             # 刪除前：可查到
-            assert db.query(Document).filter(
-                Document.tenant_id == tid,
-                Document.tombstoned_at.is_(None),
-            ).count() == 1
+            assert (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == tid,
+                    Document.tombstoned_at.is_(None),
+                )
+                .count()
+                == 1
+            )
 
             # 執行 tombstone
             doc.tombstoned_at = datetime.now(timezone.utc)
             db.commit()
 
             # 刪除後：不可查到
-            assert db.query(Document).filter(
-                Document.tenant_id == tid,
-                Document.tombstoned_at.is_(None),
-            ).count() == 0
+            assert (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == tid,
+                    Document.tombstoned_at.is_(None),
+                )
+                .count()
+                == 0
+            )
 
             # 但記錄仍存在（軟刪除）
             assert db.query(Document).filter(Document.id == did).count() == 1
@@ -312,6 +393,7 @@ class TestVerticalSliceRevoke:
     def test_deny_set_blocks_immediately(self):
         """Gateway deny cache 立即阻擋已撤權資源。"""
         from app.gateway.authorization import GatewayAuthorizer
+
         authorizer = GatewayAuthorizer()
         tid, uid, did = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
         authz = _make_authz(tid, uid, role="employee", dept_ids=[uuid.uuid4()])
@@ -330,6 +412,7 @@ class TestVerticalSliceRevoke:
     def test_audit_trail_records_revoke(self):
         """稽核軌跡記錄撤權操作。"""
         from app.gateway.contracts import AuditTrail
+
         trail = AuditTrail(
             operation="revoke",
             providers_called=["enclave"],
@@ -343,13 +426,20 @@ class TestVerticalSliceRevoke:
     def test_outbox_event_for_projection_cleanup(self):
         """撤權後產生 outbox event 觸發 projection 清理。"""
         from app.models.outbox import OutboxEvent
+
+        tenant_id = uuid.uuid4()
         event = OutboxEvent(
             id=uuid.uuid4(),
+            tenant_id=tenant_id,
             aggregate_type="document",
             aggregate_id=uuid.uuid4(),
             event_type="document_revoked",
             revision=1,
-            payload={"document_id": str(uuid.uuid4()), "reason": "user_revoked"},
+            payload={
+                "tenant_id": str(tenant_id),
+                "document_id": str(uuid.uuid4()),
+                "reason": "user_revoked",
+            },
             idempotency_key=f"revoke-{uuid.uuid4()}",
             status="pending",
         )
@@ -362,6 +452,7 @@ class TestVerticalSliceRevoke:
 #  Step 5: 完整垂直切片（整合所有步驟）
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestFullVerticalSlice:
     """完整垂直切片：Upload → Parse → Search → Revoke → Deny。"""
 
@@ -371,17 +462,23 @@ class TestFullVerticalSlice:
         try:
             # ── Setup ──
             tid, kid, did = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-            db.add_all([
-                Tenant(id=tid, name="Full Lifecycle", status="active"),
-                KnowledgeBase(id=kid, tenant_id=tid, name="Full KB"),
-            ])
+            db.add_all(
+                [
+                    Tenant(id=tid, name="Full Lifecycle", status="active"),
+                    KnowledgeBase(id=kid, tenant_id=tid, name="Full KB"),
+                ]
+            )
             db.flush()
 
             # ── Step 1: Upload ──
             doc = Document(
-                id=did, tenant_id=tid, knowledge_base_id=kid,
-                filename="handbook_v1.pdf", file_type="pdf",
-                status="uploaded", content_hash="sha256:v1",
+                id=did,
+                tenant_id=tid,
+                knowledge_base_id=kid,
+                filename="handbook_v1.pdf",
+                file_type="pdf",
+                status="uploaded",
+                content_hash="sha256:v1",
                 source_system="enclave_upload",
             )
             db.add(doc)
@@ -391,22 +488,38 @@ class TestFullVerticalSlice:
             # ── Step 2: Parse (模擬) ──
             doc.status = "parsing"
             db.commit()
-            assert db.query(Document).filter(Document.id == did).first().status == "parsing"
+            assert (
+                db.query(Document).filter(Document.id == did).first().status
+                == "parsing"
+            )
 
             # ── Step 3: Index ──
             doc.status = "completed"
-            db.add(DocumentChunk(
-                id=uuid.uuid4(), tenant_id=tid, document_id=did,
-                chunk_index=0, text="員工手冊內容：公司政策...", chunk_hash="sha256:c0",
-            ))
+            db.add(
+                DocumentChunk(
+                    id=uuid.uuid4(),
+                    tenant_id=tid,
+                    document_id=did,
+                    chunk_index=0,
+                    text="員工手冊內容：公司政策...",
+                    chunk_hash="sha256:c0",
+                )
+            )
             db.commit()
-            assert db.query(DocumentChunk).filter(DocumentChunk.document_id == did).count() == 1
+            assert (
+                db.query(DocumentChunk).filter(DocumentChunk.document_id == did).count()
+                == 1
+            )
 
             # ── Step 4: Search (模擬 ACL 過濾) ──
-            visible = db.query(Document).filter(
-                Document.tenant_id == tid,
-                Document.tombstoned_at.is_(None),
-            ).count()
+            visible = (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == tid,
+                    Document.tombstoned_at.is_(None),
+                )
+                .count()
+            )
             assert visible == 1
 
             # ── Step 5: Revoke ──
@@ -414,10 +527,14 @@ class TestFullVerticalSlice:
             db.commit()
 
             # ── Step 6: Deny ──
-            visible_after = db.query(Document).filter(
-                Document.tenant_id == tid,
-                Document.tombstoned_at.is_(None),
-            ).count()
+            visible_after = (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == tid,
+                    Document.tombstoned_at.is_(None),
+                )
+                .count()
+            )
             assert visible_after == 0
 
             # ── Step 7: Audit trail exists ──
@@ -434,30 +551,62 @@ class TestFullVerticalSlice:
             kA, kB = uuid.uuid4(), uuid.uuid4()
             dA, dB = uuid.uuid4(), uuid.uuid4()
 
-            db.add_all([
-                Tenant(id=tA, name="Tenant A", status="active"),
-                Tenant(id=tB, name="Tenant B", status="active"),
-                KnowledgeBase(id=kA, tenant_id=tA, name="KB A"),
-                KnowledgeBase(id=kB, tenant_id=tB, name="KB B"),
-            ])
+            db.add_all(
+                [
+                    Tenant(id=tA, name="Tenant A", status="active"),
+                    Tenant(id=tB, name="Tenant B", status="active"),
+                    KnowledgeBase(id=kA, tenant_id=tA, name="KB A"),
+                    KnowledgeBase(id=kB, tenant_id=tB, name="KB B"),
+                ]
+            )
             db.flush()
-            db.add_all([
-                Document(id=dA, tenant_id=tA, knowledge_base_id=kA, filename="a.pdf", file_type="pdf", status="completed", content_hash="a"),
-                Document(id=dB, tenant_id=tB, knowledge_base_id=kB, filename="b.pdf", file_type="pdf", status="completed", content_hash="b"),
-            ])
+            db.add_all(
+                [
+                    Document(
+                        id=dA,
+                        tenant_id=tA,
+                        knowledge_base_id=kA,
+                        filename="a.pdf",
+                        file_type="pdf",
+                        status="completed",
+                        content_hash="a",
+                    ),
+                    Document(
+                        id=dB,
+                        tenant_id=tB,
+                        knowledge_base_id=kB,
+                        filename="b.pdf",
+                        file_type="pdf",
+                        status="completed",
+                        content_hash="b",
+                    ),
+                ]
+            )
             db.commit()
 
             # Tenant A 只能看到自己的文件
-            a_docs = db.query(Document).filter(Document.tenant_id == tA, Document.tombstoned_at.is_(None)).count()
-            b_docs = db.query(Document).filter(Document.tenant_id == tB, Document.tombstoned_at.is_(None)).count()
+            a_docs = (
+                db.query(Document)
+                .filter(Document.tenant_id == tA, Document.tombstoned_at.is_(None))
+                .count()
+            )
+            b_docs = (
+                db.query(Document)
+                .filter(Document.tenant_id == tB, Document.tombstoned_at.is_(None))
+                .count()
+            )
             assert a_docs == 1
             assert b_docs == 1
 
             # 跨租戶查詢應為空
-            cross = db.query(Document).filter(
-                Document.tenant_id == tA,
-                Document.id == dB,
-            ).count()
+            cross = (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == tA,
+                    Document.id == dB,
+                )
+                .count()
+            )
             assert cross == 0
         finally:
             db.rollback()

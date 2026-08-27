@@ -5,6 +5,7 @@
 （artifact_type=clause_projection）。問答 intent=translate 時讀投影，
 不得只靠 chat prompt 現場翻譯。
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -73,7 +74,9 @@ def _parse_clauses_json(raw: str) -> List[Dict[str, Any]]:
     return out
 
 
-async def extract_clauses_with_llm(text: str, *, llm_client, model: str) -> List[Dict[str, Any]]:
+async def extract_clauses_with_llm(
+    text: str, *, llm_client, model: str
+) -> List[Dict[str, Any]]:
     """呼叫 LLM 產出條款對照；失敗拋例外由呼叫端決定重試／failed。"""
     content = (text or "")[:24000]
     # 部分模型（如 gpt-5.*）不接受 temperature=0；省略以用預設。
@@ -143,7 +146,9 @@ def upsert_clause_projection(
                 clauses=clauses,
             )
         except Exception as exc:
-            logger.warning("wiki sync for clause projection failed (non-blocking): %s", exc)
+            logger.warning(
+                "wiki sync for clause projection failed (non-blocking): %s", exc
+            )
     return art
 
 
@@ -209,9 +214,7 @@ def sync_clause_projection_to_wiki(
         revision=revision_num,
         content=body,
         content_hash=content_hash,
-        citation_map=[
-            {"document_id": str(document_id), "revision": doc.version or 1}
-        ],
+        citation_map=[{"document_id": str(document_id), "revision": doc.version or 1}],
         compile_job_id=f"clause-projection-{revision_num}",
         status="active",
     )
@@ -225,6 +228,7 @@ def sync_clause_projection_to_wiki(
         event_type="clause_projection_synced",
         revision=revision_num,
         payload={
+            "tenant_id": str(doc.tenant_id),
             "document_id": str(document_id),
             "clause_count": len(clauses),
             "provider": "enclave",
@@ -240,6 +244,7 @@ def sync_clause_projection_to_wiki(
             event_type="compiled",
             revision=revision_num,
             payload={
+                "tenant_id": str(doc.tenant_id),
                 "kb_id": str(doc.knowledge_base_id),
                 "page_type": "comparison",
                 "source": "clause_projection",
@@ -267,7 +272,10 @@ def load_clause_projections_for_query(
         return []
     from app.models.knowledge_engine import KnowledgeBaseRevisionDocument
     from app.services.document_readiness import ready_revision_pairs
-    from app.services.document_visibility import apply_document_visibility, deny_set_allows
+    from app.services.document_visibility import (
+        apply_document_visibility,
+        deny_set_allows,
+    )
 
     arts_query = (
         db.query(DocumentArtifact, Document)
@@ -287,7 +295,10 @@ def load_clause_projections_for_query(
         arts_query = arts_query.join(
             KnowledgeBaseRevisionDocument,
             (KnowledgeBaseRevisionDocument.document_id == DocumentArtifact.document_id)
-            & (KnowledgeBaseRevisionDocument.document_revision == DocumentArtifact.revision),
+            & (
+                KnowledgeBaseRevisionDocument.document_revision
+                == DocumentArtifact.revision
+            ),
         ).filter(KnowledgeBaseRevisionDocument.kb_revision_id.in_(revision_ids))
         ready_pairs = ready_revision_pairs(
             db, tenant_id=tenant_id, kb_revision_ids=revision_ids
@@ -347,4 +358,3 @@ def format_projection_context(projections: List[Dict[str, Any]]) -> str:
             if summary:
                 lines.append(f"  {summary}")
     return "\n".join(lines)
-

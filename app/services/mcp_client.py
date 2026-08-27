@@ -10,6 +10,7 @@ P3-3：MCP Client + Allowlist + ApprovalGate。
 - mutating tool 霈 approval（AGENT_APPROVAL_REQUIRE_FOR_MUTATING）
 - allowlist 限制可連的 MCP server
 """
+
 from __future__ import annotations
 
 import logging
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MCPServerConfig:
     """外部 MCP server 設定。"""
+
     name: str
     url: str
     auth_token: str = ""
@@ -60,6 +62,7 @@ class MCPClient:
     def is_allowed_server(self, name: str) -> bool:
         """檢查 server 是否在 allowlist 中。"""
         from app.config import settings
+
         if not settings.MCP_CLIENT_ENABLED:
             return False
 
@@ -114,6 +117,7 @@ class MCPClient:
             raise ValueError("AuthorizationContext is required")
 
         from app.config import settings
+
         if not settings.MCP_CLIENT_ENABLED:
             raise RuntimeError("MCP_CLIENT_ENABLED is false")
 
@@ -142,14 +146,23 @@ class MCPClient:
     def _is_mutating_tool(self, server_name: str, tool_name: str) -> bool:
         """判斷工具是否為 mutating（用 word boundary 避免誤判）。"""
         import re
+
         mutating_keywords = [
-            "create", "update", "delete", "upload", "modify", "write",
-            "remove", "submit", "approve", "reject",
+            "create",
+            "update",
+            "delete",
+            "upload",
+            "modify",
+            "write",
+            "remove",
+            "submit",
+            "approve",
+            "reject",
         ]
         tool_lower = tool_name.lower()
         for kw in mutating_keywords:
             # 用 word boundary（含下劃線/連字號分隔）
-            if re.search(rf'(?:^|[_\-]){kw}(?:$|[_\-])', tool_lower):
+            if re.search(rf"(?:^|[_\-]){kw}(?:$|[_\-])", tool_lower):
                 return True
         return False
 
@@ -167,6 +180,7 @@ class MCPClient:
         """
         try:
             from app.services.approval_state import get_approval_state_machine
+
             sm = get_approval_state_machine()
 
             # 先檢查是否已有已核准的 request（冪等）
@@ -190,6 +204,7 @@ class MCPClient:
                 action_summary=f"Execute MCP tool {server_name}/{tool_name}",
                 tool_args=arguments,
                 target_system=server_name,
+                tenant_id=authz.tenant_id,
             )
 
             return {"approved": False, "request_id": str(ctx.request_id)}
