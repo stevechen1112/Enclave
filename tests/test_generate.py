@@ -1,7 +1,8 @@
 """
 Generate Tests — /api/v1/generate
 測試模板列表、串流生成（SSE）、文件匯出
-使用真實 LLM（Gemini），無 mock
+API contract tests use a deterministic generator; provider connectivity belongs
+to the separately controlled integration environment.
 """
 import pytest
 from httpx import AsyncClient
@@ -36,8 +37,20 @@ async def test_list_templates(client: AsyncClient, superuser_headers: dict):
 
 
 @pytest.mark.asyncio
-async def test_generate_stream_returns_sse(client: AsyncClient, superuser_headers: dict):
+async def test_generate_stream_returns_sse(
+    client: AsyncClient,
+    superuser_headers: dict,
+    monkeypatch: pytest.MonkeyPatch,
+):
     """POST /generate/stream 應回傳 SSE 串流（text/event-stream）"""
+    class _DeterministicGenerator:
+        async def generate_stream(self, **_kwargs):
+            yield "已核准的測試內容"
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.generate._get_generator",
+        lambda: _DeterministicGenerator(),
+    )
     _, h = await _setup(client, superuser_headers, "sse")
 
     resp = await client.post(
@@ -51,6 +64,8 @@ async def test_generate_stream_returns_sse(client: AsyncClient, superuser_header
     )
     assert resp.status_code == 200
     assert "text/event-stream" in resp.headers.get("content-type", "")
+    assert "已核准的測試內容" in resp.text
+    assert "data: [DONE]" in resp.text
 
 
 @pytest.mark.asyncio

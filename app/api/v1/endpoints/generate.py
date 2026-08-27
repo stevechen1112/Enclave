@@ -34,6 +34,11 @@ def _get_generator() -> ContentGenerator:
     return ContentGenerator(llm_client=get_llm(), retriever=_retriever)
 
 
+def _get_exporter() -> ContentGenerator:
+    """Build the deterministic document exporter without an LLM dependency."""
+    return ContentGenerator()
+
+
 # ── Pydantic schemas ────────────────────────────────────────────────────────
 
 class GenerateRequest(BaseModel):
@@ -246,7 +251,7 @@ async def export_docx(
     current_user=Depends(get_current_active_user),
 ):
     """將生成內容匯出為 Word 檔案（.docx）。"""
-    generator = _get_generator()
+    generator = _get_exporter()
     try:
         docx_bytes = await generator.export_to_docx(
             content=req.content,
@@ -275,7 +280,7 @@ async def export_pdf(
     current_user=Depends(get_current_active_user),
 ):
     """將生成內容匯出為 PDF。"""
-    generator = _get_generator()
+    generator = _get_exporter()
     try:
         pdf_bytes = await generator.export_to_pdf(
             content=req.content,
