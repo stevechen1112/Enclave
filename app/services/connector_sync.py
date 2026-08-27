@@ -295,11 +295,6 @@ class ConnectorSyncService:
         live_ids = {
             r["source_record_id"] for r in resources if r.get("source_record_id")
         }
-        hash_to_record = {
-            _hash_identity(r["content_hash"]): r["source_record_id"]
-            for r in resources
-            if r.get("content_hash") and r.get("source_record_id")
-        }
         existing_docs = (
             db.query(Document)
             .filter(
@@ -309,6 +304,15 @@ class ConnectorSyncService:
             )
             .all()
         )
+        existing_source_ids = {
+            str(doc.source_record_id) for doc in existing_docs if doc.source_record_id
+        }
+        new_records_by_hash: dict[str, list[str]] = {}
+        for resource in resources:
+            record_id = str(resource.get("source_record_id") or "")
+            digest = _hash_identity(resource.get("content_hash"))
+            if record_id and digest and record_id not in existing_source_ids:
+                new_records_by_hash.setdefault(digest, []).append(record_id)
         tombstoned = 0
         renamed = 0
         for doc in existing_docs:
@@ -316,9 +320,11 @@ class ConnectorSyncService:
                 continue
             if doc.source_record_id in live_ids:
                 continue
-            # rename: same hash appears under new record id
-            new_id = hash_to_record.get(_hash_identity(doc.content_hash))
-            if new_id and new_id != doc.source_record_id:
+            # Rename only when the content hash identifies one unambiguous new
+            # source. Duplicate-content folders must never collapse identities.
+            candidates = new_records_by_hash.get(_hash_identity(doc.content_hash), [])
+            if len(candidates) == 1:
+                new_id = candidates.pop()
                 doc.source_record_id = new_id
                 doc.external_version = (
                     str(int(doc.external_version or 0) + 1)

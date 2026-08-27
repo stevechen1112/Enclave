@@ -98,6 +98,21 @@ class TestPhase3ConnectorLifecycle:
             assert life2["tombstoned"] == 1
             db.refresh(doc)
             assert doc.tombstoned_at is not None
+
+            # Duplicate-content additions are not sufficient evidence of a
+            # rename; the missing identity is tombstoned instead of colliding.
+            (root / "old-a.txt").write_text("duplicate", encoding="utf-8")
+            sync.materialize_to_documents(
+                db, conn, scan_local_nas(str(root))["resources"]
+            )
+            (root / "old-a.txt").unlink()
+            (root / "new-a.txt").write_text("duplicate", encoding="utf-8")
+            (root / "new-b.txt").write_text("duplicate", encoding="utf-8")
+            ambiguous = sync.reconcile_deletes_and_renames(
+                db, conn, scan_local_nas(str(root))["resources"]
+            )
+            assert ambiguous["renamed"] == 0
+            assert ambiguous["tombstoned"] == 1
         finally:
             db.close()
 
