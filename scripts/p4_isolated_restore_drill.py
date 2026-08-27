@@ -14,8 +14,10 @@ import io
 import json
 import os
 import secrets
+import shutil
 import subprocess
 import tarfile
+import tempfile
 import time
 import uuid
 from datetime import datetime, timezone
@@ -76,6 +78,43 @@ def _safe_tar_members(data: bytes) -> tuple[int, int]:
             if member.isfile():
                 files += 1
                 size += member.size
+            elif not member.isdir():
+                raise DrillError(
+                    f"unsupported object archive member: {member.name}"
+                )
+    return files, size
+
+
+def _restore_archive(data: bytes, target_root: Path) -> tuple[int, int]:
+    """Materialize a validated archive without links, devices, or path escape."""
+    target_root.mkdir(parents=True, exist_ok=False)
+    files = 0
+    size = 0
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:*") as archive:
+        for member in archive.getmembers():
+            normalized = Path(member.name.replace("\\", "/"))
+            target = (target_root / normalized).resolve()
+            try:
+                target.relative_to(target_root.resolve())
+            except ValueError as exc:
+                raise DrillError(
+                    f"archive restore target leaves isolation root: {member.name}"
+                ) from exc
+            if member.isdir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            if not member.isfile():
+                raise DrillError(
+                    f"unsupported archive member during restore: {member.name}"
+                )
+            source = archive.extractfile(member)
+            if source is None:
+                raise DrillError(f"archive member has no content: {member.name}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open("wb") as destination:
+                shutil.copyfileobj(source, destination)
+            files += 1
+            size += target.stat().st_size
     return files, size
 
 
@@ -180,11 +219,34 @@ def run_drill(args: argparse.Namespace) -> dict:
     object_path.write_bytes(object_archive)
     os.chmod(object_path, 0o600)
 
+    with tempfile.TemporaryDirectory(
+        prefix="object-restore-", dir=artifact_dir
+    ) as restore_root:
+        restored_object_count, restored_object_bytes = _restore_archive(
+            object_archive, Path(restore_root) / "fresh"
+        )
+    if (restored_object_count, restored_object_bytes) != (
+        object_count,
+        object_bytes,
+    ):
+        raise DrillError("restored object inventory differs from backup")
+
     config_archive = _config_archive(args.config_path)
-    _safe_tar_members(config_archive)
+    config_count, config_bytes = _safe_tar_members(config_archive)
     config_path = artifact_dir / "configuration.tgz"
     config_path.write_bytes(config_archive)
     os.chmod(config_path, 0o600)
+    with tempfile.TemporaryDirectory(
+        prefix="configuration-restore-", dir=artifact_dir
+    ) as restore_root:
+        restored_config_count, restored_config_bytes = _restore_archive(
+            config_archive, Path(restore_root) / "fresh"
+        )
+    if (restored_config_count, restored_config_bytes) != (
+        config_count,
+        config_bytes,
+    ):
+        raise DrillError("restored configuration inventory differs from backup")
 
     index_query = (
         "SELECT count(*)::text || '|' || count(embedding)::text || '|' || "
@@ -336,6 +398,8 @@ def run_drill(args: argparse.Namespace) -> dict:
             "sha256": _sha256(object_archive),
             "objects": object_count,
             "bytes": object_bytes,
+            "restored_objects": restored_object_count,
+            "restored_bytes": restored_object_bytes,
         },
         "index": {
             "backup_status": "PASS",
@@ -348,6 +412,10 @@ def run_drill(args: argparse.Namespace) -> dict:
             "restore_status": "PASS",
             "sha256": _sha256(config_archive),
             "secret_material_included": False,
+            "files": config_count,
+            "bytes": config_bytes,
+            "restored_files": restored_config_count,
+            "restored_bytes": restored_config_bytes,
         },
         "artifact_directory": str(artifact_dir),
     }

@@ -51,6 +51,28 @@ fi
 
 echo ""
 
+# ── Preflight required durable components before stopping anything ──
+DB_DUMP=$(find "${SNAPSHOT_DIR}" -maxdepth 1 -type f \( -name "enclave_*.sql" -o -name "enclave_*.sql.gz" \) | head -1)
+UPLOADS_ARCHIVE=$(find "${SNAPSHOT_DIR}" -maxdepth 1 -type f \( -name "uploads_*.tgz" -o -name "uploads.tar.gz" \) | head -1)
+if [[ ! -s "${DB_DUMP}" ]]; then
+    echo "✗ Required database dump is missing or empty; no services were stopped"
+    exit 1
+fi
+if [[ ! -s "${UPLOADS_ARCHIVE}" ]]; then
+    echo "✗ Required uploads archive is missing or empty; no services were stopped"
+    exit 1
+fi
+if tar -tzf "${UPLOADS_ARCHIVE}" | grep -Ev '^uploads(/|$)' >/dev/null; then
+    echo "✗ Upload archive contains paths outside uploads/; no services were stopped"
+    exit 1
+fi
+if ! tar -tvzf "${UPLOADS_ARCHIVE}" | awk '
+    substr($0, 1, 1) != "-" && substr($0, 1, 1) != "d" { exit 1 }
+'; then
+    echo "✗ Upload archive contains links or unsupported member types; no services were stopped"
+    exit 1
+fi
+
 # ── Step 1: Stop application ──
 echo "━━━ [1/5] Stopping Services ━━━"
 docker compose stop gateway frontend web worker worker-beat 2>/dev/null || true
@@ -59,7 +81,6 @@ echo ""
 
 # ── Step 2: Restore Database ──
 echo "━━━ [2/5] Restoring Database ━━━"
-DB_DUMP=$(find "${SNAPSHOT_DIR}" -maxdepth 1 -type f \( -name "enclave_*.sql" -o -name "enclave_*.sql.gz" \) | head -1)
 if [[ -n "${DB_DUMP}" ]]; then
     echo "▸ Using backup: ${DB_DUMP}"
 
@@ -94,7 +115,8 @@ if [[ -n "${DB_DUMP}" ]]; then
         "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';")
     echo "✓ Database restored (${TABLE_COUNT} tables)"
 else
-    echo "⚠ No database dump found in snapshot, skipping"
+    echo "✗ Required database dump is missing; refusing partial recovery"
+    exit 1
 fi
 echo ""
 
@@ -114,18 +136,18 @@ echo ""
 
 # ── Step 4: Restore Uploads ──
 echo "━━━ [4/5] Restoring Uploads ━━━"
-UPLOADS_ARCHIVE=$(find "${SNAPSHOT_DIR}" -maxdepth 1 -type f \( -name "uploads_*.tgz" -o -name "uploads.tar.gz" \) | head -1)
 if [[ -f "${UPLOADS_ARCHIVE}" ]]; then
     # Production stores uploads in a named volume, not the host ./uploads path.
     # init-storage is a narrow one-shot service with only that volume mounted.
     docker compose run --rm -T --no-deps --entrypoint sh init-storage -c \
-        'test "$(readlink -f /code/uploads)" = "/code/uploads" && find /code/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar -xzf - -C /code' \
+        'test "$(readlink -f /code/uploads)" = "/code/uploads" && find /code/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && tar --no-same-owner --no-same-permissions -xzf - -C /code' \
         < "${UPLOADS_ARCHIVE}"
     FILE_COUNT=$(docker compose run --rm -T --no-deps --entrypoint sh init-storage -c \
         'find /code/uploads -type f | wc -l')
     echo "✓ Canonical upload volume restored (${FILE_COUNT} files)"
 else
-    echo "⚠ No uploads archive found, skipping"
+    echo "✗ Required uploads archive is missing; refusing partial recovery"
+    exit 1
 fi
 echo ""
 

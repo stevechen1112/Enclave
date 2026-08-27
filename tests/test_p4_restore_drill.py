@@ -76,6 +76,30 @@ def test_safe_object_inventory_counts_files():
     assert module._safe_tar_members(data.getvalue()) == (1, 3)
 
 
+def test_safe_restore_materializes_regular_files(tmp_path):
+    module = _load_drill()
+    data = io.BytesIO()
+    with tarfile.open(fileobj=data, mode="w") as archive:
+        member = tarfile.TarInfo("uploads/tenant/file.txt")
+        member.size = 3
+        archive.addfile(member, io.BytesIO(b"abc"))
+    target = tmp_path / "fresh"
+    assert module._restore_archive(data.getvalue(), target) == (1, 3)
+    assert (target / "uploads" / "tenant" / "file.txt").read_bytes() == b"abc"
+
+
+def test_object_archive_rejects_links():
+    module = _load_drill()
+    data = io.BytesIO()
+    with tarfile.open(fileobj=data, mode="w") as archive:
+        member = tarfile.TarInfo("uploads/tenant/link")
+        member.type = tarfile.SYMTYPE
+        member.linkname = "/etc/passwd"
+        archive.addfile(member)
+    with pytest.raises(module.DrillError, match="unsupported object archive"):
+        module._safe_tar_members(data.getvalue())
+
+
 def test_disaster_recovery_consumes_canonical_backup_names_and_volume():
     script = (ROOT / "scripts" / "disaster-recovery.sh").read_text(encoding="utf-8")
     assert 'name "enclave_*.sql"' in script
@@ -84,6 +108,12 @@ def test_disaster_recovery_consumes_canonical_backup_names_and_volume():
     assert "-v ON_ERROR_STOP=1" in script
     assert "worker-beat" in script
     assert "gateway" in script
+    assert "refusing partial recovery" in script
+    assert "paths outside uploads/" in script
+    assert "links or unsupported member types" in script
+    assert script.index("no services were stopped") < script.index(
+        "docker compose stop gateway"
+    )
 
 
 def test_restore_drill_uses_actual_legacy_chunk_table_name():
