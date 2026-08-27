@@ -85,8 +85,10 @@ jobs:
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/enclave_test
       REDIS_HOST: localhost
       REDIS_PORT: 6379
-      SECRET_KEY: ci-test-secret-key
+      SECRET_KEY: ci-test-secret-key-at-least-32-characters
       APP_ENV: test
+      PACK_MKA_ENABLED: "true"
+      MODULE_ROUTER_ENABLED: "true"
       LLM_PROVIDER: gemini
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GEMINI_MODEL: gemini-3-flash-preview
