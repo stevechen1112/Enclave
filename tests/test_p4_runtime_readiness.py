@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.main import health_check
+from app.main import health_check, metrics
 from app.services.runtime_readiness import database_readiness
 
 
@@ -53,3 +53,17 @@ def test_health_endpoint_returns_ready_dependency_state():
 
     assert response["status"] == "ok"
     assert response["dependencies"] == {"database": "ready"}
+
+
+def test_metrics_scrape_refreshes_database_state_in_serving_worker():
+    request = MagicMock()
+    with (
+        patch(
+            "app.services.runtime_readiness.database_readiness", return_value=False
+        ) as readiness,
+        patch("app.main.metrics_endpoint", return_value=MagicMock()) as endpoint,
+    ):
+        metrics(request)
+
+    readiness.assert_called_once_with()
+    endpoint.assert_called_once_with(request)

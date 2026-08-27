@@ -206,6 +206,12 @@ def metrics(request: Request):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="metrics endpoint is restricted",
             )
+    # Refresh the gauge in the same worker serving this scrape. Uvicorn workers
+    # do not share in-process Prometheus state, so relying on /health traffic
+    # could expose a stale dependency value here.
+    from app.services.runtime_readiness import database_readiness
+
+    database_readiness()
     return metrics_endpoint(request)
 
 
