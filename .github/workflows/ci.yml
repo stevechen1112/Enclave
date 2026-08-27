@@ -217,6 +217,7 @@ jobs:
           tests/test_p4_resilience_gate.py
           tests/test_p4_restore_drill.py
           tests/test_p4_alert_lifecycle.py
+          tests/test_p4_runtime_readiness.py
           tests/test_p2_backup_ops.py
           tests/test_phase_m_rollback.py
           -q

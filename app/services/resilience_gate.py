@@ -33,6 +33,7 @@ REQUIRED_ALERTS = {
     "HighErrorRate",
     "HighLatency",
     "ServiceDown",
+    "DatabaseUnavailable",
     "HighConcurrency",
 }
 

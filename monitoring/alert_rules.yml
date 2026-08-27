@@ -42,6 +42,16 @@ groups:
           summary: "Enclave backend is down"
           description: "The backend service has been unreachable for over 1 minute."
 
+      # ── Required Database Unavailable ──
+      - alert: DatabaseUnavailable
+        expr: enclave_dependency_ready{dependency="database"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Enclave database is unavailable"
+          description: "The required database readiness probe has failed for over 1 minute."
+
       # ── Too Many In-Progress Requests ──
       - alert: HighConcurrency
         expr: sum(http_requests_in_progress) > 100

@@ -12,9 +12,12 @@
 
 import logging
 import time
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
+
 from app.config import settings
 
 logger = logging.getLogger("enclave.db")
@@ -40,6 +43,17 @@ engine = create_engine(
     pool_recycle=POOL_RECYCLE,
     # 開發環境可開啟 echo
     echo=getattr(settings, "DB_ECHO", False),
+)
+
+# Health probes must fail quickly even when the application pool is exhausted.
+# NullPool also prevents the probe from holding a connection between checks.
+readiness_engine = create_engine(
+    engine.url,
+    poolclass=NullPool,
+    connect_args={
+        "connect_timeout": 2,
+        "options": "-c statement_timeout=2000",
+    },
 )
 
 

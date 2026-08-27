@@ -69,6 +69,25 @@ tests:
         alertname: ServiceDown
         exp_alerts: []
 
+  - name: DatabaseUnavailable fires and recovers
+    interval: 1m
+    input_series:
+      - series: 'enclave_dependency_ready{dependency="database"}'
+        values: '0 0 0 1 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: DatabaseUnavailable
+        exp_alerts:
+          - exp_labels:
+              dependency: database
+              severity: critical
+            exp_annotations:
+              summary: "Enclave database is unavailable"
+              description: "The required database readiness probe has failed for over 1 minute."
+      - eval_time: 4m
+        alertname: DatabaseUnavailable
+        exp_alerts: []
+
   - name: HighConcurrency fires and recovers
     interval: 1m
     input_series:

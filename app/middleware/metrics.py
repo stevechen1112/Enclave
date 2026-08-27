@@ -47,11 +47,17 @@ if PROMETHEUS_AVAILABLE:
         ["method"],
     )
     APP_INFO = Info("app", "Application metadata")
+    DEPENDENCY_READY = Gauge(
+        "enclave_dependency_ready",
+        "Whether a required runtime dependency is ready (1) or unavailable (0)",
+        ["dependency"],
+    )
 
 
 def _normalize_path(path: str) -> str:
     """Collapse UUID / numeric path segments to prevent cardinality explosion."""
     import re
+
     path = re.sub(
         r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
         "{id}",
@@ -87,7 +93,9 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             raise
 
         elapsed = time.perf_counter() - start
-        REQUEST_COUNT.labels(method=method, endpoint=path, status=str(response.status_code)).inc()
+        REQUEST_COUNT.labels(
+            method=method, endpoint=path, status=str(response.status_code)
+        ).inc()
         REQUEST_DURATION.labels(method=method, endpoint=path).observe(elapsed)
         REQUESTS_IN_PROGRESS.labels(method=method).dec()
 
@@ -105,3 +113,9 @@ def set_app_info(version: str = "1.0.0", env: str = "development") -> None:
     """Set application info metric."""
     if PROMETHEUS_AVAILABLE:
         APP_INFO.info({"version": version, "environment": env})
+
+
+def set_dependency_ready(dependency: str, ready: bool) -> None:
+    """Publish a low-cardinality dependency state for operational alerts."""
+    if PROMETHEUS_AVAILABLE:
+        DEPENDENCY_READY.labels(dependency=dependency).set(1 if ready else 0)
