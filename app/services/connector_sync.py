@@ -25,6 +25,11 @@ from app.services.outbox_events import publish_event
 logger = logging.getLogger(__name__)
 
 
+def _hash_identity(value: Any) -> str:
+    """Compare legacy bare SHA-256 and canonical ``sha256:`` values equally."""
+    return str(value or "").strip().lower().removeprefix("sha256:")
+
+
 def _mock_allowed(config: Dict[str, Any]) -> bool:
     """生產環境禁止 mock；開發需明確 allow_mock / PIPESHUB_ALLOW_MOCK。"""
     from app.config import settings
@@ -99,7 +104,9 @@ class ConnectorSyncService:
                 )
                 .first()
             )
-            if winner is None or winner.content_hash != document.content_hash:
+            if winner is None or _hash_identity(winner.content_hash) != _hash_identity(
+                document.content_hash
+            ):
                 raise
             return winner
 
@@ -207,7 +214,9 @@ class ConnectorSyncService:
                 )
                 .first()
             )
-            if existing and existing.content_hash == content_hash:
+            if existing and _hash_identity(existing.content_hash) == _hash_identity(
+                content_hash
+            ):
                 created_ids.append(str(existing.id))
                 continue
 
@@ -287,7 +296,7 @@ class ConnectorSyncService:
             r["source_record_id"] for r in resources if r.get("source_record_id")
         }
         hash_to_record = {
-            r["content_hash"]: r["source_record_id"]
+            _hash_identity(r["content_hash"]): r["source_record_id"]
             for r in resources
             if r.get("content_hash") and r.get("source_record_id")
         }
@@ -308,7 +317,7 @@ class ConnectorSyncService:
             if doc.source_record_id in live_ids:
                 continue
             # rename: same hash appears under new record id
-            new_id = hash_to_record.get(doc.content_hash or "")
+            new_id = hash_to_record.get(_hash_identity(doc.content_hash))
             if new_id and new_id != doc.source_record_id:
                 doc.source_record_id = new_id
                 doc.external_version = (

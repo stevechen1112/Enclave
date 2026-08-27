@@ -161,7 +161,7 @@ def test_materialized_document_recovers_from_concurrent_identical_insert():
         source_type="connector",
         source_system="nas_smb",
         source_record_id="nas:source.txt",
-        content_hash="same-content",
+        content_hash="sha256:" + "a" * 64,
         status="processing",
     )
     contender = Document(
@@ -173,7 +173,7 @@ def test_materialized_document_recovers_from_concurrent_identical_insert():
         source_type="connector",
         source_system="nas_smb",
         source_record_id="nas:source.txt",
-        content_hash="same-content",
+        content_hash="a" * 64,
         status="processing",
     )
 
@@ -203,3 +203,10 @@ def test_materialized_document_recovers_from_concurrent_identical_insert():
     )
 
     assert persisted is winner
+
+
+def test_connector_hash_identity_accepts_worker_prefix():
+    from app.services.connector_sync import _hash_identity
+
+    digest = "A" * 64
+    assert _hash_identity(digest) == _hash_identity(f"sha256:{digest.lower()}")
