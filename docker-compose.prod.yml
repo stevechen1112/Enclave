@@ -34,7 +34,7 @@ services:
     expose:
       - "8000"
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - POSTGRES_SERVER=db
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
@@ -125,7 +125,7 @@ services:
       - ${APP_ENV_FILE:-.env.production}
       - ${DB_ADMIN_ENV_FILE:-.env.db-admin}
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - POSTGRES_SERVER=${DB_ADMIN_HOST:-db}
       - POSTGRES_PORT=${DB_ADMIN_PORT:-5432}
       - POSTGRES_DB=${DB_ADMIN_DATABASE:-enclave}
@@ -147,7 +147,7 @@ services:
       - ${DB_ADMIN_ENV_FILE:-.env.db-admin}
       - ${MAINTENANCE_ENV_FILE:-.env.maintenance}
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - DB_ADMIN_HOST=${DB_ADMIN_HOST:-db}
       - DB_ADMIN_PORT=${DB_ADMIN_PORT:-5432}
       - DB_ADMIN_DATABASE=${DB_ADMIN_DATABASE:-enclave}
@@ -205,7 +205,7 @@ services:
       - ${APP_ENV_FILE:-.env.production}
       - ${MAINTENANCE_ENV_FILE:-.env.maintenance}
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - POSTGRES_SERVER=db
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
@@ -262,7 +262,7 @@ services:
       disable: true
     env_file: ${APP_ENV_FILE:-.env.production}
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - POSTGRES_SERVER=db
       - REDIS_HOST=redis
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
