@@ -25,6 +25,15 @@ RUN npm run build
 # ── Stage 2: Serve ──
 FROM nginx:1.27-alpine
 
+ARG VITE_RELEASE_ID=dev
+ARG VITE_SOURCE_COMMIT=unknown
+ARG VITE_BUILD_TIME=unknown
+ARG VITE_SCHEMA_HEAD=unknown
+LABEL org.opencontainers.image.revision=${VITE_SOURCE_COMMIT} \
+      org.opencontainers.image.created=${VITE_BUILD_TIME} \
+      io.enclave.release-id=${VITE_RELEASE_ID} \
+      io.enclave.schema-head=${VITE_SCHEMA_HEAD}
+
 # Remove default config
 RUN rm -rf /usr/share/nginx/html/*
 
