@@ -26,6 +26,10 @@ def test_staging_credentials_are_split_and_force_rls_enabled():
     assert app["KNOWHOW_CARD_ENABLED"] == "true"
     assert app["MODULE_ROUTER_ENABLED"] == "true"
     assert app["PACK_MKA_ENABLED"] == "true"
+    assert app["RATE_LIMIT_ENABLED"] == "true"
+    assert int(app["RATE_LIMIT_GLOBAL_PER_IP"]) >= 1000
+    assert int(app["RATE_LIMIT_PER_USER"]) >= 500
+    assert int(app["RATE_LIMIT_PER_TENANT"]) >= 1000
     assert "DB_ADMIN_PASSWORD" not in app
     assert "MAINTENANCE_POSTGRES_PASSWORD" not in app
     assert admin["DB_ADMIN_USER"] == "postgres"
