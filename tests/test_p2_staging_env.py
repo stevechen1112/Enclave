@@ -20,6 +20,12 @@ def test_staging_credentials_are_split_and_force_rls_enabled():
     assert app["APP_ENV"] == "staging"
     assert app["RLS_ENFORCEMENT_ENABLED"] == "true"
     assert app["POSTGRES_USER"] == "enclave_app_staging"
+    assert app["DEMO_LOGIN_ENABLED"] == "true"
+    assert app["DEMO_TENANT_ID"] == "4a8a6ec2-9be7-5d43-a786-2bf4af10f3d1"
+    assert app["FIXED_FORM_ENABLED"] == "true"
+    assert app["KNOWHOW_CARD_ENABLED"] == "true"
+    assert app["MODULE_ROUTER_ENABLED"] == "true"
+    assert app["PACK_MKA_ENABLED"] == "true"
     assert "DB_ADMIN_PASSWORD" not in app
     assert "MAINTENANCE_POSTGRES_PASSWORD" not in app
     assert admin["DB_ADMIN_USER"] == "postgres"
@@ -50,7 +56,7 @@ def test_compose_honors_staging_app_env():
     compose = (Path(__file__).resolve().parents[1] / "docker-compose.prod.yml").read_text(encoding="utf-8")
 
     assert "APP_ENV=production" not in compose
-    assert compose.count("APP_ENV=${APP_ENV:-production}") == 6
+    assert compose.count("APP_ENV=${APP_ENV:-production}") == 7
 
 
 def test_backend_runtime_contains_database_provisioning_and_gate_inputs():
@@ -64,6 +70,7 @@ def test_backend_runtime_contains_database_provisioning_and_gate_inputs():
         "!scripts/provision_tenant_database_roles.py",
         "!scripts/init_superuser.py",
         "!scripts/initial_data.py",
+        "!scripts/init_demo_tenant.py",
         "!scripts/tenant_security_gate.py",
         "!scripts/tenant_session_context_gate.py",
         "!scripts/rls_shadow_report.py",
@@ -71,18 +78,25 @@ def test_backend_runtime_contains_database_provisioning_and_gate_inputs():
     assert all(pattern in dockerignore for pattern in required)
 
 
-def test_greenfield_deploy_initializes_owner_after_roles_are_provisioned():
+def test_greenfield_deploy_initializes_owner_and_optional_demo_after_roles():
     root = Path(__file__).resolve().parents[1]
     compose = (root / "docker-compose.prod.yml").read_text(encoding="utf-8")
 
     assert "  init-superuser:" in compose
-    init_service = compose.split("  init-superuser:", 1)[1].split("  # ── Redis", 1)[0]
+    init_service = compose.split("  init-superuser:", 1)[1].split("  init-demo:", 1)[0]
     assert "scripts/init_superuser.py" in init_service
     assert "DB_ADMIN_ENV_FILE" in init_service
+    assert "  init-demo:" in compose
+    demo_service = compose.split("  init-demo:", 1)[1].split("  # ── Redis", 1)[0]
+    assert "scripts/init_demo_tenant.py" in demo_service
+    assert "DB_ADMIN_ENV_FILE" in demo_service
     for workflow in ("deploy-staging.yml", "deploy-production.yml"):
         content = (root / ".github" / "workflows" / workflow).read_text(
             encoding="utf-8"
         )
         assert content.index("run --rm -T provision-db-roles") < content.index(
             "run --rm -T init-superuser"
+        )
+        assert content.index("run --rm -T init-superuser") < content.index(
+            "run --rm -T init-demo"
         )

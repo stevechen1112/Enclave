@@ -171,6 +171,7 @@ jobs:
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T migrate
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T provision-db-roles
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T init-superuser
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T init-demo
             docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
             # Health：必須經 edge 對外路徑（容器內 8000 僅診斷）
