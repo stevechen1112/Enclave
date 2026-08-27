@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy.orm import sessionmaker
 
 from app.db.base_class import Base
-from app.models.outbox import OutboxEvent, ProjectionStatus
+from app.models.outbox import DeadLetterEvent, OutboxEvent, ProjectionStatus
 from app.models.tenant import Tenant
 from app.services.outbox_events import publish_event
 from app.tasks.outbox_worker import _handle_document_event
@@ -103,6 +103,53 @@ def test_document_projection_skip_when_already_converged(db_session, monkeypatch
     db_session.commit()
     assert calls == []
     assert event.status == "completed"
+
+
+def _failed_event(db_session, *, attempts: int) -> OutboxEvent:
+    tenant = Tenant(id=uuid.uuid4(), name=f"outbox-failure-{attempts}", status="active")
+    db_session.add(tenant)
+    db_session.flush()
+    event = OutboxEvent(
+        tenant_id=tenant.id,
+        aggregate_type="document",
+        aggregate_id=str(uuid.uuid4()),
+        event_type="created",
+        revision=1,
+        payload={"tenant_id": str(tenant.id)},
+        idempotency_key=f"failure-{uuid.uuid4()}",
+        status="processing",
+        attempts=attempts,
+    )
+    db_session.add(event)
+    db_session.commit()
+    return event
+
+
+def test_failure_before_retry_budget_remains_retryable(db_session):
+    from app.tasks.outbox_worker import MAX_RETRIES, _handle_failure
+
+    event = _failed_event(db_session, attempts=MAX_RETRIES - 1)
+    _handle_failure(db_session, event, "provider unavailable")
+    db_session.commit()
+
+    assert event.status == "failed"
+    assert event.next_retry_at is not None
+    assert db_session.query(DeadLetterEvent).count() == 0
+
+
+def test_exhausted_retry_budget_moves_event_to_dead_letter(db_session):
+    from app.tasks.outbox_worker import MAX_RETRIES, _handle_failure
+
+    event = _failed_event(db_session, attempts=MAX_RETRIES)
+    _handle_failure(db_session, event, "provider unavailable")
+    db_session.commit()
+
+    assert event.status == "dead"
+    dead = db_session.query(DeadLetterEvent).one()
+    assert dead.original_event_id == event.id
+    assert dead.tenant_id == event.tenant_id
+    assert dead.attempts == MAX_RETRIES
+    assert dead.reason == "provider unavailable"
 
 
 def test_cache_epoch_bump_changes_key(monkeypatch):
