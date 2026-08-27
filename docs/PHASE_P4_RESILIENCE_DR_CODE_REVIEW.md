@@ -1,14 +1,14 @@
 # Phase P4 — 故障注入、備份還原與營運閉環 Code Review
 
-**Review date:** 2026-08-28  
-**Application implementation commit:** `916873350f8fb812635c0a80253b71fb7c9a2e5d`  
-**Operations restore commit:** `300893530ee32989632c76a5b97d9e360952e46f`  
-**Evidence gate commit:** `f09076341153ca32b8c29a0db322b7ad43862fcb`  
-**Staging release:** `staging-9168733`  
-**Evidence:** `docs/reports/P4_RESILIENCE_EVIDENCE_2026-08-28.json`  
-**Internal implementation gate:** PASS  
-**Code review:** PASS（Critical／High 未處理 finding：0）  
-**Phase gate:** PASS  
+**Review date:** 2026-08-28
+**Application implementation commit:** `916873350f8fb812635c0a80253b71fb7c9a2e5d`
+**Operations restore commit:** `300893530ee32989632c76a5b97d9e360952e46f`
+**Evidence gate commit:** `f09076341153ca32b8c29a0db322b7ad43862fcb`
+**Staging release:** `staging-9168733`
+**Evidence:** `docs/reports/P4_RESILIENCE_EVIDENCE_2026-08-28.json`
+**Internal implementation gate:** PASS
+**Code review:** PASS（Critical／High 未處理 finding：0）
+**Phase gate:** PASS
 **P5 entry:** ALLOWED
 
 ## Conclusion
