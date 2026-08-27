@@ -78,6 +78,16 @@ def test_production_runtime_includes_ffmpeg_toolchain():
     assert "\n    ffmpeg \\\n" in content
 
 
+def test_production_runtime_includes_only_the_p3_synthetic_corpus_contract():
+    dockerignore = Path(__file__).resolve().parents[1] / ".dockerignore"
+    content = dockerignore.read_text(encoding="utf-8")
+
+    assert "!scripts/capture_p3_staging_replay.py" in content
+    assert "!testdata/multimodal_golden/manifest.json" in content
+    assert "!testdata/multimodal_golden/ground_truth.schema.json" in content
+    assert "!testdata/golden/" not in content
+
+
 @pytest.fixture()
 def video_db():
     engine = create_engine("sqlite://")
