@@ -104,3 +104,25 @@ def test_greenfield_deploy_initializes_owner_and_optional_demo_after_roles():
         assert content.index("run --rm -T init-superuser") < content.index(
             "run --rm -T init-demo"
         )
+
+
+def test_persistent_upload_storage_is_writable_by_non_root_runtime_services():
+    root = Path(__file__).resolve().parents[1]
+    dockerfile = (root / "Dockerfile").read_text(encoding="utf-8")
+    compose = (root / "docker-compose.prod.yml").read_text(encoding="utf-8")
+
+    assert "mkdir -p /code/uploads" in dockerfile
+    assert "  init-storage:" in compose
+    init_storage = compose.split("  init-storage:", 1)[1].split(
+        "  # ── Backend API", 1
+    )[0]
+    assert 'user: "0:0"' in init_storage
+    assert "chown -R enclave:enclave /code/uploads" in init_storage
+    assert "uploads_data:/code/uploads" in init_storage
+
+    for service, next_service in (("web", "db"), ("worker", "worker-beat")):
+        block = compose.split(f"  {service}:", 1)[1].split(
+            f"  {next_service}:", 1
+        )[0]
+        assert "init-storage:" in block
+        assert "condition: service_completed_successfully" in block

@@ -75,7 +75,7 @@ RUN groupadd -r enclave && useradd -r -g enclave -d /code -s /sbin/nologin encla
 
 COPY . .
 
-RUN chown -R enclave:enclave /code
+RUN mkdir -p /code/uploads && chown -R enclave:enclave /code
 USER enclave
 
 EXPOSE 8000

@@ -14,6 +14,20 @@
 # ========================================================
 
 services:
+  # ── Persistent storage ownership (narrow root-only bootstrap) ──
+  # A brand-new named volume is otherwise created as root when /code/uploads
+  # is absent from the build context. Runtime services stay non-root.
+  init-storage:
+    image: ${IMAGE_PREFIX:-ghcr.io/enclave}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "0:0"
+    command: ["sh", "-c", "chown -R enclave:enclave /code/uploads && chmod 0750 /code/uploads"]
+    restart: "no"
+    volumes:
+      - uploads_data:/code/uploads
+
   # ── Backend API ──
   web:
     image: ${IMAGE_PREFIX:-ghcr.io/enclave}/backend:${IMAGE_TAG:-latest}
@@ -55,6 +69,8 @@ services:
     volumes:
       - uploads_data:/code/uploads    # Persist uploaded files only
     depends_on:
+      init-storage:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
@@ -268,6 +284,8 @@ services:
     volumes:
       - uploads_data:/code/uploads    # Shared with web for file processing
     depends_on:
+      init-storage:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
