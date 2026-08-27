@@ -50,7 +50,7 @@ def test_compose_honors_staging_app_env():
     compose = (Path(__file__).resolve().parents[1] / "docker-compose.prod.yml").read_text(encoding="utf-8")
 
     assert "APP_ENV=production" not in compose
-    assert compose.count("APP_ENV=${APP_ENV:-production}") == 5
+    assert compose.count("APP_ENV=${APP_ENV:-production}") == 6
 
 
 def test_backend_runtime_contains_database_provisioning_and_gate_inputs():
@@ -62,8 +62,27 @@ def test_backend_runtime_contains_database_provisioning_and_gate_inputs():
         "!config/tenant_security_catalog.json",
         "!config/tenant_session_exceptions.json",
         "!scripts/provision_tenant_database_roles.py",
+        "!scripts/init_superuser.py",
+        "!scripts/initial_data.py",
         "!scripts/tenant_security_gate.py",
         "!scripts/tenant_session_context_gate.py",
         "!scripts/rls_shadow_report.py",
     )
     assert all(pattern in dockerignore for pattern in required)
+
+
+def test_greenfield_deploy_initializes_owner_after_roles_are_provisioned():
+    root = Path(__file__).resolve().parents[1]
+    compose = (root / "docker-compose.prod.yml").read_text(encoding="utf-8")
+
+    assert "  init-superuser:" in compose
+    init_service = compose.split("  init-superuser:", 1)[1].split("  # ── Redis", 1)[0]
+    assert "scripts/init_superuser.py" in init_service
+    assert "DB_ADMIN_ENV_FILE" in init_service
+    for workflow in ("deploy-staging.yml", "deploy-production.yml"):
+        content = (root / ".github" / "workflows" / workflow).read_text(
+            encoding="utf-8"
+        )
+        assert content.index("run --rm -T provision-db-roles") < content.index(
+            "run --rm -T init-superuser"
+        )

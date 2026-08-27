@@ -68,6 +68,8 @@ coverage.xml
 !config/tenant_session_exceptions.json
 !scripts/
 !scripts/provision_tenant_database_roles.py
+!scripts/init_superuser.py
+!scripts/initial_data.py
 !scripts/tenant_security_gate.py
 !scripts/tenant_session_context_gate.py
 !scripts/rls_shadow_report.py

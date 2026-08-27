@@ -157,6 +157,28 @@ services:
       db:
         condition: service_healthy
 
+  # ── One-shot initial organization owner (idempotent; schema owner only) ──
+  init-superuser:
+    profiles: ["operations"]
+    image: ${IMAGE_PREFIX:-ghcr.io/enclave}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python scripts/init_superuser.py
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+      - ${DB_ADMIN_ENV_FILE:-.env.db-admin}
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - POSTGRES_SERVER=${DB_ADMIN_HOST:-db}
+      - POSTGRES_PORT=${DB_ADMIN_PORT:-5432}
+      - POSTGRES_DB=${DB_ADMIN_DATABASE:-enclave}
+      - POSTGRES_USER=${DB_ADMIN_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_ADMIN_PASSWORD:?DB_ADMIN_PASSWORD is required}
+    depends_on:
+      db:
+        condition: service_healthy
+
   # ── Redis ──
   redis:
     image: redis:7-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf

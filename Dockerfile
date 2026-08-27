@@ -29,6 +29,24 @@ FROM python:3.13-slim@sha256:7e3a6aca9d74f93cca21a91d86a8dad8c34749afd5b4a98ee48
 
 WORKDIR /code
 
+# Install only runtime deps (no gcc)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    openssl \
+    tesseract-ocr \
+    tesseract-ocr-chi-tra \
+    ffmpeg \
+    poppler-utils \
+    libreoffice-writer \
+    libreoffice-calc \
+    libmagic1 \
+    libxml2 \
+    libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Release identity changes on every build. Keep it after the expensive,
+# content-stable OS dependency layer so immutable releases can reuse that cache.
 ARG ENCLAVE_RELEASE_ID=dev
 ARG ENCLAVE_SOURCE_COMMIT=unknown
 ARG ENCLAVE_SOURCE_DIRTY=unknown
@@ -47,22 +65,6 @@ LABEL org.opencontainers.image.revision=${ENCLAVE_SOURCE_COMMIT} \
       org.opencontainers.image.created=${ENCLAVE_BUILD_TIME} \
       io.enclave.release-id=${ENCLAVE_RELEASE_ID} \
       io.enclave.schema-head=${ENCLAVE_SCHEMA_HEAD}
-
-# Install only runtime deps (no gcc)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
-    curl \
-    openssl \
-    tesseract-ocr \
-    tesseract-ocr-chi-tra \
-    ffmpeg \
-    poppler-utils \
-    libreoffice-writer \
-    libreoffice-calc \
-    libmagic1 \
-    libxml2 \
-    libxslt1.1 \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy virtualenv from builder
 COPY --from=builder /opt/venv /opt/venv
