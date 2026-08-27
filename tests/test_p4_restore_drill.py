@@ -84,3 +84,11 @@ def test_disaster_recovery_consumes_canonical_backup_names_and_volume():
     assert "-v ON_ERROR_STOP=1" in script
     assert "worker-beat" in script
     assert "gateway" in script
+
+
+def test_restore_drill_uses_actual_legacy_chunk_table_name():
+    script = (ROOT / "scripts" / "p4_isolated_restore_drill.py").read_text(
+        encoding="utf-8"
+    )
+    assert "FROM documentchunks" in script
+    assert "FROM document_chunks" not in script

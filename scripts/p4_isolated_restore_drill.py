@@ -188,7 +188,7 @@ def run_drill(args: argparse.Namespace) -> dict:
 
     index_query = (
         "SELECT count(*)::text || '|' || count(embedding)::text || '|' || "
-        "coalesce(sum(octet_length(text)),0)::text FROM document_chunks"
+        "coalesce(sum(octet_length(text)),0)::text FROM documentchunks"
     )
     index_source = _run(
         compose
