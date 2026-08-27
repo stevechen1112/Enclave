@@ -71,6 +71,13 @@ from app.services.video_understanding import (
 )
 
 
+def test_production_runtime_includes_ffmpeg_toolchain():
+    dockerfile = Path(__file__).resolve().parents[1] / "Dockerfile"
+    content = dockerfile.read_text(encoding="utf-8")
+
+    assert "\n    ffmpeg \\\n" in content
+
+
 @pytest.fixture()
 def video_db():
     engine = create_engine("sqlite://")

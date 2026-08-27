@@ -55,6 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     tesseract-ocr \
     tesseract-ocr-chi-tra \
+    ffmpeg \
     poppler-utils \
     libreoffice-writer \
     libreoffice-calc \
