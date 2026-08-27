@@ -86,7 +86,9 @@ def test_fastapi_has_no_duplicate_method_path_registrations():
             routes[(method, route.path)].append(route.name)
     duplicates = {key: names for key, names in routes.items() if len(names) > 1}
     assert duplicates == {}
-    assert routes[("GET", "/api/v1/job-modules")] == ["list_modules"]
+    # Keep this platform-level gate independent from optional product packs.
+    # MKA route presence/absence is covered explicitly by test_pack_runtime.py.
+    assert routes[("GET", "/api/v1/knowledge/assets")] == ["list_assets"]
 
 
 def test_legacy_usage_is_validated_and_reported_per_tenant():
