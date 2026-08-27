@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,16 @@ class ResourceDownloader:
 
         # 本機路徑 — 直接驗證
         if not self._is_remote_uri(src):
+            # Connector payloads are untrusted input. A relative parent path
+            # can escape the materialization workspace on Linux even when it
+            # merely appears nonexistent on a Windows development host.
+            normalized_parts = src.replace("\\", "/").split("/")
+            if ".." in normalized_parts:
+                logger.warning(
+                    "Rejected connector path with parent traversal: %s",
+                    resource.get("id", "unknown"),
+                )
+                return None
             if Path(src).is_file():
                 return src
             logger.warning(f"Local file not found: {src}")

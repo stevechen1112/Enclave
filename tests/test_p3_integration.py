@@ -9,10 +9,9 @@ P3：需求驅動整合 — 單元測試。
 """
 import pytest
 from unittest.mock import MagicMock, patch
-from pathlib import Path
 
 from app.services.connector_materialize import ResourceDownloader
-from app.services.mcp_server import ReadOnlyFastMCPServer, MCPToolDef, MCPToolResult
+from app.services.mcp_server import ReadOnlyFastMCPServer
 from app.services.mcp_client import MCPClient, MCPServerConfig
 from app.services.docling_ablation import (
     DoclingParser,
@@ -75,6 +74,22 @@ class TestResourceDownloader:
         )
         # 本機路徑穿越應被 _sanitize_filename 阻擋（或檔案不存在）
         assert result is None or "/etc/passwd" not in str(result)
+
+    @pytest.mark.parametrize(
+        "unsafe_path",
+        ("../secret.txt", "safe/../../secret.txt", r"..\..\secret.txt"),
+    )
+    def test_rejects_parent_traversal_before_touching_filesystem(
+        self, tmp_path, unsafe_path
+    ):
+        dl = ResourceDownloader(upload_dir=str(tmp_path), max_size_mb=10)
+        assert (
+            dl.resolve_and_download(
+                {"file_path": unsafe_path, "id": "untrusted-resource"},
+                tenant_id="tenant1",
+            )
+            is None
+        )
 
 
 # ── P3-2 Read-only FastMCP Server ──
