@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://enclave.local/schemas/multimodal-ground-truth-v1.json",
+  "title": "Enclave multimodal ground truth",
+  "type": "object",
+  "required": ["schema_version", "classification", "cases"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "classification": {"enum": ["synthetic", "licensed_internal"]},
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "modality", "slice", "source", "expected"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "modality": {"enum": ["document", "spreadsheet", "image", "audio", "video"]},
+          "slice": {"type": "string", "minLength": 1},
+          "source": {
+            "type": "object",
+            "required": ["uri", "content_type", "provenance"]
+          },
+          "expected": {
+            "type": "object",
+            "required": ["terminal_states", "tenant_id", "revision_id", "evidence_locators"],
+            "properties": {
+              "terminal_states": {"type": "array", "minItems": 1},
+              "tenant_id": {"type": "string", "minLength": 1},
+              "revision_id": {"type": "string", "minLength": 1},
+              "text": {"type": "string"},
+              "table_fields": {"type": "object"},
+              "speakers": {"type": "array"},
+              "ocr_regions": {"type": "array"},
+              "steps": {"type": "array"},
+              "conditions": {"type": "array"},
+              "risks": {"type": "array"},
+              "exceptions": {"type": "array"},
+              "high_risk": {"type": "boolean"},
+              "low_confidence": {"type": "boolean"},
+              "sop_conflict": {"type": "boolean"},
+              "evidence_locators": {"type": "array"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

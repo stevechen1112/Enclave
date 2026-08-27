@@ -1,0 +1,13 @@
+name: p3_multimodal
+version: "1.0"
+description: "P3 cross-modal contract, replay and safe-degradation quality gate"
+corpus_manifest: testdata/multimodal_golden/manifest.json
+artifact_dir: artifacts/quality
+required_modes:
+  - mock_contract
+  - degraded
+thresholds:
+  terminal_state_rate_min: 0.98
+  evidence_locator_precision_min: 0.95
+  evidence_locator_recall_min: 0.95
+  critical_error_max: 0

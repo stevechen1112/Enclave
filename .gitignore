@@ -80,6 +80,8 @@ artifacts/sbom/*
 !artifacts/sbom/.gitkeep
 artifacts/security/*
 !artifacts/security/.gitkeep
+artifacts/quality/*
+!artifacts/quality/.gitkeep
 
 # ---------- 一次性診斷／探針（不得成為正式來源）----------
 scripts/_*.py

@@ -189,6 +189,27 @@ jobs:
           tests/test_production_shadow_gate.py
           -q
 
+      - name: P3 multimodal contract and safe-degradation gates
+        run: |
+          python scripts/run_multimodal_quality_gate.py \
+            --mode mock_contract \
+            --output artifacts/quality/p3_mock_contract.json
+          python scripts/run_multimodal_quality_gate.py \
+            --mode degraded \
+            --provider enclave.disabled-provider \
+            --output artifacts/quality/p3_degraded.json
+          python scripts/build_multimodal_provider_matrix.py \
+            artifacts/quality/p3_mock_contract.json \
+            artifacts/quality/p3_degraded.json \
+            --output artifacts/quality/p3_provider_matrix.json
+
+      - name: Upload P3 multimodal quality evidence
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: p3-multimodal-quality-evidence
+          path: artifacts/quality/*.json
+          retention-days: 30
+
       - name: Run tests
         run: |
           python -m pytest tests/ \
