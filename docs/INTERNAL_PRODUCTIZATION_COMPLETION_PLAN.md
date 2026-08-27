@@ -69,12 +69,14 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 
 **優先級：P0**
 
+**2026-08-27 狀態：** COMPLETE；CI、供應鏈、license、SBOM、三映像建置／掃描與 release provenance 全部 PASS。詳見 `PHASE_P1_CI_SUPPLY_CHAIN_SECURITY_CODE_REVIEW.md`。
+
 ### 已有基礎
 
 - Backend pytest、Ruff、frontend TypeScript／lint／build、Playwright、Docker build、pip audit 與 npm audit 已在 CI。
 - SBOM 產生器、security findings gate 與安全掃描腳本已存在。
 
-### 待完成
+### 已完成
 
 - 將 `frontend npm test` 納入 CI；目前 workflow 只有 TypeScript、lint、build 與 Playwright。
 - 真正執行 backend type check；目前 CI 安裝 mypy，但沒有執行 gate。
