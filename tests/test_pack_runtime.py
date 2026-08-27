@@ -137,7 +137,14 @@ def test_enabled_pack_owns_compatible_api_and_callable_hooks():
     enabled = build_pack_registry(deployment_capabilities={"mka": True})
     router = APIRouter()
     include_pack_routers(router, enabled)
-    paths = {route.path for route in router.routes}
+    effective_routes = []
+    for route in router.routes:
+        route_contexts = getattr(route, "effective_route_contexts", None)
+        if callable(route_contexts):
+            effective_routes.extend(route_contexts())
+        else:
+            effective_routes.append(route)
+    paths = {route.path for route in effective_routes}
 
     assert "/knowhow" in paths
     assert "/job-modules" in paths
