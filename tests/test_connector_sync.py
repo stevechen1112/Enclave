@@ -143,3 +143,63 @@ def test_interactive_connector_sync_has_only_one_executor():
     assert "return _sync.run_sync(" in endpoint_source
     assert 'event.event_type == "sync_requested"' in handler_source
     assert '"created", "sync_requested"' not in handler_source
+
+
+def test_materialized_document_recovers_from_concurrent_identical_insert():
+    from contextlib import nullcontext
+
+    from app.models.document import Document
+    from app.services.connector_sync import ConnectorSyncService
+
+    tenant_id = uuid.uuid4()
+    winner = Document(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        filename="winner.txt",
+        file_type="txt",
+        file_path="winner.txt",
+        source_type="connector",
+        source_system="nas_smb",
+        source_record_id="nas:source.txt",
+        content_hash="same-content",
+        status="processing",
+    )
+    contender = Document(
+        id=uuid.uuid4(),
+        tenant_id=tenant_id,
+        filename="contender.txt",
+        file_type="txt",
+        file_path="contender.txt",
+        source_type="connector",
+        source_system="nas_smb",
+        source_record_id="nas:source.txt",
+        content_hash="same-content",
+        status="processing",
+    )
+
+    class Query:
+        def filter(self, *args):
+            return self
+
+        def first(self):
+            return winner
+
+    class RacingSession:
+        def begin_nested(self):
+            return nullcontext()
+
+        def add(self, row):
+            return None
+
+        def flush(self):
+            raise IntegrityError("insert", {}, Exception("unique race"))
+
+        def query(self, model):
+            assert model is Document
+            return Query()
+
+    persisted = ConnectorSyncService._flush_document_idempotently(
+        RacingSession(), contender  # type: ignore[arg-type]
+    )
+
+    assert persisted is winner

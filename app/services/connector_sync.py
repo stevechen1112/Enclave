@@ -80,6 +80,29 @@ class ConnectorSyncService:
                 raise
         return cursor
 
+    @staticmethod
+    def _flush_document_idempotently(db: Session, document: Document) -> Document:
+        """Persist a materialized document or return a concurrent identical winner."""
+        try:
+            with db.begin_nested():
+                db.add(document)
+                db.flush()
+            return document
+        except IntegrityError:
+            winner = (
+                db.query(Document)
+                .filter(
+                    Document.tenant_id == document.tenant_id,
+                    Document.source_system == document.source_system,
+                    Document.source_record_id == document.source_record_id,
+                    Document.tombstoned_at.is_(None),
+                )
+                .first()
+            )
+            if winner is None or winner.content_hash != document.content_hash:
+                raise
+            return winner
+
     async def _fetch_remote_sync(
         self,
         connector: ConnectorInstance,
@@ -207,8 +230,14 @@ class ConnectorSyncService:
                 status="processing",
                 uploaded_by=uploaded_by,
             )
-            db.add(doc)
-            db.flush()
+            persisted = self._flush_document_idempotently(db, doc)
+            if persisted is not doc:
+                try:
+                    dest.unlink(missing_ok=True)
+                except OSError:
+                    logger.warning("failed to clean duplicate connector copy %s", dest)
+                created_ids.append(str(persisted.id))
+                continue
             from app.services.asset_projection import project_document
 
             project_document(

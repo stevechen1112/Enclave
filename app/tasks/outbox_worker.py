@@ -333,9 +333,9 @@ def process_outbox_batch(self):
                 processed += 1
                 db.commit()
             except Exception as exc:
-                logger.error("Outbox event %s dispatch failed: %s", event.id, exc)
+                logger.error("Outbox event %s dispatch failed: %s", event_id, exc)
                 db.rollback()
-                event = db.query(OutboxEvent).filter(OutboxEvent.id == event.id).first()
+                event = db.query(OutboxEvent).filter(OutboxEvent.id == event_id).first()
                 if event:
                     _handle_failure(db, event, str(exc))
                     db.commit()
