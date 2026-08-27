@@ -72,7 +72,7 @@
     {
       "id": "video-handheld-001", "modality": "video", "slice": "handheld_motion",
       "source": {"uri": "generated://video/handheld-inspection.mp4", "content_type": "video/mp4", "provenance": "repository_generated_recipe"},
-      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-003", "evidence_query": "inspect equipment valve", "low_confidence": true, "evidence_locators": [{"id": "loc-video-003", "kind": "video", "start_ms": 12200, "end_ms": 17100, "revision_id": "rev-video-003"}]}
+      "expected": {"terminal_states": ["review_required", "degraded"], "tenant_id": "tenant-synthetic-a", "revision_id": "rev-video-003", "evidence_query": "inspect equipment valve", "low_confidence": true, "evidence_locators": [{"id": "loc-video-003", "kind": "video", "start_ms": 12200, "end_ms": 15100, "revision_id": "rev-video-003"}]}
     },
     {
       "id": "video-machine-001", "modality": "video", "slice": "equipment_high_risk_sop_conflict",
