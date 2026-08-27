@@ -51,3 +51,19 @@ def test_compose_honors_staging_app_env():
 
     assert "APP_ENV=production" not in compose
     assert compose.count("APP_ENV=${APP_ENV:-production}") == 5
+
+
+def test_backend_runtime_contains_database_provisioning_and_gate_inputs():
+    dockerignore = (Path(__file__).resolve().parents[1] / ".dockerignore").read_text(
+        encoding="utf-8"
+    )
+
+    required = (
+        "!config/tenant_security_catalog.json",
+        "!config/tenant_session_exceptions.json",
+        "!scripts/provision_tenant_database_roles.py",
+        "!scripts/tenant_security_gate.py",
+        "!scripts/tenant_session_context_gate.py",
+        "!scripts/rls_shadow_report.py",
+    )
+    assert all(pattern in dockerignore for pattern in required)
