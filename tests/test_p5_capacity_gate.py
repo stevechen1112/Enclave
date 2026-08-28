@@ -45,6 +45,7 @@ def _complete_evidence() -> dict:
                 "telemetry": _rows(spec["required_telemetry"], "metric"),
                 "telemetry_sample_count": 15,
                 "integrity": {
+                    "status": "PASS",
                     "data_corruption": 0,
                     "cross_tenant_leak": 0,
                     "unrecoverable_backlog": 0,
@@ -52,6 +53,10 @@ def _complete_evidence() -> dict:
                     "artifact_sha256": "d" * 64,
                     "tenant_isolation_status": "PASS",
                     "job_reconciliation_status": "PASS",
+                    "source_commit": "a" * 40,
+                    "tenant_id": "11111111-1111-1111-1111-111111111111",
+                    "run_started_at": capacity_start.isoformat(),
+                    "load_completed_at": now.isoformat(),
                 },
                 "grounding_evidence": {
                     "status": "PASS",
@@ -235,3 +240,15 @@ def test_ungrounded_http_success_cannot_pass():
     result = evaluate_p5_capacity_evidence(evidence)
     assert result["status"] == "HOLD"
     assert "grounded retrieval proof is incomplete: lite" in result["errors"]
+
+
+def test_stale_or_cross_release_integrity_evidence_cannot_pass():
+    evidence = _complete_evidence()
+    evidence["capacity_reports"][0]["integrity"]["source_commit"] = "b" * 40
+    evidence["capacity_reports"][1]["integrity"]["run_started_at"] = (
+        datetime.now(timezone.utc) - timedelta(days=1)
+    ).isoformat()
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "capacity integrity release mismatch: lite" in result["errors"]
+    assert "capacity integrity start-time mismatch: standard" in result["errors"]

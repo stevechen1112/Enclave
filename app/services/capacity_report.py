@@ -181,6 +181,17 @@ def build_capacity_report(
         and int(grounding.get("chat_sources", 0) or 0) > 0
         and len(str(grounding.get("artifact_sha256") or "")) == 64
     )
+    integrity_passed = (
+        integrity.get("status") == "PASS"
+        and integrity.get("execution_class") == "live"
+        and integrity.get("source_commit") == grounding.get("source_commit")
+        and integrity.get("tenant_id") == grounding.get("tenant_id")
+        and integrity.get("run_started_at") == started_at
+        and integrity.get("load_completed_at") == completed_at
+        and len(str(integrity.get("artifact_sha256") or "")) == 64
+        and integrity.get("tenant_isolation_status") == "PASS"
+        and integrity.get("job_reconciliation_status") == "PASS"
+    )
     passed = (
         duration_seconds >= int(spec["test_policy"]["capacity_min_duration_seconds"])
         and not hardware_errors
@@ -195,10 +206,7 @@ def build_capacity_report(
                 "unrecoverable_backlog",
             )
         )
-        and integrity.get("execution_class") == "live"
-        and len(str(integrity.get("artifact_sha256") or "")) == 64
-        and integrity.get("tenant_isolation_status") == "PASS"
-        and integrity.get("job_reconciliation_status") == "PASS"
+        and integrity_passed
         and grounding_passed
     )
     return {

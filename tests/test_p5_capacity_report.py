@@ -40,15 +40,18 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
     }
     telemetry.write_text(json.dumps(sample) + "\n", encoding="utf-8")
     completed = datetime.now(UTC)
+    started = (completed - timedelta(seconds=900)).isoformat()
+    completed_text = completed.isoformat()
     report = build_capacity_report(
         profile_name="lite",
         users=int(profile_load_target(spec, "lite")["concurrent_users"]),
         duration_seconds=900,
-        started_at=(completed - timedelta(seconds=900)).isoformat(),
-        completed_at=completed.isoformat(),
+        started_at=started,
+        completed_at=completed_text,
         locust_stats_path=stats,
         telemetry_path=telemetry,
         integrity={
+            "status": "PASS",
             "data_corruption": 0,
             "cross_tenant_leak": 0,
             "unrecoverable_backlog": 0,
@@ -56,6 +59,10 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
             "artifact_sha256": "a" * 64,
             "tenant_isolation_status": "PASS",
             "job_reconciliation_status": "PASS",
+            "source_commit": "a" * 40,
+            "tenant_id": "11111111-1111-1111-1111-111111111111",
+            "run_started_at": started,
+            "load_completed_at": completed_text,
         },
         grounding={
             "status": "PASS",

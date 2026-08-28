@@ -42,8 +42,11 @@
 不得寫入 evidence、plan 或 Git。
 
 1. 以 `scripts/run_p5_capacity.py` 依序執行 Lite、Standard、Enterprise；每次至少
-   900 秒並使用 profile 定義的 2× 並行數。`--integrity-evidence` 必須來自同一次
-   run 後的租戶隔離與 job reconciliation live probe。Runner 會實測 CPU、RAM、
+   900 秒並使用 profile 定義的 2× 並行數。Runner 會在負載計時結束後，於
+   `--backend-container` 指定的同版 backend 內自動執行租戶隔離與 job
+   reconciliation live probe；證據會綁定同一次 run 的開始／負載完成時間、
+   tenant 與 source commit。預先提供或重用舊 integrity JSON 不被接受。Runner
+   會實測 CPU、RAM、
    disk 與 GPU VRAM；主機低於該 profile 基準時會在負載開始前 fail-fast，不能用
    Lite 主機產生 Standard 或 Enterprise 的報告。
    先以 `scripts/provision_p5_load_users.py` 在專用測試租戶建立 credential pool；

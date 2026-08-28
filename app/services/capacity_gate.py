@@ -253,11 +253,31 @@ def evaluate_p5_capacity_evidence(
         ):
             errors.append(f"insufficient telemetry samples: {profile_name}")
         integrity = row.get("integrity", {})
+        if integrity.get("status") != "PASS":
+            errors.append(f"capacity integrity evidence did not pass: {profile_name}")
         for field in ("data_corruption", "cross_tenant_leak", "unrecoverable_backlog"):
             if int(integrity.get(field, -1)) != 0:
                 errors.append(f"capacity integrity failure for {profile_name}.{field}")
         if integrity.get("execution_class") != "live":
             errors.append(f"capacity integrity evidence is not live: {profile_name}")
+        if integrity.get("source_commit") != source_commit:
+            errors.append(
+                f"capacity integrity release mismatch: {profile_name}"
+            )
+        if integrity.get("tenant_id") != row.get("grounding_evidence", {}).get(
+            "tenant_id"
+        ):
+            errors.append(
+                f"capacity integrity tenant mismatch: {profile_name}"
+            )
+        if integrity.get("run_started_at") != row.get("started_at"):
+            errors.append(
+                f"capacity integrity start-time mismatch: {profile_name}"
+            )
+        if integrity.get("load_completed_at") != row.get("completed_at"):
+            errors.append(
+                f"capacity integrity completion-time mismatch: {profile_name}"
+            )
         if len(str(integrity.get("artifact_sha256") or "")) != 64:
             errors.append(
                 f"capacity integrity artifact hash is missing: {profile_name}"
