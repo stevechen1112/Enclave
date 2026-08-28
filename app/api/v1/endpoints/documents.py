@@ -119,6 +119,9 @@ async def upload_document(
     """
     # 權限檢查
     check_document_permission(current_user, "create")
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
 
     # 文件數量配額檢查
     doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")

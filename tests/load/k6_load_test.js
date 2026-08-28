@@ -86,7 +86,7 @@ function login(email, password) {
     tags: { name: "auth_login" },
   };
 
-  const res = http.post(`${BASE_URL}/api/v1/auth/login`, payload, params);
+  const res = http.post(`${BASE_URL}/api/v1/auth/login/access-token`, payload, params);
   loginDuration.add(res.timings.duration);
 
   const success = check(res, {
@@ -140,7 +140,7 @@ export default function () {
     const question = questions[Math.floor(Math.random() * questions.length)];
 
     const chatRes = http.post(
-      `${BASE_URL}/api/v1/chat/`,
+      `${BASE_URL}/api/v1/chat/chat`,
       JSON.stringify({ question }),
       {
         ...headers,
@@ -164,9 +164,14 @@ export default function () {
     const queries = ["特休假", "加班", "離職", "請假", "勞保"];
     const q = queries[Math.floor(Math.random() * queries.length)];
 
-    const searchRes = http.get(
-      `${BASE_URL}/api/v1/kb/search?q=${encodeURIComponent(q)}&top_k=5`,
-      { ...headers, tags: { name: "kb_search" } }
+    const searchRes = http.post(
+      `${BASE_URL}/api/v1/kb/search`,
+      JSON.stringify({ query: q, top_k: 5, granularity: "auto" }),
+      {
+        ...headers,
+        headers: { ...headers.headers, "Content-Type": "application/json" },
+        tags: { name: "kb_search" },
+      }
     );
 
     searchDuration.add(searchRes.timings.duration);
@@ -179,7 +184,7 @@ export default function () {
 
   // ----- Documents -----
   group("Documents", () => {
-    const docRes = http.get(`${BASE_URL}/api/v1/documents/`, {
+    const docRes = http.get(`${BASE_URL}/api/v1/knowledge/assets`, {
       ...headers,
       tags: { name: "document_list" },
     });
@@ -204,16 +209,6 @@ export default function () {
   });
 
   sleep(0.5);
-
-  // ----- Subscription -----
-  group("Subscription", () => {
-    const planRes = http.get(`${BASE_URL}/api/v1/subscription/plans`, {
-      tags: { name: "subscription_plans" },
-    });
-    check(planRes, {
-      "plans status 200": (r) => r.status === 200,
-    });
-  });
 
   // ----- Health -----
   group("Health", () => {

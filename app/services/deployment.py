@@ -19,6 +19,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+from app.services.capacity_gate import load_capacity_spec
+
 logger = logging.getLogger(__name__)
 
 
@@ -44,16 +46,35 @@ class DeploymentConfig:
     services: List[str] = field(default_factory=list)
     ports: Dict[str, int] = field(default_factory=dict)
     env_vars: Dict[str, str] = field(default_factory=dict)
+    capacity: Dict[str, Any] = field(default_factory=dict)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  Profile Definitions
 # ═══════════════════════════════════════════════════════════════════════════════
 
+_CAPACITY_SPEC = load_capacity_spec()
+
+
+def _profile_capacity(name: str) -> Dict[str, Any]:
+    return dict(_CAPACITY_SPEC["profiles"][name])
+
+
+def _profile_hardware(name: str) -> HardwareRequirement:
+    hardware = _CAPACITY_SPEC["profiles"][name]["hardware"]
+    return HardwareRequirement(
+        cpu_cores=int(hardware["cpu_cores"]),
+        ram_gb=int(hardware["ram_gb"]),
+        disk_gb=int(hardware["disk_gb"]),
+        gpu_required=int(hardware.get("gpu_vram_gb", 0)) > 0,
+        gpu_vram_gb=int(hardware.get("gpu_vram_gb", 0)),
+    )
+
+
 PROFILES: Dict[DeploymentProfile, DeploymentConfig] = {
     DeploymentProfile.LITE: DeploymentConfig(
         profile=DeploymentProfile.LITE,
-        hardware=HardwareRequirement(cpu_cores=4, ram_gb=8, disk_gb=50),
+        hardware=_profile_hardware("lite"),
         services=["enclave", "postgres", "redis"],
         ports={"enclave": 8000, "postgres": 5432, "redis": 6379},
         env_vars={
@@ -62,12 +83,11 @@ PROFILES: Dict[DeploymentProfile, DeploymentConfig] = {
             "PIPESHUB_ENABLED": "false",
             "WEKNORA_ENABLED": "false",
         },
+        capacity=_profile_capacity("lite"),
     ),
     DeploymentProfile.STANDARD: DeploymentConfig(
         profile=DeploymentProfile.STANDARD,
-        hardware=HardwareRequirement(
-            cpu_cores=8, ram_gb=32, disk_gb=200, gpu_required=True, gpu_vram_gb=8,
-        ),
+        hardware=_profile_hardware("standard"),
         services=["enclave", "postgres", "redis", "ragflow", "pipeshub", "weknora", "neo4j", "langfuse"],
         ports={"enclave": 8000, "postgres": 5432, "redis": 6379, "ragflow": 8001, "pipeshub": 8002, "weknora": 8003},
         env_vars={
@@ -76,12 +96,11 @@ PROFILES: Dict[DeploymentProfile, DeploymentConfig] = {
             "PIPESHUB_ENABLED": "true",
             "WEKNORA_ENABLED": "true",
         },
+        capacity=_profile_capacity("standard"),
     ),
     DeploymentProfile.ENTERPRISE: DeploymentConfig(
         profile=DeploymentProfile.ENTERPRISE,
-        hardware=HardwareRequirement(
-            cpu_cores=16, ram_gb=64, disk_gb=500, gpu_required=True, gpu_vram_gb=24,
-        ),
+        hardware=_profile_hardware("enterprise"),
         services=["enclave", "postgres", "redis", "ragflow", "pipeshub", "weknora", "neo4j", "langfuse", "minio", "grafana"],
         ports={"enclave": 8000, "postgres": 5432, "redis": 6379, "ragflow": 8001, "pipeshub": 8002, "weknora": 8003},
         env_vars={
@@ -91,6 +110,7 @@ PROFILES: Dict[DeploymentProfile, DeploymentConfig] = {
             "WEKNORA_ENABLED": "true",
             "HA_MODE": "true",
         },
+        capacity=_profile_capacity("enterprise"),
     ),
 }
 

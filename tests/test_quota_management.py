@@ -97,6 +97,28 @@ async def test_query_quota_enforcement(client: AsyncClient, superuser_headers: d
 
 
 @pytest.mark.asyncio
+async def test_monthly_cost_guardrail_blocks_chat_before_provider_call(
+    client: AsyncClient, superuser_headers: dict
+):
+    t, h = await _setup_tenant(client, superuser_headers, "CostEnf", "CE01")
+    updated = await client.put(
+        f"/api/v1/admin/tenants/{t['id']}/quota",
+        headers=superuser_headers,
+        json={"monthly_cost_limit_usd": 0.001},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["monthly_cost_limit_usd"] == 0.001
+
+    response = await client.post(
+        CHAT_URL, headers=h, json={"question": "這次查詢不應呼叫 provider"}
+    )
+    assert response.status_code == 429
+    detail = response.json()["detail"]
+    assert detail["error"] == "quota_exceeded"
+    assert detail["axis"] == "cost"
+
+
+@pytest.mark.asyncio
 async def test_document_quota_enforcement(client: AsyncClient, superuser_headers: dict):
     """測試文件配額強制執行"""
     t, h = await _setup_tenant(client, superuser_headers, "DocQuota", "DQ01")

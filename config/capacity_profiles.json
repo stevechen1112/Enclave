@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "currency": "USD",
+  "profiles": {
+    "lite": {
+      "hardware": {"cpu_cores": 4, "ram_gb": 8, "disk_gb": 50, "gpu_vram_gb": 0},
+      "expected_peak": {"concurrent_users": 20, "requests_per_minute": 240, "ingest_jobs_per_hour": 30, "media_hours_per_day": 2},
+      "slo": {"availability": 0.995, "api_error_rate": 0.02, "search_p95_ms": 5000, "chat_p95_ms": 8000, "upload_p95_ms": 5000, "ingest_lag_p95_seconds": 1800},
+      "resource_limits": {"cpu_percent": 90, "memory_percent": 85, "db_pool_percent": 85, "redis_memory_percent": 85, "queue_depth": 100, "provider_error_rate": 0.05}
+    },
+    "standard": {
+      "hardware": {"cpu_cores": 8, "ram_gb": 32, "disk_gb": 200, "gpu_vram_gb": 8},
+      "expected_peak": {"concurrent_users": 100, "requests_per_minute": 1200, "ingest_jobs_per_hour": 180, "media_hours_per_day": 12},
+      "slo": {"availability": 0.995, "api_error_rate": 0.01, "search_p95_ms": 2500, "chat_p95_ms": 5000, "upload_p95_ms": 3000, "ingest_lag_p95_seconds": 900},
+      "resource_limits": {"cpu_percent": 85, "memory_percent": 80, "db_pool_percent": 80, "redis_memory_percent": 80, "queue_depth": 500, "provider_error_rate": 0.03}
+    },
+    "enterprise": {
+      "hardware": {"cpu_cores": 16, "ram_gb": 64, "disk_gb": 500, "gpu_vram_gb": 24},
+      "expected_peak": {"concurrent_users": 500, "requests_per_minute": 6000, "ingest_jobs_per_hour": 900, "media_hours_per_day": 60},
+      "slo": {"availability": 0.999, "api_error_rate": 0.005, "search_p95_ms": 2000, "chat_p95_ms": 4000, "upload_p95_ms": 2500, "ingest_lag_p95_seconds": 600},
+      "resource_limits": {"cpu_percent": 80, "memory_percent": 75, "db_pool_percent": 75, "redis_memory_percent": 75, "queue_depth": 2000, "provider_error_rate": 0.02}
+    }
+  },
+  "required_scenarios": [
+    "auth_login",
+    "asset_list",
+    "knowledge_search",
+    "grounded_chat",
+    "document_upload",
+    "batch_ingestion",
+    "audio_queue",
+    "video_queue"
+  ],
+  "required_telemetry": [
+    "api_latency",
+    "api_error_rate",
+    "db_pool",
+    "redis_memory",
+    "celery_backlog",
+    "object_io",
+    "memory",
+    "cpu",
+    "gpu",
+    "provider_latency",
+    "provider_error_rate"
+  ],
+  "required_degradation_scenarios": [
+    "provider_slow",
+    "quota_exhausted",
+    "queue_saturated",
+    "sidecar_unavailable"
+  ],
+  "cost_units": {
+    "storage_gb_month": 0.023,
+    "audio_hour": 0.36,
+    "video_hour": 1.2,
+    "queries_1000": 2.5
+  },
+  "test_policy": {
+    "peak_multiplier": 2.0,
+    "capacity_min_duration_seconds": 900,
+    "capacity_min_samples": 15,
+    "soak_min_duration_seconds": 259200,
+    "telemetry_sample_interval_seconds": 300,
+    "soak_min_sample_ratio": 0.95,
+    "max_memory_growth_percent": 10.0,
+    "max_db_pool_exhaustion_events": 0,
+    "max_unrecoverable_backlog": 0
+  }
+}

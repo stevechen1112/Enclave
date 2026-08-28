@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "gate": "P5-CAPACITY",
+  "capacity_spec_sha256": "FILL_FROM_CONFIG",
+  "environment": {
+    "isolated_staging": true,
+    "source_commit": "",
+    "runtime_images": {}
+  },
+  "capacity_reports": [],
+  "soak_test": {
+    "status": "NOT_RUN",
+    "execution_class": "live",
+    "started_at": "",
+    "completed_at": "",
+    "duration_seconds": 0,
+    "telemetry_sample_count": 0,
+    "memory_growth_percent": null,
+    "db_pool_exhaustion_events": null,
+    "ending_unrecoverable_backlog": null
+  },
+  "cost_guardrails": {
+    "status": "NOT_RUN",
+    "execution_class": "live",
+    "overage_unbounded": null,
+    "artifact_sha256": "",
+    "unit_reports": []
+  },
+  "degradation_tests": [],
+  "operator": "",
+  "completed_at": ""
+}

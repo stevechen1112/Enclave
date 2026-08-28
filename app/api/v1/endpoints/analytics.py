@@ -17,8 +17,22 @@ from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.audit import UsageRecord
 from app.crud import crud_tenant
+from app.services.cost_guardrails import build_tenant_cost_report
 
 router = APIRouter()
+
+
+@router.get("/cost-units")
+def tenant_cost_units(
+    tenant_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """Return tenant-scoped P5 cost units and monthly guardrail state."""
+    try:
+        return build_tenant_cost_report(db, tenant_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="租戶不存在") from exc
 
 
 # ═══════════════════════════════════════════
@@ -289,6 +303,7 @@ def budget_alerts(
             "tokens": ("tokens_usage_ratio", "monthly_token_limit", "current_monthly_tokens", "月 Token 量"),
             "users": ("users_usage_ratio", "max_users", "current_users", "使用者數量"),
             "documents": ("documents_usage_ratio", "max_documents", "current_documents", "文件數量"),
+            "cost": ("cost_usage_ratio", "monthly_cost_limit_usd", "current_monthly_cost_usd", "月成本"),
         }
 
         threshold = status_data.get("quota_alert_threshold", 0.8)

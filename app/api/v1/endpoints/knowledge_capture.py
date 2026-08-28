@@ -153,6 +153,9 @@ async def upload_chunk(
     current_user: User = Depends(require_knowhow_author),
 ) -> Dict[str, Any]:
     from app.config import settings
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
 
     row = _session_or_404(db, current_user, session_id)
     if row.status not in {"recording", "uploading"}:
@@ -225,6 +228,30 @@ async def upload_chunk(
             "duplicate": True,
             "received_chunks": row.received_chunks or 0,
         }
+
+    from app.services.cost_guardrails import reserve_media_cost
+
+    cost_reservation = reserve_media_cost(
+        db,
+        tenant_id=current_user.tenant_id,
+        media_kind="audio",
+        duration_ms=duration_ms,
+        task_id=f"capture:{session_id}:{sequence}:{actual_hash}",
+    )
+    if not cost_reservation.get("allowed", False):
+        db.rollback()
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "quota_exceeded",
+                "axis": "cost",
+                "message": cost_reservation.get("message"),
+                "current": cost_reservation.get("current"),
+                "limit": cost_reservation.get("limit"),
+            },
+        )
 
     chunk = KnowledgeCaptureChunk(
         tenant_id=current_user.tenant_id,

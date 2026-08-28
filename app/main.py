@@ -210,8 +210,12 @@ def metrics(request: Request):
     # do not share in-process Prometheus state, so relying on /health traffic
     # could expose a stale dependency value here.
     from app.services.runtime_readiness import database_readiness
+    from app.db.session import refresh_pool_metrics
+    from app.services.capacity_metrics import refresh_capacity_runtime_metrics
 
     database_readiness()
+    refresh_pool_metrics()
+    refresh_capacity_runtime_metrics()
     return metrics_endpoint(request)
 
 

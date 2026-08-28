@@ -52,6 +52,10 @@ if PROMETHEUS_AVAILABLE:
         "Whether a required runtime dependency is ready (1) or unavailable (0)",
         ["dependency"],
     )
+    DB_POOL_EXHAUSTION = Counter(
+        "enclave_db_pool_exhaustion_total",
+        "Requests that failed because the SQLAlchemy pool timed out",
+    )
 
 
 def _normalize_path(path: str) -> str:
@@ -84,12 +88,19 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(request)
-        except Exception:
+        except Exception as exc:
             REQUEST_COUNT.labels(method=method, endpoint=path, status="500").inc()
             REQUEST_DURATION.labels(method=method, endpoint=path).observe(
                 time.perf_counter() - start
             )
             REQUESTS_IN_PROGRESS.labels(method=method).dec()
+            try:
+                from sqlalchemy.exc import TimeoutError as SQLAlchemyTimeoutError
+
+                if isinstance(exc, SQLAlchemyTimeoutError):
+                    DB_POOL_EXHAUSTION.inc()
+            except Exception:
+                pass
             raise
 
         elapsed = time.perf_counter() - start

@@ -346,6 +346,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_TRUSTED_PROXY_IPS: str = "127.0.0.1,::1,172.16.0.0/12"
     # 聊天配額預留：每次 reserve 先計入 estimated token，finalize 時改為實際值
     CHAT_TOKEN_RESERVE_ESTIMATE: int = 4000
+    PROVIDER_TIMEOUT_SECONDS: float = 120.0
+    QUEUE_GUARD_ENABLED: bool = True
+    QUEUE_GUARD_RETRY_AFTER_SECONDS: int = 30
 
     # Admin IP Whitelist
     ADMIN_IP_WHITELIST_ENABLED: bool = False

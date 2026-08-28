@@ -22,8 +22,9 @@ from app.api.v1.endpoints.knowledge_assets import (
     _validate_source_url,
 )
 from app.models.asset import AssetRevision, SourceAsset
+from app.models.audit import UsageRecord
 from app.models.ingestion import IngestionJob, IngestionJobEvent
-from app.models.mka import JobRole
+from app.models.mka import JobRole, MKATaskCost
 from app.models.permission import Department
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -44,6 +45,8 @@ def _session():
         User.__table__,
         SourceAsset.__table__,
         AssetRevision.__table__,
+        UsageRecord.__table__,
+        MKATaskCost.__table__,
         IngestionJob.__table__,
         IngestionJobEvent.__table__,
     ):
@@ -257,6 +260,10 @@ async def test_audio_upload_persists_job_and_dispatches_worker(monkeypatch):
         monkeypatch.setattr(
             "app.crud.crud_tenant.lock_and_check_storage_quota",
             lambda *_args: {"allowed": True},
+        )
+        monkeypatch.setattr(
+            "app.services.cost_guardrails.probe_media_duration_ms",
+            lambda _path: 1_000,
         )
         monkeypatch.setattr(
             "app.tasks.audio_tasks.process_audio_asset.delay",

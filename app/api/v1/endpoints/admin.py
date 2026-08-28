@@ -260,6 +260,7 @@ def system_health(
     import sys
     import time
     import redis as redis_lib
+    from redis.exceptions import RedisError
 
     start = time.time()
 
@@ -270,13 +271,26 @@ def system_health(
         db_status = "unhealthy"
 
     redis_status = "healthy"
+    redis_memory_ratio = 0.0
+    celery_queue_depth = 0
     try:
         from app.config import settings
-        r = redis_lib.Redis.from_url(settings.CELERY_BROKER_URL)
+        r = redis_lib.Redis.from_url(
+            settings.CELERY_BROKER_URL,
+            socket_connect_timeout=2,
+            socket_timeout=2,
+        )
         r.ping()
-        r.close()
-    except Exception:
+        memory = r.info("memory")
+        used_memory = int(memory.get("used_memory", 0) or 0)
+        max_memory = int(memory.get("maxmemory", 0) or 0)
+        redis_memory_ratio = used_memory / max_memory if max_memory > 0 else 0.0
+        celery_queue_depth = int(r.llen("celery") or 0)
+    except (RedisError, OSError, ValueError):
         redis_status = "unavailable"
+    finally:
+        if "r" in locals():
+            r.close()
 
     overall = (
         "healthy"
@@ -284,13 +298,19 @@ def system_health(
         else "degraded"
     )
 
+    from app.db.session import get_pool_status
+
+    db_pool = get_pool_status()
     return SystemHealth(
         status=overall,
         database=db_status,
         redis=redis_status,
         uptime_seconds=round(time.time() - start, 3),
         python_version=sys.version.split()[0],
-        active_connections=0,
+        active_connections=int(db_pool["checked_out"]),
+        db_pool=db_pool,
+        redis_memory_ratio=round(redis_memory_ratio, 6),
+        celery_queue_depth=celery_queue_depth,
     )
 
 

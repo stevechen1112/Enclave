@@ -46,6 +46,9 @@ def create(db: Session, *, obj_in: TenantCreate) -> Tenant:
         monthly_token_limit=obj_in.monthly_token_limit
         if obj_in.monthly_token_limit is not None
         else defaults.get("monthly_token_limit"),
+        monthly_cost_limit_usd=obj_in.monthly_cost_limit_usd
+        if obj_in.monthly_cost_limit_usd is not None
+        else defaults.get("monthly_cost_limit_usd"),
         quota_alert_threshold=obj_in.quota_alert_threshold
         if obj_in.quota_alert_threshold is not None
         else 0.8,
@@ -159,12 +162,34 @@ def get_current_usage(db: Session, tenant_id: UUID) -> Dict[str, Any]:
         .first()
     )
 
+    from app.models.mka import MKATaskCost
+
+    usage_cost = (
+        db.query(func.coalesce(func.sum(UsageRecord.estimated_cost_usd), 0))
+        .filter(
+            UsageRecord.tenant_id == tenant_id,
+            UsageRecord.created_at >= month_start,
+        )
+        .scalar()
+        or 0
+    )
+    task_cost = (
+        db.query(func.coalesce(func.sum(MKATaskCost.total_cost), 0))
+        .filter(
+            MKATaskCost.tenant_id == tenant_id,
+            MKATaskCost.created_at >= month_start,
+        )
+        .scalar()
+        or 0
+    )
+
     return {
         "current_users": user_count,
         "current_documents": doc_count,
         "current_storage_mb": round(storage_bytes / (1024 * 1024), 2),
         "current_monthly_queries": monthly.queries or 0,
         "current_monthly_tokens": int(monthly.tokens or 0),
+        "current_monthly_cost_usd": round(float(usage_cost) + float(task_cost), 6),
     }
 
 
@@ -190,6 +215,7 @@ def get_quota_status(db: Session, tenant_id: UUID) -> Dict[str, Any]:
         "storage": _ratio(usage["current_storage_mb"], tenant.max_storage_mb),
         "queries": _ratio(usage["current_monthly_queries"], tenant.monthly_query_limit),
         "tokens": _ratio(usage["current_monthly_tokens"], tenant.monthly_token_limit),
+        "cost": _ratio(usage["current_monthly_cost_usd"], tenant.monthly_cost_limit_usd),
     }
 
     labels = {
@@ -198,6 +224,7 @@ def get_quota_status(db: Session, tenant_id: UUID) -> Dict[str, Any]:
         "storage": ("儲存空間", tenant.max_storage_mb),
         "queries": ("月查詢次數", tenant.monthly_query_limit),
         "tokens": ("月 Token 量", tenant.monthly_token_limit),
+        "cost": ("月成本", tenant.monthly_cost_limit_usd),
     }
 
     for key, ratio in ratios.items():
@@ -218,6 +245,7 @@ def get_quota_status(db: Session, tenant_id: UUID) -> Dict[str, Any]:
         "max_storage_mb": tenant.max_storage_mb,
         "monthly_query_limit": tenant.monthly_query_limit,
         "monthly_token_limit": tenant.monthly_token_limit,
+        "monthly_cost_limit_usd": tenant.monthly_cost_limit_usd,
         "quota_alert_threshold": threshold,
         **usage,
         "users_usage_ratio": ratios["users"],
@@ -225,6 +253,7 @@ def get_quota_status(db: Session, tenant_id: UUID) -> Dict[str, Any]:
         "storage_usage_ratio": ratios["storage"],
         "queries_usage_ratio": ratios["queries"],
         "tokens_usage_ratio": ratios["tokens"],
+        "cost_usage_ratio": ratios["cost"],
         "is_over_quota": is_over,
         "quota_warnings": warnings,
     }
@@ -295,6 +324,11 @@ def check_quota(db: Session, tenant_id: UUID, resource: str) -> Dict[str, Any]:
             tenant.monthly_token_limit,
             "月 Token 量",
         ),
+        "cost": (
+            usage["current_monthly_cost_usd"],
+            tenant.monthly_cost_limit_usd,
+            "月成本",
+        ),
     }
 
     if resource not in checks:
@@ -328,6 +362,7 @@ def _apply_plan_fields(tenant: Tenant, plan: str) -> None:
     tenant.max_storage_mb = defaults.get("max_storage_mb")
     tenant.monthly_query_limit = defaults.get("monthly_query_limit")
     tenant.monthly_token_limit = defaults.get("monthly_token_limit")
+    tenant.monthly_cost_limit_usd = defaults.get("monthly_cost_limit_usd")
 
 
 def lock_and_check_storage_quota(
@@ -380,12 +415,32 @@ def reserve_chat_quota(
         db.rollback()
         return {**query_check, "usage_record_id": None, "axis": "query"}
 
+    from app.services.cost_guardrails import query_reservation_cost_usd
+
+    reserve_cost = query_reservation_cost_usd()
+    cost_limit = locked.monthly_cost_limit_usd
+    projected_cost = usage["current_monthly_cost_usd"] + reserve_cost
+    if cost_limit is not None and projected_cost > cost_limit:
+        db.rollback()
+        return {
+            "allowed": False,
+            "message": (
+                f"月成本已達上限 USD {cost_limit:.2f}，"
+                f"預估本次後為 USD {projected_cost:.2f}"
+            ),
+            "current": usage["current_monthly_cost_usd"],
+            "limit": cost_limit,
+            "usage_record_id": None,
+            "axis": "cost",
+        }
+
     record = UsageRecord(
         tenant_id=tenant_id,
         user_id=user_id,
         action_type="chat_query",
         input_tokens=reserve_tokens,
         output_tokens=0,
+        estimated_cost_usd=reserve_cost,
     )
     db.add(record)
     db.commit()
@@ -420,6 +475,7 @@ def update_quota(
         "max_storage_mb",
         "monthly_query_limit",
         "monthly_token_limit",
+        "monthly_cost_limit_usd",
         "quota_alert_threshold",
         "quota_alert_email",
     ):

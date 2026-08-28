@@ -116,7 +116,10 @@ class KnowledgeBaseRetriever:
         self._openai = None
         openai_key = getattr(settings, "OPENAI_API_KEY", "")
         if _HAS_OPENAI and openai_key:
-            self._openai = openai_lib.OpenAI(api_key=openai_key)
+            self._openai = openai_lib.OpenAI(
+                api_key=openai_key,
+                timeout=float(getattr(settings, "PROVIDER_TIMEOUT_SECONDS", 120.0)),
+            )
 
         # Redis 快取
         self._redis = None

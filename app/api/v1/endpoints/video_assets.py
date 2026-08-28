@@ -188,6 +188,9 @@ async def upload_video_asset(
     applicable_roles: Annotated[str | None, Form()] = None,
 ) -> dict[str, Any]:
     check_document_permission(current_user, "create")
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
     if not settings.VIDEO_INGESTION_ENABLED:
         raise HTTPException(status_code=404, detail="video ingestion is not enabled")
     clean_filename = os.path.basename(file.filename or "")
@@ -238,6 +241,27 @@ async def upload_video_asset(
         )
         if not storage_quota.get("allowed", True):
             raise HTTPException(status_code=429, detail="storage quota exceeded")
+
+        from app.services.cost_guardrails import reserve_media_cost
+
+        cost_reservation = reserve_media_cost(
+            db,
+            tenant_id=current_user.tenant_id,
+            media_kind="video",
+            duration_ms=probe.duration_ms,
+            task_id=f"upload:{digest.hexdigest()}",
+        )
+        if not cost_reservation.get("allowed", False):
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "quota_exceeded",
+                    "axis": "cost",
+                    "message": cost_reservation.get("message"),
+                    "current": cost_reservation.get("current"),
+                    "limit": cost_reservation.get("limit"),
+                },
+            )
 
         equipment_values = [
             value.strip()[:100]

@@ -7,6 +7,7 @@ key 格式：``<tenant_id>/<document_id><ext>``——租戶前綴是強制性的
 from __future__ import annotations
 
 import re
+import time
 from typing import Optional
 from uuid import UUID
 
@@ -57,6 +58,50 @@ def assert_key_matches_tenant(key: str, tenant_id: str) -> None:
 _backend: Optional[StorageBackend] = None
 
 
+class _ObservedStorageBackend:
+    def __init__(self, delegate: StorageBackend):
+        self._delegate = delegate
+        self.name = delegate.name
+
+    def _call(self, operation: str, *args):
+        started = time.perf_counter()
+        ok = False
+        try:
+            result = getattr(self._delegate, operation)(*args)
+            ok = True
+            return result
+        finally:
+            try:
+                from app.observability.business_metrics import record_object_io
+
+                record_object_io(
+                    backend=self.name,
+                    operation=operation,
+                    duration_seconds=time.perf_counter() - started,
+                    ok=ok,
+                )
+            except Exception:
+                pass
+
+    def put(self, key: str, source_path: str) -> str:
+        return self._call("put", key, source_path)
+
+    def get_to_file(self, key: str, dest_path: str) -> str:
+        return self._call("get_to_file", key, dest_path)
+
+    def get_bytes(self, key: str) -> bytes:
+        return self._call("get_bytes", key)
+
+    def delete(self, key: str) -> None:
+        self._call("delete", key)
+
+    def exists(self, key: str) -> bool:
+        return self._call("exists", key)
+
+    def presigned_url(self, key: str, expires: int = 3600) -> str:
+        return self._call("presigned_url", key, expires)
+
+
 def get_storage_backend() -> StorageBackend:
     """依 ``STORAGE_BACKEND`` 設定回傳後端單例（local 預設，行為與舊版一致）。"""
     global _backend
@@ -67,16 +112,20 @@ def get_storage_backend() -> StorageBackend:
     if kind == "local":
         from app.services.storage.local import LocalFilesystemBackend
 
-        _backend = LocalFilesystemBackend(root=settings.UPLOAD_DIR)
+        _backend = _ObservedStorageBackend(
+            LocalFilesystemBackend(root=settings.UPLOAD_DIR)
+        )
     elif kind in ("s3", "s3_compatible", "r2"):
         from app.services.storage.s3_compatible import S3CompatibleBackend
 
-        _backend = S3CompatibleBackend(
-            endpoint_url=settings.S3_ENDPOINT_URL or None,
-            bucket=settings.S3_BUCKET,
-            access_key=settings.S3_ACCESS_KEY,
-            secret_key=settings.S3_SECRET_KEY,
-            region=settings.S3_REGION or "auto",
+        _backend = _ObservedStorageBackend(
+            S3CompatibleBackend(
+                endpoint_url=settings.S3_ENDPOINT_URL or None,
+                bucket=settings.S3_BUCKET,
+                access_key=settings.S3_ACCESS_KEY,
+                secret_key=settings.S3_SECRET_KEY,
+                region=settings.S3_REGION or "auto",
+            )
         )
     else:
         raise ValueError(f"unknown STORAGE_BACKEND: {kind!r}")

@@ -20,6 +20,17 @@ from sqlalchemy.pool import NullPool
 
 from app.config import settings
 
+try:
+    from prometheus_client import Gauge
+
+    DB_POOL_CONNECTIONS = Gauge(
+        "enclave_db_pool_connections",
+        "SQLAlchemy application pool connection state",
+        ["state"],
+    )
+except ImportError:
+    DB_POOL_CONNECTIONS = None
+
 logger = logging.getLogger("enclave.db")
 
 # ---------------------------------------------------------------------------
@@ -100,6 +111,12 @@ def _on_checkout(dbapi_conn, connection_rec, connection_proxy):
             "overflow": pool.overflow(),
         },
     )
+    refresh_pool_metrics()
+
+
+@event.listens_for(engine, "checkin")
+def _on_checkin(dbapi_conn, connection_rec):
+    refresh_pool_metrics()
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -183,3 +200,12 @@ def get_pool_status() -> dict:
         "pool_timeout": POOL_TIMEOUT,
         "pool_recycle": POOL_RECYCLE,
     }
+
+
+def refresh_pool_metrics() -> dict:
+    status = get_pool_status()
+    if DB_POOL_CONNECTIONS is not None:
+        for state in ("size", "checked_in", "checked_out", "overflow"):
+            key = "pool_size" if state == "size" else state
+            DB_POOL_CONNECTIONS.labels(state=state).set(status[key])
+    return status

@@ -7,7 +7,7 @@ modules free of inline Pydantic class definitions.
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OrgDashboard(BaseModel):
@@ -46,3 +46,6 @@ class SystemHealth(BaseModel):
     uptime_seconds: float
     python_version: str
     active_connections: int
+    db_pool: dict = Field(default_factory=dict)
+    redis_memory_ratio: float = 0.0
+    celery_queue_depth: int = 0

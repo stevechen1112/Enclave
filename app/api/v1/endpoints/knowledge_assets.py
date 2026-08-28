@@ -440,6 +440,9 @@ async def create_asset(
     data_classification: Annotated[str, Form()] = "internal",
 ) -> dict[str, Any]:
     check_document_permission(current_user, "create")
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
     if idempotency_key and len(idempotency_key) > 500:
         raise HTTPException(status_code=400, detail="idempotency_key is too long")
     if capture_manifest and len(capture_manifest.encode("utf-8")) > 64 * 1024:
@@ -690,6 +693,37 @@ async def _create_audio_asset(
         os.remove(temp_path)
         asset = db.query(SourceAsset).filter(SourceAsset.id == duplicate.asset_id).one()
         return {**_asset_dict(db, asset), "deduplicated": True}
+    from app.services.cost_guardrails import (
+        MediaDurationError,
+        probe_media_duration_ms,
+        reserve_media_cost,
+    )
+
+    try:
+        duration_ms = probe_media_duration_ms(temp_path)
+    except MediaDurationError as exc:
+        os.remove(temp_path)
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    cost_reservation = reserve_media_cost(
+        db,
+        tenant_id=current_user.tenant_id,
+        media_kind="audio",
+        duration_ms=duration_ms,
+        task_id=f"upload:{content_hash}",
+    )
+    if not cost_reservation.get("allowed", False):
+        db.rollback()
+        os.remove(temp_path)
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "quota_exceeded",
+                "axis": "cost",
+                "message": cost_reservation.get("message"),
+                "current": cost_reservation.get("current"),
+                "limit": cost_reservation.get("limit"),
+            },
+        )
     from app.crud import crud_tenant
 
     storage_quota = crud_tenant.lock_and_check_storage_quota(
@@ -748,6 +782,7 @@ async def _create_audio_asset(
             content_uri=content_uri,
             content_hash=content_hash,
             byte_size=size,
+            duration_ms=duration_ms,
             ingestion_status="queued",
             created_by=current_user.id,
         )

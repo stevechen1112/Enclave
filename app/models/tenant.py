@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Integer, Float, Enum, Text, func, JSON, ForeignKey
+from sqlalchemy import CheckConstraint, Column, String, Boolean, DateTime, Integer, Float, Enum, Text, func, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
@@ -21,6 +21,7 @@ class Tenant(Base):
     max_storage_mb = Column(Integer, nullable=True, default=None)
     monthly_query_limit = Column(Integer, nullable=True, default=None)  # 每月查詢次數上限
     monthly_token_limit = Column(Integer, nullable=True, default=None)  # 每月 token 上限
+    monthly_cost_limit_usd = Column(Float, nullable=True, default=None)
     quota_alert_threshold = Column(Float, default=0.8)                  # 配額告警閾值 (0~1)
     quota_alert_email = Column(String, nullable=True)                   # 告警通知信箱
 
@@ -38,6 +39,13 @@ class Tenant(Base):
     departments = relationship("Department", back_populates="tenant")
     feature_permissions = relationship("FeaturePermission", back_populates="tenant")
     sso_configs = relationship("TenantSSOConfig", back_populates="tenant")
+
+    __table_args__ = (
+        CheckConstraint(
+            "monthly_cost_limit_usd IS NULL OR monthly_cost_limit_usd >= 0",
+            name="ck_tenants_monthly_cost_limit_nonnegative",
+        ),
+    )
 
 
 class TenantSSOConfig(Base):

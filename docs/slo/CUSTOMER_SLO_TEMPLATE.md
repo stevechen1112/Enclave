@@ -1,6 +1,8 @@
 # Customer SLO Template (Enclave)
 
-Copy per customer deployment. Defaults are starting points — adjust after capacity test.
+Copy per customer deployment. Defaults are starting points — adjust only after a
+capacity test. The checked-in internal baselines are authoritative in
+`config/capacity_profiles.json`; do not duplicate profile targets in this file.
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|

@@ -1,7 +1,7 @@
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # Shared properties
@@ -19,6 +19,7 @@ class TenantCreate(TenantBase):
     max_storage_mb: Optional[int] = None
     monthly_query_limit: Optional[int] = None
     monthly_token_limit: Optional[int] = None
+    monthly_cost_limit_usd: Optional[float] = Field(default=None, ge=0)
     quota_alert_threshold: Optional[float] = 0.8
     quota_alert_email: Optional[str] = None
 
@@ -30,6 +31,7 @@ class TenantUpdate(TenantBase):
     max_storage_mb: Optional[int] = None
     monthly_query_limit: Optional[int] = None
     monthly_token_limit: Optional[int] = None
+    monthly_cost_limit_usd: Optional[float] = Field(default=None, ge=0)
     quota_alert_threshold: Optional[float] = None
     quota_alert_email: Optional[str] = None
 
@@ -43,6 +45,7 @@ class TenantInDBBase(TenantBase):
     max_storage_mb: Optional[int] = None
     monthly_query_limit: Optional[int] = None
     monthly_token_limit: Optional[int] = None
+    monthly_cost_limit_usd: Optional[float] = Field(default=None, ge=0)
     quota_alert_threshold: Optional[float] = 0.8
     quota_alert_email: Optional[str] = None
 
@@ -64,6 +67,7 @@ class QuotaStatus(BaseModel):
     max_storage_mb: Optional[int] = None
     monthly_query_limit: Optional[int] = None
     monthly_token_limit: Optional[int] = None
+    monthly_cost_limit_usd: Optional[float] = Field(default=None, ge=0)
     quota_alert_threshold: float = 0.8
     # 目前使用量
     current_users: int = 0
@@ -71,12 +75,14 @@ class QuotaStatus(BaseModel):
     current_storage_mb: float = 0.0
     current_monthly_queries: int = 0
     current_monthly_tokens: int = 0
+    current_monthly_cost_usd: float = 0.0
     # 使用率 (0~1)
     users_usage_ratio: Optional[float] = None
     documents_usage_ratio: Optional[float] = None
     storage_usage_ratio: Optional[float] = None
     queries_usage_ratio: Optional[float] = None
     tokens_usage_ratio: Optional[float] = None
+    cost_usage_ratio: Optional[float] = None
     # 是否超額
     is_over_quota: bool = False
     quota_warnings: list = []
@@ -89,6 +95,7 @@ class QuotaUpdate(BaseModel):
     max_storage_mb: Optional[int] = None
     monthly_query_limit: Optional[int] = None
     monthly_token_limit: Optional[int] = None
+    monthly_cost_limit_usd: Optional[float] = Field(default=None, ge=0)
     quota_alert_threshold: Optional[float] = None
     quota_alert_email: Optional[str] = None
 
@@ -104,6 +111,7 @@ PLAN_QUOTAS = {
         "max_storage_mb": 500,
         "monthly_query_limit": 500,
         "monthly_token_limit": 2_000_000,
+        "monthly_cost_limit_usd": 50.0,
     },
     "team": {
         "max_users": 50,
@@ -111,6 +119,7 @@ PLAN_QUOTAS = {
         "max_storage_mb": 5000,
         "monthly_query_limit": 5000,
         "monthly_token_limit": 40_000_000,
+        "monthly_cost_limit_usd": 500.0,
     },
     "business": {
         "max_users": 200,
@@ -118,6 +127,7 @@ PLAN_QUOTAS = {
         "max_storage_mb": 50000,
         "monthly_query_limit": 50000,
         "monthly_token_limit": 400_000_000,
+        "monthly_cost_limit_usd": 5000.0,
     },
     "enterprise": {
         "max_users": None,       # 合約制（無限制）
@@ -125,6 +135,7 @@ PLAN_QUOTAS = {
         "max_storage_mb": None,
         "monthly_query_limit": None,
         "monthly_token_limit": None,
+        "monthly_cost_limit_usd": None,
     },
     # 遺留方案名（既有租戶相容；新租戶請用 pilot/team/business）
     "free": {
@@ -133,6 +144,7 @@ PLAN_QUOTAS = {
         "max_storage_mb": 100,
         "monthly_query_limit": 500,
         "monthly_token_limit": 500000,
+        "monthly_cost_limit_usd": 10.0,
     },
     "pro": {
         "max_users": 50,
@@ -140,6 +152,7 @@ PLAN_QUOTAS = {
         "max_storage_mb": 1000,
         "monthly_query_limit": 5000,
         "monthly_token_limit": 5000000,
+        "monthly_cost_limit_usd": 200.0,
     },
 }
 

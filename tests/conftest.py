@@ -175,6 +175,9 @@ async def create_tenant(client: AsyncClient, headers: dict, data: dict) -> dict:
             max_storage_mb=data.get("max_storage_mb", defaults.get("max_storage_mb")),
             monthly_query_limit=data.get("monthly_query_limit", defaults.get("monthly_query_limit")),
             monthly_token_limit=data.get("monthly_token_limit", defaults.get("monthly_token_limit")),
+            monthly_cost_limit_usd=data.get(
+                "monthly_cost_limit_usd", defaults.get("monthly_cost_limit_usd")
+            ),
         )
         db.add(t)
         db.commit()

@@ -68,6 +68,7 @@ class ChatOrchestrator:
         self._llm_model = "gpt-4o-mini"
 
         main_cfg = runtime.get("main", {})
+        provider_timeout = float(getattr(settings, "PROVIDER_TIMEOUT_SECONDS", 120.0))
         provider = str(main_cfg.get("provider", getattr(settings, "LLM_PROVIDER", "openai"))).lower()
         main_model = str(main_cfg.get("model", ""))
 
@@ -76,19 +77,19 @@ class ChatOrchestrator:
                 api_key = getattr(settings, "GEMINI_API_KEY", "")
                 if api_key:
                     _base = "https://generativelanguage.googleapis.com/v1beta/openai/"
-                    self._openai = openai_lib.OpenAI(api_key=api_key, base_url=_base)
-                    self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base)
+                    self._openai = openai_lib.OpenAI(api_key=api_key, base_url=_base, timeout=provider_timeout)
+                    self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base, timeout=provider_timeout)
                     self._llm_model = main_model or getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
             elif provider == "openai":
                 api_key = getattr(settings, "OPENAI_API_KEY", "")
                 if api_key:
-                    self._openai = openai_lib.OpenAI(api_key=api_key)
-                    self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key)
+                    self._openai = openai_lib.OpenAI(api_key=api_key, timeout=provider_timeout)
+                    self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, timeout=provider_timeout)
                     self._llm_model = main_model or getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
             elif provider == "ollama":
                 ollama_url = str(main_cfg.get("base_url", getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434")))
-                self._openai = openai_lib.OpenAI(api_key="ollama", base_url=f"{ollama_url.rstrip('/')}/v1/")
-                self._openai_async = openai_lib.AsyncOpenAI(api_key="ollama", base_url=f"{ollama_url.rstrip('/')}/v1/")
+                self._openai = openai_lib.OpenAI(api_key="ollama", base_url=f"{ollama_url.rstrip('/')}/v1/", timeout=provider_timeout)
+                self._openai_async = openai_lib.AsyncOpenAI(api_key="ollama", base_url=f"{ollama_url.rstrip('/')}/v1/", timeout=provider_timeout)
                 self._llm_model = main_model or getattr(settings, "OLLAMA_MODEL", "llama3.2")
 
         # Internal LLM（用於 contextualize 改寫等輕量任務，走本地 Ollama 省錢）
@@ -103,6 +104,7 @@ class ChatOrchestrator:
             self._internal_async = openai_lib.AsyncOpenAI(
                 api_key="ollama",  # Ollama 不需要真實 key
                 base_url=f"{ollama_url.rstrip('/')}/v1/",
+                timeout=provider_timeout,
             )
             logger.info("ChatOrchestrator internal LLM: Ollama(%s @ %s)", self._internal_model, ollama_url)
         elif internal_provider == "gemini":
@@ -110,7 +112,7 @@ class ChatOrchestrator:
             api_key = getattr(settings, "GEMINI_API_KEY", "")
             _base = "https://generativelanguage.googleapis.com/v1beta/openai/"
             if _HAS_OPENAI and api_key:
-                self._internal_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base)
+                self._internal_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_base, timeout=provider_timeout)
             else:
                 self._internal_async = self._openai_async
             self._internal_model = str(internal_cfg.get("model", getattr(settings, "INTERNAL_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")))
@@ -507,6 +509,8 @@ class ChatOrchestrator:
         if extra_system_note:
             messages[0]["content"] += "\n\n" + extra_system_note
 
+        provider_started = time.perf_counter()
+        provider_ok = False
         try:
             from app.services.openai_compat import chat_completion_kwargs
 
@@ -533,9 +537,19 @@ class ChatOrchestrator:
                     "模型未產出可讀答案（可能將回應額度用在內部推理）。"
                     "請縮小問題範圍，或改問可直接從文件摘錄的事實。"
                 )
+            else:
+                provider_ok = True
         except Exception as e:
             logger.warning("LLM 串流生成失敗，回退到模板: %s", e)
             yield self._fallback_answer(context)
+        finally:
+            from app.observability.business_metrics import record_provider_call
+
+            record_provider_call(
+                provider=self._llm_model,
+                duration_seconds=time.perf_counter() - provider_started,
+                ok=provider_ok,
+            )
 
     async def _run_source_verification(
         self,
@@ -895,13 +909,31 @@ class ChatOrchestrator:
         last_finish = None
         last_reasoning = 0
         for max_tokens in budgets:
-            response = self._openai.chat.completions.create(
-                messages=messages,
-                **chat_completion_kwargs(
-                    self._llm_model,
-                    max_tokens=max_tokens,
-                    temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
-                ),
+            started = time.perf_counter()
+            try:
+                response = self._openai.chat.completions.create(
+                    messages=messages,
+                    **chat_completion_kwargs(
+                        self._llm_model,
+                        max_tokens=max_tokens,
+                        temperature=getattr(settings, "OPENAI_TEMPERATURE", 0.3),
+                    ),
+                )
+            except Exception:
+                from app.observability.business_metrics import record_provider_call
+
+                record_provider_call(
+                    provider=self._llm_model,
+                    duration_seconds=time.perf_counter() - started,
+                    ok=False,
+                )
+                raise
+            from app.observability.business_metrics import record_provider_call
+
+            record_provider_call(
+                provider=self._llm_model,
+                duration_seconds=time.perf_counter() - started,
+                ok=True,
             )
             choice = response.choices[0]
             content = (choice.message.content or "").strip()

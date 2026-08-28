@@ -58,6 +58,7 @@ class LLMClient:
             base_url: 覆蓋 Ollama base URL（容器內需用 host.docker.internal）
         """
         self.provider = (provider or settings.LLM_PROVIDER).lower()
+        provider_timeout = float(getattr(settings, "PROVIDER_TIMEOUT_SECONDS", 120.0))
 
         if self.provider == "openai":
             if not _HAS_OPENAI:
@@ -65,8 +66,8 @@ class LLMClient:
             api_key = getattr(settings, "OPENAI_API_KEY", "")
             if not api_key:
                 raise RuntimeError("LLM_PROVIDER=openai 但 OPENAI_API_KEY 未設定")
-            self._openai_sync  = openai_lib.OpenAI(api_key=api_key)
-            self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key)
+            self._openai_sync  = openai_lib.OpenAI(api_key=api_key, timeout=provider_timeout)
+            self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, timeout=provider_timeout)
             self._model = model or getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
             logger.info("LLMClient 初始化：OpenAI（model=%s）", self._model)
 
@@ -77,8 +78,8 @@ class LLMClient:
             if not api_key:
                 raise RuntimeError("LLM_PROVIDER=gemini 但 GEMINI_API_KEY 未設定")
             _GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
-            self._openai_sync  = openai_lib.OpenAI(api_key=api_key, base_url=_GEMINI_BASE_URL)
-            self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_GEMINI_BASE_URL)
+            self._openai_sync  = openai_lib.OpenAI(api_key=api_key, base_url=_GEMINI_BASE_URL, timeout=provider_timeout)
+            self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_GEMINI_BASE_URL, timeout=provider_timeout)
             self._model = model or getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
             logger.info("LLMClient 初始化：Gemini（model=%s）", self._model)
 

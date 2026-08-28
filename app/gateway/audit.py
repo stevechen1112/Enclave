@@ -89,6 +89,16 @@ class OperationTimer:
 
     def record_provider(self, provider: str, latency_ms: int) -> None:
         self._provider_latencies[provider] = latency_ms
+        try:
+            from app.observability.business_metrics import record_provider_call
+
+            record_provider_call(
+                provider=provider,
+                duration_seconds=max(0, latency_ms) / 1000,
+                ok=True,
+            )
+        except Exception:
+            pass
 
     @property
     def total_latency_ms(self) -> int:
