@@ -3,9 +3,12 @@ Authentication Tests — /api/v1/auth
 測試 JWT 登入、token 格式、無效憑證拒絕
 """
 
+from datetime import timedelta
+
 import pytest
 from httpx import AsyncClient
 
+from app.core import security
 from tests.conftest import create_tenant, create_user
 
 # ── 登入成功 ──
@@ -85,12 +88,35 @@ async def test_nonexistent_user_rejected(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_invalid_token_rejected(client: AsyncClient):
-    """偽造 token 呼叫受保護端點應回傳 401 或 403"""
+    """偽造 token 是驗證失敗，必須回傳 401 讓 client 清除 session。"""
     resp = await client.get(
         "/api/v1/users/me",
         headers={"Authorization": "Bearer this.is.fake"},
     )
-    assert resp.status_code in [401, 403]
+    assert resp.status_code == 401
+    assert resp.headers["www-authenticate"] == "Bearer"
+
+
+@pytest.mark.asyncio
+async def test_expired_token_requests_reauthentication(
+    client: AsyncClient, superuser_headers: dict
+):
+    """過期 token 不得把 SPA 困在 workspace unavailable；應要求重新登入。"""
+    me = await client.get("/api/v1/users/me", headers=superuser_headers)
+    assert me.status_code == 200
+    expired = security.create_access_token(
+        "superuser@test.com",
+        expires_delta=timedelta(seconds=-1),
+        tenant_id=me.json()["tenant_id"],
+    )
+
+    resp = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {expired}"},
+    )
+
+    assert resp.status_code == 401
+    assert resp.headers["www-authenticate"] == "Bearer"
 
 
 @pytest.mark.asyncio

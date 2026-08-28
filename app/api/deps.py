@@ -41,8 +41,13 @@ def get_current_user(
         token_data = TokenPayload(**payload)
     except (InvalidTokenError, ValidationError):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            # An invalid or expired bearer token is an authentication failure,
+            # not an authorization denial.  Returning 401 lets web clients
+            # discard stale sessions and send the user back through login
+            # instead of trapping them on the fail-closed workspace screen.
+            status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     # CG-AUTH-SSO：MFA 局部 token（mfa_pending／mfa_enroll）不得存取任何受保護 API，
     # 這是「MFA 挑戰不可繞」的強制點；局部 token 僅 /auth/mfa/* 接受。
