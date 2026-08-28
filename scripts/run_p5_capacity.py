@@ -9,6 +9,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,6 +21,7 @@ from app.services.capacity_gate import load_capacity_spec, profile_load_target
 from app.services.capacity_report import build_capacity_report
 from app.services.hardware_inventory import (
     co_resident_enclave_projects,
+    compose_container_identity,
     detect_hardware,
     hardware_shortfalls,
 )
@@ -31,6 +33,19 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _stop_process(process: subprocess.Popen | None, *, timeout: int = 60) -> int:
+    if process is None:
+        return -1
+    if process.poll() is None:
+        process.terminate()
+        try:
+            return int(process.wait(timeout=timeout))
+        except subprocess.TimeoutExpired:
+            process.kill()
+            return int(process.wait(timeout=30))
+    return int(process.returncode if process.returncode is not None else -1)
 
 
 def _run_post_load_integrity_probe(
@@ -162,7 +177,12 @@ def main() -> int:
     parser.add_argument("--spawn-rate", type=int, default=10)
     parser.add_argument("--telemetry-interval-seconds", type=int, default=60)
     parser.add_argument("--locust-executable", default=sys.executable)
+    parser.add_argument("--confirm-isolated-staging", action="store_true")
     args = parser.parse_args()
+    if not args.confirm_isolated_staging:
+        parser.error("--confirm-isolated-staging is required")
+    if args.spawn_rate <= 0 or args.telemetry_interval_seconds <= 0:
+        parser.error("spawn rate and telemetry interval must be positive")
     for path in (
         args.document_fixture,
         args.audio_fixture,
@@ -197,6 +217,11 @@ def main() -> int:
         parser.error(f"formal capacity duration must be at least {minimum} seconds")
     if args.reconciliation_timeout_seconds <= 0:
         parser.error("reconciliation timeout must be positive")
+    maximum_interval = minimum // int(spec["test_policy"]["capacity_min_samples"])
+    if args.telemetry_interval_seconds > maximum_interval:
+        parser.error(
+            f"formal capacity telemetry interval cannot exceed {maximum_interval} seconds"
+        )
     users = int(profile_load_target(spec, args.profile)["concurrent_users"])
     observed_hardware = detect_hardware(ROOT)
     shortfalls = hardware_shortfalls(
@@ -210,11 +235,54 @@ def main() -> int:
             "capacity host is not isolated; co-resident Enclave projects: "
             + ", ".join(co_resident)
         )
+    try:
+        metrics_identity = compose_container_identity(
+            args.metrics_container, args.compose_project
+        )
+        backend_identity = compose_container_identity(
+            args.backend_container, args.compose_project
+        )
+    except ValueError as exc:
+        parser.error(f"capacity container binding failed: {exc}")
+
+    import httpx
+
+    try:
+        with httpx.Client(base_url=args.base_url.rstrip("/"), timeout=30) as client:
+            health = client.get("/health")
+            health.raise_for_status()
+            payload = health.json()
+            release = payload.get("release", {})
+            if (
+                payload.get("env") != "staging"
+                or release.get("identifiable") is not True
+                or release.get("source_commit") != grounding.get("source_commit")
+            ):
+                parser.error("runtime release does not match grounding evidence")
+    except (httpx.HTTPError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        parser.error(f"capacity live preflight failed: {exc}")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     integrity_evidence = args.output_dir / f"{args.profile}_integrity_evidence.json"
     prefix = args.output_dir / args.profile
     telemetry_jsonl = args.output_dir / f"{args.profile}_telemetry.jsonl"
     telemetry_summary = args.output_dir / f"{args.profile}_telemetry_summary.json"
+    collector_log_path = args.output_dir / f"{args.profile}_collector.log"
+    locust_log_path = args.output_dir / f"{args.profile}_locust.log"
+    report_path = args.output_dir / f"{args.profile}_capacity_report.json"
+    formal_artifacts = (
+        Path(str(prefix) + "_stats.csv"),
+        Path(str(prefix) + "_stats_history.csv"),
+        Path(str(prefix) + "_failures.csv"),
+        Path(str(prefix) + "_exceptions.csv"),
+        telemetry_jsonl,
+        telemetry_summary,
+        integrity_evidence,
+        collector_log_path,
+        locust_log_path,
+        report_path,
+    )
+    if any(path.exists() for path in formal_artifacts):
+        parser.error("formal capacity run requires a fresh output directory")
     environment = os.environ.copy()
     environment.update(
         {
@@ -280,29 +348,53 @@ def main() -> int:
         "--csv-full-history",
     ]
     started = datetime.now(UTC)
-    with (args.output_dir / f"{args.profile}_collector.log").open(
-        "w", encoding="utf-8"
-    ) as collector_log:
-        collector = subprocess.Popen(
-            collector_command,
-            cwd=ROOT,
-            env=environment,
-            stdout=collector_log,
-            stderr=subprocess.STDOUT,
-        )
-        with (args.output_dir / f"{args.profile}_locust.log").open(
-            "w", encoding="utf-8"
-        ) as locust_log:
-            load = subprocess.run(
+    started_monotonic = time.monotonic()
+    collector: subprocess.Popen | None = None
+    load: subprocess.Popen | None = None
+    load_exit = -1
+    collector_result = -1
+    actual_load_seconds = 0
+    with (
+        collector_log_path.open("w", encoding="utf-8") as collector_log,
+        locust_log_path.open("w", encoding="utf-8") as locust_log,
+    ):
+        try:
+            collector = subprocess.Popen(
+                collector_command,
+                cwd=ROOT,
+                env=environment,
+                stdout=collector_log,
+                stderr=subprocess.STDOUT,
+            )
+            load = subprocess.Popen(
                 locust_command,
                 cwd=ROOT,
                 env=environment,
                 stdout=locust_log,
                 stderr=subprocess.STDOUT,
-                check=False,
             )
-        collector_result = collector.wait(timeout=args.duration_seconds + 180)
-    completed = datetime.now(UTC)
+            while load.poll() is None:
+                if collector.poll() is not None:
+                    _stop_process(load)
+                    break
+                time.sleep(5)
+            load_exit = int(load.poll() if load.poll() is not None else -1)
+            completed = datetime.now(UTC)
+            actual_load_seconds = int(time.monotonic() - started_monotonic)
+            load_finished_early = actual_load_seconds + 5 < args.duration_seconds
+            if load_exit != 0 or load_finished_early or collector.poll() is not None:
+                collector_result = _stop_process(collector)
+            else:
+                try:
+                    collector_result = int(
+                        collector.wait(timeout=args.telemetry_interval_seconds + 180)
+                    )
+                except subprocess.TimeoutExpired:
+                    collector_result = _stop_process(collector)
+        finally:
+            for process in (load, collector):
+                if process is not None and process.poll() is None:
+                    _stop_process(process, timeout=30)
     integrity_result = _run_post_load_integrity_probe(
         container=args.backend_container,
         credentials=args.credentials,
@@ -335,7 +427,7 @@ def main() -> int:
     report = build_capacity_report(
         profile_name=args.profile,
         users=users,
-        duration_seconds=int((completed - started).total_seconds()),
+        duration_seconds=actual_load_seconds,
         started_at=started.isoformat(),
         completed_at=completed.isoformat(),
         locust_stats_path=Path(str(prefix) + "_stats.csv"),
@@ -343,15 +435,19 @@ def main() -> int:
         integrity=integrity,
         grounding=grounding,
         observed_hardware=observed_hardware,
+        source_commit=str(grounding["source_commit"]),
+        compose_project=args.compose_project,
+        metrics_container_identity=metrics_identity,
+        backend_container_identity=backend_identity,
+        telemetry_interval_seconds=args.telemetry_interval_seconds,
     )
     report["runner"] = {
-        "locust_exit_code": load.returncode,
+        "locust_exit_code": load_exit,
         "collector_exit_code": collector_result,
         "integrity_probe_exit_code": integrity_result,
     }
-    if load.returncode != 0 or collector_result != 0 or integrity_result != 0:
+    if load_exit != 0 or collector_result != 0 or integrity_result != 0:
         report["status"] = "FAIL"
-    report_path = args.output_dir / f"{args.profile}_capacity_report.json"
     report_path.write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
     )

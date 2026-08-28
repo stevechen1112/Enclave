@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from app.services.capacity_gate import capacity_spec_sha256, load_capacity_spec
-from app.services.capacity_telemetry import summarize_samples
+from app.services.capacity_telemetry import (
+    summarize_samples,
+    validate_telemetry_integrity,
+)
 from app.services.hardware_inventory import hardware_shortfalls
 
 
@@ -71,13 +74,23 @@ def build_capacity_report(
     integrity: dict[str, int],
     grounding: dict[str, Any],
     observed_hardware: dict[str, Any],
+    source_commit: str,
+    compose_project: str,
+    metrics_container_identity: dict[str, Any],
+    backend_container_identity: dict[str, Any],
+    telemetry_interval_seconds: int,
     execution_class: str = "live",
 ) -> dict[str, Any]:
     spec = load_capacity_spec()
     profile = spec["profiles"][profile_name]
     hardware_errors = hardware_shortfalls(observed_hardware, profile["hardware"])
     stats = read_locust_stats(locust_stats_path)
-    samples = read_jsonl(telemetry_path)
+    raw_lines = [
+        line for line in telemetry_path.read_text(encoding="utf-8").splitlines() if line
+    ]
+    parsed_samples = read_jsonl(telemetry_path)
+    samples = [sample for sample in parsed_samples if isinstance(sample, dict)]
+    invalid_json_lines = len(raw_lines) - len(samples)
     telemetry_summary = summarize_samples(samples)
     total = stats.get("Aggregated", {})
     requests = int(_number(total, "Request Count"))
@@ -125,6 +138,15 @@ def build_capacity_report(
     provider_errors = _delta(samples, "provider_error_count")
     provider_error_rate = provider_errors / provider_count if provider_count else 0.0
     gpu_required = int(profile["hardware"].get("gpu_vram_gb", 0)) > 0
+    telemetry_integrity = validate_telemetry_integrity(
+        samples,
+        started_at=started_at,
+        completed_at=completed_at,
+        source_commit=source_commit,
+        interval_seconds=telemetry_interval_seconds,
+        gpu_required=gpu_required,
+        invalid_json_lines=invalid_json_lines,
+    )
     telemetry_checks = {
         "api_latency": all(row["status"] == "PASS" for row in scenarios),
         "api_error_rate": error_rate <= float(slo["api_error_rate"]),
@@ -192,12 +214,29 @@ def build_capacity_report(
         and integrity.get("tenant_isolation_status") == "PASS"
         and integrity.get("job_reconciliation_status") == "PASS"
     )
+    runtime_binding_passed = (
+        source_commit == grounding.get("source_commit")
+        and metrics_container_identity.get("compose_project") == compose_project
+        and metrics_container_identity.get("running") is True
+        and bool(str(metrics_container_identity.get("compose_service") or "").strip())
+        and bool(str(metrics_container_identity.get("image_id") or "").strip())
+        and backend_container_identity.get("compose_project") == compose_project
+        and backend_container_identity.get("running") is True
+        and bool(str(backend_container_identity.get("compose_service") or "").strip())
+        and bool(str(backend_container_identity.get("image_id") or "").strip())
+    )
+    maximum_interval = int(spec["test_policy"]["capacity_min_duration_seconds"]) // int(
+        spec["test_policy"]["capacity_min_samples"]
+    )
     passed = (
         duration_seconds >= int(spec["test_policy"]["capacity_min_duration_seconds"])
+        and len(samples) >= int(spec["test_policy"]["capacity_min_samples"])
+        and 0 < telemetry_interval_seconds <= maximum_interval
         and not hardware_errors
         and load_passed
         and all(row["status"] == "PASS" for row in scenarios)
         and all(row["status"] == "PASS" for row in telemetry)
+        and telemetry_integrity["status"] == "PASS"
         and telemetry_summary["health_failures"] == 0
         and telemetry_summary["metrics_failures"] == 0
         and all(
@@ -210,11 +249,16 @@ def build_capacity_report(
         )
         and integrity_passed
         and grounding_passed
+        and runtime_binding_passed
     )
     return {
         "profile": profile_name,
         "status": "PASS" if passed else "FAIL",
         "execution_class": execution_class,
+        "source_commit": source_commit,
+        "compose_project": compose_project,
+        "metrics_container_identity": metrics_container_identity,
+        "backend_container_identity": backend_container_identity,
         "capacity_spec_sha256": capacity_spec_sha256(spec),
         "started_at": started_at,
         "completed_at": completed_at,
@@ -230,6 +274,8 @@ def build_capacity_report(
         "scenarios": scenarios,
         "telemetry": telemetry,
         "telemetry_sample_count": len(samples),
+        "telemetry_interval_seconds": telemetry_interval_seconds,
+        "telemetry_integrity": telemetry_integrity,
         "telemetry_summary": telemetry_summary,
         "integrity": integrity,
         "grounding_evidence": grounding,

@@ -7,9 +7,12 @@ import math
 from pathlib import Path
 from typing import Any
 
-from app.services.capacity_gate import load_capacity_spec
+from app.services.capacity_gate import capacity_spec_sha256, load_capacity_spec
 from app.services.capacity_report import read_jsonl, read_locust_stats
-from app.services.capacity_telemetry import summarize_samples
+from app.services.capacity_telemetry import (
+    summarize_samples,
+    validate_telemetry_integrity,
+)
 from app.services.hardware_inventory import hardware_shortfalls
 
 
@@ -38,6 +41,10 @@ def build_soak_report(
     started_at: str,
     completed_at: str,
     duration_seconds: int,
+    target_duration_seconds: int,
+    source_commit: str,
+    compose_project: str,
+    metrics_container_identity: dict[str, Any],
     locust_stats_path: Path,
     telemetry_path: Path,
     locust_exit_code: int,
@@ -46,7 +53,12 @@ def build_soak_report(
 ) -> dict[str, Any]:
     spec = load_capacity_spec()
     policy = spec["test_policy"]
-    samples = read_jsonl(telemetry_path)
+    raw_lines = [
+        line for line in telemetry_path.read_text(encoding="utf-8").splitlines() if line
+    ]
+    parsed_samples = read_jsonl(telemetry_path)
+    samples = [sample for sample in parsed_samples if isinstance(sample, dict)]
+    invalid_json_lines = len(raw_lines) - len(samples)
     summary = summarize_samples(samples)
     stats = read_locust_stats(locust_stats_path)
     aggregate = stats.get("Aggregated", {})
@@ -55,6 +67,17 @@ def build_soak_report(
     error_rate = failures / requests if requests else 1.0
     rpm = requests / max(1, duration_seconds) * 60
     profile = spec["profiles"][profile_name]
+    interval = int(policy["telemetry_sample_interval_seconds"])
+    gpu_required = int(profile["hardware"].get("gpu_vram_gb", 0)) > 0
+    telemetry_integrity = validate_telemetry_integrity(
+        samples,
+        started_at=started_at,
+        completed_at=completed_at,
+        source_commit=source_commit,
+        interval_seconds=interval,
+        gpu_required=gpu_required,
+        invalid_json_lines=invalid_json_lines,
+    )
     hardware_errors = hardware_shortfalls(observed_hardware, profile["hardware"])
     scenario_rows = []
     for name in spec["required_scenarios"]:
@@ -103,12 +126,22 @@ def build_soak_report(
         and int(grounding.get("chat_sources", 0) or 0) > 0
         and len(str(grounding.get("artifact_sha256") or "")) == 64
     )
+    runtime_binding_passed = (
+        source_commit == grounding.get("source_commit")
+        and metrics_container_identity.get("compose_project") == compose_project
+        and metrics_container_identity.get("running") is True
+        and bool(str(metrics_container_identity.get("compose_service") or "").strip())
+        and bool(str(metrics_container_identity.get("image_id") or "").strip())
+    )
     passed = (
         locust_exit_code == 0
         and collector_exit_code == 0
         and duration_seconds >= int(policy["soak_min_duration_seconds"])
         and not hardware_errors
         and len(samples) >= required_samples
+        and telemetry_integrity["status"] == "PASS"
+        and summary["health_failures"] == 0
+        and summary["metrics_failures"] == 0
         and memory_growth is not None
         and memory_growth <= float(policy["max_memory_growth_percent"])
         and exhaustion <= int(policy["max_db_pool_exhaustion_events"])
@@ -118,14 +151,19 @@ def build_soak_report(
         and rpm >= float(profile["expected_peak"]["requests_per_minute"])
         and all(row["status"] == "PASS" for row in scenario_rows)
         and grounding_passed
+        and runtime_binding_passed
     )
     return {
         "profile": profile_name,
         "status": "PASS" if passed else "FAIL",
         "execution_class": "live",
+        "capacity_spec_sha256": capacity_spec_sha256(spec),
+        "source_commit": source_commit,
+        "compose_project": compose_project,
         "started_at": started_at,
         "completed_at": completed_at,
         "duration_seconds": duration_seconds,
+        "target_duration_seconds": target_duration_seconds,
         "observed_hardware": observed_hardware,
         "hardware_shortfalls": hardware_errors,
         "achieved_load": {
@@ -140,6 +178,8 @@ def build_soak_report(
         "request_count": requests,
         "error_rate": round(error_rate, 6),
         "telemetry_summary": summary,
+        "telemetry_integrity": telemetry_integrity,
+        "metrics_container_identity": metrics_container_identity,
         "grounding_evidence": grounding,
         "runner": {
             "locust_exit_code": locust_exit_code,

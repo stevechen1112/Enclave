@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from app.services.hardware_inventory import (
     co_resident_enclave_projects,
+    compose_container_identity,
     hardware_shortfalls,
 )
 
@@ -38,3 +39,41 @@ def test_capacity_host_inspection_fails_closed():
         assert co_resident_enclave_projects("enclave-staging") == [
             "docker-inspection-unavailable:OSError"
         ]
+
+
+def test_metrics_container_must_belong_to_target_compose_project():
+    completed = MagicMock(
+        returncode=0,
+        stdout=(
+            '{"com.docker.compose.project":"enclave-p5",'
+            '"com.docker.compose.service":"web"}\t'
+            '{"Running":true}\t"sha256:abc"\n'
+        ),
+    )
+    with patch("subprocess.run", return_value=completed):
+        identity = compose_container_identity("enclave-p5-web-1", "enclave-p5")
+    assert identity == {
+        "container": "enclave-p5-web-1",
+        "compose_project": "enclave-p5",
+        "compose_service": "web",
+        "running": True,
+        "image_id": "sha256:abc",
+    }
+
+
+def test_metrics_container_rejects_production_project():
+    completed = MagicMock(
+        returncode=0,
+        stdout=(
+            '{"com.docker.compose.project":"enclave",'
+            '"com.docker.compose.service":"web"}\t'
+            '{"Running":true}\t"sha256:prod"\n'
+        ),
+    )
+    with patch("subprocess.run", return_value=completed):
+        try:
+            compose_container_identity("enclave-web-1", "enclave-p5")
+        except ValueError as exc:
+            assert "not a running member" in str(exc)
+        else:
+            raise AssertionError("production container binding was accepted")

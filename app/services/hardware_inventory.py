@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -88,3 +89,50 @@ def co_resident_enclave_projects(target_project: str) -> list[str]:
         if name.casefold().startswith("enclave") or "enclave" in image.casefold():
             projects.add(project)
     return sorted(projects)
+
+
+def compose_container_identity(container: str, target_project: str) -> dict[str, Any]:
+    """Inspect one running container and prove its Compose project binding."""
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-")
+    for value, name in ((container, "container"), (target_project, "Compose project")):
+        if not value or any(char not in allowed for char in value):
+            raise ValueError(f"{name} contains unsupported characters")
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                container,
+                "--format",
+                '{{json .Config.Labels}}\t{{json .State}}\t{{json .Image}}',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise ValueError("Docker container inspection failed") from exc
+    if result.returncode != 0:
+        raise ValueError("Docker container inspection failed")
+    try:
+        labels_raw, state_raw, image_raw = result.stdout.strip().split("\t", 2)
+        labels = json.loads(labels_raw)
+        state = json.loads(state_raw)
+        image_id = json.loads(image_raw)
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("Docker container inspection returned invalid JSON") from exc
+    project = str((labels or {}).get("com.docker.compose.project") or "")
+    service = str((labels or {}).get("com.docker.compose.service") or "")
+    running = bool((state or {}).get("Running"))
+    if project != target_project or not service or not running:
+        raise ValueError(
+            f"container is not a running member of Compose project {target_project}"
+        )
+    return {
+        "container": container,
+        "compose_project": project,
+        "compose_service": service,
+        "running": running,
+        "image_id": str(image_id or ""),
+    }

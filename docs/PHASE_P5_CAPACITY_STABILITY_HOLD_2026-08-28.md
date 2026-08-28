@@ -28,6 +28,9 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
 - 登入、資產、搜尋、有來源問答、文件、批次 ingestion、音訊與影片 queue 的
   Locust workload contract。
 - 15 分鐘 2× capacity runner 與不可縮短的 Standard 72 小時 soak runner。
+- Standard soak 已強制 fresh artifacts、100 個唯一同租戶 token、metrics container
+  Compose 綁定、Locust／collector 互相 fail-fast，以及逐樣本 release／時間連續性／
+  health／metrics／container／GPU 完整性；只完成內部 contract test，尚未執行 72 小時。
 - 專案範圍 Docker telemetry、內網 metrics、DB pool、Redis、Celery backlog、
   object I/O、CPU、RAM、GPU、provider latency/error 採樣與樣本完整性驗證。
 - Grounded SOP fixture、search/chat source contract，以及 post-load tenant isolation

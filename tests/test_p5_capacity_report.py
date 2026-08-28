@@ -27,6 +27,10 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
     sample = {
         "captured_at": datetime.now(UTC).isoformat(),
         "health_status": 200,
+        "health": {
+            "env": "staging",
+            "release": {"identifiable": True, "source_commit": "a" * 40},
+        },
         "runtime": {
             "db_pool_percent": 10,
             "redis_memory_ratio": 0.1,
@@ -82,6 +86,23 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
             "disk_gb": 50,
             "gpu_vram_gb": 0,
         },
+        source_commit="a" * 40,
+        compose_project="enclave-p5",
+        metrics_container_identity={
+            "container": "enclave-p5-web-1",
+            "compose_project": "enclave-p5",
+            "compose_service": "web",
+            "running": True,
+            "image_id": "sha256:" + "b" * 64,
+        },
+        backend_container_identity={
+            "container": "enclave-p5-worker-1",
+            "compose_project": "enclave-p5",
+            "compose_service": "worker",
+            "running": True,
+            "image_id": "sha256:" + "b" * 64,
+        },
+        telemetry_interval_seconds=60,
     )
     assert report["status"] == "FAIL"
     assert (

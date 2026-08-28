@@ -35,6 +35,22 @@ def _complete_evidence() -> dict:
                 "profile": name,
                 "status": "PASS",
                 "execution_class": "live",
+                "source_commit": "a" * 40,
+                "compose_project": "enclave-p5-dedicated",
+                "metrics_container_identity": {
+                    "container": "enclave-p5-web-1",
+                    "compose_project": "enclave-p5-dedicated",
+                    "compose_service": "web",
+                    "running": True,
+                    "image_id": "sha256:" + "b" * 64,
+                },
+                "backend_container_identity": {
+                    "container": "enclave-p5-worker-1",
+                    "compose_project": "enclave-p5-dedicated",
+                    "compose_service": "worker",
+                    "running": True,
+                    "image_id": "sha256:" + "b" * 64,
+                },
                 "capacity_spec_sha256": capacity_spec_sha256(spec),
                 "started_at": capacity_start.isoformat(),
                 "completed_at": now.isoformat(),
@@ -44,6 +60,8 @@ def _complete_evidence() -> dict:
                 "scenarios": _rows(spec["required_scenarios"], "scenario"),
                 "telemetry": _rows(spec["required_telemetry"], "metric"),
                 "telemetry_sample_count": 15,
+                "telemetry_interval_seconds": 60,
+                "telemetry_integrity": {"status": "PASS", "errors": []},
                 "integrity": {
                     "status": "PASS",
                     "data_corruption": 0,
@@ -96,11 +114,23 @@ def _complete_evidence() -> dict:
             "profile": "standard",
             "status": "PASS",
             "execution_class": "live",
+            "capacity_spec_sha256": capacity_spec_sha256(spec),
+            "source_commit": "a" * 40,
+            "compose_project": "enclave-p5-dedicated",
             "started_at": soak_start.isoformat(),
             "completed_at": now.isoformat(),
             "duration_seconds": 72 * 60 * 60,
+            "target_duration_seconds": 72 * 60 * 60,
             "observed_hardware": spec["profiles"]["standard"]["hardware"],
             "telemetry_sample_count": 830,
+            "telemetry_integrity": {"status": "PASS", "errors": []},
+            "metrics_container_identity": {
+                "container": "enclave-p5-web-1",
+                "compose_project": "enclave-p5-dedicated",
+                "compose_service": "web",
+                "running": True,
+                "image_id": "sha256:" + "b" * 64,
+            },
             "memory_growth_percent": 2.0,
             "db_pool_exhaustion_events": 0,
             "ending_unrecoverable_backlog": 0,
@@ -193,6 +223,14 @@ def test_blank_template_holds():
     assert result["errors"]
 
 
+def test_formal_soak_cannot_use_lite_profile():
+    evidence = _complete_evidence()
+    evidence["soak_test"]["profile"] = "lite"
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "formal 72-hour soak must use the Standard profile" in result["errors"]
+
+
 def test_complete_live_evidence_passes():
     assert evaluate_p5_capacity_evidence(_complete_evidence()) == {
         "status": "PASS",
@@ -234,6 +272,23 @@ def test_missing_media_scenario_or_telemetry_holds():
     assert result["status"] == "HOLD"
     assert any("video_queue" in error for error in result["errors"])
     assert "insufficient telemetry samples: lite" in result["errors"]
+
+
+def test_capacity_telemetry_integrity_failure_holds():
+    evidence = _complete_evidence()
+    evidence["capacity_reports"][0]["telemetry_integrity"] = {
+        "status": "FAIL",
+        "errors": ["telemetry source commit mismatch at sample 4"],
+    }
+    evidence["capacity_reports"][0]["telemetry_interval_seconds"] = 61
+    evidence["capacity_reports"][0]["backend_container_identity"][
+        "compose_project"
+    ] = "enclave-production"
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "capacity telemetry integrity failed: lite" in result["errors"]
+    assert "capacity telemetry interval is invalid: lite" in result["errors"]
+    assert "capacity backend container identity is incomplete: lite" in result["errors"]
 
 
 def test_cost_or_integrity_failure_holds():

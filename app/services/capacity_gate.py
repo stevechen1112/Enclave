@@ -225,6 +225,32 @@ def evaluate_p5_capacity_evidence(
             errors.append(f"capacity report must be live PASS: {profile_name}")
         if row.get("capacity_spec_sha256") != expected_hash:
             errors.append(f"capacity report specification mismatch: {profile_name}")
+        if row.get("source_commit") != source_commit:
+            errors.append(f"capacity report source commit mismatch: {profile_name}")
+        if row.get("compose_project") != environment.get("compose_project"):
+            errors.append(f"capacity report Compose project mismatch: {profile_name}")
+        metrics_identity = row.get("metrics_container_identity", {})
+        if (
+            metrics_identity.get("compose_project")
+            != environment.get("compose_project")
+            or metrics_identity.get("running") is not True
+            or not str(metrics_identity.get("compose_service") or "").strip()
+            or not str(metrics_identity.get("image_id") or "").strip()
+        ):
+            errors.append(
+                f"capacity metrics container identity is incomplete: {profile_name}"
+            )
+        backend_identity = row.get("backend_container_identity", {})
+        if (
+            backend_identity.get("compose_project")
+            != environment.get("compose_project")
+            or backend_identity.get("running") is not True
+            or not str(backend_identity.get("compose_service") or "").strip()
+            or not str(backend_identity.get("image_id") or "").strip()
+        ):
+            errors.append(
+                f"capacity backend container identity is incomplete: {profile_name}"
+            )
         raw_artifacts = row.get("raw_artifacts", {})
         for artifact_name in ("locust_stats_sha256", "telemetry_sha256"):
             value = str(raw_artifacts.get(artifact_name) or "")
@@ -277,6 +303,13 @@ def evaluate_p5_capacity_evidence(
             policy["capacity_min_samples"]
         ):
             errors.append(f"insufficient telemetry samples: {profile_name}")
+        maximum_interval = int(policy["capacity_min_duration_seconds"]) // int(
+            policy["capacity_min_samples"]
+        )
+        if not 0 < int(row.get("telemetry_interval_seconds", 0) or 0) <= maximum_interval:
+            errors.append(f"capacity telemetry interval is invalid: {profile_name}")
+        if row.get("telemetry_integrity", {}).get("status") != "PASS":
+            errors.append(f"capacity telemetry integrity failed: {profile_name}")
         integrity = row.get("integrity", {})
         if integrity.get("status") != "PASS":
             errors.append(f"capacity integrity evidence did not pass: {profile_name}")
@@ -330,6 +363,22 @@ def evaluate_p5_capacity_evidence(
     soak = evidence.get("soak_test", {})
     if soak.get("status") != "PASS" or soak.get("execution_class") != "live":
         errors.append("72-hour soak must be a live PASS")
+    if soak.get("capacity_spec_sha256") != expected_hash:
+        errors.append("soak capacity specification mismatch")
+    if soak.get("source_commit") != source_commit:
+        errors.append("soak source commit mismatch")
+    if soak.get("compose_project") != environment.get("compose_project"):
+        errors.append("soak Compose project mismatch")
+    if soak.get("telemetry_integrity", {}).get("status") != "PASS":
+        errors.append("soak telemetry integrity did not pass")
+    metrics_identity = soak.get("metrics_container_identity", {})
+    if (
+        metrics_identity.get("compose_project") != environment.get("compose_project")
+        or metrics_identity.get("running") is not True
+        or not str(metrics_identity.get("compose_service") or "").strip()
+        or not str(metrics_identity.get("image_id") or "").strip()
+    ):
+        errors.append("soak metrics container identity is incomplete")
     soak_started = _parse_timestamp(
         soak.get("started_at"), "soak_test.started_at", errors
     )
@@ -337,12 +386,17 @@ def evaluate_p5_capacity_evidence(
         soak.get("completed_at"), "soak_test.completed_at", errors
     )
     soak_duration = int(soak.get("duration_seconds", 0) or 0)
+    soak_target_duration = int(soak.get("target_duration_seconds", 0) or 0)
     soak_profile = str(soak.get("profile") or "")
     if soak_profile not in PROFILE_NAMES:
         errors.append("soak profile is invalid")
+    elif soak_profile != "standard":
+        errors.append("formal 72-hour soak must use the Standard profile")
     required_duration = int(policy["soak_min_duration_seconds"])
     if soak_duration < required_duration:
         errors.append("soak duration is less than 72 hours")
+    if soak_target_duration < required_duration:
+        errors.append("soak target duration is less than 72 hours")
     if soak_started and soak_completed:
         elapsed = (soak_completed - soak_started).total_seconds()
         if elapsed < required_duration or elapsed < soak_duration:

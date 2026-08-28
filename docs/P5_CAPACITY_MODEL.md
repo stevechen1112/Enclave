@@ -54,9 +54,16 @@
    Lite 主機產生 Standard 或 Enterprise 的報告。
    遙測必須以 `--compose-project` 限定受測 Compose project，禁止混入同主機
    其他 deployment；`--metrics-container` 從內網 Web 容器讀取非公開 `/metrics`。
+   開跑前會驗證公開 `/health` 是 staging 且 source commit 與 grounding evidence
+   完全一致；metrics container 與執行 post-load integrity probe 的 backend container
+   也都必須是同一 Compose project 的 running service。15 分鐘正式 run 的 telemetry
+   interval 上限為 60 秒，確保至少 15 個樣本並防止以放寬 gap 冒充連續覆蓋。
    Docker CPU% 依受測 project 各容器加總後除以主機 logical cores，輸出主機
    使用率，避免把可超過 100% 的多核心 container 指標誤判為 host saturation。
-   Runner 也會檢查 Docker host 上是否有另一個 Enclave Compose project；若
+   Runner 要求明確傳入 `--confirm-isolated-staging`，且正式輸出目錄不得含有
+   同 profile 的既有 CSV、telemetry、integrity、report 或 log。Locust 與 telemetry
+   collector 任一提前結束時會立即回收另一方，不能靠續跑、附加舊資料或等待逾時
+   產生貌似完整的證據。Runner 也會檢查 Docker host 上是否有另一個 Enclave Compose project；若
    production 與 staging 共用主機會在負載開始前 fail-fast，不能產生正式容量或
    soak 證據。
    先以 `scripts/provision_p5_load_users.py` 在專用測試租戶建立 credential pool；
@@ -94,7 +101,13 @@
    詳細執行與中斷復原程序見 `runbooks/P5_DEGRADATION_DRILLS.md`。
 4. 容量與降級短測通過後，才以 `scripts/run_p5_soak.py` 啟動 Standard profile
    的 1× 預估尖峰 72 小時測試。Runner 拒絕任何短於 259,200 秒的正式 run，
-   並要求同一環境的 live grounding evidence，避免長時間跑在空知識庫上。
+   並要求同一環境的 live grounding evidence、100 個唯一且同租戶的 access token、
+   fresh output directory，以及屬於同一 Compose project 的 metrics container，避免
+   長時間跑在空知識庫或錯誤 deployment。Locust 或 telemetry collector 任一提前
+   結束時會立即終止另一方；正式 run 不接受把舊 telemetry 接到新 Locust run。
+   Report 必須證明 telemetry 時間單調、首尾覆蓋完整、無過大 gap、每個樣本的
+   staging release／source commit 一致，且 health、metrics、container 與 GPU
+   （Standard 必要）皆無採樣失敗。詳見 `runbooks/P5_SOAK.md`。
 5. 先以 `scripts/capture_p5_environment.py` 實測 staging release、硬體、runtime
    image IDs 與同主機 Compose projects，再交由 `scripts/assemble_p5_evidence.py`
    組合三份 capacity report、soak report、cost report 與四份 degradation report。

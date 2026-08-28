@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timedelta, timezone
+from itertools import pairwise
 from typing import Any
 
 _LINE = re.compile(
@@ -218,4 +220,89 @@ def summarize_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
             1 for sample in samples if sample.get("health_status") != 200
         ),
         "metrics_failures": sum(1 for sample in samples if sample.get("metrics_error")),
+    }
+
+
+def _timestamp(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def validate_telemetry_integrity(
+    samples: list[dict[str, Any]],
+    *,
+    started_at: str,
+    completed_at: str,
+    source_commit: str,
+    interval_seconds: int,
+    gpu_required: bool,
+    invalid_json_lines: int,
+) -> dict[str, Any]:
+    """Bind telemetry coverage and every sample to one staging release."""
+    errors: list[str] = []
+    started = _timestamp(started_at)
+    completed = _timestamp(completed_at)
+    captured = [_timestamp(sample.get("captured_at")) for sample in samples]
+    if started is None or completed is None or completed < started:
+        errors.append("runner timestamps are invalid")
+    if interval_seconds <= 0:
+        errors.append("telemetry interval must be positive")
+    if invalid_json_lines:
+        errors.append("telemetry contains invalid JSON lines")
+    if not samples or any(value is None for value in captured):
+        errors.append("telemetry timestamps are incomplete")
+    valid_captured = [value for value in captured if value is not None]
+    gaps: list[float] = []
+    if len(valid_captured) >= 2:
+        gaps = [
+            (current - previous).total_seconds()
+            for previous, current in pairwise(valid_captured)
+        ]
+        if any(gap <= 0 for gap in gaps):
+            errors.append("telemetry timestamps are not strictly increasing")
+        if interval_seconds > 0 and any(
+            gap > interval_seconds * 2.5 for gap in gaps
+        ):
+            errors.append("telemetry contains an excessive sampling gap")
+    if (
+        started
+        and valid_captured
+        and interval_seconds > 0
+        and abs((valid_captured[0] - started).total_seconds()) > interval_seconds
+    ):
+        errors.append("telemetry did not begin with the load run")
+    if (
+        completed
+        and valid_captured
+        and interval_seconds > 0
+        and valid_captured[-1] < completed - timedelta(seconds=interval_seconds)
+    ):
+        errors.append("telemetry does not cover the completed load run")
+    for index, sample in enumerate(samples):
+        health = sample.get("health") if isinstance(sample.get("health"), dict) else {}
+        release = health.get("release") if isinstance(health.get("release"), dict) else {}
+        if sample.get("health_status") != 200:
+            errors.append(f"telemetry health failure at sample {index}")
+        if health.get("env") != "staging" or release.get("identifiable") is not True:
+            errors.append(f"telemetry release identity failure at sample {index}")
+        if release.get("source_commit") != source_commit:
+            errors.append(f"telemetry source commit mismatch at sample {index}")
+        if sample.get("metrics_error") or not sample.get("runtime"):
+            errors.append(f"telemetry metrics failure at sample {index}")
+        if sample.get("container_error") or not sample.get("containers"):
+            errors.append(f"telemetry container failure at sample {index}")
+        if gpu_required and (sample.get("gpu_error") or not sample.get("gpus")):
+            errors.append(f"telemetry GPU failure at sample {index}")
+    return {
+        "status": "PASS" if not errors else "FAIL",
+        "errors": errors,
+        "invalid_json_lines": invalid_json_lines,
+        "first_sample_at": valid_captured[0].isoformat() if valid_captured else None,
+        "last_sample_at": valid_captured[-1].isoformat() if valid_captured else None,
+        "max_gap_seconds": max(gaps, default=None),
     }
