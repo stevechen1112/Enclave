@@ -16,7 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.services.capacity_gate import load_capacity_spec
-from app.services.hardware_inventory import detect_hardware, hardware_shortfalls
+from app.services.hardware_inventory import (
+    co_resident_enclave_projects,
+    detect_hardware,
+    hardware_shortfalls,
+)
 from app.services.soak_report import build_soak_report
 
 
@@ -56,6 +60,12 @@ def main() -> int:
     )
     if shortfalls:
         parser.error("host does not qualify for profile: " + "; ".join(shortfalls))
+    co_resident = co_resident_enclave_projects(args.compose_project)
+    if co_resident:
+        parser.error(
+            "soak host is not isolated; co-resident Enclave projects: "
+            + ", ".join(co_resident)
+        )
     for path in (
         args.document_fixture,
         args.audio_fixture,

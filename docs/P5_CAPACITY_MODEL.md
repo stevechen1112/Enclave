@@ -56,6 +56,9 @@
    其他 deployment；`--metrics-container` 從內網 Web 容器讀取非公開 `/metrics`。
    Docker CPU% 依受測 project 各容器加總後除以主機 logical cores，輸出主機
    使用率，避免把可超過 100% 的多核心 container 指標誤判為 host saturation。
+   Runner 也會檢查 Docker host 上是否有另一個 Enclave Compose project；若
+   production 與 staging 共用主機會在負載開始前 fail-fast，不能產生正式容量或
+   soak 證據。
    先以 `scripts/provision_p5_load_users.py` 在專用測試租戶建立 credential pool；
    pool 至少要有目標並行數那麼多組帳號。每個虛擬使用者使用不同帳號，不能
    關閉 per-user 限流或用單一共用帳號取代容量測試。

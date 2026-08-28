@@ -53,3 +53,38 @@ def hardware_shortfalls(
         if actual < minimum:
             shortfalls.append(f"{field}: observed {actual:g}, requires {minimum:g}")
     return shortfalls
+
+
+def co_resident_enclave_projects(target_project: str) -> list[str]:
+    """Return other running Enclave Compose projects on the Docker host."""
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-")
+    if not target_project or any(char not in allowed for char in target_project):
+        raise ValueError("Compose project name contains unsupported characters")
+    try:
+        result = subprocess.run(
+            [
+                "docker",
+                "ps",
+                "--format",
+                '{{.Label "com.docker.compose.project"}}\t{{.Names}}\t{{.Image}}',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [f"docker-inspection-unavailable:{type(exc).__name__}"]
+    if result.returncode != 0:
+        return ["docker-inspection-unavailable"]
+    projects = set()
+    for line in result.stdout.splitlines():
+        parts = line.split("\t", 2)
+        if len(parts) != 3:
+            continue
+        project, name, image = (part.strip() for part in parts)
+        if not project or project == target_project:
+            continue
+        if name.casefold().startswith("enclave") or "enclave" in image.casefold():
+            projects.add(project)
+    return sorted(projects)

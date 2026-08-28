@@ -18,7 +18,11 @@ sys.path.insert(0, str(ROOT))
 
 from app.services.capacity_gate import load_capacity_spec, profile_load_target
 from app.services.capacity_report import build_capacity_report
-from app.services.hardware_inventory import detect_hardware, hardware_shortfalls
+from app.services.hardware_inventory import (
+    co_resident_enclave_projects,
+    detect_hardware,
+    hardware_shortfalls,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -200,6 +204,12 @@ def main() -> int:
     )
     if shortfalls:
         parser.error("host does not qualify for profile: " + "; ".join(shortfalls))
+    co_resident = co_resident_enclave_projects(args.compose_project)
+    if co_resident:
+        parser.error(
+            "capacity host is not isolated; co-resident Enclave projects: "
+            + ", ".join(co_resident)
+        )
     args.output_dir.mkdir(parents=True, exist_ok=True)
     integrity_evidence = args.output_dir / f"{args.profile}_integrity_evidence.json"
     prefix = args.output_dir / args.profile
