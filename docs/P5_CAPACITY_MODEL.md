@@ -79,9 +79,14 @@
    問答在預估超額前回傳 cost-axis 429，並在 `finally` 恢復原配額。
 3. 為 `provider_slow`、`quota_exhausted`、`queue_saturated`、
    `sidecar_unavailable` 各準備一份 command plan，交給
-   `scripts/run_p5_degradation.py`。Plan 的 baseline／inject／probe／recover／verify
-   都是 argv array，不經 shell；verify 必須輸出 `data_loss=0` 與
-   `false_completion=0` 的 JSON。
+   `scripts/run_p5_degradation.py`。Plan 必須綁定 environment evidence、完整
+   source commit、Compose project 與 tenant；baseline／inject／probe／recover／verify
+   每一步都只能執行 `scripts/p5_degradation_drivers/` 下、存在於相同 source
+   commit 且 SHA-256 相符的 driver，不接受 shell／inline Python 偽造證據。
+   密碼、token、secret 與 API key 只能由環境變數注入，不得出現在 argv 或
+   transcript。verify 必須輸出 scenario／commit／tenant 綁定、非空觀測紀錄、
+   `data_loss=0`、`false_completion=0`、`cross_tenant_leak=0` 與
+   `recovered=true`；總 gate 會再次逐項比對。
 4. 容量與降級短測通過後，才以 `scripts/run_p5_soak.py` 啟動 Standard profile
    的 1× 預估尖峰 72 小時測試。Runner 拒絕任何短於 259,200 秒的正式 run，
    並要求同一環境的 live grounding evidence，避免長時間跑在空知識庫上。

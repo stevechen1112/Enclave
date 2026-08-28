@@ -137,8 +137,14 @@ def _complete_evidence() -> dict:
                 **row,
                 "execution_class": "live",
                 "artifact_sha256": "4" * 64,
+                "source_commit": "a" * 40,
+                "compose_project": "enclave-p5-dedicated",
+                "environment_artifact_sha256": "8" * 64,
+                "tenant_id": "11111111-1111-1111-1111-111111111111",
                 "data_loss": 0,
                 "false_completion": 0,
+                "cross_tenant_leak": 0,
+                "recovered": True,
             }
             for row in _rows(spec["required_degradation_scenarios"], "scenario")
         ],

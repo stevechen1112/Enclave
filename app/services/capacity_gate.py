@@ -439,11 +439,29 @@ def evaluate_p5_capacity_evidence(
     }
     for scenario in spec["required_degradation_scenarios"]:
         row = degradation_rows.get(scenario, {})
+        if row.get("status") != "PASS":
+            errors.append(f"degradation test did not pass: {scenario}")
         if row.get("execution_class") != "live":
             errors.append(f"degradation test requires live execution: {scenario}")
         if len(str(row.get("artifact_sha256") or "")) != 64:
             errors.append(f"degradation artifact hash is missing: {scenario}")
-        if row.get("data_loss", -1) != 0 or row.get("false_completion", -1) != 0:
+        if row.get("source_commit") != source_commit:
+            errors.append(f"degradation source commit mismatch: {scenario}")
+        if row.get("compose_project") != environment.get("compose_project"):
+            errors.append(f"degradation compose project mismatch: {scenario}")
+        if (
+            row.get("environment_artifact_sha256")
+            != environment.get("artifact_sha256")
+        ):
+            errors.append(f"degradation environment mismatch: {scenario}")
+        if not str(row.get("tenant_id") or "").strip():
+            errors.append(f"degradation tenant binding is missing: {scenario}")
+        if (
+            row.get("data_loss", -1) != 0
+            or row.get("false_completion", -1) != 0
+            or row.get("cross_tenant_leak", -1) != 0
+            or row.get("recovered") is not True
+        ):
             errors.append(f"degradation safety failure: {scenario}")
     if not evidence.get("operator"):
         errors.append("operator is required")
