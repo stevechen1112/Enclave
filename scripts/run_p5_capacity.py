@@ -38,6 +38,7 @@ def _run_post_load_integrity_probe(
     run_started_at: str,
     load_completed_at: str,
     timeout_seconds: int,
+    probe_base_url: str,
 ) -> int:
     """Execute the integrity probe in the exact backend release under test."""
     if not container or any(char not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-" for char in container):
@@ -101,7 +102,7 @@ def _run_post_load_integrity_probe(
                 "python",
                 "scripts/run_p5_integrity_probe.py",
                 "--base-url",
-                "http://127.0.0.1:8000",
+                probe_base_url,
                 "--credentials",
                 remote_credentials,
                 "--grounding-evidence",
@@ -149,6 +150,7 @@ def main() -> int:
     parser.add_argument("--grounding-evidence", type=Path, required=True)
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--backend-container", required=True)
+    parser.add_argument("--backend-base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--reconciliation-timeout-seconds", type=int, default=1800)
     parser.add_argument("--duration-seconds", type=int, default=900)
     parser.add_argument("--spawn-rate", type=int, default=10)
@@ -293,6 +295,7 @@ def main() -> int:
         run_started_at=started.isoformat(),
         load_completed_at=completed.isoformat(),
         timeout_seconds=args.reconciliation_timeout_seconds,
+        probe_base_url=args.backend_base_url,
     )
     if not integrity_evidence.is_file():
         integrity_evidence.write_text(

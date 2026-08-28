@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from sqlalchemy.exc import SQLAlchemyError
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -62,12 +63,12 @@ def probe(
     reconciliation_timeout_seconds: int,
     poll_seconds: float,
 ) -> dict[str, Any]:
-    from app.db.session import SessionLocal
+    from app.db.session import MaintenanceSessionLocal, SessionLocal
     from app.models.asset import AssetRevision, SourceAsset
     from app.models.document import Document, DocumentChunk
     from app.models.ingestion import IngestionJob
     from app.models.tenant import Tenant
-    from app.services.rls import apply_rls_context
+    from app.services.rls import apply_rls_bypass, apply_rls_context
 
     errors: list[str] = []
     health = client.get("/health")
@@ -124,8 +125,15 @@ def probe(
             and revision.ingestion_status == "ready"
             and chunk_count > 0
         )
+    with MaintenanceSessionLocal() as maintenance_db:
+        apply_rls_bypass(
+            maintenance_db,
+            actor_identity="p5-integrity-probe",
+            operation="select_isolation_probe_tenant",
+            reason="Select or create an isolated staging tenant for P5 verification",
+        )
         other_tenant_id = (
-            db.query(Tenant.id)
+            maintenance_db.query(Tenant.id)
             .filter(Tenant.id != tenant_id, Tenant.status == "active")
             .order_by(Tenant.created_at.asc())
             .scalar()
@@ -135,9 +143,14 @@ def probe(
     probe_tenant_created = False
     if other_tenant_id is None:
         other_tenant_id = uuid.uuid4()
-        with SessionLocal() as db:
-            apply_rls_context(db, tenant_id)
-            db.add(
+        with MaintenanceSessionLocal() as maintenance_db:
+            apply_rls_bypass(
+                maintenance_db,
+                actor_identity="p5-integrity-probe",
+                operation="create_isolation_probe_tenant",
+                reason="Create an ephemeral second tenant in isolated staging",
+            )
+            maintenance_db.add(
                 Tenant(
                     id=other_tenant_id,
                     name=f"P5 isolation probe {other_tenant_id}",
@@ -145,7 +158,7 @@ def probe(
                     status="active",
                 )
             )
-            db.commit()
+            maintenance_db.commit()
         probe_tenant_created = True
 
     foreign_asset_id = uuid.uuid4()
@@ -194,12 +207,21 @@ def probe(
                     db.delete(row)
                     db.commit()
         if probe_tenant_created and other_tenant_id is not None:
-            with SessionLocal() as db:
-                apply_rls_context(db, tenant_id)
-                row = db.query(Tenant).filter(Tenant.id == other_tenant_id).first()
+            with MaintenanceSessionLocal() as maintenance_db:
+                apply_rls_bypass(
+                    maintenance_db,
+                    actor_identity="p5-integrity-probe",
+                    operation="delete_isolation_probe_tenant",
+                    reason="Remove the ephemeral P5 isolation tenant after verification",
+                )
+                row = (
+                    maintenance_db.query(Tenant)
+                    .filter(Tenant.id == other_tenant_id)
+                    .first()
+                )
                 if row is not None:
-                    db.delete(row)
-                    db.commit()
+                    maintenance_db.delete(row)
+                    maintenance_db.commit()
 
     cross_tenant_leak = int(
         other_tenant_id is None
@@ -323,7 +345,14 @@ def main() -> int:
                 reconciliation_timeout_seconds=args.reconciliation_timeout_seconds,
                 poll_seconds=args.poll_seconds,
             )
-    except (OSError, TypeError, ValueError, httpx.HTTPError) as exc:
+    except (
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+        httpx.HTTPError,
+        SQLAlchemyError,
+    ) as exc:
         result = {
             "status": "FAIL",
             "execution_class": "live",
