@@ -132,12 +132,13 @@ def probe(
             operation="select_isolation_probe_tenant",
             reason="Select or create an isolated staging tenant for P5 verification",
         )
-        other_tenant_id = (
+        other_tenant_row = (
             maintenance_db.query(Tenant.id)
             .filter(Tenant.id != tenant_id, Tenant.status == "active")
             .order_by(Tenant.created_at.asc())
-            .scalar()
+            .first()
         )
+        other_tenant_id = other_tenant_row[0] if other_tenant_row else None
     if not canonical_ok:
         errors.append("grounded fixture canonical projection is inconsistent")
     probe_tenant_created = False
