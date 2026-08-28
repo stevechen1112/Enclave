@@ -50,6 +50,15 @@ def _chat_is_grounded(payload: Any) -> bool:
     )
 
 
+def _asset_is_ready(payload: Any) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    revision = payload.get("revision") or {}
+    return payload.get("status") in {"active", "ready"} and revision.get(
+        "ingestion_status"
+    ) == "ready"
+
+
 def prepare(
     *,
     client: httpx.Client,
@@ -94,10 +103,10 @@ def prepare(
 
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
-        asset_status = client.get(f"/api/v1/knowledge/assets/{asset_id}/status")
+        asset_status = client.get(f"/api/v1/knowledge/assets/{asset_id}")
         asset_status.raise_for_status()
         status_payload = asset_status.json()
-        if status_payload.get("status") == "ready":
+        if _asset_is_ready(status_payload):
             break
         job = status_payload.get("job") or {}
         if status_payload.get("status") in {"failed", "tombstoned"} or job.get(

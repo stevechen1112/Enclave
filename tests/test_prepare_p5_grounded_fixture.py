@@ -16,6 +16,7 @@ from app.models.tenant import Tenant
 from app.services.kb_scope_policy import resolve_kb_revision_scope
 from app.services.p5_staging_fixture import activate_staging_capacity_fixture
 from scripts.prepare_p5_grounded_fixture import (
+    _asset_is_ready,
     _chat_is_grounded,
     _search_has_marker,
 )
@@ -35,6 +36,16 @@ def test_search_marker_must_exist_in_retrieved_content():
 def test_grounded_chat_requires_answer_and_sources():
     assert _chat_is_grounded({"answer": "先確認壓力歸零", "sources": [{"id": "1"}]})
     assert not _chat_is_grounded({"answer": "無資料", "sources": []})
+
+
+def test_document_asset_readiness_uses_canonical_revision_state():
+    assert _asset_is_ready(
+        {"status": "active", "revision": {"ingestion_status": "ready"}}
+    )
+    assert not _asset_is_ready(
+        {"status": "active", "revision": {"ingestion_status": "pending"}}
+    )
+    assert not _asset_is_ready({"status": "active"})
 
 
 def test_public_search_passes_explicit_active_revision_scope_to_retrieval():
