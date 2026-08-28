@@ -172,6 +172,8 @@ def build_capacity_report(
     grounding_passed = (
         grounding.get("status") == "PASS"
         and grounding.get("execution_class") == "live"
+        and grounding.get("publication_class") == "isolated_staging_fixture"
+        and bool(str(grounding.get("kb_revision_id") or "").strip())
         and bool(str(grounding.get("marker") or "").strip())
         and len(str(grounding.get("source_commit") or "")) == 40
         and bool(str(grounding.get("tenant_id") or "").strip())

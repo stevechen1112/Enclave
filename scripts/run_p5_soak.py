@@ -68,6 +68,8 @@ def main() -> int:
     if (
         grounding.get("status") != "PASS"
         or grounding.get("execution_class") != "live"
+        or grounding.get("publication_class") != "isolated_staging_fixture"
+        or not str(grounding.get("kb_revision_id") or "").strip()
         or int(grounding.get("search_results", 0) or 0) <= 0
         or int(grounding.get("chat_sources", 0) or 0) <= 0
         or len(str(grounding.get("source_commit") or "")) != 40

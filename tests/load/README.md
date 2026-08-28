@@ -47,6 +47,13 @@ k6 run tests/load/k6_load_test.js \
 credential pool。JSON 是 mode 0600 的 secret，不可納入 evidence 或 Git；帳號數
 至少等於該 run 的目標並行數，每個虛擬使用者使用不同帳號。
 
+token pool 準備完成後，將 token、合成 SOP 與輸出路徑掛入同一個 isolated
+staging backend 容器，執行 `scripts/prepare_p5_grounded_fixture.py`，並同時傳入
+`--confirm-isolated-staging --activate-staging-fixture`。此命令需要 backend 的 DB
+連線以建立專用測試 revision，因此不能在一般操作員工作站直接執行；產出的
+grounding evidence 必須含 `publication_class=isolated_staging_fixture` 與非空
+`kb_revision_id`，容量與 soak runner 才會接受。
+
 ## 效能基準線
 
 端點 SLO 依 `CAPACITY_PROFILE` 從容量規格載入。所有 profile 的正式容量測試都必須達到其預估尖峰 2 倍、至少 15 分鐘，並同時由 P5 telemetry collector 留下資源樣本。

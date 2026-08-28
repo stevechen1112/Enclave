@@ -7,6 +7,7 @@ import argparse
 import hashlib
 import json
 import os
+import sys
 import time
 import uuid
 from datetime import UTC, datetime
@@ -14,6 +15,10 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 def _first_token(path: Path) -> str:
@@ -52,6 +57,7 @@ def prepare(
     marker: str,
     timeout_seconds: int,
     poll_seconds: float,
+    activate_staging_fixture: bool,
 ) -> dict[str, Any]:
     started_at = datetime.now(UTC)
     health = client.get("/health")
@@ -60,6 +66,8 @@ def prepare(
     release = health_payload.get("release", {}) if isinstance(health_payload, dict) else {}
     if release.get("identifiable") is not True:
         raise ValueError("staging release identity is not identifiable")
+    if health_payload.get("env") != "staging":
+        raise ValueError("grounded P5 fixture may only target a staging release")
     me = client.get("/api/v1/users/me")
     me.raise_for_status()
     me_payload = me.json()
@@ -77,7 +85,49 @@ def prepare(
         )
     upload.raise_for_status()
     upload_payload = upload.json()
+    asset_id = str(upload_payload.get("id") or upload_payload.get("asset_id") or "")
+    document_id = str(
+        (upload_payload.get("metadata") or {}).get("legacy_document_id") or ""
+    )
+    if not asset_id or not document_id:
+        raise ValueError("fixture upload did not return canonical asset/document identity")
+
     deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        asset_status = client.get(f"/api/v1/knowledge/assets/{asset_id}/status")
+        asset_status.raise_for_status()
+        status_payload = asset_status.json()
+        if status_payload.get("status") == "ready":
+            break
+        job = status_payload.get("job") or {}
+        if status_payload.get("status") in {"failed", "tombstoned"} or job.get(
+            "status"
+        ) == "failed":
+            raise ValueError("seeded P5 fixture ingestion failed")
+        time.sleep(poll_seconds)
+    else:
+        raise TimeoutError("seeded P5 fixture did not finish ingestion")
+
+    if not activate_staging_fixture:
+        raise ValueError("--activate-staging-fixture is required")
+    if os.getenv("APP_ENV", "").lower() != "staging":
+        raise ValueError("fixture activation must run inside APP_ENV=staging backend")
+    from app.db.session import SessionLocal
+    from app.services.p5_staging_fixture import activate_staging_capacity_fixture
+    from app.services.rls import apply_rls_context
+
+    with SessionLocal() as db:
+        apply_rls_context(db, uuid.UUID(tenant_id))
+        revision = activate_staging_capacity_fixture(
+            db,
+            tenant_id=uuid.UUID(tenant_id),
+            document_id=uuid.UUID(document_id),
+            marker=marker,
+            confirm_isolated_staging=True,
+        )
+        revision_id = str(revision.id)
+        db.commit()
+
     search_payload: dict[str, Any] = {}
     while time.monotonic() < deadline:
         search = client.post(
@@ -114,9 +164,10 @@ def prepare(
         "started_at": started_at.isoformat(),
         "completed_at": completed_at.isoformat(),
         "fixture_sha256": hashlib.sha256(fixture.read_bytes()).hexdigest(),
-        "asset_id": str(
-            upload_payload.get("id") or upload_payload.get("asset_id") or ""
-        ),
+        "asset_id": asset_id,
+        "document_id": document_id,
+        "kb_revision_id": revision_id,
+        "publication_class": "isolated_staging_fixture",
         "search_results": int(search_payload.get("total_results", 0) or 0),
         "chat_sources": len(chat_payload["sources"]),
     }
@@ -132,9 +183,12 @@ def main() -> int:
     parser.add_argument("--timeout-seconds", type=int, default=600)
     parser.add_argument("--poll-seconds", type=float, default=5)
     parser.add_argument("--confirm-isolated-staging", action="store_true")
+    parser.add_argument("--activate-staging-fixture", action="store_true")
     args = parser.parse_args()
     if not args.confirm_isolated_staging:
         parser.error("--confirm-isolated-staging is required")
+    if not args.activate_staging_fixture:
+        parser.error("--activate-staging-fixture is required")
     if args.timeout_seconds <= 0 or args.poll_seconds <= 0:
         parser.error("timeouts must be positive")
     if not args.fixture.is_file() or not args.credentials.is_file():
@@ -152,6 +206,7 @@ def main() -> int:
                 marker=args.marker,
                 timeout_seconds=args.timeout_seconds,
                 poll_seconds=args.poll_seconds,
+                activate_staging_fixture=args.activate_staging_fixture,
             )
     except (OSError, TypeError, ValueError, TimeoutError, httpx.HTTPError) as exc:
         parser.error(str(exc))

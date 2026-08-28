@@ -54,10 +54,14 @@
    token。正式計時時所有虛擬使用者以 token 同步進入負載；另由一個固定
    `AuthProbeUser` 依 edge auth 限流安全速率持續測量真實登入。這能避免大量
    使用者 ramp-up 被防暴力登入限制扭曲，也沒有關閉任何 production guardrail。
-   開始計時前還必須以 `scripts/prepare_p5_grounded_fixture.py` 匯入合成 SOP，並
-   實際證明 marker 可搜尋且 chat response 含非空 sources。Locust 對搜尋結果與
-   sources 執行內容契約檢查；只有 HTTP 200、但回覆「未找到資料」不得冒充
-   `grounded_chat` 成功。
+   開始計時前還必須在隔離 staging backend 容器內，以
+   `scripts/prepare_p5_grounded_fixture.py --activate-staging-fixture` 匯入合成 SOP。
+   腳本只在 `APP_ENV=staging` 生效，會建立明確標記為非正式 release 的 active
+   fixture revision，再從公開搜尋與 chat 實際證明 marker 可搜尋且 response 含
+   非空 sources。它不偽造正式 promotion gates，也不建立 `KnowledgeRelease`。
+   公開搜尋與 chat 共用相同 active-revision scope；未發布文件不能由任一 reader
+   路徑看到。Locust 對搜尋結果與 sources 執行內容契約檢查；只有 HTTP 200、但
+   回覆「未找到資料」不得冒充 `grounded_chat` 成功。
 2. 以 `scripts/run_p5_cost_guardrails.py` 對專用測試租戶暫時收緊成本上限，驗證
    問答在預估超額前回傳 cost-axis 429，並在 `finally` 恢復原配額。
 3. 為 `provider_slow`、`quota_exhausted`、`queue_saturated`、

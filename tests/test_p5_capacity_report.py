@@ -60,6 +60,8 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
         grounding={
             "status": "PASS",
             "execution_class": "live",
+            "publication_class": "isolated_staging_fixture",
+            "kb_revision_id": "22222222-2222-2222-2222-222222222222",
             "marker": "P5-SOP-RESET-042",
             "source_commit": "a" * 40,
             "tenant_id": "11111111-1111-1111-1111-111111111111",

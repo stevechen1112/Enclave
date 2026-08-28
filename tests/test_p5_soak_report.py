@@ -53,6 +53,8 @@ def test_short_soak_artifacts_cannot_pass(tmp_path: Path):
         grounding={
             "status": "PASS",
             "execution_class": "live",
+            "publication_class": "isolated_staging_fixture",
+            "kb_revision_id": "22222222-2222-2222-2222-222222222222",
             "source_commit": "a" * 40,
             "tenant_id": "11111111-1111-1111-1111-111111111111",
             "search_results": 1,

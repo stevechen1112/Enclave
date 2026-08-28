@@ -271,6 +271,8 @@ def evaluate_p5_capacity_evidence(
         if (
             grounding.get("status") != "PASS"
             or grounding.get("execution_class") != "live"
+            or grounding.get("publication_class") != "isolated_staging_fixture"
+            or not str(grounding.get("kb_revision_id") or "").strip()
             or not str(grounding.get("marker") or "").strip()
             or grounding.get("source_commit") != source_commit
             or not str(grounding.get("tenant_id") or "").strip()
@@ -354,6 +356,8 @@ def evaluate_p5_capacity_evidence(
     if (
         soak_grounding.get("status") != "PASS"
         or soak_grounding.get("execution_class") != "live"
+        or soak_grounding.get("publication_class") != "isolated_staging_fixture"
+        or not str(soak_grounding.get("kb_revision_id") or "").strip()
         or soak_grounding.get("source_commit") != source_commit
         or not str(soak_grounding.get("tenant_id") or "").strip()
         or int(soak_grounding.get("search_results", 0) or 0) <= 0

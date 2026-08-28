@@ -62,6 +62,10 @@ def main() -> int:
     grounding_errors = []
     if grounding.get("status") != "PASS" or grounding.get("execution_class") != "live":
         grounding_errors.append("grounding evidence is not a live PASS")
+    if grounding.get("publication_class") != "isolated_staging_fixture":
+        grounding_errors.append("grounding evidence is not a staging fixture publication")
+    if not str(grounding.get("kb_revision_id") or "").strip():
+        grounding_errors.append("grounding evidence has no active KB revision")
     if int(grounding.get("search_results", 0) or 0) <= 0:
         grounding_errors.append("grounding evidence has no search results")
     if int(grounding.get("chat_sources", 0) or 0) <= 0:
