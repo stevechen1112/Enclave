@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import subprocess
+import sys
+from pathlib import Path
 from uuid import UUID
 
 import jwt
@@ -9,6 +12,18 @@ from app.config import settings
 from scripts.prepare_p5_load_tokens import attach_tokens
 
 TENANT_ID = UUID("11111111-1111-1111-1111-111111111111")
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_token_preparer_is_directly_executable():
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "prepare_p5_load_tokens.py"), "--help"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
 
 
 def test_attach_tokens_preserves_credentials_and_scopes_token_to_tenant():
