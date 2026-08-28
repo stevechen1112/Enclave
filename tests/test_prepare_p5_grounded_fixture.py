@@ -93,6 +93,31 @@ def test_public_catalog_search_uses_the_same_revision_scope():
     assert response.granularity == "catalog"
 
 
+def test_auto_search_uses_chunk_evidence_for_difference_question():
+    authz = MagicMock()
+    facade = MagicMock()
+    facade.search.return_value = SimpleNamespace(results=[])
+    with patch(
+        "app.core.authorization.AuthorizationContext.from_user", return_value=authz
+    ), patch(
+        "app.services.kb_scope_policy.resolve_kb_revision_scope",
+        return_value={"kb_revision_ids": []},
+    ), patch(
+        "app.services.retrieval_facade.get_retrieval_facade", return_value=facade
+    ):
+        response = search_knowledge_base(
+            request=SearchRequest(
+                query="P5-SOP-RESET-042 盤點差異", granularity="auto"
+            ),
+            db=MagicMock(),
+            current_user=MagicMock(),
+        )
+
+    facade.search.assert_called_once()
+    facade.search_catalog.assert_not_called()
+    assert response.granularity == "chunk"
+
+
 def test_capacity_fixture_activation_is_staging_only(test_engine, monkeypatch):
     db = sessionmaker(bind=test_engine)()
     tenant_id = uuid.uuid4()

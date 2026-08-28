@@ -66,7 +66,12 @@ def search_knowledge_base(
 
     granularity = request.granularity
     if granularity == "auto":
-        granularity = "catalog" if plan.wants_catalog else "chunk"
+        # ``compare`` plans also carry a catalog arm for multi-document fusion,
+        # but a single-arm public search must still retrieve passage evidence.
+        # Reserve catalog-only routing for actual inventory/listing intents.
+        granularity = (
+            "catalog" if plan.intent in {"inventory", "multi_hop"} else "chunk"
+        )
 
     if granularity == "catalog":
         catalog_queries = plan.sub_queries or [request.query]
