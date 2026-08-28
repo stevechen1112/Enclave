@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -19,6 +20,14 @@ from app.services.hardware_inventory import detect_hardware, hardware_shortfalls
 from app.services.soak_report import build_soak_report
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -30,6 +39,7 @@ def main() -> int:
     parser.add_argument("--audio-fixture", type=Path, required=True)
     parser.add_argument("--video-fixture", type=Path, required=True)
     parser.add_argument("--credentials", type=Path, required=True)
+    parser.add_argument("--grounding-evidence", type=Path, required=True)
     parser.add_argument("--duration-seconds", type=int, default=259200)
     parser.add_argument("--recovery-seconds", type=int, default=600)
     parser.add_argument("--spawn-rate", type=int, default=5)
@@ -49,9 +59,21 @@ def main() -> int:
         args.audio_fixture,
         args.video_fixture,
         args.credentials,
+        args.grounding_evidence,
     ):
         if not path.is_file():
             parser.error(f"missing fixture: {path}")
+    grounding = json.loads(args.grounding_evidence.read_text(encoding="utf-8"))
+    grounding["artifact_sha256"] = _sha256(args.grounding_evidence)
+    if (
+        grounding.get("status") != "PASS"
+        or grounding.get("execution_class") != "live"
+        or int(grounding.get("search_results", 0) or 0) <= 0
+        or int(grounding.get("chat_sources", 0) or 0) <= 0
+        or len(str(grounding.get("source_commit") or "")) != 40
+        or not str(grounding.get("tenant_id") or "").strip()
+    ):
+        parser.error("grounding evidence is not a complete live PASS")
     environment = os.environ.copy()
     for name in (
         "LOAD_TEST_USER_PASSWORD",
@@ -148,6 +170,7 @@ def main() -> int:
         telemetry_path=telemetry,
         locust_exit_code=load.returncode,
         collector_exit_code=collector_exit,
+        grounding=grounding,
     )
     (args.output_dir / "soak_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"

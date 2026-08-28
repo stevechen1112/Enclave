@@ -267,6 +267,18 @@ def evaluate_p5_capacity_evidence(
                 errors.append(
                     f"capacity integrity check did not pass: {profile_name}.{field}"
                 )
+        grounding = row.get("grounding_evidence", {})
+        if (
+            grounding.get("status") != "PASS"
+            or grounding.get("execution_class") != "live"
+            or not str(grounding.get("marker") or "").strip()
+            or grounding.get("source_commit") != source_commit
+            or not str(grounding.get("tenant_id") or "").strip()
+            or int(grounding.get("search_results", 0) or 0) <= 0
+            or int(grounding.get("chat_sources", 0) or 0) <= 0
+            or len(str(grounding.get("artifact_sha256") or "")) != 64
+        ):
+            errors.append(f"grounded retrieval proof is incomplete: {profile_name}")
 
     soak = evidence.get("soak_test", {})
     if soak.get("status") != "PASS" or soak.get("execution_class") != "live":
@@ -338,6 +350,17 @@ def evaluate_p5_capacity_evidence(
         section="soak_test.scenarios",
         errors=errors,
     )
+    soak_grounding = soak.get("grounding_evidence", {})
+    if (
+        soak_grounding.get("status") != "PASS"
+        or soak_grounding.get("execution_class") != "live"
+        or soak_grounding.get("source_commit") != source_commit
+        or not str(soak_grounding.get("tenant_id") or "").strip()
+        or int(soak_grounding.get("search_results", 0) or 0) <= 0
+        or int(soak_grounding.get("chat_sources", 0) or 0) <= 0
+        or len(str(soak_grounding.get("artifact_sha256") or "")) != 64
+    ):
+        errors.append("soak grounded retrieval proof is incomplete")
 
     cost = evidence.get("cost_guardrails", {})
     if cost.get("status") != "PASS" or cost.get("overage_unbounded") is not False:

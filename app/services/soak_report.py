@@ -42,6 +42,7 @@ def build_soak_report(
     telemetry_path: Path,
     locust_exit_code: int,
     collector_exit_code: int,
+    grounding: dict[str, Any],
 ) -> dict[str, Any]:
     spec = load_capacity_spec()
     policy = spec["test_policy"]
@@ -91,6 +92,15 @@ def build_soak_report(
         * policy["soak_min_sample_ratio"]
     )
     memory_growth = summary.get("memory_growth_percent")
+    grounding_passed = (
+        grounding.get("status") == "PASS"
+        and grounding.get("execution_class") == "live"
+        and len(str(grounding.get("source_commit") or "")) == 40
+        and bool(str(grounding.get("tenant_id") or "").strip())
+        and int(grounding.get("search_results", 0) or 0) > 0
+        and int(grounding.get("chat_sources", 0) or 0) > 0
+        and len(str(grounding.get("artifact_sha256") or "")) == 64
+    )
     passed = (
         locust_exit_code == 0
         and collector_exit_code == 0
@@ -105,6 +115,7 @@ def build_soak_report(
         and users >= int(profile["expected_peak"]["concurrent_users"])
         and rpm >= float(profile["expected_peak"]["requests_per_minute"])
         and all(row["status"] == "PASS" for row in scenario_rows)
+        and grounding_passed
     )
     return {
         "profile": profile_name,
@@ -127,6 +138,7 @@ def build_soak_report(
         "request_count": requests,
         "error_rate": round(error_rate, 6),
         "telemetry_summary": summary,
+        "grounding_evidence": grounding,
         "runner": {
             "locust_exit_code": locust_exit_code,
             "collector_exit_code": collector_exit_code,

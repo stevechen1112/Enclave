@@ -53,6 +53,16 @@ def _complete_evidence() -> dict:
                     "tenant_isolation_status": "PASS",
                     "job_reconciliation_status": "PASS",
                 },
+                "grounding_evidence": {
+                    "status": "PASS",
+                    "execution_class": "live",
+                    "marker": "P5-SOP-RESET-042",
+                    "source_commit": "a" * 40,
+                    "tenant_id": "11111111-1111-1111-1111-111111111111",
+                    "search_results": 5,
+                    "chat_sources": 3,
+                    "artifact_sha256": "c" * 64,
+                },
                 "raw_artifacts": {
                     "locust_stats_sha256": "e" * 64,
                     "telemetry_sha256": "f" * 64,
@@ -86,6 +96,15 @@ def _complete_evidence() -> dict:
                 "requests_per_minute": 1200,
             },
             "scenarios": _rows(spec["required_scenarios"], "scenario"),
+            "grounding_evidence": {
+                "status": "PASS",
+                "execution_class": "live",
+                "source_commit": "a" * 40,
+                "tenant_id": "11111111-1111-1111-1111-111111111111",
+                "search_results": 5,
+                "chat_sources": 3,
+                "artifact_sha256": "9" * 64,
+            },
             "raw_artifacts": {
                 "locust_stats_sha256": "1" * 64,
                 "telemetry_sha256": "2" * 64,
@@ -204,3 +223,11 @@ def test_cost_or_integrity_failure_holds():
     assert result["status"] == "HOLD"
     assert "cost guardrails did not fail closed" in result["errors"]
     assert any("cross_tenant_leak" in error for error in result["errors"])
+
+
+def test_ungrounded_http_success_cannot_pass():
+    evidence = _complete_evidence()
+    evidence["capacity_reports"][0]["grounding_evidence"]["chat_sources"] = 0
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "grounded retrieval proof is incomplete: lite" in result["errors"]

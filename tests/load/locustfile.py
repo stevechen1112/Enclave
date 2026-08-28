@@ -32,6 +32,7 @@ from capacity_config import (
 PROFILE_NAME, PROFILE = selected_profile()
 TARGET = target_load()
 FIXTURES = fixture_paths()
+GROUNDED_MARKER = os.getenv("P5_GROUNDED_MARKER", "P5-SOP-RESET-042")
 FULL_SCENARIO = os.getenv("P5_FULL_SCENARIO", "false").lower() in {
     "1",
     "true",
@@ -103,7 +104,7 @@ class AuthenticatedUser(HttpUser):
 class KnowledgeUser(AuthenticatedUser):
     """Read and query traffic: 82% of virtual users."""
 
-    wait_time = between(1, 5)
+    wait_time = between(0.5, 1.5)
     weight = 9
 
     @tag("asset_list")
@@ -116,27 +117,53 @@ class KnowledgeUser(AuthenticatedUser):
     @tag("knowledge_search")
     @task(4)
     def knowledge_search(self) -> None:
-        query = random.choice(("設備復歸", "換線步驟", "盤點差異", "安全門鎖"))
-        self.client.post(
+        query = random.choice(
+            (
+                GROUNDED_MARKER,
+                f"{GROUNDED_MARKER} 設備復歸",
+                f"{GROUNDED_MARKER} 換線前確認",
+                f"{GROUNDED_MARKER} 盤點差異",
+            )
+        )
+        with self.client.post(
             "/api/v1/kb/search",
             json={"query": query, "top_k": 5, "granularity": "auto"},
             headers=self.headers,
             name="knowledge_search",
-        )
+            catch_response=True,
+        ) as response:
+            if response.status_code != 200:
+                return
+            payload = response.json()
+            results = payload.get("results") if isinstance(payload, dict) else None
+            if not isinstance(results, list) or not results:
+                response.failure("knowledge search returned no evidence")
 
     @tag("grounded_chat")
     @task(3)
     def grounded_chat(self) -> None:
         question = random.choice(
-            ("這台設備如何復歸？", "盤點差異應如何處理？", "換線前要確認什麼？")
+            (
+                f"依據 {GROUNDED_MARKER}，設備復歸前要先確認什麼？",
+                f"依據 {GROUNDED_MARKER}，盤點差異應如何處理？",
+                f"依據 {GROUNDED_MARKER}，換線前要確認什麼？",
+            )
         )
-        self.client.post(
+        with self.client.post(
             "/api/v1/chat/chat",
             json={"question": question, "top_k": 3},
             headers=self.headers,
             name="grounded_chat",
             timeout=30,
-        )
+            catch_response=True,
+        ) as response:
+            if response.status_code != 200:
+                return
+            payload = response.json()
+            answer = payload.get("answer") if isinstance(payload, dict) else None
+            sources = payload.get("sources") if isinstance(payload, dict) else None
+            if not str(answer or "").strip() or not isinstance(sources, list) or not sources:
+                response.failure("chat response was not grounded in evidence")
 
 
 class IngestionUser(AuthenticatedUser):

@@ -39,6 +39,7 @@ def main() -> int:
     parser.add_argument("--audio-fixture", type=Path, required=True)
     parser.add_argument("--video-fixture", type=Path, required=True)
     parser.add_argument("--integrity-evidence", type=Path, required=True)
+    parser.add_argument("--grounding-evidence", type=Path, required=True)
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--duration-seconds", type=int, default=900)
     parser.add_argument("--spawn-rate", type=int, default=10)
@@ -50,11 +51,27 @@ def main() -> int:
         args.audio_fixture,
         args.video_fixture,
         args.integrity_evidence,
+        args.grounding_evidence,
         args.credentials,
     ):
         if not path.is_file():
             parser.error(f"missing required evidence or fixture: {path}")
     spec = load_capacity_spec()
+    grounding = json.loads(args.grounding_evidence.read_text(encoding="utf-8"))
+    grounding["artifact_sha256"] = _sha256(args.grounding_evidence)
+    grounding_errors = []
+    if grounding.get("status") != "PASS" or grounding.get("execution_class") != "live":
+        grounding_errors.append("grounding evidence is not a live PASS")
+    if int(grounding.get("search_results", 0) or 0) <= 0:
+        grounding_errors.append("grounding evidence has no search results")
+    if int(grounding.get("chat_sources", 0) or 0) <= 0:
+        grounding_errors.append("grounding evidence has no chat sources")
+    if len(str(grounding.get("source_commit") or "")) != 40:
+        grounding_errors.append("grounding evidence has no full source commit")
+    if not str(grounding.get("tenant_id") or "").strip():
+        grounding_errors.append("grounding evidence has no tenant identity")
+    if grounding_errors:
+        parser.error("; ".join(grounding_errors))
     minimum = int(spec["test_policy"]["capacity_min_duration_seconds"])
     if args.duration_seconds < minimum:
         parser.error(f"formal capacity duration must be at least {minimum} seconds")
@@ -164,6 +181,7 @@ def main() -> int:
         locust_stats_path=Path(str(prefix) + "_stats.csv"),
         telemetry_path=telemetry_jsonl,
         integrity=integrity,
+        grounding=grounding,
         observed_hardware=observed_hardware,
     )
     report["runner"] = {

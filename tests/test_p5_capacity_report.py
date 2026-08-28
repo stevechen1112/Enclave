@@ -57,6 +57,16 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
             "tenant_isolation_status": "PASS",
             "job_reconciliation_status": "PASS",
         },
+        grounding={
+            "status": "PASS",
+            "execution_class": "live",
+            "marker": "P5-SOP-RESET-042",
+            "source_commit": "a" * 40,
+            "tenant_id": "11111111-1111-1111-1111-111111111111",
+            "search_results": 1,
+            "chat_sources": 1,
+            "artifact_sha256": "b" * 64,
+        },
         observed_hardware={
             "cpu_cores": 4,
             "ram_gb": 8,

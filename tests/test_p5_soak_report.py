@@ -50,6 +50,15 @@ def test_short_soak_artifacts_cannot_pass(tmp_path: Path):
         telemetry_path=telemetry,
         locust_exit_code=0,
         collector_exit_code=0,
+        grounding={
+            "status": "PASS",
+            "execution_class": "live",
+            "source_commit": "a" * 40,
+            "tenant_id": "11111111-1111-1111-1111-111111111111",
+            "search_results": 1,
+            "chat_sources": 1,
+            "artifact_sha256": "a" * 64,
+        },
     )
     assert report["status"] == "FAIL"
     assert report["telemetry_sample_count"] == 2

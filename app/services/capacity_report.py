@@ -69,6 +69,7 @@ def build_capacity_report(
     locust_stats_path: Path,
     telemetry_path: Path,
     integrity: dict[str, int],
+    grounding: dict[str, Any],
     observed_hardware: dict[str, Any],
     execution_class: str = "live",
 ) -> dict[str, Any]:
@@ -168,6 +169,16 @@ def build_capacity_report(
     load_passed = users >= int(
         target["concurrent_users"] * multiplier
     ) and rpm >= float(target["requests_per_minute"] * multiplier)
+    grounding_passed = (
+        grounding.get("status") == "PASS"
+        and grounding.get("execution_class") == "live"
+        and bool(str(grounding.get("marker") or "").strip())
+        and len(str(grounding.get("source_commit") or "")) == 40
+        and bool(str(grounding.get("tenant_id") or "").strip())
+        and int(grounding.get("search_results", 0) or 0) > 0
+        and int(grounding.get("chat_sources", 0) or 0) > 0
+        and len(str(grounding.get("artifact_sha256") or "")) == 64
+    )
     passed = (
         duration_seconds >= int(spec["test_policy"]["capacity_min_duration_seconds"])
         and not hardware_errors
@@ -186,6 +197,7 @@ def build_capacity_report(
         and len(str(integrity.get("artifact_sha256") or "")) == 64
         and integrity.get("tenant_isolation_status") == "PASS"
         and integrity.get("job_reconciliation_status") == "PASS"
+        and grounding_passed
     )
     return {
         "profile": profile_name,
@@ -208,6 +220,7 @@ def build_capacity_report(
         "telemetry_sample_count": len(samples),
         "telemetry_summary": telemetry_summary,
         "integrity": integrity,
+        "grounding_evidence": grounding,
         "raw_artifacts": {
             "locust_stats_sha256": _sha256(locust_stats_path),
             "telemetry_sha256": _sha256(telemetry_path),
