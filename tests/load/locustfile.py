@@ -14,6 +14,7 @@ from itertools import cycle
 from pathlib import Path
 
 from locust import HttpUser, between, events, tag, task
+from locust.exception import StopUser
 
 LOAD_DIR = Path(__file__).resolve().parent
 if str(LOAD_DIR) not in sys.path:
@@ -57,10 +58,16 @@ class AuthenticatedUser(HttpUser):
     password = USER_PASSWORD
 
     def on_start(self) -> None:
+        access_token = ""
         if _CREDENTIAL_CYCLE is not None:
             credential = next(_CREDENTIAL_CYCLE)
             self.email = credential["email"]
             self.password = credential["password"]
+            access_token = credential.get("access_token", "")
+        if access_token:
+            self.token = access_token
+            self.headers = {"Authorization": f"Bearer {self.token}"}
+            return
         with self.client.post(
             "/api/v1/auth/login/access-token",
             data={"username": self.email, "password": self.password},
@@ -71,12 +78,26 @@ class AuthenticatedUser(HttpUser):
                 response.failure(f"login failed: {response.status_code}")
                 self.token = ""
                 self.headers = {}
-                return
+                raise StopUser()
             payload = response.json()
             self.token = payload.get("access_token", "")
             if not self.token:
                 response.failure("login did not return a full access token")
+                raise StopUser()
         self.headers = {"Authorization": f"Bearer {self.token}"}
+
+    def _live_login_probe(self) -> None:
+        with self.client.post(
+            "/api/v1/auth/login/access-token",
+            data={"username": self.email, "password": self.password},
+            name="auth_login",
+            catch_response=True,
+        ) as response:
+            if response.status_code != 200:
+                response.failure(f"login probe failed: {response.status_code}")
+                return
+            if not response.json().get("access_token"):
+                response.failure("login probe did not return a full access token")
 
 
 class KnowledgeUser(AuthenticatedUser):
@@ -177,6 +198,18 @@ class OperationsUser(AuthenticatedUser):
     @task
     def health(self) -> None:
         self.client.get("/health", name="health_check")
+
+
+class AuthProbeUser(AuthenticatedUser):
+    """One rate-safe live auth client, independent of the pre-issued load tokens."""
+
+    fixed_count = 1
+    wait_time = between(4, 6)
+
+    @tag("auth_login")
+    @task
+    def login(self) -> None:
+        self._live_login_probe()
 
 
 def _media_type(path: Path) -> str:

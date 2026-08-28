@@ -71,7 +71,11 @@ def test_full_scenario_accepts_one_credential_per_virtual_user(monkeypatch, tmp_
         path.write_bytes(b"fixture")
         monkeypatch.setenv(f"LOAD_{kind.upper()}_FIXTURE_PATH", str(path))
     credentials = [
-        {"email": f"load-{index}@example.invalid", "password": "secret"}
+        {
+            "email": f"load-{index}@example.invalid",
+            "password": "secret",
+            "access_token": f"token-{index}",
+        }
         for index in range(40)
     ]
     credential_path = tmp_path / "credentials.json"
@@ -88,6 +92,38 @@ def test_full_scenario_accepts_one_credential_per_virtual_user(monkeypatch, tmp_
         monkeypatch.setenv(name, "injected")
     assert module.validate_full_scenario_environment() == []
     assert len(module.credential_pool()) == 40
+
+
+def test_full_scenario_rejects_credential_pool_without_tokens(monkeypatch, tmp_path):
+    module = _load_module()
+    for kind in ("document", "audio", "video"):
+        path = tmp_path / f"{kind}.bin"
+        path.write_bytes(b"fixture")
+        monkeypatch.setenv(f"LOAD_{kind.upper()}_FIXTURE_PATH", str(path))
+    credential_path = tmp_path / "credentials.json"
+    credential_path.write_text(
+        json.dumps(
+            [
+                {"email": f"load-{index}@example.invalid", "password": "secret"}
+                for index in range(40)
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LOAD_TEST_CREDENTIALS_PATH", str(credential_path))
+    monkeypatch.setenv("CAPACITY_PROFILE", "lite")
+    monkeypatch.setenv("LOAD_MULTIPLIER", "2")
+    monkeypatch.setenv("P5_FULL_SCENARIO", "true")
+    for name in (
+        "LOAD_TEST_USER_PASSWORD",
+        "LOAD_TEST_ADMIN_PASSWORD",
+        "LOAD_TEST_SUPERUSER_PASSWORD",
+    ):
+        monkeypatch.setenv(name, "injected")
+    assert any(
+        "one access_token per virtual user" in error
+        for error in module.validate_full_scenario_environment()
+    )
 
 
 def test_locust_contract_uses_current_api_routes():

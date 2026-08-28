@@ -81,9 +81,13 @@ def credential_pool() -> list[dict[str, str]]:
     for index, row in enumerate(value):
         if not isinstance(row, dict) or not row.get("email") or not row.get("password"):
             raise ValueError(f"load credential row {index} is incomplete")
-        credentials.append(
-            {"email": str(row["email"]), "password": str(row["password"])}
-        )
+        credential = {
+            "email": str(row["email"]),
+            "password": str(row["password"]),
+        }
+        if row.get("access_token"):
+            credential["access_token"] = str(row["access_token"])
+        credentials.append(credential)
     return credentials
 
 
@@ -108,6 +112,15 @@ def validate_full_scenario_environment() -> list[str]:
                     "LOAD_TEST_CREDENTIALS_PATH must contain at least "
                     f"{required_users} credentials"
                 )
+            else:
+                token_count = sum(
+                    bool(row.get("access_token")) for row in credentials[:required_users]
+                )
+                if token_count < required_users:
+                    errors.append(
+                        "formal load credential pool must contain one access_token per "
+                        f"virtual user ({token_count}/{required_users})"
+                    )
         except (TypeError, ValueError) as exc:
             errors.append(str(exc))
     return errors

@@ -139,6 +139,9 @@ def test_gateway_general_api_does_not_duplicate_application_rate_limit():
     for filename in ("gateway.conf", "gateway-ssl.conf"):
         config = (root / "nginx" / filename).read_text(encoding="utf-8")
         assert "limit_req zone=api_general" not in config
+        assert "zone=api_chat:5m    rate=12000r/m" in config
+        assert config.count("limit_req zone=api_chat burst=200 nodelay") == 2
+        assert config.count("limit_req_status 429") >= 3
         assert "zone=api_auth:5m    rate=30r/m" in config
         assert "limit_req zone=api_auth burst=10 nodelay" in config
         assert "limit_req_status 429" in config

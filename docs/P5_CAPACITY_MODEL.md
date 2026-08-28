@@ -49,6 +49,11 @@
    先以 `scripts/provision_p5_load_users.py` 在專用測試租戶建立 credential pool；
    pool 至少要有目標並行數那麼多組帳號。每個虛擬使用者使用不同帳號，不能
    關閉 per-user 限流或用單一共用帳號取代容量測試。
+   接著在隔離 staging backend 內執行 `scripts/prepare_p5_load_tokens.py`，確認每個
+   帳號仍是該租戶的 active user 後，為正式負載池附上帶 tenant claim 的測試
+   token。正式計時時所有虛擬使用者以 token 同步進入負載；另由一個固定
+   `AuthProbeUser` 依 edge auth 限流安全速率持續測量真實登入。這能避免大量
+   使用者 ramp-up 被防暴力登入限制扭曲，也沒有關閉任何 production guardrail。
 2. 以 `scripts/run_p5_cost_guardrails.py` 對專用測試租戶暫時收緊成本上限，驗證
    問答在預估超額前回傳 cost-axis 429，並在 `finally` 恢復原配額。
 3. 為 `provider_slow`、`quota_exhausted`、`queue_saturated`、
