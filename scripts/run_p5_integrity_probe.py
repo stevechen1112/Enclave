@@ -132,15 +132,28 @@ def probe(
         )
     if not canonical_ok:
         errors.append("grounded fixture canonical projection is inconsistent")
+    probe_tenant_created = False
     if other_tenant_id is None:
-        errors.append("no second active staging tenant exists for isolation probe")
+        other_tenant_id = uuid.uuid4()
+        with SessionLocal() as db:
+            apply_rls_context(db, tenant_id)
+            db.add(
+                Tenant(
+                    id=other_tenant_id,
+                    name=f"P5 isolation probe {other_tenant_id}",
+                    plan="free",
+                    status="active",
+                )
+            )
+            db.commit()
+        probe_tenant_created = True
 
     foreign_asset_id = uuid.uuid4()
-    direct_cross_tenant_visible = True
+    direct_cross_tenant_visible = False
     foreign_http_status = 0
     foreign_created = False
-    if other_tenant_id is not None:
-        try:
+    try:
+        if other_tenant_id is not None:
             with SessionLocal() as db:
                 apply_rls_context(db, other_tenant_id)
                 db.add(
@@ -168,18 +181,25 @@ def probe(
                 f"/api/v1/knowledge/assets/{foreign_asset_id}"
             )
             foreign_http_status = foreign_response.status_code
-        finally:
-            if foreign_created:
-                with SessionLocal() as db:
-                    apply_rls_context(db, other_tenant_id)
-                    row = (
-                        db.query(SourceAsset)
-                        .filter(SourceAsset.id == foreign_asset_id)
-                        .first()
-                    )
-                    if row is not None:
-                        db.delete(row)
-                        db.commit()
+    finally:
+        if foreign_created and other_tenant_id is not None:
+            with SessionLocal() as db:
+                apply_rls_context(db, other_tenant_id)
+                row = (
+                    db.query(SourceAsset)
+                    .filter(SourceAsset.id == foreign_asset_id)
+                    .first()
+                )
+                if row is not None:
+                    db.delete(row)
+                    db.commit()
+        if probe_tenant_created and other_tenant_id is not None:
+            with SessionLocal() as db:
+                apply_rls_context(db, tenant_id)
+                row = db.query(Tenant).filter(Tenant.id == other_tenant_id).first()
+                if row is not None:
+                    db.delete(row)
+                    db.commit()
 
     cross_tenant_leak = int(
         other_tenant_id is None
