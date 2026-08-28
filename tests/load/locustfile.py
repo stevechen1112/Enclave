@@ -10,6 +10,7 @@ import os
 import random
 import sys
 import uuid
+from itertools import cycle
 from pathlib import Path
 
 from locust import HttpUser, between, events, tag, task
@@ -19,6 +20,7 @@ if str(LOAD_DIR) not in sys.path:
     sys.path.insert(0, str(LOAD_DIR))
 
 from capacity_config import (
+    credential_pool,
     fixture_paths,
     selected_profile,
     spec_sha256,
@@ -34,6 +36,8 @@ FULL_SCENARIO = os.getenv("P5_FULL_SCENARIO", "false").lower() in {
     "true",
     "yes",
 }
+CREDENTIALS = credential_pool()
+_CREDENTIAL_CYCLE = cycle(CREDENTIALS) if CREDENTIALS else None
 
 ENVIRONMENT_ERRORS = validate_full_scenario_environment()
 if ENVIRONMENT_ERRORS:
@@ -53,6 +57,10 @@ class AuthenticatedUser(HttpUser):
     password = USER_PASSWORD
 
     def on_start(self) -> None:
+        if _CREDENTIAL_CYCLE is not None:
+            credential = next(_CREDENTIAL_CYCLE)
+            self.email = credential["email"]
+            self.password = credential["password"]
         with self.client.post(
             "/api/v1/auth/login/access-token",
             data={"username": self.email, "password": self.password},

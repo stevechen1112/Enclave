@@ -16,6 +16,7 @@ set P5_FULL_SCENARIO=true
 set LOAD_DOCUMENT_FIXTURE_PATH=C:\fixtures\capacity.txt
 set LOAD_AUDIO_FIXTURE_PATH=C:\fixtures\capacity.wav
 set LOAD_VIDEO_FIXTURE_PATH=C:\fixtures\capacity.mp4
+set LOAD_TEST_CREDENTIALS_PATH=C:\fixtures\p5-load-users.json
 locust -f tests/load/locustfile.py --host=http://localhost:8000
 # UI: http://localhost:8089
 
@@ -42,7 +43,9 @@ k6 run tests/load/k6_load_test.js \
 | Ingestion 管理員 | 9% | 文件、batch、音訊與影片 queue |
 | 平台管理員 | 9% | 健康與營運可視性 |
 
-請先在目標環境建立帳號（本機 Pilot 可用 `scripts/ensure_ux_test_users.py`）。
+正式測試先以 `scripts/provision_p5_load_users.py` 在隔離 staging 專用租戶建立
+credential pool。JSON 是 mode 0600 的 secret，不可納入 evidence 或 Git；帳號數
+至少等於該 run 的目標並行數，每個虛擬使用者使用不同帳號。
 
 ## 效能基準線
 

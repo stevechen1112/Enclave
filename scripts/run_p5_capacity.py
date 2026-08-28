@@ -39,6 +39,7 @@ def main() -> int:
     parser.add_argument("--audio-fixture", type=Path, required=True)
     parser.add_argument("--video-fixture", type=Path, required=True)
     parser.add_argument("--integrity-evidence", type=Path, required=True)
+    parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--duration-seconds", type=int, default=900)
     parser.add_argument("--spawn-rate", type=int, default=10)
     parser.add_argument("--telemetry-interval-seconds", type=int, default=60)
@@ -49,6 +50,7 @@ def main() -> int:
         args.audio_fixture,
         args.video_fixture,
         args.integrity_evidence,
+        args.credentials,
     ):
         if not path.is_file():
             parser.error(f"missing required evidence or fixture: {path}")
@@ -77,6 +79,7 @@ def main() -> int:
             "LOAD_DOCUMENT_FIXTURE_PATH": str(args.document_fixture.resolve()),
             "LOAD_AUDIO_FIXTURE_PATH": str(args.audio_fixture.resolve()),
             "LOAD_VIDEO_FIXTURE_PATH": str(args.video_fixture.resolve()),
+            "LOAD_TEST_CREDENTIALS_PATH": str(args.credentials.resolve()),
         }
     )
     missing_secrets = [

@@ -46,6 +46,9 @@
    run 後的租戶隔離與 job reconciliation live probe。Runner 會實測 CPU、RAM、
    disk 與 GPU VRAM；主機低於該 profile 基準時會在負載開始前 fail-fast，不能用
    Lite 主機產生 Standard 或 Enterprise 的報告。
+   先以 `scripts/provision_p5_load_users.py` 在專用測試租戶建立 credential pool；
+   pool 至少要有目標並行數那麼多組帳號。每個虛擬使用者使用不同帳號，不能
+   關閉 per-user 限流或用單一共用帳號取代容量測試。
 2. 以 `scripts/run_p5_cost_guardrails.py` 對專用測試租戶暫時收緊成本上限，驗證
    問答在預估超額前回傳 cost-axis 429，並在 `finally` 恢復原配額。
 3. 為 `provider_slow`、`quota_exhausted`、`queue_saturated`、

@@ -64,6 +64,29 @@ def fixture_paths() -> dict[str, Path]:
     }
 
 
+def credential_pool() -> list[dict[str, str]]:
+    path_value = os.getenv("LOAD_TEST_CREDENTIALS_PATH", "").strip()
+    if not path_value:
+        return []
+    path = Path(path_value)
+    if not path.is_file():
+        raise ValueError("LOAD_TEST_CREDENTIALS_PATH is not a file")
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError("load credential pool is not valid JSON") from exc
+    if not isinstance(value, list):
+        raise TypeError("load credential pool must be a JSON list")
+    credentials = []
+    for index, row in enumerate(value):
+        if not isinstance(row, dict) or not row.get("email") or not row.get("password"):
+            raise ValueError(f"load credential row {index} is incomplete")
+        credentials.append(
+            {"email": str(row["email"]), "password": str(row["password"])}
+        )
+    return credentials
+
+
 def validate_full_scenario_environment() -> list[str]:
     errors: list[str] = []
     for name in (
@@ -77,4 +100,14 @@ def validate_full_scenario_environment() -> list[str]:
         for kind, path in fixture_paths().items():
             if not str(path) or not path.is_file():
                 errors.append(f"valid LOAD_{kind.upper()}_FIXTURE_PATH is required")
+        try:
+            credentials = credential_pool()
+            required_users = int(target_load()["concurrent_users"])
+            if len(credentials) < required_users:
+                errors.append(
+                    "LOAD_TEST_CREDENTIALS_PATH must contain at least "
+                    f"{required_users} credentials"
+                )
+        except (TypeError, ValueError) as exc:
+            errors.append(str(exc))
     return errors

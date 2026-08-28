@@ -29,6 +29,7 @@ def main() -> int:
     parser.add_argument("--document-fixture", type=Path, required=True)
     parser.add_argument("--audio-fixture", type=Path, required=True)
     parser.add_argument("--video-fixture", type=Path, required=True)
+    parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--duration-seconds", type=int, default=259200)
     parser.add_argument("--recovery-seconds", type=int, default=600)
     parser.add_argument("--spawn-rate", type=int, default=5)
@@ -43,7 +44,12 @@ def main() -> int:
     )
     if shortfalls:
         parser.error("host does not qualify for profile: " + "; ".join(shortfalls))
-    for path in (args.document_fixture, args.audio_fixture, args.video_fixture):
+    for path in (
+        args.document_fixture,
+        args.audio_fixture,
+        args.video_fixture,
+        args.credentials,
+    ):
         if not path.is_file():
             parser.error(f"missing fixture: {path}")
     environment = os.environ.copy()
@@ -63,6 +69,7 @@ def main() -> int:
             "LOAD_DOCUMENT_FIXTURE_PATH": str(args.document_fixture.resolve()),
             "LOAD_AUDIO_FIXTURE_PATH": str(args.audio_fixture.resolve()),
             "LOAD_VIDEO_FIXTURE_PATH": str(args.video_fixture.resolve()),
+            "LOAD_TEST_CREDENTIALS_PATH": str(args.credentials.resolve()),
         }
     )
     # Soak uses the expected peak, not the 2x capacity target.
