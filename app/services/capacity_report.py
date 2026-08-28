@@ -148,8 +148,8 @@ def build_capacity_report(
             <= limits["memory_percent"]
         ),
         "cpu": (
-            telemetry_summary["max_container_cpu_percent"] is not None
-            and telemetry_summary["max_container_cpu_percent"] <= limits["cpu_percent"]
+            telemetry_summary["max_host_cpu_percent"] is not None
+            and telemetry_summary["max_host_cpu_percent"] <= limits["cpu_percent"]
         ),
         "gpu": (not gpu_required or telemetry_summary["max_gpu_percent"] is not None),
         "provider_latency": provider_count > 0,

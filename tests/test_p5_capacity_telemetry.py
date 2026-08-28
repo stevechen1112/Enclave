@@ -45,6 +45,7 @@ def test_docker_stats_and_sample_summary_are_machine_readable():
         [
             {
                 "health_status": 200,
+                "host_cpu_cores": 4,
                 "runtime": {
                     "db_pool_percent": 40,
                     "redis_memory_ratio": 0.25,
@@ -57,3 +58,4 @@ def test_docker_stats_and_sample_summary_are_machine_readable():
     assert summary["sample_count"] == 1
     assert summary["max_redis_memory_percent"] == 25
     assert summary["max_container_memory_percent"] == 33
+    assert summary["max_host_cpu_percent"] == 3.125

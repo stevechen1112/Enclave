@@ -40,6 +40,8 @@ def main() -> int:
     parser.add_argument("--video-fixture", type=Path, required=True)
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--grounding-evidence", type=Path, required=True)
+    parser.add_argument("--metrics-container", required=True)
+    parser.add_argument("--compose-project", required=True)
     parser.add_argument("--duration-seconds", type=int, default=259200)
     parser.add_argument("--recovery-seconds", type=int, default=600)
     parser.add_argument("--spawn-rate", type=int, default=5)
@@ -117,6 +119,10 @@ def main() -> int:
         "--interval-seconds",
         str(spec["test_policy"]["telemetry_sample_interval_seconds"]),
         "--docker-stats",
+        "--metrics-container",
+        args.metrics_container,
+        "--compose-project",
+        args.compose_project,
     ]
     if int(spec["profiles"][args.profile]["hardware"].get("gpu_vram_gb", 0)) > 0:
         collector_command.append("--gpu-stats")

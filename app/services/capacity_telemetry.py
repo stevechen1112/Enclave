@@ -148,12 +148,16 @@ def summarize_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
         for container in sample.get("containers", [])
         if container.get("memory_percent") is not None
     ]
-    cpu_values = [
-        float(container["cpu_percent"])
-        for sample in samples
-        for container in sample.get("containers", [])
-        if container.get("cpu_percent") is not None
-    ]
+    host_cpu_values = []
+    for sample in samples:
+        cores = int(sample.get("host_cpu_cores", 0) or 0)
+        cpu_total = sum(
+            float(container["cpu_percent"])
+            for container in sample.get("containers", [])
+            if container.get("cpu_percent") is not None
+        )
+        if cores > 0:
+            host_cpu_values.append(cpu_total / cores)
     gpu_values = [
         float(gpu["utilization_percent"])
         for sample in samples
@@ -201,7 +205,7 @@ def summarize_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "max_celery_queue_depth": max(_values("celery_queue_depth"), default=None),
         "max_container_memory_percent": max(memory_values, default=None),
-        "max_container_cpu_percent": max(cpu_values, default=None),
+        "max_host_cpu_percent": max(host_cpu_values, default=None),
         "max_gpu_percent": max(gpu_values, default=None),
         "memory_growth_percent": (
             round(last_memory - first_memory, 6)

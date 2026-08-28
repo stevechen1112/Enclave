@@ -151,6 +151,8 @@ def main() -> int:
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--backend-container", required=True)
     parser.add_argument("--backend-base-url", default="http://127.0.0.1:8000")
+    parser.add_argument("--metrics-container", required=True)
+    parser.add_argument("--compose-project", required=True)
     parser.add_argument("--reconciliation-timeout-seconds", type=int, default=1800)
     parser.add_argument("--duration-seconds", type=int, default=900)
     parser.add_argument("--spawn-rate", type=int, default=10)
@@ -241,6 +243,10 @@ def main() -> int:
         "--interval-seconds",
         str(args.telemetry_interval_seconds),
         "--docker-stats",
+        "--metrics-container",
+        args.metrics_container,
+        "--compose-project",
+        args.compose_project,
     ]
     if int(spec["profiles"][args.profile]["hardware"].get("gpu_vram_gb", 0)) > 0:
         collector_command.append("--gpu-stats")

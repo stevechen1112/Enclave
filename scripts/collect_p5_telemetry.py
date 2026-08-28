@@ -42,12 +42,50 @@ def _get(url: str, timeout: float = 10) -> tuple[int, str]:
         return int(exc.code), exc.read().decode("utf-8", errors="replace")
 
 
-def _docker_stats(enabled: bool) -> tuple[list[dict], str | None]:
+def _safe_container_name(value: str) -> str:
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-")
+    if not value or any(char not in allowed for char in value):
+        raise ValueError("container name contains unsupported characters")
+    return value
+
+
+def _docker_stats(
+    enabled: bool, *, compose_project: str | None
+) -> tuple[list[dict], str | None]:
     if not enabled:
         return [], None
+    if not compose_project:
+        return [], "docker Compose project is required"
     try:
+        project = _safe_container_name(compose_project)
+        listing = subprocess.run(
+            [
+                "docker",
+                "ps",
+                "--filter",
+                f"label=com.docker.compose.project={project}",
+                "--format",
+                "{{.Names}}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        names = [line.strip() for line in listing.stdout.splitlines() if line.strip()]
+        if listing.returncode != 0:
+            return [], listing.stderr.strip() or "docker ps failed"
+        if not names:
+            return [], f"no running containers found for Compose project {project}"
         result = subprocess.run(
-            ["docker", "stats", "--no-stream", "--format", "{{json .}}"],
+            [
+                "docker",
+                "stats",
+                "--no-stream",
+                "--format",
+                "{{json .}}",
+                *names,
+            ],
             capture_output=True,
             text=True,
             timeout=30,
@@ -58,6 +96,26 @@ def _docker_stats(enabled: bool) -> tuple[list[dict], str | None]:
     if result.returncode != 0:
         return [], result.stderr.strip() or "docker stats failed"
     return parse_docker_stats(result.stdout), None
+
+
+def _internal_metrics(container: str) -> str:
+    result = subprocess.run(
+        [
+            "docker",
+            "exec",
+            _safe_container_name(container),
+            "curl",
+            "-sSf",
+            "http://127.0.0.1:8000/metrics",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "internal metrics request failed")
+    return result.stdout
 
 
 def _gpu_stats(enabled: bool) -> tuple[list[dict], str | None]:
@@ -116,8 +174,15 @@ def _append(path: Path, sample: dict) -> None:
         os.fsync(stream.fileno())
 
 
-def collect_once(base_url: str, *, docker_stats: bool, gpu_stats: bool) -> dict:
-    sample = {"captured_at": _iso_now()}
+def collect_once(
+    base_url: str,
+    *,
+    docker_stats: bool,
+    gpu_stats: bool,
+    metrics_container: str | None = None,
+    compose_project: str | None = None,
+) -> dict:
+    sample = {"captured_at": _iso_now(), "host_cpu_cores": int(os.cpu_count() or 0)}
     try:
         health_status, health_body = _get(base_url.rstrip("/") + "/health")
         sample["health_status"] = health_status
@@ -129,9 +194,12 @@ def collect_once(base_url: str, *, docker_stats: bool, gpu_stats: bool) -> dict:
         sample["health_status"] = 0
         sample["health_error"] = str(exc)
     try:
-        metrics_status, metrics_body = _get(base_url.rstrip("/") + "/metrics")
-        if metrics_status != 200:
-            raise RuntimeError(f"metrics returned HTTP {metrics_status}")
+        if metrics_container:
+            metrics_body = _internal_metrics(metrics_container)
+        else:
+            metrics_status, metrics_body = _get(base_url.rstrip("/") + "/metrics")
+            if metrics_status != 200:
+                raise RuntimeError(f"metrics returned HTTP {metrics_status}")
         sample["runtime"] = telemetry_snapshot(parse_prometheus_text(metrics_body))
     except (
         OSError,
@@ -142,7 +210,9 @@ def collect_once(base_url: str, *, docker_stats: bool, gpu_stats: bool) -> dict:
     ) as exc:
         sample["runtime"] = {}
         sample["metrics_error"] = str(exc)
-    containers, container_error = _docker_stats(docker_stats)
+    containers, container_error = _docker_stats(
+        docker_stats, compose_project=compose_project
+    )
     sample["containers"] = containers
     if container_error:
         sample["container_error"] = container_error
@@ -161,11 +231,15 @@ def main() -> int:
     parser.add_argument("--duration-seconds", type=int, required=True)
     parser.add_argument("--interval-seconds", type=int, default=300)
     parser.add_argument("--docker-stats", action="store_true")
+    parser.add_argument("--metrics-container")
+    parser.add_argument("--compose-project")
     parser.add_argument("--gpu-stats", action="store_true")
     parser.add_argument("--max-samples", type=int, default=0, help="test-only bound")
     args = parser.parse_args()
     if args.duration_seconds <= 0 or args.interval_seconds <= 0:
         parser.error("duration and interval must be positive")
+    if args.docker_stats and not args.compose_project:
+        parser.error("--compose-project is required with --docker-stats")
 
     existing = _read_samples(args.output)
     if existing:
@@ -178,6 +252,8 @@ def main() -> int:
             args.base_url,
             docker_stats=args.docker_stats,
             gpu_stats=args.gpu_stats,
+            metrics_container=args.metrics_container,
+            compose_project=args.compose_project,
         )
         _append(args.output, sample)
         samples.append(sample)
