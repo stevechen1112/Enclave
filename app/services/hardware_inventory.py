@@ -56,6 +56,28 @@ def hardware_shortfalls(
     return shortfalls
 
 
+def hardware_boundary_errors(
+    observed: dict[str, Any], required: dict[str, Any]
+) -> list[str]:
+    """Require a profile-sized CPU/RAM/GPU envelope, not a larger tier host."""
+    errors = hardware_shortfalls(observed, required)
+    cpu = float(observed.get("cpu_cores", 0) or 0)
+    required_cpu = float(required.get("cpu_cores", 0) or 0)
+    if cpu > required_cpu:
+        errors.append(f"cpu_cores: observed {cpu:g}, profile boundary {required_cpu:g}")
+    for field in ("ram_gb", "gpu_vram_gb"):
+        actual = float(observed.get(field, 0) or 0)
+        minimum = float(required.get(field, 0) or 0)
+        maximum = minimum * 1.1
+        if minimum == 0 and actual > 0:
+            errors.append(f"{field}: observed {actual:g}, profile boundary 0")
+        elif minimum > 0 and actual > maximum:
+            errors.append(
+                f"{field}: observed {actual:g}, profile boundary maximum {maximum:g}"
+            )
+    return errors
+
+
 def co_resident_enclave_projects(target_project: str) -> list[str]:
     """Return other running Enclave Compose projects on the Docker host."""
     allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-")
@@ -104,7 +126,7 @@ def compose_container_identity(container: str, target_project: str) -> dict[str,
                 "inspect",
                 container,
                 "--format",
-                '{{json .Config.Labels}}\t{{json .State}}\t{{json .Image}}',
+                '{{json .Config.Labels}}\t{{json .State}}\t{{json .Image}}\t{{json .Id}}',
             ],
             capture_output=True,
             text=True,
@@ -116,10 +138,13 @@ def compose_container_identity(container: str, target_project: str) -> dict[str,
     if result.returncode != 0:
         raise ValueError("Docker container inspection failed")
     try:
-        labels_raw, state_raw, image_raw = result.stdout.strip().split("\t", 2)
+        labels_raw, state_raw, image_raw, container_id_raw = (
+            result.stdout.strip().split("\t", 3)
+        )
         labels = json.loads(labels_raw)
         state = json.loads(state_raw)
         image_id = json.loads(image_raw)
+        container_id = json.loads(container_id_raw)
     except (ValueError, json.JSONDecodeError) as exc:
         raise ValueError("Docker container inspection returned invalid JSON") from exc
     project = str((labels or {}).get("com.docker.compose.project") or "")
@@ -135,4 +160,5 @@ def compose_container_identity(container: str, target_project: str) -> dict[str,
         "compose_service": service,
         "running": running,
         "image_id": str(image_id or ""),
+        "container_id": str(container_id or ""),
     }

@@ -42,15 +42,15 @@ def assemble_evidence(
     soak_report: dict[str, Any],
     cost_report: dict[str, Any],
     degradation_reports: list[dict[str, Any]],
-    environment: dict[str, Any],
+    environments: list[dict[str, Any]],
     operator: str,
 ) -> dict[str, Any]:
     spec = load_capacity_spec()
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "gate": "P5-CAPACITY",
         "capacity_spec_sha256": capacity_spec_sha256(spec),
-        "environment": environment,
+        "environments": environments,
         "capacity_reports": capacity_reports,
         "soak_test": soak_report,
         "cost_guardrails": cost_report,
@@ -68,7 +68,9 @@ def main() -> int:
     parser.add_argument(
         "--degradation-report", type=Path, action="append", required=True
     )
-    parser.add_argument("--environment-evidence", type=Path, required=True)
+    parser.add_argument(
+        "--environment-evidence", type=Path, action="append", required=True
+    )
     parser.add_argument("--operator", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--confirm-isolated-staging", action="store_true")
@@ -76,8 +78,11 @@ def main() -> int:
     if not args.confirm_isolated_staging:
         parser.error("--confirm-isolated-staging is required")
     try:
-        environment = _read_object(args.environment_evidence)
-        environment["artifact_sha256"] = _sha256(args.environment_evidence)
+        environments = []
+        for path in args.environment_evidence:
+            environment = _read_object(path)
+            environment["artifact_sha256"] = _sha256(path)
+            environments.append(environment)
         evidence = assemble_evidence(
             capacity_reports=[_read_object(path) for path in args.capacity_report],
             soak_report=_read_object(args.soak_report),
@@ -85,7 +90,7 @@ def main() -> int:
             degradation_reports=[
                 _read_object(path) for path in args.degradation_report
             ],
-            environment=environment,
+            environments=environments,
             operator=args.operator,
         )
     except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:

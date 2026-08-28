@@ -18,6 +18,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.services.capacity_gate import load_capacity_spec
+from app.services.hardware_inventory import compose_container_identity
+from app.services.p5_evidence_binding import (
+    load_environment_evidence,
+    require_environment_binding,
+    runtime_identity_matches_environment,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -43,6 +49,10 @@ def run_live_cost_drill(
     email: str,
     password: str,
     timeout: int,
+    source_commit: str,
+    compose_project: str,
+    environment_artifact_sha256: str,
+    runtime_container_identity: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     spec = load_capacity_spec()
     transcript: dict[str, Any] = {
@@ -62,6 +72,11 @@ def run_live_cost_drill(
         if not token:
             raise ValueError("login did not return an access token")
         headers = {"Authorization": f"Bearer {token}"}
+        identity_response = client.get("/api/v1/users/me", headers=headers)
+        identity_response.raise_for_status()
+        identity = _json(identity_response)
+        if str(identity.get("tenant_id") or "") != tenant_id:
+            raise ValueError("cost drill administrator is not in the dedicated tenant")
         quota_url = f"/api/v1/admin/tenants/{tenant_id}/quota"
         original_response = client.get(quota_url, headers=headers)
         original_response.raise_for_status()
@@ -153,6 +168,10 @@ def run_live_cost_drill(
             "execution_class": "live",
             "overage_unbounded": not blocked_on_cost,
             "tenant_id": tenant_id,
+            "source_commit": source_commit,
+            "compose_project": compose_project,
+            "environment_artifact_sha256": environment_artifact_sha256,
+            "runtime_container_identity": runtime_container_identity,
             "started_at": transcript["started_at"],
             "completed_at": transcript["completed_at"],
             "quota_restored": restored,
@@ -166,6 +185,9 @@ def main() -> int:
     parser.add_argument("--base-url", required=True)
     parser.add_argument("--tenant-id", required=True)
     parser.add_argument("--email", required=True)
+    parser.add_argument("--environment-evidence", type=Path, required=True)
+    parser.add_argument("--compose-project", required=True)
+    parser.add_argument("--container", required=True)
     parser.add_argument("--password-env", default="P5_ADMIN_PASSWORD")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--timeout-seconds", type=int, default=60)
@@ -173,21 +195,54 @@ def main() -> int:
     args = parser.parse_args()
     if not args.confirm_isolated_staging:
         parser.error("--confirm-isolated-staging is required")
+    if args.timeout_seconds <= 0:
+        parser.error("timeout must be positive")
+    if not args.environment_evidence.is_file():
+        parser.error("environment evidence does not exist")
+    transcript_path = args.output.with_suffix(".raw.json")
+    if args.output.exists() or transcript_path.exists():
+        parser.error("formal cost drill requires fresh output paths")
     password = os.getenv(args.password_env, "")
     if not password:
         parser.error(f"{args.password_env} must be injected")
     try:
+        environment = load_environment_evidence(args.environment_evidence)
+        require_environment_binding(
+            environment, compose_project=args.compose_project
+        )
+        runtime_identity = compose_container_identity(
+            args.container, args.compose_project
+        )
+        if not runtime_identity_matches_environment(environment, runtime_identity):
+            raise ValueError(
+                "cost runtime image does not match environment evidence"
+            )
+        health_response = httpx.get(
+            args.base_url.rstrip("/") + "/health", timeout=args.timeout_seconds
+        )
+        health_response.raise_for_status()
+        health = _json(health_response)
+        release = health.get("release") if isinstance(health.get("release"), dict) else {}
+        if (
+            health.get("env") != "staging"
+            or release.get("identifiable") is not True
+            or release.get("source_commit") != environment.get("source_commit")
+        ):
+            raise ValueError("cost runtime release does not match environment evidence")
         report, transcript = run_live_cost_drill(
             base_url=args.base_url,
             tenant_id=args.tenant_id,
             email=args.email,
             password=password,
             timeout=args.timeout_seconds,
+            source_commit=str(environment["source_commit"]),
+            compose_project=args.compose_project,
+            environment_artifact_sha256=str(environment["artifact_sha256"]),
+            runtime_container_identity=runtime_identity,
         )
-    except (ValueError, httpx.HTTPError) as exc:
+    except (OSError, TypeError, ValueError, json.JSONDecodeError, httpx.HTTPError) as exc:
         parser.error(str(exc))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    transcript_path = args.output.with_suffix(".raw.json")
     transcript_path.write_text(
         json.dumps(transcript, ensure_ascii=False, indent=2), encoding="utf-8"
     )

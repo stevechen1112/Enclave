@@ -15,10 +15,23 @@ HARDWARE = {
 }
 IDENTITY = {
     "container": "enclave-p5-web-1",
+    "container_id": "web-container-id",
     "compose_project": "enclave-p5",
     "compose_service": "web",
     "running": True,
     "image_id": "sha256:" + "b" * 64,
+}
+EXPECTED_RUNTIME = {
+    "web": {
+        "container": "enclave-p5-web-1",
+        "container_id": "web-container-id",
+        "image_id": "sha256:" + "b" * 64,
+    },
+    "worker": {
+        "container": "enclave-p5-worker-1",
+        "container_id": "worker-container-id",
+        "image_id": "sha256:" + "b" * 64,
+    },
 }
 
 
@@ -74,6 +87,8 @@ def test_short_soak_artifacts_cannot_pass(tmp_path: Path):
         source_commit=SOURCE_COMMIT,
         compose_project="enclave-p5",
         metrics_container_identity=IDENTITY,
+        environment_artifact_sha256="e" * 64,
+        expected_runtime_images=EXPECTED_RUNTIME,
         locust_stats_path=stats,
         telemetry_path=telemetry,
         locust_exit_code=0,
@@ -125,7 +140,22 @@ def _valid_soak(tmp_path: Path) -> tuple[dict, Path]:
                     "celery_queue_depth": 0,
                     "db_pool_exhaustion_count": 0,
                 },
-                "containers": [{"cpu_percent": 20, "memory_percent": 20}],
+                "containers": [
+                    {
+                        "name": "enclave-p5-web-1",
+                        "container_id": "web-container-id",
+                        "image_id": "sha256:" + "b" * 64,
+                        "cpu_percent": 20,
+                        "memory_percent": 20,
+                    },
+                    {
+                        "name": "enclave-p5-worker-1",
+                        "container_id": "worker-container-id",
+                        "image_id": "sha256:" + "b" * 64,
+                        "cpu_percent": 20,
+                        "memory_percent": 20,
+                    },
+                ],
                 "gpus": [{"utilization_percent": 20}],
             }
         )
@@ -143,6 +173,8 @@ def _valid_soak(tmp_path: Path) -> tuple[dict, Path]:
         "source_commit": SOURCE_COMMIT,
         "compose_project": "enclave-p5",
         "metrics_container_identity": IDENTITY,
+        "environment_artifact_sha256": "e" * 64,
+        "expected_runtime_images": EXPECTED_RUNTIME,
         "locust_stats_path": stats,
         "telemetry_path": telemetry,
         "locust_exit_code": 0,
@@ -171,6 +203,21 @@ def test_soak_rejects_release_mismatch_in_one_sample(tmp_path: Path):
     assert report["status"] == "FAIL"
     assert any(
         "source commit mismatch" in error
+        for error in report["telemetry_integrity"]["errors"]
+    )
+
+
+def test_soak_rejects_runtime_container_replacement(tmp_path: Path):
+    kwargs, telemetry = _valid_soak(tmp_path)
+    rows = telemetry.read_text(encoding="utf-8").splitlines()
+    sample = json.loads(rows[100])
+    sample["containers"][0]["container_id"] = "replacement-container-id"
+    rows[100] = json.dumps(sample)
+    telemetry.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    report = build_soak_report(**kwargs)
+    assert report["status"] == "FAIL"
+    assert any(
+        "runtime image mismatch" in error
         for error in report["telemetry_integrity"]["errors"]
     )
 

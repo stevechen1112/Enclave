@@ -41,7 +41,12 @@
 `/opt/enclave` 當壓測或故障注入目標。密碼只透過環境變數或命令參數注入，
 不得寫入 evidence、plan 或 Git。
 
-1. 以 `scripts/run_p5_capacity.py` 依序執行 Lite、Standard、Enterprise；每次至少
+1. 為 Lite、Standard、Enterprise 各自擷取 PASS environment evidence；三個環境
+   必須使用同一 source commit，但硬體各自位於對應 profile 邊界，不能用 Enterprise
+   大機器冒充 Lite 容量。每份 capacity report 引用自己的 environment artifact；
+   Standard environment 再由 cost、degradation 與 soak 共用。任何 Compose project、
+   container instance 或 image ID 不一致都會 fail closed。Capture 不能事後補做。
+2. 以 `scripts/run_p5_capacity.py` 依序執行 Lite、Standard、Enterprise；每次至少
    900 秒並使用 profile 定義的 2× 並行數。Runner 會在負載計時結束後，於
    `--backend-container` 指定的同版 Worker（持有獨立 audited maintenance
    身分）內自動執行租戶隔離與 job
@@ -82,9 +87,11 @@
    公開搜尋與 chat 共用相同 active-revision scope；未發布文件不能由任一 reader
    路徑看到。Locust 對搜尋結果與 sources 執行內容契約檢查；只有 HTTP 200、但
    回覆「未找到資料」不得冒充 `grounded_chat` 成功。
-2. 以 `scripts/run_p5_cost_guardrails.py` 對專用測試租戶暫時收緊成本上限，驗證
-   問答在預估超額前回傳 cost-axis 429，並在 `finally` 恢復原配額。
-3. 為 `provider_slow`、`quota_exhausted`、`queue_saturated`、
+3. 以 `scripts/run_p5_cost_guardrails.py` 對專用測試租戶暫時收緊成本上限，驗證
+   問答在預估超額前回傳 cost-axis 429，並在 `finally` 恢復原配額。Runner 會
+   驗證管理者屬於同一專用租戶，並綁定 environment artifact、source commit、
+   Compose project 與 Web runtime image。
+4. 為 `provider_slow`、`quota_exhausted`、`queue_saturated`、
    `sidecar_unavailable` 各準備一份 command plan，交給
    `scripts/run_p5_degradation.py`。Plan 必須綁定 environment evidence、完整
    source commit、Compose project 與 tenant；baseline／inject／probe／recover／verify
@@ -99,7 +106,7 @@
    `data_loss=0`、`false_completion=0`、`cross_tenant_leak=0` 與
    `recovered=true`；總 gate 會再次逐項比對。
    詳細執行與中斷復原程序見 `runbooks/P5_DEGRADATION_DRILLS.md`。
-4. 容量與降級短測通過後，才以 `scripts/run_p5_soak.py` 啟動 Standard profile
+5. 容量與降級短測通過後，才以 `scripts/run_p5_soak.py` 啟動 Standard profile
    的 1× 預估尖峰 72 小時測試。Runner 拒絕任何短於 259,200 秒的正式 run，
    並要求同一環境的 live grounding evidence、100 個唯一且同租戶的 access token、
    fresh output directory，以及屬於同一 Compose project 的 metrics container，避免
@@ -108,14 +115,14 @@
    Report 必須證明 telemetry 時間單調、首尾覆蓋完整、無過大 gap、每個樣本的
    staging release／source commit 一致，且 health、metrics、container 與 GPU
    （Standard 必要）皆無採樣失敗。詳見 `runbooks/P5_SOAK.md`。
-5. 先以 `scripts/capture_p5_environment.py` 實測 staging release、硬體、runtime
-   image IDs 與同主機 Compose projects，再交由 `scripts/assemble_p5_evidence.py`
+6. 將三份 environment evidence 全部交由
+   `scripts/assemble_p5_evidence.py`
    組合三份 capacity report、soak report、cost report 與四份 degradation report。
    組裝器不再自行宣稱 `isolated_staging=true`，必須引用 environment evidence。
    組裝時會保存 environment artifact SHA-256；gate 同時要求 live PASS、capture
    timestamp、Compose project、零 co-resident Enclave project 與完整 image IDs。
    組裝器只引用既有 artifact；缺少任何一項時輸出 `HOLD` 並以非零狀態結束。
-6. 最後以 `scripts/verify_p5_capacity.py` 對組裝結果獨立重驗。只有 `PASS` 才能
+7. 最後以 `scripts/verify_p5_capacity.py` 對組裝結果獨立重驗。只有 `PASS` 才能
    進入 P5 Code Review。
 
 Soak 的負載契約刻意與容量測試分開：capacity 使用 2× 尖峰；soak 使用 1×

@@ -79,6 +79,8 @@ def build_capacity_report(
     metrics_container_identity: dict[str, Any],
     backend_container_identity: dict[str, Any],
     telemetry_interval_seconds: int,
+    environment_artifact_sha256: str,
+    expected_runtime_images: dict[str, Any],
     execution_class: str = "live",
 ) -> dict[str, Any]:
     spec = load_capacity_spec()
@@ -146,6 +148,7 @@ def build_capacity_report(
         interval_seconds=telemetry_interval_seconds,
         gpu_required=gpu_required,
         invalid_json_lines=invalid_json_lines,
+        expected_runtime_images=expected_runtime_images,
     )
     telemetry_checks = {
         "api_latency": all(row["status"] == "PASS" for row in scenarios),
@@ -218,10 +221,12 @@ def build_capacity_report(
         source_commit == grounding.get("source_commit")
         and metrics_container_identity.get("compose_project") == compose_project
         and metrics_container_identity.get("running") is True
+        and bool(str(metrics_container_identity.get("container_id") or "").strip())
         and bool(str(metrics_container_identity.get("compose_service") or "").strip())
         and bool(str(metrics_container_identity.get("image_id") or "").strip())
         and backend_container_identity.get("compose_project") == compose_project
         and backend_container_identity.get("running") is True
+        and bool(str(backend_container_identity.get("container_id") or "").strip())
         and bool(str(backend_container_identity.get("compose_service") or "").strip())
         and bool(str(backend_container_identity.get("image_id") or "").strip())
     )
@@ -259,6 +264,7 @@ def build_capacity_report(
         "compose_project": compose_project,
         "metrics_container_identity": metrics_container_identity,
         "backend_container_identity": backend_container_identity,
+        "environment_artifact_sha256": environment_artifact_sha256,
         "capacity_spec_sha256": capacity_spec_sha256(spec),
         "started_at": started_at,
         "completed_at": completed_at,

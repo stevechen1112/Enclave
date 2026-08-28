@@ -25,6 +25,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.services.capacity_gate import load_capacity_spec
+from app.services.p5_evidence_binding import (
+    load_environment_evidence,
+    require_environment_binding,
+)
 
 
 def _sha256(path: Path) -> str:
@@ -74,7 +78,12 @@ def _committed_driver_sha256(file_value: str, source_commit: str) -> str:
 
 
 def _command(
-    value: Any, name: str, scenario: str, source_commit: str
+    value: Any,
+    name: str,
+    scenario: str,
+    source_commit: str,
+    compose_project: str,
+    tenant_id: str,
 ) -> list[str]:
     if not isinstance(value, dict):
         raise TypeError(f"commands.{name} must be an object")
@@ -130,6 +139,8 @@ def _command(
     if integrity_path not in trusted_by_repo_path:
         raise ValueError(f"commands.{name} must pin {integrity_path}")
     try:
+        if argv.count("--integrity-script") != 1:
+            raise ValueError
         integrity_index = argv.index("--integrity-script")
         configured_integrity = Path(argv[integrity_index + 1])
     except (ValueError, IndexError) as exc:
@@ -163,13 +174,20 @@ def _command(
     expected = {
         "--p5-scenario": scenario,
         "--p5-step": name,
+        "--source-commit": source_commit,
+        "--compose-project": compose_project,
+        "--tenant-id": tenant_id,
     }
     for flag, expected_value in expected.items():
         try:
+            if argv.count(flag) != 1:
+                raise ValueError
             index = argv.index(flag)
             actual = argv[index + 1]
         except (ValueError, IndexError) as exc:
-            raise ValueError(f"commands.{name}.argv requires {flag}") from exc
+            raise ValueError(
+                f"commands.{name}.argv requires exactly one {flag}"
+            ) from exc
         if actual != expected_value:
             raise ValueError(f"commands.{name}.argv has invalid {flag}")
     return argv
@@ -178,18 +196,11 @@ def _command(
 def _validate_environment(
     environment: dict[str, Any], *, source_commit: str, compose_project: str
 ) -> None:
-    if environment.get("status") != "PASS":
-        raise ValueError("environment evidence is not PASS")
-    if environment.get("isolated_staging") is not True:
-        raise ValueError("environment evidence is not isolated staging")
-    if environment.get("co_resident_enclave_projects"):
-        raise ValueError("environment evidence contains co-resident Enclave projects")
-    if environment.get("source_commit") != source_commit:
-        raise ValueError("environment source_commit mismatch")
-    if environment.get("compose_project") != compose_project:
-        raise ValueError("environment compose_project mismatch")
-    if len(str(environment.get("artifact_sha256") or "")) != 64:
-        raise ValueError("environment artifact hash is missing")
+    require_environment_binding(
+        environment,
+        source_commit=source_commit,
+        compose_project=compose_project,
+    )
 
 
 def _run(argv: list[str], timeout: int) -> dict[str, Any]:
@@ -239,16 +250,30 @@ def execute_plan(
     compose_project = str(plan.get("compose_project") or "")
     if not compose_project:
         raise ValueError("plan compose_project is required")
+    tenant_id = str(plan.get("tenant_id") or "").strip()
+    if not tenant_id:
+        raise ValueError("plan tenant_id is required")
     _validate_environment(
         environment,
         source_commit=source_commit,
         compose_project=compose_project,
     )
+    if plan.get("environment_artifact_sha256") != environment.get(
+        "artifact_sha256"
+    ):
+        raise ValueError("plan environment artifact mismatch")
     commands = plan.get("commands")
     if not isinstance(commands, dict):
         raise TypeError("commands must be an object")
     argv = {
-        name: _command(commands.get(name), name, scenario, source_commit)
+        name: _command(
+            commands.get(name),
+            name,
+            scenario,
+            source_commit,
+            compose_project,
+            tenant_id,
+        )
         for name in ("baseline", "inject", "probe", "recover", "verify")
     }
     transcript: dict[str, Any] = {
@@ -286,7 +311,7 @@ def execute_plan(
         and verify_payload.get("schema_version") == 1
         and verify_payload.get("scenario") == scenario
         and verify_payload.get("source_commit") == source_commit
-        and bool(str(verify_payload.get("tenant_id") or "").strip())
+        and verify_payload.get("tenant_id") == tenant_id
         and isinstance(verify_payload.get("observations"), list)
         and bool(verify_payload["observations"])
     )
@@ -303,7 +328,7 @@ def execute_plan(
         "false_completion": verify_payload.get("false_completion", -1),
         "cross_tenant_leak": verify_payload.get("cross_tenant_leak", -1),
         "recovered": verify_payload.get("recovered", False),
-        "tenant_id": verify_payload.get("tenant_id", ""),
+        "tenant_id": tenant_id,
         "verification": verify_payload,
     }
     return report, transcript
@@ -319,14 +344,14 @@ def main() -> int:
     args = parser.parse_args()
     if not args.confirm_isolated_staging:
         parser.error("--confirm-isolated-staging is required")
+    if args.timeout_seconds <= 0:
+        parser.error("timeout must be positive")
+    transcript_path = args.output.with_suffix(".raw.json")
+    if args.output.exists() or transcript_path.exists():
+        parser.error("formal degradation drill requires fresh output paths")
     try:
         plan = json.loads(args.plan.read_text(encoding="utf-8"))
-        environment = json.loads(
-            args.environment_evidence.read_text(encoding="utf-8")
-        )
-        if not isinstance(environment, dict):
-            raise TypeError("environment evidence must be a JSON object")
-        environment["artifact_sha256"] = _sha256(args.environment_evidence)
+        environment = load_environment_evidence(args.environment_evidence)
         report, transcript = execute_plan(
             plan,
             timeout=args.timeout_seconds,
@@ -335,7 +360,6 @@ def main() -> int:
     except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
         parser.error(str(exc))
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    transcript_path = args.output.with_suffix(".raw.json")
     transcript_path.write_text(
         json.dumps(transcript, ensure_ascii=False, indent=2), encoding="utf-8"
     )

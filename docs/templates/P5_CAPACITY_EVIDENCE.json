@@ -1,27 +1,38 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "gate": "P5-CAPACITY",
   "capacity_spec_sha256": "FILL_FROM_CONFIG",
-  "environment": {
-    "isolated_staging": true,
-    "source_commit": "",
-    "runtime_images": {}
-  },
+  "environments": [],
   "capacity_reports": [],
   "soak_test": {
+    "profile": "standard",
     "status": "NOT_RUN",
     "execution_class": "live",
+    "capacity_spec_sha256": "FILL_FROM_CONFIG",
+    "source_commit": "",
+    "compose_project": "",
+    "environment_artifact_sha256": "",
+    "metrics_container_identity": {},
     "started_at": "",
     "completed_at": "",
     "duration_seconds": 0,
+    "target_duration_seconds": 259200,
     "telemetry_sample_count": 0,
+    "telemetry_integrity": {"status": "NOT_RUN", "errors": []},
     "memory_growth_percent": null,
     "db_pool_exhaustion_events": null,
-    "ending_unrecoverable_backlog": null
+    "ending_unrecoverable_backlog": null,
+    "grounding_evidence": {},
+    "raw_artifacts": {}
   },
   "cost_guardrails": {
     "status": "NOT_RUN",
     "execution_class": "live",
+    "source_commit": "",
+    "compose_project": "",
+    "environment_artifact_sha256": "",
+    "tenant_id": "",
+    "runtime_container_identity": {},
     "overage_unbounded": null,
     "artifact_sha256": "",
     "unit_reports": []

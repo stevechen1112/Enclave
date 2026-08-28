@@ -242,6 +242,7 @@ def validate_telemetry_integrity(
     interval_seconds: int,
     gpu_required: bool,
     invalid_json_lines: int,
+    expected_runtime_images: dict[str, Any],
 ) -> dict[str, Any]:
     """Bind telemetry coverage and every sample to one staging release."""
     errors: list[str] = []
@@ -254,6 +255,11 @@ def validate_telemetry_integrity(
         errors.append("telemetry interval must be positive")
     if invalid_json_lines:
         errors.append("telemetry contains invalid JSON lines")
+    expected_identities = [
+        row for row in expected_runtime_images.values() if isinstance(row, dict)
+    ] if isinstance(expected_runtime_images, dict) else []
+    if not expected_identities:
+        errors.append("expected runtime image inventory is missing")
     if not samples or any(value is None for value in captured):
         errors.append("telemetry timestamps are incomplete")
     valid_captured = [value for value in captured if value is not None]
@@ -296,6 +302,22 @@ def validate_telemetry_integrity(
             errors.append(f"telemetry metrics failure at sample {index}")
         if sample.get("container_error") or not sample.get("containers"):
             errors.append(f"telemetry container failure at sample {index}")
+        observed_containers = {
+            str(row.get("name") or ""): row
+            for row in sample.get("containers", [])
+            if isinstance(row, dict)
+        }
+        for expected in expected_identities:
+            name = str(expected.get("container") or "")
+            observed = observed_containers.get(name, {})
+            if (
+                not name
+                or observed.get("container_id") != expected.get("container_id")
+                or observed.get("image_id") != expected.get("image_id")
+            ):
+                errors.append(
+                    f"telemetry runtime image mismatch at sample {index}: {name or 'unknown'}"
+                )
         if gpu_required and (sample.get("gpu_error") or not sample.get("gpus")):
             errors.append(f"telemetry GPU failure at sample {index}")
     return {
@@ -305,4 +327,5 @@ def validate_telemetry_integrity(
         "first_sample_at": valid_captured[0].isoformat() if valid_captured else None,
         "last_sample_at": valid_captured[-1].isoformat() if valid_captured else None,
         "max_gap_seconds": max(gaps, default=None),
+        "expected_runtime_container_count": len(expected_identities),
     }

@@ -10,12 +10,14 @@ soak 固定使用 Standard profile：8 CPU、32 GB RAM、200 GB disk、8 GB GPU 
    Enclave project。
 2. Runtime `/health` 為 staging、release identifiable、source commit 與 grounded
    evidence 完全一致。
-3. 準備 100 個不同使用者的唯一 access token；runner 會逐一呼叫 `/users/me`，
+3. Environment evidence 已在本次 campaign 開始前擷取為 PASS；其中必須包含
+   metrics container 的完全相同 container name 與 image ID。
+4. 準備 100 個不同使用者的唯一 access token；runner 會逐一呼叫 `/users/me`，
    確認全部 active 且屬於 grounded evidence tenant。
-4. Document、audio、video 只使用合成 fixture。
-5. Metrics container 必須是受測 Compose project 中 running 的 Web service；不能
+5. Document、audio、video 只使用合成 fixture。
+6. Metrics container 必須是受測 Compose project 中 running 的 Web service；不能
    指向同機其他 container。
-6. Output directory 必須是全新目錄，不能包含任何舊 soak CSV、JSONL、log 或 report。
+7. Output directory 必須是全新目錄，不能包含任何舊 soak CSV、JSONL、log 或 report。
 
 密碼只能透過 `LOAD_TEST_USER_PASSWORD`、`LOAD_TEST_ADMIN_PASSWORD` 與
 `LOAD_TEST_SUPERUSER_PASSWORD` 環境變數注入，不得寫入命令列或 evidence。
@@ -35,6 +37,7 @@ python scripts/run_p5_soak.py \
   --video-fixture artifacts/ops/p5/fixtures/video.mp4 \
   --credentials artifacts/ops/p5/standard-token-pool.json \
   --grounding-evidence artifacts/ops/p5/grounding-evidence.json \
+  --environment-evidence artifacts/ops/p5/environment-evidence.json \
   --metrics-container enclave-p5-web-1 \
   --compose-project enclave-p5 \
   --duration-seconds 259200 \

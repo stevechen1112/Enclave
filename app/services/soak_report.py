@@ -45,6 +45,8 @@ def build_soak_report(
     source_commit: str,
     compose_project: str,
     metrics_container_identity: dict[str, Any],
+    environment_artifact_sha256: str,
+    expected_runtime_images: dict[str, Any],
     locust_stats_path: Path,
     telemetry_path: Path,
     locust_exit_code: int,
@@ -77,6 +79,7 @@ def build_soak_report(
         interval_seconds=interval,
         gpu_required=gpu_required,
         invalid_json_lines=invalid_json_lines,
+        expected_runtime_images=expected_runtime_images,
     )
     hardware_errors = hardware_shortfalls(observed_hardware, profile["hardware"])
     scenario_rows = []
@@ -130,6 +133,7 @@ def build_soak_report(
         source_commit == grounding.get("source_commit")
         and metrics_container_identity.get("compose_project") == compose_project
         and metrics_container_identity.get("running") is True
+        and bool(str(metrics_container_identity.get("container_id") or "").strip())
         and bool(str(metrics_container_identity.get("compose_service") or "").strip())
         and bool(str(metrics_container_identity.get("image_id") or "").strip())
     )
@@ -180,6 +184,7 @@ def build_soak_report(
         "telemetry_summary": summary,
         "telemetry_integrity": telemetry_integrity,
         "metrics_container_identity": metrics_container_identity,
+        "environment_artifact_sha256": environment_artifact_sha256,
         "grounding_evidence": grounding,
         "runner": {
             "locust_exit_code": locust_exit_code,

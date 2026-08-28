@@ -25,6 +25,8 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
 ## 已完成的內部工程
 
 - Lite／Standard／Enterprise 唯一權威容量規格與硬體門檻。
+- Evidence schema v2 支援三份 profile-sized environment；CPU 必須等於 profile，
+  RAM／GPU 僅允許 10% 標示誤差，禁止以 Enterprise 主機冒充 Lite／Standard 證據。
 - 登入、資產、搜尋、有來源問答、文件、批次 ingestion、音訊與影片 queue 的
   Locust workload contract。
 - 15 分鐘 2× capacity runner 與不可縮短的 Standard 72 小時 soak runner。
@@ -37,7 +39,8 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
   和 ingestion job reconciliation。
 - 每租戶 storage／audio／video／query 成本報表與 live quota fail-closed 驗證。
 - Environment evidence 實測、runtime image ID、source commit、artifact hash 與
-  co-resident Enclave project gate。
+  co-resident Enclave project gate；container ID 也逐樣本比對，重建同版 container
+  仍會使正式 evidence FAIL。
 - Degradation evidence 綁定 commit／Compose／tenant／environment；只接受同 commit
   且雜湊相符的版本控制 driver 與 integrity probe，禁止敏感資訊進 argv，並要求
   recovery、data loss、false completion 與 cross-tenant leak 的實際觀測。四種

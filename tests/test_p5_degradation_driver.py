@@ -126,11 +126,19 @@ def test_plan_generator_emits_all_required_bound_steps(monkeypatch, tmp_path):
         path.write_text("{}", encoding="utf-8")
     environment = {
         "status": "PASS",
+        "execution_class": "live",
         "isolated_staging": True,
         "co_resident_enclave_projects": [],
         "source_commit": "a" * 40,
         "compose_project": "enclave-p5",
         "artifact_sha256": "e" * 64,
+        "runtime_images": {
+            "web": {
+                "container": "enclave-p5-web-1",
+                "container_id": "web-container-id",
+                "image_id": "sha256:" + "b" * 64,
+            }
+        },
     }
     paths = module.build_plans(
         environment=environment,
@@ -154,6 +162,8 @@ def test_plan_generator_emits_all_required_bound_steps(monkeypatch, tmp_path):
     }
     plan = module._object(paths[0])
     assert plan["source_commit"] == "a" * 40
+    assert plan["tenant_id"] == "tenant-test"
+    assert plan["environment_artifact_sha256"] == "e" * 64
     assert set(plan["commands"]) == {"baseline", "inject", "probe", "recover", "verify"}
     for step, command in plan["commands"].items():
         assert command["driver_sha256"] == "d" * 64
@@ -178,7 +188,7 @@ def test_plan_generator_rejects_shared_host(monkeypatch, tmp_path):
         "compose_project": "enclave-staging",
     }
     missing = tmp_path / "unused"
-    with pytest.raises(ValueError, match="not isolated-staging PASS"):
+    with pytest.raises(ValueError, match="not PASS"):
         module.build_plans(
             environment=environment,
             output_dir=tmp_path,

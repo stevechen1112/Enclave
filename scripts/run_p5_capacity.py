@@ -23,7 +23,13 @@ from app.services.hardware_inventory import (
     co_resident_enclave_projects,
     compose_container_identity,
     detect_hardware,
+    hardware_boundary_errors,
     hardware_shortfalls,
+)
+from app.services.p5_evidence_binding import (
+    load_environment_evidence,
+    require_environment_binding,
+    runtime_identity_matches_environment,
 )
 
 
@@ -167,6 +173,7 @@ def main() -> int:
     parser.add_argument("--audio-fixture", type=Path, required=True)
     parser.add_argument("--video-fixture", type=Path, required=True)
     parser.add_argument("--grounding-evidence", type=Path, required=True)
+    parser.add_argument("--environment-evidence", type=Path, required=True)
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--backend-container", required=True)
     parser.add_argument("--backend-base-url", default="http://127.0.0.1:8000")
@@ -188,6 +195,7 @@ def main() -> int:
         args.audio_fixture,
         args.video_fixture,
         args.grounding_evidence,
+        args.environment_evidence,
         args.credentials,
     ):
         if not path.is_file():
@@ -212,6 +220,15 @@ def main() -> int:
         grounding_errors.append("grounding evidence has no tenant identity")
     if grounding_errors:
         parser.error("; ".join(grounding_errors))
+    try:
+        environment_evidence = load_environment_evidence(args.environment_evidence)
+        require_environment_binding(
+            environment_evidence,
+            source_commit=str(grounding["source_commit"]),
+            compose_project=args.compose_project,
+        )
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        parser.error(f"environment evidence binding failed: {exc}")
     minimum = int(spec["test_policy"]["capacity_min_duration_seconds"])
     if args.duration_seconds < minimum:
         parser.error(f"formal capacity duration must be at least {minimum} seconds")
@@ -224,11 +241,21 @@ def main() -> int:
         )
     users = int(profile_load_target(spec, args.profile)["concurrent_users"])
     observed_hardware = detect_hardware(ROOT)
+    if environment_evidence.get("observed_hardware") != observed_hardware:
+        parser.error("capacity host hardware does not match environment evidence")
     shortfalls = hardware_shortfalls(
         observed_hardware, spec["profiles"][args.profile]["hardware"]
     )
     if shortfalls:
         parser.error("host does not qualify for profile: " + "; ".join(shortfalls))
+    boundary_errors = hardware_boundary_errors(
+        observed_hardware, spec["profiles"][args.profile]["hardware"]
+    )
+    if boundary_errors:
+        parser.error(
+            "host is outside the formal profile boundary: "
+            + "; ".join(boundary_errors)
+        )
     co_resident = co_resident_enclave_projects(args.compose_project)
     if co_resident:
         parser.error(
@@ -244,6 +271,12 @@ def main() -> int:
         )
     except ValueError as exc:
         parser.error(f"capacity container binding failed: {exc}")
+    if not runtime_identity_matches_environment(
+        environment_evidence, metrics_identity
+    ) or not runtime_identity_matches_environment(
+        environment_evidence, backend_identity
+    ):
+        parser.error("capacity runtime image does not match environment evidence")
 
     import httpx
 
@@ -440,6 +473,10 @@ def main() -> int:
         metrics_container_identity=metrics_identity,
         backend_container_identity=backend_identity,
         telemetry_interval_seconds=args.telemetry_interval_seconds,
+        environment_artifact_sha256=str(
+            environment_evidence["artifact_sha256"]
+        ),
+        expected_runtime_images=dict(environment_evidence["runtime_images"]),
     )
     report["runner"] = {
         "locust_exit_code": load_exit,

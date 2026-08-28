@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 from app.services.hardware_inventory import (
     co_resident_enclave_projects,
     compose_container_identity,
+    hardware_boundary_errors,
     hardware_shortfalls,
 )
 
@@ -19,6 +20,14 @@ def test_hardware_shortfalls_accept_qualified_host():
     required = {"cpu_cores": 4, "ram_gb": 8, "disk_gb": 50, "gpu_vram_gb": 0}
     observed = {"cpu_cores": 4, "ram_gb": 8.2, "disk_gb": 160, "gpu_vram_gb": 0}
     assert hardware_shortfalls(observed, required) == []
+
+
+def test_profile_boundary_rejects_using_enterprise_host_for_lite_claim():
+    required = {"cpu_cores": 4, "ram_gb": 8, "disk_gb": 50, "gpu_vram_gb": 0}
+    observed = {"cpu_cores": 16, "ram_gb": 64, "disk_gb": 500, "gpu_vram_gb": 24}
+    errors = hardware_boundary_errors(observed, required)
+    assert any("cpu_cores" in error and "profile boundary" in error for error in errors)
+    assert any("gpu_vram_gb" in error for error in errors)
 
 
 def test_capacity_host_rejects_other_enclave_compose_project():
@@ -47,7 +56,7 @@ def test_metrics_container_must_belong_to_target_compose_project():
         stdout=(
             '{"com.docker.compose.project":"enclave-p5",'
             '"com.docker.compose.service":"web"}\t'
-            '{"Running":true}\t"sha256:abc"\n'
+            '{"Running":true}\t"sha256:abc"\t"container-web-id"\n'
         ),
     )
     with patch("subprocess.run", return_value=completed):
@@ -58,6 +67,7 @@ def test_metrics_container_must_belong_to_target_compose_project():
         "compose_service": "web",
         "running": True,
         "image_id": "sha256:abc",
+        "container_id": "container-web-id",
     }
 
 
@@ -67,7 +77,7 @@ def test_metrics_container_rejects_production_project():
         stdout=(
             '{"com.docker.compose.project":"enclave",'
             '"com.docker.compose.service":"web"}\t'
-            '{"Running":true}\t"sha256:prod"\n'
+            '{"Running":true}\t"sha256:prod"\t"container-prod-id"\n'
         ),
     )
     with patch("subprocess.run", return_value=completed):

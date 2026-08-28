@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import inspect
+import json
+from unittest.mock import MagicMock, patch
 
 from app.services.capacity_telemetry import (
     parse_docker_stats,
@@ -69,3 +71,40 @@ def test_collector_uses_absolute_sample_schedule() -> None:
     source = inspect.getsource(collect_p5_telemetry.main)
     assert "len(samples) * args.interval_seconds" in source
     assert "time.sleep(args.interval_seconds)" not in source
+
+
+def test_collector_binds_each_sample_to_immutable_container_identity():
+    from scripts import collect_p5_telemetry
+
+    listing = MagicMock(returncode=0, stdout="enclave-p5-web-1\n", stderr="")
+    stats = MagicMock(
+        returncode=0,
+        stdout=(
+            '{"Name":"enclave-p5-web-1","CPUPerc":"1%",'
+            '"MemPerc":"2%"}\n'
+        ),
+        stderr="",
+    )
+    inspection = MagicMock(
+        returncode=0,
+        stdout=json.dumps(
+            [
+                {
+                    "Name": "/enclave-p5-web-1",
+                    "Id": "web-container-id",
+                    "Image": "sha256:" + "b" * 64,
+                    "Config": {
+                        "Labels": {"com.docker.compose.project": "enclave-p5"}
+                    },
+                }
+            ]
+        ),
+        stderr="",
+    )
+    with patch("subprocess.run", side_effect=[listing, stats, inspection]):
+        rows, error = collect_p5_telemetry._docker_stats(
+            True, compose_project="enclave-p5"
+        )
+    assert error is None
+    assert rows[0]["container_id"] == "web-container-id"
+    assert rows[0]["image_id"] == "sha256:" + "b" * 64

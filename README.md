@@ -19,7 +19,7 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 | 前端最新回歸 | 25 個測試檔／88 項測試通過；14 項 staging Playwright E2E、ESLint、TypeScript 與 Vite production build 通過 |
 | 後端架構基線 | P4 全量回歸 1,314 passed／12 skipped／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
 | 正式站 | [https://kachu.tw](https://kachu.tw) 已正式上線；P0 核准 release 已通過 source／schema／route machine parity 與瀏覽器驗收 |
-| 產品化 Phase | P0 release parity、P1 CI／供應鏈、P2 多租戶硬隔離、P3 多模態 Golden Corpus 及 P4 故障／DR／營運閉環均 PASS；P5 可開始 |
+| 產品化 Phase | P0–P4 PASS；P5 內部實作與 evidence schema v2 已完成 review，正式三 profile capacity、四種 degradation 與 72 小時 soak 因缺少隔離硬體維持 ENVIRONMENT HOLD |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；外部滲透、法律／現場簽核、真機弱網噪音與跨產業多模態 holdout 尚待完成 |
 
@@ -438,6 +438,8 @@ Production DB secrets 必須分為三檔：`.env.production`（application）、
 | `docs/PRODUCTION_BROWSER_ACCEPTANCE_2026-08-27.md` | 正式網域驗收與目前 release parity 判定 |
 | `docs/INTERNAL_PRODUCTIZATION_COMPLETION_PLAN.md` | 無須等待客戶或第三方即可完成的 P0–P8 產品化閉環 |
 | `docs/PHASE_P0_RELEASE_PARITY_CODE_REVIEW.md` | Release identity、schema／route parity 與 production gate 審查 |
+| `docs/P5_CAPACITY_MODEL.md` | P5 三種資源 profile、SLO、成本與穩定性 gate |
+| `docs/runbooks/P5_CAMPAIGN.md` | P5 隔離環境完整執行順序與 evidence 組裝程序 |
 | `docs/release/MODULAR_PLATFORM_UPGRADE_GUIDE.md` | 升級與相容發布指南 |
 | `docs/runbooks/SYNTHETIC_DEMO_TENANT.md` | 六 persona Demo 安全邊界 |
 | `docs/runbooks/RLS_AUTHORITY_ROLLOUT.md` | RLS／authority rollout |

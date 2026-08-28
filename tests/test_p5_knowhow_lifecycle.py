@@ -1,13 +1,9 @@
 """
 MKA P5 — Know-how 生命週期測試。
 """
-import pytest
 from datetime import datetime, timedelta, timezone
 
-from app.services.knowhow_lifecycle import (
-    AudioLineage, ReviewReminder, KnowhowLifecycleManager,
-    get_knowhow_lifecycle_manager,
-)
+from app.services.knowhow_lifecycle import KnowhowLifecycleManager
 
 
 class TestAudioLineage:

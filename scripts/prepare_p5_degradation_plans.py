@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from app.services.capacity_gate import load_capacity_spec
+from app.services.p5_evidence_binding import require_environment_binding
 
 DRIVER = Path("scripts/p5_degradation_drivers/live_drill.py")
 INTEGRITY_PROBE = Path("scripts/run_p5_integrity_probe.py")
@@ -65,17 +66,19 @@ def build_plans(
 ) -> list[Path]:
     source_commit = str(environment.get("source_commit") or "")
     compose_project = str(environment.get("compose_project") or "")
-    if (
-        environment.get("status") != "PASS"
-        or environment.get("isolated_staging") is not True
-        or environment.get("co_resident_enclave_projects")
-    ):
-        raise ValueError("environment evidence is not isolated-staging PASS")
+    require_environment_binding(environment)
     if len(source_commit) != 40 or not compose_project:
         raise ValueError("environment release binding is incomplete")
     driver_hash = _committed_hash(source_commit, DRIVER)
     integrity_hash = _committed_hash(source_commit, INTEGRITY_PROBE)
     output_dir.mkdir(parents=True, exist_ok=True)
+    formal_paths = [
+        output_dir / f"{scenario}.{suffix}"
+        for scenario in load_capacity_spec()["required_degradation_scenarios"]
+        for suffix in ("plan.json", "state.json")
+    ]
+    if any(path.exists() for path in formal_paths):
+        raise ValueError("formal degradation plans require a fresh output directory")
     created: list[Path] = []
     for scenario in load_capacity_spec()["required_degradation_scenarios"]:
         common = [
@@ -128,6 +131,7 @@ def build_plans(
             "scenario": scenario,
             "source_commit": source_commit,
             "compose_project": compose_project,
+            "tenant_id": tenant_id,
             "environment_artifact_sha256": environment.get("artifact_sha256"),
             "commands": commands,
         }

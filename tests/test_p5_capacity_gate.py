@@ -26,8 +26,42 @@ def _rows(names: list[str], field: str) -> list[dict]:
 def _complete_evidence() -> dict:
     spec = load_capacity_spec()
     now = datetime.now(timezone.utc) - timedelta(minutes=1)
-    capacity_start = now - timedelta(minutes=16)
-    soak_start = now - timedelta(hours=73)
+    environment_capture = now - timedelta(hours=74)
+    capacity_start = environment_capture + timedelta(minutes=1)
+    capacity_completed = capacity_start + timedelta(minutes=16)
+    cost_started = capacity_completed + timedelta(minutes=1)
+    cost_completed = cost_started + timedelta(minutes=1)
+    degradation_started = cost_completed + timedelta(minutes=1)
+    degradation_completed = degradation_started + timedelta(minutes=4)
+    soak_start = degradation_completed + timedelta(minutes=1)
+    soak_completed = soak_start + timedelta(hours=72)
+    environment_hashes = {"lite": "6" * 64, "standard": "7" * 64, "enterprise": "8" * 64}
+    environments = [
+        {
+            "status": "PASS",
+            "execution_class": "live",
+            "isolated_staging": True,
+            "compose_project": f"enclave-p5-{name}",
+            "source_commit": "a" * 40,
+            "observed_hardware": spec["profiles"][name]["hardware"],
+            "runtime_images": {
+                "web": {
+                    "container": "enclave-p5-web-1",
+                    "container_id": "web-container-id",
+                    "image_id": "sha256:" + "b" * 64,
+                },
+                "worker": {
+                    "container": "enclave-p5-worker-1",
+                    "container_id": "worker-container-id",
+                    "image_id": "sha256:" + "b" * 64,
+                },
+            },
+            "co_resident_enclave_projects": [],
+            "artifact_sha256": environment_hashes[name],
+            "captured_at": environment_capture.isoformat(),
+        }
+        for name in PROFILE_NAMES
+    ]
     reports = []
     for name in PROFILE_NAMES:
         reports.append(
@@ -36,24 +70,27 @@ def _complete_evidence() -> dict:
                 "status": "PASS",
                 "execution_class": "live",
                 "source_commit": "a" * 40,
-                "compose_project": "enclave-p5-dedicated",
+                "compose_project": f"enclave-p5-{name}",
+                "environment_artifact_sha256": environment_hashes[name],
                 "metrics_container_identity": {
                     "container": "enclave-p5-web-1",
-                    "compose_project": "enclave-p5-dedicated",
+                    "container_id": "web-container-id",
+                    "compose_project": f"enclave-p5-{name}",
                     "compose_service": "web",
                     "running": True,
                     "image_id": "sha256:" + "b" * 64,
                 },
                 "backend_container_identity": {
                     "container": "enclave-p5-worker-1",
-                    "compose_project": "enclave-p5-dedicated",
+                    "container_id": "worker-container-id",
+                    "compose_project": f"enclave-p5-{name}",
                     "compose_service": "worker",
                     "running": True,
                     "image_id": "sha256:" + "b" * 64,
                 },
                 "capacity_spec_sha256": capacity_spec_sha256(spec),
                 "started_at": capacity_start.isoformat(),
-                "completed_at": now.isoformat(),
+                "completed_at": capacity_completed.isoformat(),
                 "duration_seconds": 900,
                 "observed_hardware": spec["profiles"][name]["hardware"],
                 "achieved_load": profile_load_target(spec, name),
@@ -74,7 +111,7 @@ def _complete_evidence() -> dict:
                     "source_commit": "a" * 40,
                     "tenant_id": "11111111-1111-1111-1111-111111111111",
                     "run_started_at": capacity_start.isoformat(),
-                    "load_completed_at": now.isoformat(),
+                    "load_completed_at": capacity_completed.isoformat(),
                 },
                 "grounding_evidence": {
                     "status": "PASS",
@@ -95,20 +132,10 @@ def _complete_evidence() -> dict:
             }
         )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "gate": "P5-CAPACITY",
         "capacity_spec_sha256": capacity_spec_sha256(spec),
-        "environment": {
-            "status": "PASS",
-            "execution_class": "live",
-            "isolated_staging": True,
-            "compose_project": "enclave-p5-dedicated",
-            "source_commit": "a" * 40,
-            "runtime_images": {"backend": "sha256:" + "b" * 64},
-            "co_resident_enclave_projects": [],
-            "artifact_sha256": "8" * 64,
-            "captured_at": now.isoformat(),
-        },
+        "environments": environments,
         "capacity_reports": reports,
         "soak_test": {
             "profile": "standard",
@@ -116,9 +143,10 @@ def _complete_evidence() -> dict:
             "execution_class": "live",
             "capacity_spec_sha256": capacity_spec_sha256(spec),
             "source_commit": "a" * 40,
-            "compose_project": "enclave-p5-dedicated",
+            "compose_project": "enclave-p5-standard",
+            "environment_artifact_sha256": environment_hashes["standard"],
             "started_at": soak_start.isoformat(),
-            "completed_at": now.isoformat(),
+            "completed_at": soak_completed.isoformat(),
             "duration_seconds": 72 * 60 * 60,
             "target_duration_seconds": 72 * 60 * 60,
             "observed_hardware": spec["profiles"]["standard"]["hardware"],
@@ -126,7 +154,8 @@ def _complete_evidence() -> dict:
             "telemetry_integrity": {"status": "PASS", "errors": []},
             "metrics_container_identity": {
                 "container": "enclave-p5-web-1",
-                "compose_project": "enclave-p5-dedicated",
+                "container_id": "web-container-id",
+                "compose_project": "enclave-p5-standard",
                 "compose_service": "web",
                 "running": True,
                 "image_id": "sha256:" + "b" * 64,
@@ -160,6 +189,20 @@ def _complete_evidence() -> dict:
             "overage_unbounded": False,
             "execution_class": "live",
             "artifact_sha256": "3" * 64,
+            "started_at": cost_started.isoformat(),
+            "completed_at": cost_completed.isoformat(),
+            "source_commit": "a" * 40,
+            "compose_project": "enclave-p5-standard",
+            "environment_artifact_sha256": environment_hashes["standard"],
+            "tenant_id": "11111111-1111-1111-1111-111111111111",
+            "runtime_container_identity": {
+                "container": "enclave-p5-web-1",
+                "container_id": "web-container-id",
+                "compose_project": "enclave-p5-standard",
+                "compose_service": "web",
+                "running": True,
+                "image_id": "sha256:" + "b" * 64,
+            },
             "unit_reports": _rows(list(spec["cost_units"]), "unit"),
         },
         "degradation_tests": [
@@ -168,8 +211,10 @@ def _complete_evidence() -> dict:
                 "execution_class": "live",
                 "artifact_sha256": "4" * 64,
                 "source_commit": "a" * 40,
-                "compose_project": "enclave-p5-dedicated",
-                "environment_artifact_sha256": "8" * 64,
+                "compose_project": "enclave-p5-standard",
+                "environment_artifact_sha256": environment_hashes["standard"],
+                "started_at": degradation_started.isoformat(),
+                "completed_at": degradation_completed.isoformat(),
                 "tenant_id": "11111111-1111-1111-1111-111111111111",
                 "data_loss": 0,
                 "false_completion": 0,
@@ -210,6 +255,23 @@ def test_invalid_spec_fails_closed():
     spec["test_policy"]["soak_min_duration_seconds"] = 3600
     with pytest.raises(CapacitySpecError, match="72 hours"):
         validate_capacity_spec(spec)
+
+
+def test_invalid_numeric_capacity_contract_fails_closed():
+    spec = load_capacity_spec()
+    spec["profiles"]["lite"]["hardware"]["cpu_cores"] = "unknown"
+    spec["profiles"]["standard"]["slo"]["availability"] = 1.5
+    spec["profiles"]["enterprise"]["resource_limits"]["cpu_percent"] = 101
+    spec["test_policy"]["capacity_min_samples"] = 0
+    spec["test_policy"]["telemetry_sample_interval_seconds"] = 301
+    with pytest.raises(CapacitySpecError) as raised:
+        validate_capacity_spec(spec)
+    message = str(raised.value)
+    assert "hardware.cpu_cores must be numeric" in message
+    assert "availability cannot exceed 1" in message
+    assert "cpu_percent cannot exceed 100" in message
+    assert "capacity_min_samples must be at least 15" in message
+    assert "telemetry_sample_interval_seconds cannot exceed 300" in message
 
 
 def test_blank_template_holds():
@@ -291,6 +353,37 @@ def test_capacity_telemetry_integrity_failure_holds():
     assert "capacity backend container identity is incomplete: lite" in result["errors"]
 
 
+def test_cross_environment_images_and_mixed_tenants_cannot_pass():
+    evidence = _complete_evidence()
+    evidence["capacity_reports"][0]["metrics_container_identity"]["image_id"] = (
+        "sha256:" + "c" * 64
+    )
+    evidence["soak_test"]["environment_artifact_sha256"] = "f" * 64
+    evidence["cost_guardrails"]["tenant_id"] = (
+        "99999999-9999-9999-9999-999999999999"
+    )
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "capacity metrics runtime image mismatch: lite" in result["errors"]
+    assert "soak references an unknown environment artifact" in result["errors"]
+    assert "P5 evidence is not bound to one dedicated tenant" in result["errors"]
+
+
+def test_campaign_rejects_duplicates_stale_capture_and_hardware_drift():
+    evidence = _complete_evidence()
+    evidence["capacity_reports"].append(dict(evidence["capacity_reports"][0]))
+    evidence["capacity_reports"][-1]["observed_hardware"] = {
+        **evidence["capacity_reports"][-1]["observed_hardware"],
+        "ram_gb": 999,
+    }
+    evidence["environments"][0]["captured_at"] = evidence["soak_test"]["started_at"]
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "capacity reports must contain each profile exactly once" in result["errors"]
+    assert "capacity hardware environment mismatch: lite" in result["errors"]
+    assert "capacity started before environment capture: lite" in result["errors"]
+
+
 def test_cost_or_integrity_failure_holds():
     evidence = _complete_evidence()
     evidence["cost_guardrails"]["overage_unbounded"] = True
@@ -323,9 +416,9 @@ def test_stale_or_cross_release_integrity_evidence_cannot_pass():
 
 def test_environment_cannot_claim_isolation_without_measured_evidence():
     evidence = _complete_evidence()
-    evidence["environment"]["status"] = "HOLD"
-    evidence["environment"]["co_resident_enclave_projects"] = ["enclave"]
+    evidence["environments"][0]["status"] = "HOLD"
+    evidence["environments"][0]["co_resident_enclave_projects"] = ["enclave"]
     result = evaluate_p5_capacity_evidence(evidence)
     assert result["status"] == "HOLD"
-    assert "environment evidence must be PASS" in result["errors"]
-    assert "environment contains co-resident Enclave projects" in result["errors"]
+    assert "environment[0] must be PASS" in result["errors"]
+    assert "environment[0] contains co-resident projects" in result["errors"]

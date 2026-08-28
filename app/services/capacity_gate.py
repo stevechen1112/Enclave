@@ -14,7 +14,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from app.services.hardware_inventory import hardware_shortfalls
+from app.services.hardware_inventory import (
+    hardware_boundary_errors,
+    hardware_shortfalls,
+)
+from app.services.p5_evidence_binding import runtime_identity_matches_environment
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SPEC_PATH = ROOT / "config" / "capacity_profiles.json"
@@ -44,6 +48,20 @@ def capacity_spec_sha256(spec: dict[str, Any]) -> str:
 
 def validate_capacity_spec(spec: dict[str, Any]) -> None:
     errors: list[str] = []
+
+    def numeric(
+        value: Any, field: str, *, minimum: float = 0, strict: bool = True
+    ) -> float:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            errors.append(f"{field} must be numeric")
+            return float("-inf")
+        if (strict and parsed <= minimum) or (not strict and parsed < minimum):
+            operator = "greater than" if strict else "at least"
+            errors.append(f"{field} must be {operator} {minimum:g}")
+        return parsed
+
     if spec.get("schema_version") != 1:
         errors.append("schema_version must be 1")
     profiles = spec.get("profiles")
@@ -65,8 +83,57 @@ def validate_capacity_spec(spec: dict[str, Any]) -> None:
             "ingest_jobs_per_hour",
             "media_hours_per_day",
         ):
-            if float(peak.get(field, 0) or 0) <= 0:
-                errors.append(f"profile {name} expected_peak.{field} must be positive")
+            numeric(peak.get(field), f"profile {name} expected_peak.{field}")
+        hardware = profile.get("hardware", {})
+        for field in ("cpu_cores", "ram_gb", "disk_gb"):
+            numeric(hardware.get(field), f"profile {name} hardware.{field}")
+        numeric(
+            hardware.get("gpu_vram_gb"),
+            f"profile {name} hardware.gpu_vram_gb",
+            strict=False,
+        )
+        slo = profile.get("slo", {})
+        availability = numeric(
+            slo.get("availability"), f"profile {name} slo.availability"
+        )
+        error_rate = numeric(
+            slo.get("api_error_rate"),
+            f"profile {name} slo.api_error_rate",
+            strict=False,
+        )
+        if availability > 1:
+            errors.append(f"profile {name} slo.availability cannot exceed 1")
+        if error_rate >= 1:
+            errors.append(f"profile {name} slo.api_error_rate must be less than 1")
+        for field in (
+            "search_p95_ms",
+            "chat_p95_ms",
+            "upload_p95_ms",
+            "ingest_lag_p95_seconds",
+        ):
+            numeric(slo.get(field), f"profile {name} slo.{field}")
+        limits = profile.get("resource_limits", {})
+        for field in (
+            "cpu_percent",
+            "memory_percent",
+            "db_pool_percent",
+            "redis_memory_percent",
+        ):
+            value = numeric(limits.get(field), f"profile {name} resource_limits.{field}")
+            if value > 100:
+                errors.append(
+                    f"profile {name} resource_limits.{field} cannot exceed 100"
+                )
+        numeric(limits.get("queue_depth"), f"profile {name} resource_limits.queue_depth")
+        provider_error_rate = numeric(
+            limits.get("provider_error_rate"),
+            f"profile {name} resource_limits.provider_error_rate",
+            strict=False,
+        )
+        if provider_error_rate >= 1:
+            errors.append(
+                f"profile {name} resource_limits.provider_error_rate must be less than 1"
+            )
     for field in (
         "required_scenarios",
         "required_telemetry",
@@ -81,16 +148,44 @@ def validate_capacity_spec(spec: dict[str, Any]) -> None:
             errors.append(f"{field} must be a non-empty unique list")
     costs = spec.get("cost_units", {})
     for field in ("storage_gb_month", "audio_hour", "video_hour", "queries_1000"):
-        if float(costs.get(field, 0) or 0) <= 0:
-            errors.append(f"cost_units.{field} must be positive")
+        numeric(costs.get(field), f"cost_units.{field}")
     policy = spec.get("test_policy", {})
-    if float(policy.get("peak_multiplier", 0) or 0) < 2:
+    if numeric(policy.get("peak_multiplier"), "test_policy.peak_multiplier") < 2:
         errors.append("test_policy.peak_multiplier must be at least 2")
-    if int(policy.get("soak_min_duration_seconds", 0) or 0) < 72 * 60 * 60:
+    if numeric(
+        policy.get("capacity_min_duration_seconds"),
+        "test_policy.capacity_min_duration_seconds",
+    ) < 900:
+        errors.append("test_policy.capacity_min_duration_seconds must be at least 900")
+    if numeric(
+        policy.get("capacity_min_samples"), "test_policy.capacity_min_samples"
+    ) < 15:
+        errors.append("test_policy.capacity_min_samples must be at least 15")
+    if numeric(
+        policy.get("soak_min_duration_seconds"),
+        "test_policy.soak_min_duration_seconds",
+    ) < 72 * 60 * 60:
         errors.append("test_policy.soak_min_duration_seconds must be at least 72 hours")
-    ratio = float(policy.get("soak_min_sample_ratio", 0) or 0)
+    interval = numeric(
+        policy.get("telemetry_sample_interval_seconds"),
+        "test_policy.telemetry_sample_interval_seconds",
+    )
+    if interval > 300:
+        errors.append(
+            "test_policy.telemetry_sample_interval_seconds cannot exceed 300"
+        )
+    ratio = numeric(
+        policy.get("soak_min_sample_ratio"), "test_policy.soak_min_sample_ratio"
+    )
     if not 0 < ratio <= 1:
         errors.append("test_policy.soak_min_sample_ratio must be in (0, 1]")
+    numeric(
+        policy.get("max_memory_growth_percent"),
+        "test_policy.max_memory_growth_percent",
+        strict=False,
+    )
+    for field in ("max_db_pool_exhaustion_events", "max_unrecoverable_backlog"):
+        numeric(policy.get(field), f"test_policy.{field}", strict=False)
     if errors:
         raise CapacitySpecError("; ".join(errors))
 
@@ -161,48 +256,75 @@ def evaluate_p5_capacity_evidence(
 
     spec = spec or load_capacity_spec()
     errors: list[str] = []
-    if evidence.get("schema_version") != 1:
-        errors.append("evidence schema_version must be 1")
+    if evidence.get("schema_version") != 2:
+        errors.append("evidence schema_version must be 2")
     if evidence.get("gate") != "P5-CAPACITY":
         errors.append("evidence gate must be P5-CAPACITY")
     expected_hash = capacity_spec_sha256(spec)
     if evidence.get("capacity_spec_sha256") != expected_hash:
         errors.append("capacity specification hash mismatch")
-    environment = evidence.get("environment", {})
-    if environment.get("status") != "PASS":
-        errors.append("environment evidence must be PASS")
-    if environment.get("execution_class") != "live":
-        errors.append("environment evidence must be live")
-    if environment.get("isolated_staging") is not True:
-        errors.append("tests must run in isolated staging")
-    if not str(environment.get("compose_project") or "").strip():
-        errors.append("environment Compose project is required")
-    if environment.get("co_resident_enclave_projects") != []:
-        errors.append("environment contains co-resident Enclave projects")
-    if len(str(environment.get("artifact_sha256") or "")) != 64:
-        errors.append("environment artifact hash is required")
-    environment_captured = _parse_timestamp(
-        environment.get("captured_at"), "environment.captured_at", errors
-    )
-    if environment_captured and environment_captured > datetime.now(timezone.utc):
-        errors.append("environment capture timestamp is in the future")
-    source_commit = str(environment.get("source_commit") or "")
-    if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
-        errors.append("source commit must be a full lowercase Git SHA")
-    runtime_images = environment.get("runtime_images")
-    if not isinstance(runtime_images, dict) or not runtime_images:
-        errors.append("runtime image identities are required")
-    elif any(
-        len(
-            str(
-                value.get("image_id") if isinstance(value, dict) else value
-                or ""
-            )
+    environments = evidence.get("environments")
+    if not isinstance(environments, list) or not environments:
+        errors.append("environments must be a non-empty list")
+        environments = []
+    environment_by_hash: dict[str, dict[str, Any]] = {}
+    source_commits: set[str] = set()
+    for index, environment in enumerate(environments):
+        if not isinstance(environment, dict):
+            errors.append(f"environment[{index}] must be an object")
+            continue
+        artifact_hash = str(environment.get("artifact_sha256") or "")
+        if not re.fullmatch(r"[0-9a-f]{64}", artifact_hash):
+            errors.append(f"environment[{index}] artifact hash is invalid")
+        elif artifact_hash in environment_by_hash:
+            errors.append("environment artifact hashes must be unique")
+        else:
+            environment_by_hash[artifact_hash] = environment
+        if environment.get("status") != "PASS":
+            errors.append(f"environment[{index}] must be PASS")
+        if environment.get("execution_class") != "live":
+            errors.append(f"environment[{index}] must be live")
+        if environment.get("isolated_staging") is not True:
+            errors.append(f"environment[{index}] must be isolated staging")
+        if environment.get("co_resident_enclave_projects") != []:
+            errors.append(f"environment[{index}] contains co-resident projects")
+        commit = str(environment.get("source_commit") or "")
+        if re.fullmatch(r"[0-9a-f]{40}", commit):
+            source_commits.add(commit)
+        else:
+            errors.append(f"environment[{index}] source commit is invalid")
+        captured = _parse_timestamp(
+            environment.get("captured_at"), f"environment[{index}].captured_at", errors
         )
-        < 12
-        for value in runtime_images.values()
-    ):
-        errors.append("runtime image identities are incomplete")
+        if captured and captured > datetime.now(timezone.utc):
+            errors.append(f"environment[{index}] capture timestamp is in the future")
+        hardware = environment.get("observed_hardware", {})
+        if not isinstance(hardware, dict) or any(
+            field not in hardware
+            for field in ("cpu_cores", "ram_gb", "disk_gb", "gpu_vram_gb")
+        ):
+            errors.append(f"environment[{index}] hardware inventory is incomplete")
+        runtime_images = environment.get("runtime_images")
+        if not isinstance(runtime_images, dict) or not runtime_images or any(
+            not isinstance(value, dict)
+            or not str(value.get("container") or "").strip()
+            or not str(value.get("container_id") or "").strip()
+            or len(str(value.get("image_id") or "")) < 12
+            for value in (runtime_images or {}).values()
+        ):
+            errors.append(f"environment[{index}] runtime images are incomplete")
+    source_commit = next(iter(source_commits), "")
+    if len(source_commits) != 1:
+        errors.append("all P5 environments must use one source commit")
+
+    def bound_environment(artifact_hash: Any, section: str) -> dict[str, Any]:
+        environment = environment_by_hash.get(str(artifact_hash or ""))
+        if environment is None:
+            errors.append(f"{section} references an unknown environment artifact")
+            return {}
+        return environment
+    campaign_tenants: set[str] = set()
+    campaign_completions: list[datetime] = []
 
     policy = spec["test_policy"]
     reports = evidence.get("capacity_reports")
@@ -217,39 +339,64 @@ def evaluate_p5_capacity_evidence(
     missing_profiles = sorted(set(PROFILE_NAMES) - set(by_profile))
     if missing_profiles:
         errors.append(f"missing capacity reports: {', '.join(missing_profiles)}")
+    if len(reports) != len(PROFILE_NAMES) or len(by_profile) != len(reports):
+        errors.append("capacity reports must contain each profile exactly once")
     for profile_name in PROFILE_NAMES:
         row = by_profile.get(profile_name)
         if row is None:
             continue
+        report_environment = bound_environment(
+            row.get("environment_artifact_sha256"), f"capacity.{profile_name}"
+        )
+        environment_captured = _parse_timestamp(
+            report_environment.get("captured_at"),
+            f"capacity.{profile_name}.environment.captured_at",
+            errors,
+        ) if report_environment else None
+        environment_hardware = report_environment.get("observed_hardware", {})
         if row.get("status") != "PASS" or row.get("execution_class") != "live":
             errors.append(f"capacity report must be live PASS: {profile_name}")
         if row.get("capacity_spec_sha256") != expected_hash:
             errors.append(f"capacity report specification mismatch: {profile_name}")
         if row.get("source_commit") != source_commit:
             errors.append(f"capacity report source commit mismatch: {profile_name}")
-        if row.get("compose_project") != environment.get("compose_project"):
+        if row.get("compose_project") != report_environment.get("compose_project"):
             errors.append(f"capacity report Compose project mismatch: {profile_name}")
         metrics_identity = row.get("metrics_container_identity", {})
         if (
             metrics_identity.get("compose_project")
-            != environment.get("compose_project")
+            != report_environment.get("compose_project")
             or metrics_identity.get("running") is not True
+            or not str(metrics_identity.get("container_id") or "").strip()
             or not str(metrics_identity.get("compose_service") or "").strip()
             or not str(metrics_identity.get("image_id") or "").strip()
         ):
             errors.append(
                 f"capacity metrics container identity is incomplete: {profile_name}"
             )
+        elif not runtime_identity_matches_environment(
+            report_environment, metrics_identity
+        ):
+            errors.append(
+                f"capacity metrics runtime image mismatch: {profile_name}"
+            )
         backend_identity = row.get("backend_container_identity", {})
         if (
             backend_identity.get("compose_project")
-            != environment.get("compose_project")
+            != report_environment.get("compose_project")
             or backend_identity.get("running") is not True
+            or not str(backend_identity.get("container_id") or "").strip()
             or not str(backend_identity.get("compose_service") or "").strip()
             or not str(backend_identity.get("image_id") or "").strip()
         ):
             errors.append(
                 f"capacity backend container identity is incomplete: {profile_name}"
+            )
+        elif not runtime_identity_matches_environment(
+            report_environment, backend_identity
+        ):
+            errors.append(
+                f"capacity backend runtime image mismatch: {profile_name}"
             )
         raw_artifacts = row.get("raw_artifacts", {})
         for artifact_name in ("locust_stats_sha256", "telemetry_sha256"):
@@ -271,6 +418,11 @@ def evaluate_p5_capacity_evidence(
             elapsed = (completed - started).total_seconds()
             if elapsed < duration or completed > datetime.now(timezone.utc):
                 errors.append(f"capacity timestamps are inconsistent: {profile_name}")
+            if environment_captured and started < environment_captured:
+                errors.append(
+                    f"capacity started before environment capture: {profile_name}"
+                )
+            campaign_completions.append(completed)
         target = profile_load_target(spec, profile_name)
         hardware_errors = hardware_shortfalls(
             row.get("observed_hardware", {}),
@@ -281,6 +433,17 @@ def evaluate_p5_capacity_evidence(
                 f"capacity host does not qualify for {profile_name}: "
                 + "; ".join(hardware_errors)
             )
+        boundary_errors = hardware_boundary_errors(
+            row.get("observed_hardware", {}),
+            spec["profiles"][profile_name]["hardware"],
+        )
+        if boundary_errors:
+            errors.append(
+                f"capacity host is outside {profile_name} boundary: "
+                + "; ".join(boundary_errors)
+            )
+        if row.get("observed_hardware") != environment_hardware:
+            errors.append(f"capacity hardware environment mismatch: {profile_name}")
         achieved = row.get("achieved_load", {})
         for field in ("concurrent_users", "requests_per_minute"):
             if float(achieved.get(field, 0) or 0) < float(target[field]):
@@ -346,6 +509,9 @@ def evaluate_p5_capacity_evidence(
                     f"capacity integrity check did not pass: {profile_name}.{field}"
                 )
         grounding = row.get("grounding_evidence", {})
+        grounding_tenant = str(grounding.get("tenant_id") or "").strip()
+        if grounding_tenant:
+            campaign_tenants.add(grounding_tenant)
         if (
             grounding.get("status") != "PASS"
             or grounding.get("execution_class") != "live"
@@ -361,24 +527,37 @@ def evaluate_p5_capacity_evidence(
             errors.append(f"grounded retrieval proof is incomplete: {profile_name}")
 
     soak = evidence.get("soak_test", {})
+    soak_environment = bound_environment(
+        soak.get("environment_artifact_sha256"), "soak"
+    )
+    soak_environment_captured = _parse_timestamp(
+        soak_environment.get("captured_at"),
+        "soak.environment.captured_at",
+        errors,
+    ) if soak_environment else None
+    soak_environment_hardware = soak_environment.get("observed_hardware", {})
     if soak.get("status") != "PASS" or soak.get("execution_class") != "live":
         errors.append("72-hour soak must be a live PASS")
     if soak.get("capacity_spec_sha256") != expected_hash:
         errors.append("soak capacity specification mismatch")
     if soak.get("source_commit") != source_commit:
         errors.append("soak source commit mismatch")
-    if soak.get("compose_project") != environment.get("compose_project"):
+    if soak.get("compose_project") != soak_environment.get("compose_project"):
         errors.append("soak Compose project mismatch")
     if soak.get("telemetry_integrity", {}).get("status") != "PASS":
         errors.append("soak telemetry integrity did not pass")
     metrics_identity = soak.get("metrics_container_identity", {})
     if (
-        metrics_identity.get("compose_project") != environment.get("compose_project")
+        metrics_identity.get("compose_project")
+        != soak_environment.get("compose_project")
         or metrics_identity.get("running") is not True
+        or not str(metrics_identity.get("container_id") or "").strip()
         or not str(metrics_identity.get("compose_service") or "").strip()
         or not str(metrics_identity.get("image_id") or "").strip()
     ):
         errors.append("soak metrics container identity is incomplete")
+    elif not runtime_identity_matches_environment(soak_environment, metrics_identity):
+        errors.append("soak metrics runtime image mismatch")
     soak_started = _parse_timestamp(
         soak.get("started_at"), "soak_test.started_at", errors
     )
@@ -403,6 +582,9 @@ def evaluate_p5_capacity_evidence(
             errors.append("soak timestamps do not prove the reported duration")
         if soak_completed > datetime.now(timezone.utc):
             errors.append("soak completion timestamp is in the future")
+        if soak_environment_captured and soak_started < soak_environment_captured:
+            errors.append("soak started before environment capture")
+        campaign_completions.append(soak_completed)
     interval = int(policy["telemetry_sample_interval_seconds"])
     min_samples = math.ceil(
         (required_duration / interval) * float(policy["soak_min_sample_ratio"])
@@ -435,6 +617,17 @@ def evaluate_p5_capacity_evidence(
             errors.append(
                 "soak host does not qualify for profile: " + "; ".join(hardware_errors)
             )
+        if soak.get("observed_hardware") != soak_environment_hardware:
+            errors.append("soak hardware environment mismatch")
+        boundary_errors = hardware_boundary_errors(
+            soak.get("observed_hardware", {}),
+            spec["profiles"][soak_profile]["hardware"],
+        )
+        if boundary_errors:
+            errors.append(
+                "soak host is outside Standard boundary: "
+                + "; ".join(boundary_errors)
+            )
         achieved = soak.get("achieved_load", {})
         if int(achieved.get("concurrent_users", 0) or 0) < int(
             peak["concurrent_users"]
@@ -452,6 +645,9 @@ def evaluate_p5_capacity_evidence(
         errors=errors,
     )
     soak_grounding = soak.get("grounding_evidence", {})
+    soak_tenant = str(soak_grounding.get("tenant_id") or "").strip()
+    if soak_tenant:
+        campaign_tenants.add(soak_tenant)
     if (
         soak_grounding.get("status") != "PASS"
         or soak_grounding.get("execution_class") != "live"
@@ -466,12 +662,50 @@ def evaluate_p5_capacity_evidence(
         errors.append("soak grounded retrieval proof is incomplete")
 
     cost = evidence.get("cost_guardrails", {})
+    cost_environment = bound_environment(
+        cost.get("environment_artifact_sha256"), "cost_guardrails"
+    )
+    cost_environment_captured = _parse_timestamp(
+        cost_environment.get("captured_at"),
+        "cost_guardrails.environment.captured_at",
+        errors,
+    ) if cost_environment else None
     if cost.get("status") != "PASS" or cost.get("overage_unbounded") is not False:
         errors.append("cost guardrails did not fail closed")
     if cost.get("execution_class") != "live":
         errors.append("cost guardrails require live execution")
+    if cost.get("source_commit") != source_commit:
+        errors.append("cost guardrail source commit mismatch")
+    if cost.get("compose_project") != cost_environment.get("compose_project"):
+        errors.append("cost guardrail Compose project mismatch")
+    cost_identity = cost.get("runtime_container_identity", {})
+    if (
+        cost_identity.get("compose_project")
+        != cost_environment.get("compose_project")
+        or cost_identity.get("running") is not True
+        or not str(cost_identity.get("container_id") or "").strip()
+        or not str(cost_identity.get("compose_service") or "").strip()
+    ):
+        errors.append("cost guardrail runtime identity is incomplete")
+    elif not runtime_identity_matches_environment(cost_environment, cost_identity):
+        errors.append("cost guardrail runtime image mismatch")
+    cost_tenant = str(cost.get("tenant_id") or "").strip()
+    if cost_tenant:
+        campaign_tenants.add(cost_tenant)
     if len(str(cost.get("artifact_sha256") or "")) != 64:
         errors.append("cost guardrail artifact hash is missing")
+    cost_started = _parse_timestamp(
+        cost.get("started_at"), "cost_guardrails.started_at", errors
+    )
+    cost_completed = _parse_timestamp(
+        cost.get("completed_at"), "cost_guardrails.completed_at", errors
+    )
+    if cost_started and cost_completed:
+        if cost_completed < cost_started or cost_completed > datetime.now(timezone.utc):
+            errors.append("cost guardrail timestamps are inconsistent")
+        if cost_environment_captured and cost_started < cost_environment_captured:
+            errors.append("cost guardrail started before environment capture")
+        campaign_completions.append(cost_completed)
     _require_complete_rows(
         cost.get("unit_reports"),
         set(spec["cost_units"]),
@@ -491,8 +725,23 @@ def evaluate_p5_capacity_evidence(
         for row in evidence.get("degradation_tests", [])
         if isinstance(row, dict)
     }
+    degradation_list = evidence.get("degradation_tests", [])
+    if (
+        not isinstance(degradation_list, list)
+        or len(degradation_list) != len(spec["required_degradation_scenarios"])
+        or len(degradation_rows) != len(degradation_list)
+    ):
+        errors.append("degradation tests must contain each scenario exactly once")
     for scenario in spec["required_degradation_scenarios"]:
         row = degradation_rows.get(scenario, {})
+        degradation_environment = bound_environment(
+            row.get("environment_artifact_sha256"), f"degradation.{scenario}"
+        )
+        degradation_environment_captured = _parse_timestamp(
+            degradation_environment.get("captured_at"),
+            f"degradation.{scenario}.environment.captured_at",
+            errors,
+        ) if degradation_environment else None
         if row.get("status") != "PASS":
             errors.append(f"degradation test did not pass: {scenario}")
         if row.get("execution_class") != "live":
@@ -501,15 +750,34 @@ def evaluate_p5_capacity_evidence(
             errors.append(f"degradation artifact hash is missing: {scenario}")
         if row.get("source_commit") != source_commit:
             errors.append(f"degradation source commit mismatch: {scenario}")
-        if row.get("compose_project") != environment.get("compose_project"):
-            errors.append(f"degradation compose project mismatch: {scenario}")
-        if (
-            row.get("environment_artifact_sha256")
-            != environment.get("artifact_sha256")
+        if row.get("compose_project") != degradation_environment.get(
+            "compose_project"
         ):
-            errors.append(f"degradation environment mismatch: {scenario}")
+            errors.append(f"degradation compose project mismatch: {scenario}")
         if not str(row.get("tenant_id") or "").strip():
             errors.append(f"degradation tenant binding is missing: {scenario}")
+        else:
+            campaign_tenants.add(str(row["tenant_id"]).strip())
+        degradation_started = _parse_timestamp(
+            row.get("started_at"), f"{scenario}.started_at", errors
+        )
+        degradation_completed = _parse_timestamp(
+            row.get("completed_at"), f"{scenario}.completed_at", errors
+        )
+        if degradation_started and degradation_completed:
+            if (
+                degradation_completed < degradation_started
+                or degradation_completed > datetime.now(timezone.utc)
+            ):
+                errors.append(f"degradation timestamps are inconsistent: {scenario}")
+            if (
+                degradation_environment_captured
+                and degradation_started < degradation_environment_captured
+            ):
+                errors.append(
+                    f"degradation started before environment capture: {scenario}"
+                )
+            campaign_completions.append(degradation_completed)
         if (
             row.get("data_loss", -1) != 0
             or row.get("false_completion", -1) != 0
@@ -517,6 +785,8 @@ def evaluate_p5_capacity_evidence(
             or row.get("recovered") is not True
         ):
             errors.append(f"degradation safety failure: {scenario}")
+    if len(campaign_tenants) != 1:
+        errors.append("P5 evidence is not bound to one dedicated tenant")
     if not evidence.get("operator"):
         errors.append("operator is required")
     gate_completed = _parse_timestamp(
@@ -524,4 +794,8 @@ def evaluate_p5_capacity_evidence(
     )
     if gate_completed and gate_completed > datetime.now(timezone.utc):
         errors.append("evidence completion timestamp is in the future")
+    if gate_completed and campaign_completions and gate_completed < max(
+        campaign_completions
+    ):
+        errors.append("evidence completion timestamp predates campaign artifacts")
     return {"status": "PASS" if not errors else "HOLD", "errors": errors}

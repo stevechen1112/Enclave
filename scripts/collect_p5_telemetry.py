@@ -91,11 +91,43 @@ def _docker_stats(
             timeout=30,
             check=False,
         )
+        inspection = subprocess.run(
+            ["docker", "inspect", *names],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return [], str(exc)
     if result.returncode != 0:
         return [], result.stderr.strip() or "docker stats failed"
-    return parse_docker_stats(result.stdout), None
+    if inspection.returncode != 0:
+        return [], inspection.stderr.strip() or "docker inspect failed"
+    try:
+        inspected = json.loads(inspection.stdout)
+        identities = {
+            str(row.get("Name") or "").lstrip("/"): {
+                "container_id": str(row.get("Id") or ""),
+                "image_id": str(row.get("Image") or ""),
+            }
+            for row in inspected
+            if isinstance(row, dict)
+            and ((row.get("Config") or {}).get("Labels") or {}).get(
+                "com.docker.compose.project"
+            )
+            == project
+        }
+    except (AttributeError, TypeError, json.JSONDecodeError) as exc:
+        return [], f"docker inspect returned invalid JSON: {exc}"
+    rows = parse_docker_stats(result.stdout)
+    if len(identities) != len(names) or any(
+        str(row.get("name") or "") not in identities for row in rows
+    ):
+        return [], "Docker stats identity inventory is incomplete"
+    for row in rows:
+        row.update(identities[str(row["name"])])
+    return rows, None
 
 
 def _internal_metrics(container: str) -> str:

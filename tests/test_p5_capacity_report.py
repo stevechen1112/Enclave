@@ -39,7 +39,15 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
             "provider_count": 0,
             "provider_error_count": 0,
         },
-        "containers": [{"cpu_percent": 10, "memory_percent": 10}],
+        "containers": [
+            {
+                "name": "enclave-p5-web-1",
+                "container_id": "web-container-id",
+                "image_id": "sha256:" + "b" * 64,
+                "cpu_percent": 10,
+                "memory_percent": 10,
+            }
+        ],
         "gpus": [],
     }
     telemetry.write_text(json.dumps(sample) + "\n", encoding="utf-8")
@@ -90,6 +98,7 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
         compose_project="enclave-p5",
         metrics_container_identity={
             "container": "enclave-p5-web-1",
+            "container_id": "web-container-id",
             "compose_project": "enclave-p5",
             "compose_service": "web",
             "running": True,
@@ -97,12 +106,26 @@ def test_report_fails_closed_when_required_workload_or_provider_metric_is_missin
         },
         backend_container_identity={
             "container": "enclave-p5-worker-1",
+            "container_id": "worker-container-id",
             "compose_project": "enclave-p5",
             "compose_service": "worker",
             "running": True,
             "image_id": "sha256:" + "b" * 64,
         },
         telemetry_interval_seconds=60,
+        environment_artifact_sha256="e" * 64,
+        expected_runtime_images={
+            "web": {
+                "container": "enclave-p5-web-1",
+                "container_id": "web-container-id",
+                "image_id": "sha256:" + "b" * 64,
+            },
+            "worker": {
+                "container": "enclave-p5-worker-1",
+                "container_id": "worker-container-id",
+                "image_id": "sha256:" + "b" * 64,
+            },
+        },
     )
     assert report["status"] == "FAIL"
     assert (

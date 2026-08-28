@@ -28,11 +28,19 @@ COMPOSE_PROJECT = "enclave-p5-dedicated"
 def _environment() -> dict:
     return {
         "status": "PASS",
+        "execution_class": "live",
         "isolated_staging": True,
         "co_resident_enclave_projects": [],
         "source_commit": SOURCE_COMMIT,
         "compose_project": COMPOSE_PROJECT,
         "artifact_sha256": "e" * 64,
+        "runtime_images": {
+            "web": {
+                "container": "enclave-p5-web-1",
+                "container_id": "web-container-id",
+                "image_id": "sha256:" + "b" * 64,
+            }
+        },
     }
 
 
@@ -51,6 +59,8 @@ p=argparse.ArgumentParser()
 p.add_argument('--p5-scenario', required=True)
 p.add_argument('--p5-step', required=True)
 p.add_argument('--source-commit', required=True)
+p.add_argument('--compose-project', required=True)
+p.add_argument('--tenant-id', required=True)
 p.add_argument('--probe-exit', type=int, default=0)
 p.add_argument('--false-completion', type=int, default=0)
 p.add_argument('--integrity-script', required=True)
@@ -78,6 +88,10 @@ raise SystemExit(a.probe_exit if a.p5_step == 'probe' else 0)
             step,
             "--source-commit",
             SOURCE_COMMIT,
+            "--compose-project",
+            COMPOSE_PROJECT,
+            "--tenant-id",
+            "tenant-test",
             "--integrity-script",
             str(integrity),
         ]
@@ -101,6 +115,8 @@ raise SystemExit(a.probe_exit if a.p5_step == 'probe' else 0)
         "scenario": scenario,
         "source_commit": SOURCE_COMMIT,
         "compose_project": COMPOSE_PROJECT,
+        "tenant_id": "tenant-test",
+        "environment_artifact_sha256": "e" * 64,
         "commands": commands,
     }
 
@@ -204,6 +220,24 @@ def test_degradation_runner_rejects_integrity_probe_hash_mismatch(tmp_path):
         module.execute_plan(plan, timeout=5, environment=_environment())
 
 
+def test_degradation_runner_rejects_tenant_or_environment_plan_tampering(tmp_path):
+    module = _load_script("run_p5_degradation.py")
+    plan = _driver_plan(module, tmp_path, "provider_slow")
+    plan["tenant_id"] = "other-tenant"
+    with pytest.raises(ValueError, match="invalid --tenant-id"):
+        module.execute_plan(plan, timeout=5, environment=_environment())
+
+    plan = _driver_plan(module, tmp_path, "provider_slow")
+    plan["environment_artifact_sha256"] = "f" * 64
+    with pytest.raises(ValueError, match="environment artifact mismatch"):
+        module.execute_plan(plan, timeout=5, environment=_environment())
+
+    plan = _driver_plan(module, tmp_path, "provider_slow")
+    plan["commands"]["probe"]["argv"] += ["--tenant-id", "other-tenant"]
+    with pytest.raises(ValueError, match="exactly one --tenant-id"):
+        module.execute_plan(plan, timeout=5, environment=_environment())
+
+
 def test_assembler_uses_authoritative_spec_and_does_not_claim_pass():
     module = _load_script("assemble_p5_evidence.py")
     evidence = module.assemble_evidence(
@@ -211,11 +245,13 @@ def test_assembler_uses_authoritative_spec_and_does_not_claim_pass():
         soak_report={"status": "NOT_RUN"},
         cost_report={"status": "NOT_RUN"},
         degradation_reports=[],
-        environment={
-            "isolated_staging": False,
-            "source_commit": "a" * 40,
-            "runtime_images": {"web": {"image_id": "sha256:abc"}},
-        },
+        environments=[
+            {
+                "isolated_staging": False,
+                "source_commit": "a" * 40,
+                "runtime_images": {"web": {"image_id": "sha256:abc"}},
+            }
+        ],
         operator="test",
     )
     assert evidence["capacity_spec_sha256"]
@@ -223,4 +259,4 @@ def test_assembler_uses_authoritative_spec_and_does_not_claim_pass():
         load_capacity_spec()
     )
     assert module.evaluate_p5_capacity_evidence(evidence)["status"] == "HOLD"
-    assert evidence["environment"]["isolated_staging"] is False
+    assert evidence["environments"][0]["isolated_staging"] is False

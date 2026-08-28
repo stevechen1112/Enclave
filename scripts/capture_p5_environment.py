@@ -46,6 +46,7 @@ def _container_image(container: str) -> dict[str, str]:
         raise ValueError(f"runtime container is not running: {container}")
     return {
         "container": container,
+        "container_id": str(row.get("Id") or ""),
         "configured_image": str((row.get("Config") or {}).get("Image") or ""),
         "image_id": str(row.get("Image") or ""),
     }

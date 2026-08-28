@@ -21,7 +21,13 @@ from app.services.hardware_inventory import (
     co_resident_enclave_projects,
     compose_container_identity,
     detect_hardware,
+    hardware_boundary_errors,
     hardware_shortfalls,
+)
+from app.services.p5_evidence_binding import (
+    load_environment_evidence,
+    require_environment_binding,
+    runtime_identity_matches_environment,
 )
 from app.services.soak_report import build_soak_report
 
@@ -59,6 +65,7 @@ def main() -> int:
     parser.add_argument("--video-fixture", type=Path, required=True)
     parser.add_argument("--credentials", type=Path, required=True)
     parser.add_argument("--grounding-evidence", type=Path, required=True)
+    parser.add_argument("--environment-evidence", type=Path, required=True)
     parser.add_argument("--metrics-container", required=True)
     parser.add_argument("--compose-project", required=True)
     parser.add_argument("--duration-seconds", type=int, default=259200)
@@ -82,6 +89,14 @@ def main() -> int:
     )
     if shortfalls:
         parser.error("host does not qualify for profile: " + "; ".join(shortfalls))
+    boundary_errors = hardware_boundary_errors(
+        observed_hardware, spec["profiles"][args.profile]["hardware"]
+    )
+    if boundary_errors:
+        parser.error(
+            "host is outside the formal profile boundary: "
+            + "; ".join(boundary_errors)
+        )
     co_resident = co_resident_enclave_projects(args.compose_project)
     if co_resident:
         parser.error(
@@ -100,6 +115,7 @@ def main() -> int:
         args.video_fixture,
         args.credentials,
         args.grounding_evidence,
+        args.environment_evidence,
     ):
         if not path.is_file():
             parser.error(f"missing fixture: {path}")
@@ -116,6 +132,19 @@ def main() -> int:
         or not str(grounding.get("tenant_id") or "").strip()
     ):
         parser.error("grounding evidence is not a complete live PASS")
+    try:
+        environment_evidence = load_environment_evidence(args.environment_evidence)
+        require_environment_binding(
+            environment_evidence,
+            source_commit=str(grounding["source_commit"]),
+            compose_project=args.compose_project,
+        )
+    except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        parser.error(f"environment evidence binding failed: {exc}")
+    if environment_evidence.get("observed_hardware") != observed_hardware:
+        parser.error("soak host hardware does not match environment evidence")
+    if not runtime_identity_matches_environment(environment_evidence, metrics_identity):
+        parser.error("soak runtime image does not match environment evidence")
     environment = os.environ.copy()
     for name in (
         "LOAD_TEST_USER_PASSWORD",
@@ -301,6 +330,10 @@ def main() -> int:
         source_commit=str(grounding["source_commit"]),
         compose_project=args.compose_project,
         metrics_container_identity=metrics_identity,
+        environment_artifact_sha256=str(
+            environment_evidence["artifact_sha256"]
+        ),
+        expected_runtime_images=dict(environment_evidence["runtime_images"]),
         locust_stats_path=Path(str(prefix) + "_stats.csv"),
         telemetry_path=telemetry,
         locust_exit_code=load_exit,

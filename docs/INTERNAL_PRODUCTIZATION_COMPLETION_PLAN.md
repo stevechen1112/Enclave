@@ -222,7 +222,9 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 **2026-08-28 狀態：** IN PROGRESS／ENVIRONMENT HOLD。容量 profile、2× load
 runner、grounded retrieval、即時 telemetry、live ingestion／tenant isolation
 reconciliation、成本報表與 quota guardrail，以及 fail-closed evidence gate 已完成；
-P5 程式回歸通過。正式 capacity／degradation／72 小時 soak 不得在目前與 production
+P5 evidence schema v2 已將三種 profile 分別綁定 profile-sized environment，並逐樣本
+驗證 container instance／image identity；100 項 P5 程式回歸通過。正式
+capacity／degradation／72 小時 soak 不得在目前與 production
 共用的 4C／8GB Docker host 執行，runner 與 environment capture 已會自動拒絕該
 環境。待取得無其他 Enclave project 的獨立 Lite／Standard／Enterprise 資源後，
 完成三份 15 分鐘 2× capacity report、四種 live degradation、Standard 72 小時
