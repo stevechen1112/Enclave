@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import UTC, datetime
@@ -25,6 +26,14 @@ def _read_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise TypeError(f"artifact must contain a JSON object: {path}")
     return value
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def assemble_evidence(
@@ -68,6 +77,7 @@ def main() -> int:
         parser.error("--confirm-isolated-staging is required")
     try:
         environment = _read_object(args.environment_evidence)
+        environment["artifact_sha256"] = _sha256(args.environment_evidence)
         evidence = assemble_evidence(
             capacity_reports=[_read_object(path) for path in args.capacity_report],
             soak_report=_read_object(args.soak_report),

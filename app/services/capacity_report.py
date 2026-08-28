@@ -198,6 +198,8 @@ def build_capacity_report(
         and load_passed
         and all(row["status"] == "PASS" for row in scenarios)
         and all(row["status"] == "PASS" for row in telemetry)
+        and telemetry_summary["health_failures"] == 0
+        and telemetry_summary["metrics_failures"] == 0
         and all(
             int(integrity.get(field, -1)) == 0
             for field in (

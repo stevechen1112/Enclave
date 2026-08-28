@@ -168,12 +168,28 @@ def evaluate_p5_capacity_evidence(
     expected_hash = capacity_spec_sha256(spec)
     if evidence.get("capacity_spec_sha256") != expected_hash:
         errors.append("capacity specification hash mismatch")
-    if evidence.get("environment", {}).get("isolated_staging") is not True:
+    environment = evidence.get("environment", {})
+    if environment.get("status") != "PASS":
+        errors.append("environment evidence must be PASS")
+    if environment.get("execution_class") != "live":
+        errors.append("environment evidence must be live")
+    if environment.get("isolated_staging") is not True:
         errors.append("tests must run in isolated staging")
-    source_commit = str(evidence.get("environment", {}).get("source_commit") or "")
+    if not str(environment.get("compose_project") or "").strip():
+        errors.append("environment Compose project is required")
+    if environment.get("co_resident_enclave_projects") != []:
+        errors.append("environment contains co-resident Enclave projects")
+    if len(str(environment.get("artifact_sha256") or "")) != 64:
+        errors.append("environment artifact hash is required")
+    environment_captured = _parse_timestamp(
+        environment.get("captured_at"), "environment.captured_at", errors
+    )
+    if environment_captured and environment_captured > datetime.now(timezone.utc):
+        errors.append("environment capture timestamp is in the future")
+    source_commit = str(environment.get("source_commit") or "")
     if not re.fullmatch(r"[0-9a-f]{40}", source_commit):
         errors.append("source commit must be a full lowercase Git SHA")
-    runtime_images = evidence.get("environment", {}).get("runtime_images")
+    runtime_images = environment.get("runtime_images")
     if not isinstance(runtime_images, dict) or not runtime_images:
         errors.append("runtime image identities are required")
     elif any(

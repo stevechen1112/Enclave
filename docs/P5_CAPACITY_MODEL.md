@@ -89,6 +89,8 @@
    image IDs 與同主機 Compose projects，再交由 `scripts/assemble_p5_evidence.py`
    組合三份 capacity report、soak report、cost report 與四份 degradation report。
    組裝器不再自行宣稱 `isolated_staging=true`，必須引用 environment evidence。
+   組裝時會保存 environment artifact SHA-256；gate 同時要求 live PASS、capture
+   timestamp、Compose project、零 co-resident Enclave project 與完整 image IDs。
    組裝器只引用既有 artifact；缺少任何一項時輸出 `HOLD` 並以非零狀態結束。
 6. 最後以 `scripts/verify_p5_capacity.py` 對組裝結果獨立重驗。只有 `PASS` 才能
    進入 P5 Code Review。

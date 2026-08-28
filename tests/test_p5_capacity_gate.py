@@ -81,9 +81,15 @@ def _complete_evidence() -> dict:
         "gate": "P5-CAPACITY",
         "capacity_spec_sha256": capacity_spec_sha256(spec),
         "environment": {
+            "status": "PASS",
+            "execution_class": "live",
             "isolated_staging": True,
+            "compose_project": "enclave-p5-dedicated",
             "source_commit": "a" * 40,
             "runtime_images": {"backend": "sha256:" + "b" * 64},
+            "co_resident_enclave_projects": [],
+            "artifact_sha256": "8" * 64,
+            "captured_at": now.isoformat(),
         },
         "capacity_reports": reports,
         "soak_test": {
@@ -252,3 +258,13 @@ def test_stale_or_cross_release_integrity_evidence_cannot_pass():
     assert result["status"] == "HOLD"
     assert "capacity integrity release mismatch: lite" in result["errors"]
     assert "capacity integrity start-time mismatch: standard" in result["errors"]
+
+
+def test_environment_cannot_claim_isolation_without_measured_evidence():
+    evidence = _complete_evidence()
+    evidence["environment"]["status"] = "HOLD"
+    evidence["environment"]["co_resident_enclave_projects"] = ["enclave"]
+    result = evaluate_p5_capacity_evidence(evidence)
+    assert result["status"] == "HOLD"
+    assert "environment evidence must be PASS" in result["errors"]
+    assert "environment contains co-resident Enclave projects" in result["errors"]
