@@ -11,7 +11,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -247,7 +247,15 @@ def main() -> int:
     else:
         started = datetime.now(UTC)
     samples = existing
-    while (datetime.now(UTC) - started).total_seconds() < args.duration_seconds:
+    deadline = started + timedelta(seconds=args.duration_seconds)
+    while datetime.now(UTC) < deadline:
+        next_capture = started + timedelta(
+            seconds=len(samples) * args.interval_seconds
+        )
+        remaining = (next_capture - datetime.now(UTC)).total_seconds()
+        if remaining > 0:
+            time.sleep(min(remaining, 60))
+            continue
         sample = collect_once(
             args.base_url,
             docker_stats=args.docker_stats,
@@ -271,11 +279,6 @@ def main() -> int:
         )
         if args.max_samples and len(samples) >= args.max_samples:
             break
-        remaining = args.interval_seconds
-        while remaining > 0:
-            step = min(remaining, 60)
-            time.sleep(step)
-            remaining -= step
 
     completed = datetime.now(UTC)
     elapsed = int((completed - started).total_seconds())

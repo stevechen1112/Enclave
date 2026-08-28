@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from app.services.capacity_telemetry import (
     parse_docker_stats,
     parse_prometheus_text,
@@ -59,3 +61,11 @@ def test_docker_stats_and_sample_summary_are_machine_readable():
     assert summary["max_redis_memory_percent"] == 25
     assert summary["max_container_memory_percent"] == 33
     assert summary["max_host_cpu_percent"] == 3.125
+
+
+def test_collector_uses_absolute_sample_schedule() -> None:
+    from scripts import collect_p5_telemetry
+
+    source = inspect.getsource(collect_p5_telemetry.main)
+    assert "len(samples) * args.interval_seconds" in source
+    assert "time.sleep(args.interval_seconds)" not in source
