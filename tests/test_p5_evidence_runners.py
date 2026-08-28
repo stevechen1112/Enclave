@@ -88,8 +88,11 @@ def test_assembler_uses_authoritative_spec_and_does_not_claim_pass():
         soak_report={"status": "NOT_RUN"},
         cost_report={"status": "NOT_RUN"},
         degradation_reports=[],
-        source_commit="a" * 40,
-        runtime_images={"web": "sha256:abc"},
+        environment={
+            "isolated_staging": False,
+            "source_commit": "a" * 40,
+            "runtime_images": {"web": {"image_id": "sha256:abc"}},
+        },
         operator="test",
     )
     assert evidence["capacity_spec_sha256"]
@@ -97,3 +100,4 @@ def test_assembler_uses_authoritative_spec_and_does_not_claim_pass():
         load_capacity_spec()
     )
     assert module.evaluate_p5_capacity_evidence(evidence)["status"] == "HOLD"
+    assert evidence["environment"]["isolated_staging"] is False

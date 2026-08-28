@@ -85,8 +85,10 @@
 4. 容量與降級短測通過後，才以 `scripts/run_p5_soak.py` 啟動 Standard profile
    的 1× 預估尖峰 72 小時測試。Runner 拒絕任何短於 259,200 秒的正式 run，
    並要求同一環境的 live grounding evidence，避免長時間跑在空知識庫上。
-5. 以 `scripts/assemble_p5_evidence.py` 組合三份 capacity report、soak report、
-   cost report、四份 degradation report、source commit 與 runtime image IDs。
+5. 先以 `scripts/capture_p5_environment.py` 實測 staging release、硬體、runtime
+   image IDs 與同主機 Compose projects，再交由 `scripts/assemble_p5_evidence.py`
+   組合三份 capacity report、soak report、cost report 與四份 degradation report。
+   組裝器不再自行宣稱 `isolated_staging=true`，必須引用 environment evidence。
    組裝器只引用既有 artifact；缺少任何一項時輸出 `HOLD` 並以非零狀態結束。
 6. 最後以 `scripts/verify_p5_capacity.py` 對組裝結果獨立重驗。只有 `PASS` 才能
    進入 P5 Code Review。

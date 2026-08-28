@@ -176,7 +176,16 @@ def evaluate_p5_capacity_evidence(
     runtime_images = evidence.get("environment", {}).get("runtime_images")
     if not isinstance(runtime_images, dict) or not runtime_images:
         errors.append("runtime image identities are required")
-    elif any(len(str(value or "")) < 12 for value in runtime_images.values()):
+    elif any(
+        len(
+            str(
+                value.get("image_id") if isinstance(value, dict) else value
+                or ""
+            )
+        )
+        < 12
+        for value in runtime_images.values()
+    ):
         errors.append("runtime image identities are incomplete")
 
     policy = spec["test_policy"]

@@ -33,8 +33,7 @@ def assemble_evidence(
     soak_report: dict[str, Any],
     cost_report: dict[str, Any],
     degradation_reports: list[dict[str, Any]],
-    source_commit: str,
-    runtime_images: dict[str, Any],
+    environment: dict[str, Any],
     operator: str,
 ) -> dict[str, Any]:
     spec = load_capacity_spec()
@@ -42,11 +41,7 @@ def assemble_evidence(
         "schema_version": 1,
         "gate": "P5-CAPACITY",
         "capacity_spec_sha256": capacity_spec_sha256(spec),
-        "environment": {
-            "isolated_staging": True,
-            "source_commit": source_commit,
-            "runtime_images": runtime_images,
-        },
+        "environment": environment,
         "capacity_reports": capacity_reports,
         "soak_test": soak_report,
         "cost_guardrails": cost_report,
@@ -64,8 +59,7 @@ def main() -> int:
     parser.add_argument(
         "--degradation-report", type=Path, action="append", required=True
     )
-    parser.add_argument("--source-commit", required=True)
-    parser.add_argument("--runtime-images", type=Path, required=True)
+    parser.add_argument("--environment-evidence", type=Path, required=True)
     parser.add_argument("--operator", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--confirm-isolated-staging", action="store_true")
@@ -73,7 +67,7 @@ def main() -> int:
     if not args.confirm_isolated_staging:
         parser.error("--confirm-isolated-staging is required")
     try:
-        runtime_images = _read_object(args.runtime_images)
+        environment = _read_object(args.environment_evidence)
         evidence = assemble_evidence(
             capacity_reports=[_read_object(path) for path in args.capacity_report],
             soak_report=_read_object(args.soak_report),
@@ -81,8 +75,7 @@ def main() -> int:
             degradation_reports=[
                 _read_object(path) for path in args.degradation_report
             ],
-            source_commit=args.source_commit,
-            runtime_images=runtime_images,
+            environment=environment,
             operator=args.operator,
         )
     except (OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
