@@ -3,11 +3,12 @@ Phase 1 — Enclave Canonical Adapter
 
 Primary retrieval against Enclave pgvector index (canonical data plane).
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from app.core.authorization import AuthorizationContext
@@ -29,10 +30,11 @@ class EnclaveCanonicalAdapter(BaseAdapter):
     def _get_retriever(self):
         if self._retriever is None:
             from app.services.kb_retrieval import KnowledgeBaseRetriever
+
             self._retriever = KnowledgeBaseRetriever()
         return self._retriever
 
-    async def capabilities(self) -> Dict[str, Any]:
+    async def capabilities(self) -> dict[str, Any]:
         return {
             "provider": self.provider,
             "version": self.version,
@@ -40,7 +42,7 @@ class EnclaveCanonicalAdapter(BaseAdapter):
             "index": "pgvector",
         }
 
-    async def health(self) -> Dict[str, Any]:
+    async def health(self) -> dict[str, Any]:
         def probe_database() -> None:
             from sqlalchemy import text
 
@@ -55,8 +57,12 @@ class EnclaveCanonicalAdapter(BaseAdapter):
         try:
             loop = asyncio.get_running_loop()
             await loop.run_in_executor(None, probe_database)
-            return {"status": "healthy", "provider": self.provider, "version": self.version}
-        except Exception as exc:
+            return {
+                "status": "healthy",
+                "provider": self.provider,
+                "version": self.version,
+            }
+        except Exception as exc:  # noqa: BLE001 - health probes must report all failures
             return {
                 "status": "unhealthy",
                 "provider": self.provider,
@@ -69,8 +75,8 @@ class EnclaveCanonicalAdapter(BaseAdapter):
         authz: AuthorizationContext,
         query: str,
         top_k: int = 20,
-        scope: Optional[Dict[str, Any]] = None,
-    ) -> List[ChunkResult]:
+        scope: dict[str, Any] | None = None,
+    ) -> list[ChunkResult]:
         retriever = self._get_retriever()
         loop = asyncio.get_event_loop()
         raw = await loop.run_in_executor(
@@ -81,9 +87,10 @@ class EnclaveCanonicalAdapter(BaseAdapter):
                 top_k=top_k,
                 mode="hybrid",
                 authz=authz,
+                filter_dict=scope,
             ),
         )
-        results: List[ChunkResult] = []
+        results: list[ChunkResult] = []
         for item in raw:
             results.append(
                 ChunkResult(
@@ -92,11 +99,13 @@ class EnclaveCanonicalAdapter(BaseAdapter):
                     score=float(item.get("score", 0)),
                     result_type="chunk",
                     document_id=item.get("document_id"),
+                    document_revision=item.get("document_revision"),
                     provider=self.provider,
                     provider_version=self.version,
                     metadata={
                         "filename": item.get("filename", ""),
                         "chunk_index": item.get("chunk_index"),
+                        "document_revision": item.get("document_revision"),
                         "source": item.get("source", "hybrid"),
                     },
                 )
@@ -111,8 +120,8 @@ class EnclaveCanonicalAdapter(BaseAdapter):
         content_hash: str,
         file_type: str,
         authz: AuthorizationContext,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         return {
             "status": "indexed",
             "document_id": str(document_id),
@@ -126,7 +135,7 @@ class EnclaveCanonicalAdapter(BaseAdapter):
         resource_id: str,
         revision: int,
         idempotency_key: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {
             "status": "tombstoned",
             "resource_id": resource_id,
@@ -139,7 +148,7 @@ class EnclaveCanonicalAdapter(BaseAdapter):
         resource_type: str,
         resource_id: str,
         desired_revision: int,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {
             "resource_id": resource_id,
             "desired_revision": desired_revision,
@@ -148,7 +157,7 @@ class EnclaveCanonicalAdapter(BaseAdapter):
             "provider": self.provider,
         }
 
-    async def export_manifest(self, kb_revision: int) -> Dict[str, Any]:
+    async def export_manifest(self, kb_revision: int) -> dict[str, Any]:
         return {
             "provider": self.provider,
             "version": self.version,
