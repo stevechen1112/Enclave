@@ -4,7 +4,8 @@
 
 本 review 涵蓋 capacity、cost、degradation、telemetry、soak、environment capture、
 evidence assembly 與 verifier。未發現尚未處理的 Critical／High 程式 finding；本結論
-不等於 P5 Phase PASS，也不開放 P6。
+不等於商用規模 live evidence PASS。P6 後續由產品負責人的風險接受決策開放，
+不是由此 review 自動開放。
 
 ## 已關閉 findings
 
@@ -33,4 +34,5 @@ evidence assembly 與 verifier。未發現尚未處理的 Critical／High 程式
 正式 Lite、Standard、Enterprise 2× capacity、四種 degradation、cost live drill 與
 Standard 72 小時 soak 必須在隔離、profile-sized staging 硬體上實際執行。目前共用
 production 的主機不符合條件，runner 會 fail closed。只有正式 evidence verifier PASS
-後，才能進行 P5 最終 Phase Code Review 並開放 P6。
+後，才能補做 P5 商用規模最終簽核。P6 本輪依
+`decisions/P5_LIVE_VALIDATION_WAIVER_2026-08-28.md` 的明確風險接受決策開放。

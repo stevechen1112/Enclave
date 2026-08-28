@@ -11,6 +11,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import AsyncState from '../../components/AsyncState'
 import { useHasCapability } from '../../navigation/useCapabilities'
 import clsx from 'clsx'
+import EvidenceLocatorBanner from '../../components/EvidenceLocatorBanner'
 
 type TimelineStep = {
   key: string
@@ -157,6 +158,7 @@ export default function DocumentDetailPage() {
       >
         {doc && (
           <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-8">
+            <EvidenceLocatorBanner />
             <div className="flex items-start gap-2">
               <button
                 type="button"

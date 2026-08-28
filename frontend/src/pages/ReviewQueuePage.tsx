@@ -12,6 +12,7 @@ import { formatErrorWithTrace, knowledgeReviewApi, parseApiError, type ApiErrorI
 import AsyncState from '../components/AsyncState'
 import ConfirmDialog from '../components/ConfirmDialog'
 import type { KnowledgeReviewInbox, KnowledgeReviewItem, ReviewEvidenceLocator } from '../types'
+import { normalizeEvidenceDeepLink } from '../lib/evidenceLinks'
 
 type MobileStep = 'list' | 'evidence' | 'decision'
 
@@ -103,6 +104,11 @@ export default function ReviewQueuePage() {
   useEffect(() => { void load() }, [load])
   const items = useMemo(() => inbox?.items || [], [inbox])
   const selected = useMemo(() => items.find(item => item.id === selectedId) || null, [items, selectedId])
+  const evidenceLinks = useMemo(() => selected?.evidence.map(evidence => ({
+    evidence,
+    deepLink: normalizeEvidenceDeepLink(evidence.deep_link),
+  })) || [], [selected])
+  const evidenceLinksValid = evidenceLinks.length > 0 && evidenceLinks.every(item => item.deepLink)
   const conflicts = useMemo(() => {
     const value = selected?.proposal.conflicts
     return Array.isArray(value) ? value.filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object') : []
@@ -168,16 +174,16 @@ export default function ReviewQueuePage() {
         {items.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><CheckCircle className="h-10 w-10 text-success" /><p className="mt-3 font-medium">目前沒有待審項目</p><Link className="btn-primary mt-4" to="/knowledge/new">新增知識來源</Link></div> : <ul className="flex-1 overflow-y-auto">{items.map(item => <li key={item.id} className={clsx('flex border-b border-line', item.id === selectedId && 'bg-accent-soft/50')}><span className="flex items-start px-3 py-3"><input type="checkbox" checked={selectedIds.has(item.id)} disabled={!item.batch_eligible} onChange={() => toggleBatch(item)} aria-label={`選取 ${item.title}`} title={item.batch_eligible ? '加入批量核准' : '僅低風險、同策略項目可批量'} className="mt-1 h-5 w-5" /></span><button type="button" onClick={() => choose(item)} className="min-h-11 min-w-0 flex-1 py-3 pr-3 text-left hover:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><span className="block truncate text-sm font-medium text-ink">{item.title}</span><span className="block truncate text-xs text-muted">{sourceLabels[item.source_type] || item.source_type}{item.confidence != null ? ` · ${Math.round(item.confidence * 100)}%` : ''}</span><span className="mt-1 flex flex-wrap gap-1"><span className={clsx('rounded-full px-2 py-0.5 text-xs', item.risk_level === 'high' ? 'bg-danger-soft text-danger' : item.risk_level === 'medium' ? 'bg-highlight-soft text-highlight' : 'bg-success-soft text-success')}>{item.risk_level === 'high' ? '高風險' : item.risk_level === 'medium' ? '中風險' : '低風險'}</span>{item.blocked_reasons.map(reason => <span key={reason} className="rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">{blockedLabels[reason] || reason}</span>)}</span></button></li>)}</ul>}
       </aside>
 
-      <main className={clsx('min-h-0 flex-1 flex-col overflow-y-auto border-b border-line p-5 md:flex md:border-b-0 md:border-r lg:p-7', mobileStep === 'evidence' ? 'flex' : 'hidden')} aria-label="證據與建議">
+      <section className={clsx('min-h-0 flex-1 flex-col overflow-y-auto border-b border-line p-5 md:flex md:border-b-0 md:border-r lg:p-7', mobileStep === 'evidence' ? 'flex' : 'hidden')} aria-label="證據與建議">
         {!selected ? <div className="m-auto text-center text-muted"><FileSearch className="mx-auto h-10 w-10" /><p className="mt-3">請選擇待審項目</p></div> : <div className="mx-auto w-full max-w-3xl space-y-5">
           <button type="button" className="btn-ghost -ml-3 md:hidden" onClick={() => setMobileStep('list')}><ArrowLeft className="h-4 w-4" />返回佇列</button>
           <header><div className="flex flex-wrap items-center gap-2 text-xs text-muted"><span>{sourceLabels[selected.source_type] || selected.source_type}</span><span>·</span><span>{selected.provider}</span><span>·</span><span>{selected.policy_key} v{selected.policy_version}</span></div><h2 className="mt-2 font-display text-2xl font-semibold text-ink">{selected.title}</h2><p className="mt-1 text-sm text-muted">{selected.subtitle}</p></header>
           <section className="card p-5"><h3 className="font-semibold text-ink">AI 建議與候選內容</h3><div className="mt-4"><JsonPreview value={selected.proposal} /></div></section>
-          <section className="card p-5"><h3 className="flex items-center gap-2 font-semibold text-ink"><FileSearch className="h-5 w-5" />來源證據</h3>{selected.evidence.length === 0 ? <p className="mt-3 rounded-lg bg-danger-soft p-3 text-sm text-danger">此項目沒有可追溯定位器，不應核准。</p> : <ul className="mt-3 space-y-2">{selected.evidence.map(evidence => <li key={evidence.id}><Link to={evidence.deep_link} className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm hover:border-accent hover:bg-accent-soft/30"><span><span className="block font-medium text-ink">{evidenceLabel(evidence)}</span>{evidence.section && evidence.kind !== 'document' && <span className="line-clamp-2 text-xs text-muted">{evidence.section}</span>}</span><ExternalLink className="h-4 w-4 shrink-0 text-accent" /></Link></li>)}</ul>}</section>
+          <section className="card p-5"><h3 className="flex items-center gap-2 font-semibold text-ink"><FileSearch className="h-5 w-5" />來源證據</h3>{!evidenceLinksValid ? <p className="mt-3 rounded-lg bg-danger-soft p-3 text-sm text-danger">此項目缺少有效的站內證據定位器，不應核准。</p> : <ul className="mt-3 space-y-2">{evidenceLinks.map(({ evidence, deepLink }) => <li key={evidence.id}><Link to={deepLink!} className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm hover:border-accent hover:bg-accent-soft/30"><span><span className="block font-medium text-ink">{evidenceLabel(evidence)}</span>{evidence.section && evidence.kind !== 'document' && <span className="line-clamp-2 text-xs text-muted">{evidence.section}</span>}</span><ExternalLink className="h-4 w-4 shrink-0 text-accent" /></Link></li>)}</ul>}</section>
           {conflicts.length > 0 && <section className="rounded-2xl border border-highlight/40 bg-highlight-soft p-5"><h3 className="flex items-center gap-2 font-semibold text-highlight"><ShieldAlert className="h-5 w-5" />正式 SOP 衝突</h3><p className="mt-1 text-sm text-highlight">逐項確認正式 SOP 優先，才可發布。</p><div className="mt-3 space-y-2">{conflicts.map((conflict, index) => { const id = String(conflict.id || index); return <label key={id} className="flex min-h-11 cursor-pointer items-start gap-2 rounded-lg bg-surface p-3 text-sm"><input type="checkbox" className="mt-1" checked={resolvedConflicts.has(id)} onChange={event => setResolvedConflicts(current => { const next = new Set(current); if (event.target.checked) next.add(id); else next.delete(id); return next })} /><span><strong>SOP：</strong>{String(conflict.sop_value || conflict.message || '')}<br /><span className="text-muted">候選：{String(conflict.knowhow_value || '')}</span></span></label> })}</div></section>}
           <button type="button" className="btn-primary w-full md:hidden" onClick={() => setMobileStep('decision')}>下一步：發布決策 <ArrowRight className="h-4 w-4" /></button>
         </div>}
-      </main>
+      </section>
 
       <aside className={clsx('w-full flex-col bg-surface md:flex md:w-[22rem]', mobileStep === 'decision' ? 'flex flex-1' : 'hidden')} aria-label="發布決策">
         <div className="border-b border-line p-4"><h2 className="font-semibold text-ink">決策與發布契約</h2><p className="text-sm text-muted">核准前確認權限、版本與回滾方式</p></div>
@@ -189,7 +195,7 @@ export default function ReviewQueuePage() {
           {selected.confidence != null && selected.confidence < 0.8 && <label className="flex min-h-11 cursor-pointer items-start gap-2 rounded-xl border border-highlight/30 bg-highlight-soft p-3 text-sm text-highlight"><input type="checkbox" className="mt-1" checked={ackLow} onChange={event => setAckLow(event.target.checked)} /><span>我已逐一核對低信心辨識內容與原始證據。</span></label>}
           <div><label className="input-label" htmlFor="review-notes">覆核備註</label><textarea id="review-notes" className="input min-h-0 py-2" rows={4} maxLength={2000} value={notes} onChange={event => setNotes(event.target.value)} placeholder="記錄修正、核准依據或駁回原因" /></div>
           <p className="flex items-start gap-2 rounded-xl bg-accent-soft p-3 text-sm text-accent-ink"><Clock3 className="mt-0.5 h-4 w-4 shrink-0" />決策、審核人、政策版本與發布結果會留下不可變稽核證據。</p>
-          <div className="mt-auto space-y-2"><button type="button" disabled={acting || !approvalReady || selected.evidence.length === 0} className="btn-primary w-full" onClick={() => void decide('approved')}>{acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}核准並發布</button><button type="button" disabled={acting} className="btn-outline w-full text-danger" onClick={() => setRejectOpen(true)}><XCircle className="h-4 w-4" />駁回</button></div>
+          <div className="mt-auto space-y-2"><button type="button" disabled={acting || !approvalReady || !evidenceLinksValid} className="btn-primary w-full" onClick={() => void decide('approved')}>{acting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}核准並發布</button><button type="button" disabled={acting} className="btn-outline w-full text-danger" onClick={() => setRejectOpen(true)}><XCircle className="h-4 w-4" />駁回</button></div>
         </div>}
       </aside>
       <ConfirmDialog open={rejectOpen} danger busy={acting} title="駁回此知識候選？" description="不會發布至知識檢索，決策與備註會保留在稽核紀錄。" confirmLabel="確認駁回" onCancel={() => !acting && setRejectOpen(false)} onConfirm={() => void decide('rejected')} />

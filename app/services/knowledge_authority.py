@@ -416,7 +416,7 @@ def publish_approved_knowhow(
             "authority_level": int(card.authority_level or 60),
             "source_type": card.source_type,
             "source_document_id": card.source_document_id,
-            "deep_link": f"/knowledge/knowhow/{card.id}",
+            "deep_link": f"/knowhow/{card.id}",
         },
         gate_evidence={
             "reviewer_id": str(reviewer_id),

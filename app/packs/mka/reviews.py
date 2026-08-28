@@ -76,7 +76,7 @@ class MKAReviewProvider:
                         "id": f"knowhow-quote:{card.id}:{index}",
                         "kind": "audio" if card.source_audio_uri else "document",
                         "section": str(quote),
-                        "deep_link": f"/knowledge/knowhow/{card.id}?evidence={index}",
+                        "deep_link": f"/knowhow/{card.id}?evidence={index}",
                     }
                 )
             if not evidence:
@@ -85,7 +85,7 @@ class MKAReviewProvider:
                         "id": f"knowhow:{card.id}",
                         "kind": "document",
                         "section": "知識卡草稿",
-                        "deep_link": f"/knowledge/knowhow/{card.id}",
+                        "deep_link": f"/knowhow/{card.id}",
                     }
                 )
             items.append(

@@ -360,6 +360,7 @@ def test_approved_knowhow_publishes_to_tenant_release():
         assert len(rows) == 1
         assert rows[0].unit_type == "knowhow"
         assert rows[0].source_resource_id == str(card.id)
+        assert rows[0].metadata["deep_link"] == f"/knowhow/{card.id}"
         retired = retire_knowledge_unit(
             db,
             tenant_id=tenant.id,

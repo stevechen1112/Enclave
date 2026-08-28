@@ -7,6 +7,7 @@ import { formatErrorWithTrace, parseApiError, videoApi } from '../../api'
 import AsyncState from '../../components/AsyncState'
 import { useAuth } from '../../auth'
 import type { VideoArtifact, VideoAssetDetail } from '../../types'
+import EvidenceLocatorBanner from '../../components/EvidenceLocatorBanner'
 
 function clock(ms: number | null | undefined) {
   const seconds = Math.floor((ms || 0) / 1000)
@@ -108,6 +109,7 @@ export default function VideoReviewPage() {
   return (
     <div className="h-full overflow-y-auto px-5 py-5 lg:px-8">
       <Link to={`/knowledge/assets/${assetId}`} className="mb-4 inline-flex min-h-11 items-center gap-2 rounded-lg pr-3 text-sm font-medium text-accent hover:bg-accent-soft/50"><ArrowLeft size={16} />回資產詳情</Link>
+      <EvidenceLocatorBanner />
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div><h1 className="font-display text-2xl font-semibold">{detail.title}</h1><p className="mt-1 text-sm text-muted">每筆內容都保留精確時間點；作業程序未核准前不會發布。</p></div>
         <span className="rounded-full bg-highlight-soft px-3 py-1 text-sm text-highlight">{detail.job?.phase || detail.job?.status || detail.status}</span>

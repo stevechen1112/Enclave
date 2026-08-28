@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { knowledgeAssetApi, formatErrorWithTrace, parseApiError } from '../../api'
 import { SectionPanel, WorkspacePage } from '../../components/WorkspacePage'
+import { rememberKnowledgeTask } from '../../lib/longTaskRecovery'
 
 type Mode = 'file' | 'url' | 'record'
 type QueueStatus = 'pending' | 'uploading' | 'done' | 'error'
@@ -80,6 +81,12 @@ export default function AddKnowledgePage() {
           dataClassification: classification,
         }, value => updateQueueItem(item.key, { progress: value }))
         updateQueueItem(item.key, { status: 'done', progress: 100, assetId: asset.id })
+        rememberKnowledgeTask({
+          assetId: asset.id,
+          title: asset.title || item.file.name,
+          assetKind: asset.asset_kind,
+          createdAt: new Date().toISOString(),
+        })
         succeeded += 1
         lastAssetId = asset.id
       } catch (reason) {
@@ -106,6 +113,12 @@ export default function AddKnowledgePage() {
         dataClassification: classification,
       }, setProgress)
       toast.success(asset.deduplicated ? '已找到相同內容，沿用既有資產' : '已加入知識處理佇列')
+      rememberKnowledgeTask({
+        assetId: asset.id,
+        title: asset.title || title || url || `${sourceSystem}:${recordId}`,
+        assetKind: asset.asset_kind,
+        createdAt: new Date().toISOString(),
+      })
       navigate(`/knowledge/assets/${asset.id}`)
     } catch (reason) {
       toast.error(formatErrorWithTrace(parseApiError(reason, '無法加入知識')))
@@ -122,13 +135,20 @@ export default function AddKnowledgePage() {
     }
   }
   const invalid = mode === 'file' ? pendingFiles.length === 0 : mode === 'url' ? !url.trim() : !sourceSystem.trim() || !recordId.trim()
+  const modes: Mode[] = ['file', 'url', 'record']
+  const selectAdjacentMode = (current: Mode, offset: number) => {
+    const index = modes.indexOf(current)
+    const next = modes[(index + offset + modes.length) % modes.length]
+    setMode(next)
+    window.requestAnimationFrame(() => document.getElementById(`source-tab-${next}`)?.focus())
+  }
 
   return <WorkspacePage title="新增知識" subtitle="選擇來源即可；系統會自動判斷文字擷取、表格解析、OCR、轉寫或影音分析。" backTo="/knowledge/assets" backLabel="回所有資產" width="reading">
     <SectionPanel className="mt-6" title="1. 選擇來源" description="不同來源共用相同的權限、處理、覆核與發布生命週期。">
       <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="知識來源">
-        {([['file', FileUp, '上傳／拍攝'], ['url', Link2, '貼上網址'], ['record', Mic, '外部紀錄']] as const).map(([value, Icon, label]) => <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => setMode(value)} className={`min-h-16 rounded-xl border p-2 text-sm font-medium transition-colors ${mode === value ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:border-accent/40 hover:text-ink'}`}><Icon className="mx-auto mb-1 h-5 w-5" aria-hidden />{label}</button>)}
+        {([['file', FileUp, '上傳／拍攝'], ['url', Link2, '貼上網址'], ['record', Mic, '外部紀錄']] as const).map(([value, Icon, label]) => <button key={value} id={`source-tab-${value}`} type="button" role="tab" aria-selected={mode === value} aria-controls={`source-panel-${value}`} tabIndex={mode === value ? 0 : -1} onClick={() => setMode(value)} onKeyDown={event => { if (event.key === 'ArrowRight') { event.preventDefault(); selectAdjacentMode(value, 1) } else if (event.key === 'ArrowLeft') { event.preventDefault(); selectAdjacentMode(value, -1) } else if (event.key === 'Home') { event.preventDefault(); setMode('file'); window.requestAnimationFrame(() => document.getElementById('source-tab-file')?.focus()) } else if (event.key === 'End') { event.preventDefault(); setMode('record'); window.requestAnimationFrame(() => document.getElementById('source-tab-record')?.focus()) } }} className={`min-h-16 rounded-xl border p-2 text-sm font-medium transition-colors ${mode === value ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:border-accent/40 hover:text-ink'}`}><Icon className="mx-auto mb-1 h-5 w-5" aria-hidden />{label}</button>)}
       </div>
-      <div className="mt-6 space-y-4">
+      <div id={`source-panel-${mode}`} role="tabpanel" aria-labelledby={`source-tab-${mode}`} className="mt-6 space-y-4">
         {mode === 'file' && <>
           <div {...getRootProps()} className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-colors ${isDragActive ? 'border-accent bg-accent-soft' : 'border-line hover:border-accent'}`}>
             <input {...getInputProps()} aria-label="選擇檔案" />
@@ -137,9 +157,9 @@ export default function AddKnowledgePage() {
             <span className="mt-1 block text-sm text-muted">可一次拖放多個來源；系統會逐檔建立可追蹤的處理工作</span>
           </div>
           <div className="grid grid-cols-3 gap-2 sm:hidden">
-            <label className="btn-outline justify-center"><Camera className="h-4 w-4" />拍照<input className="sr-only" type="file" accept="image/*" capture="environment" onChange={event => addFiles(Array.from(event.target.files || []))} /></label>
-            <label className="btn-outline justify-center"><Mic className="h-4 w-4" />錄音<input className="sr-only" type="file" accept="audio/*" capture onChange={event => addFiles(Array.from(event.target.files || []))} /></label>
-            <label className="btn-outline justify-center"><Video className="h-4 w-4" />錄影<input className="sr-only" type="file" accept="video/*" capture="environment" onChange={event => addFiles(Array.from(event.target.files || []))} /></label>
+            <label className="btn-outline justify-center"><Camera className="h-4 w-4" aria-hidden />拍照<input className="sr-only" type="file" accept="image/*" capture="environment" onChange={event => addFiles(Array.from(event.target.files || []))} /></label>
+            <label className="btn-outline justify-center"><Mic className="h-4 w-4" aria-hidden />錄音<input className="sr-only" type="file" accept="audio/*" capture onChange={event => addFiles(Array.from(event.target.files || []))} /></label>
+            <label className="btn-outline justify-center"><Video className="h-4 w-4" aria-hidden />錄影<input className="sr-only" type="file" accept="video/*" capture="environment" onChange={event => addFiles(Array.from(event.target.files || []))} /></label>
           </div>
           {queue.length > 0 && <ul className="space-y-2" aria-label="待上傳來源">{queue.map(item => <li key={item.key} className="rounded-xl border border-line bg-wash p-3"><div className="flex items-start gap-3"><span className="mt-0.5 text-accent">{item.status === 'uploading' ? <Loader2 className="h-5 w-5 animate-spin" /> : item.status === 'done' ? <CheckCircle2 className="h-5 w-5 text-success" /> : item.status === 'error' ? <XCircle className="h-5 w-5 text-danger" /> : <FileUp className="h-5 w-5" />}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-ink">{item.file.name}</span><span className="mt-0.5 block text-xs text-muted">{capabilitySummary(item.file)}</span>{item.error && <span className="mt-1 block text-xs text-danger">{item.error}</span>}{item.status === 'uploading' && <span className="mt-2 block h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={item.progress}><span className="block h-full bg-accent" style={{ width: `${item.progress}%` }} /></span>}</span>{item.status !== 'uploading' && item.status !== 'done' && <button type="button" className="icon-btn -m-2" aria-label={`移除 ${item.file.name}`} onClick={event => { event.stopPropagation(); setQueue(current => current.filter(candidate => candidate.key !== item.key)) }}><Trash2 className="h-4 w-4" /></button>}</div></li>)}</ul>}
         </>}

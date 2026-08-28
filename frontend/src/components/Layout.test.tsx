@@ -38,7 +38,7 @@ describe('Layout user menu', () => {
     auth.logout.mockReset()
   })
 
-  it('allows the visible desktop menu to log out when desktop and mobile sidebars coexist', async () => {
+  it('allows the visible desktop account disclosure to log out', async () => {
     const user = userEvent.setup()
     render(
       <MemoryRouter initialEntries={['/overview']}>
@@ -52,7 +52,7 @@ describe('Layout user menu', () => {
     )
 
     await user.click(screen.getAllByRole('button', { name: /現場測試 李阿明/ })[0])
-    await user.click(screen.getAllByRole('menuitem', { name: '登出' })[0])
+    await user.click(screen.getAllByRole('button', { name: '登出' })[0])
 
     expect(auth.logout).toHaveBeenCalledOnce()
     expect(screen.getByText('登入頁')).toBeInTheDocument()

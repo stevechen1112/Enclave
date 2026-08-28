@@ -51,4 +51,17 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByLabelText('部門 ID')).toBeInTheDocument()
     expect(screen.getByLabelText('已逾期')).toBeInTheDocument()
   })
+
+  it('fails closed when evidence points outside the knowledge workspace', async () => {
+    vi.mocked(knowledgeReviewApi.list).mockResolvedValue({
+      items: [{ ...item, confidence: 0.99, evidence: [{ ...item.evidence[0], deep_link: 'https://evil.example/steal' }] }],
+      total: 1,
+      limit: 100,
+      offset: 0,
+      facets: { source_types: ['transcript_segment'], policy_keys: ['artifact-human-review-v1'], assignees: [] },
+    })
+    render(<MemoryRouter><ReviewQueuePage /></MemoryRouter>)
+    expect(await screen.findByText(/缺少有效的站內證據定位器/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /核准並發布/ })).toBeDisabled()
+  })
 })

@@ -2,15 +2,16 @@
 
 日期：2026-08-28
 
-Phase 狀態：`IN PROGRESS / ENVIRONMENT HOLD`
+Phase 狀態：`ENGINEERING COMPLETE / LIVE VALIDATION WAIVED`
 
-P6 entry：`CLOSED`
+P6 entry：`OPEN BY PRODUCT RISK ACCEPTANCE`
 
 ## 結論
 
-P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P6。程式、測試工具、
-證據模型與 fail-closed gate 可以持續開發；只有會干擾 production 或產生無效容量
-結論的正式負載、故障注入與 72 小時 soak 被鎖住。
+P5 工程、測試工具、證據模型與 fail-closed gate 已完成。正式負載、故障注入與
+72 小時 soak 因會干擾 production 或產生無效容量結論而未執行；產品負責人於
+2026-08-28 接受此風險並要求直接進入 P6。未執行項目維持 `WAIVED / NOT RUN`，
+不得宣稱為 PASS。決策見 `decisions/P5_LIVE_VALIDATION_WAIVER_2026-08-28.md`。
 
 2026-08-28 對 staging `8c4065f2a9d94e80262ba0f9fcc5ed961bbf04de`
 的實測結果如下：
@@ -56,7 +57,7 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
 | Enterprise capacity | 16C／64GB／24GB VRAM 以上獨立環境，1,000 users、12,000 RPM、15 分鐘 | NOT RUN |
 | Degradation | provider slow、quota exhausted、queue saturated、sidecar unavailable 各一份 live PASS | NOT RUN |
 | Soak | Standard 1× peak、259,200 秒、五分鐘內採樣、樣本完整率至少 95% | NOT RUN |
-| P5 Code Review | 完整 evidence gate PASS 後進行 | BLOCKED BY EVIDENCE |
+| P5 商用規模最終簽核 | 完整 evidence gate PASS 後進行 | WAIVED / NOT RUN |
 
 先前在共用主機上開始的試跑只用於發現 runner 與 telemetry 問題，已停止並保留為
 診斷 artifact；不得改標為 capacity PASS。
@@ -84,6 +85,5 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
 
 ## 持續推進原則
 
-Environment HOLD 只凍結上述正式 live evidence，不凍結內部工程。等待專用主機期間，
-仍應持續完成測試覆蓋、runbook、artifact schema、review findings 與部署自動化；
-不得因外部環境尚未到位而停止整個產品化計畫，也不得跳過 P5 進 P6。
+正式 live evidence 仍等待專用主機；P6 依產品風險接受決策開放。此狀態不得被
+解讀為三種 deployment profile、故障演練或 72 小時穩定性已通過。

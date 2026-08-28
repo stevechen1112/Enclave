@@ -8,6 +8,8 @@ import type { KnowledgeAsset, KnowledgeAssetEvent } from '../../types'
 import AsyncState from '../../components/AsyncState'
 import LifecycleBadge from '../../components/LifecycleBadge'
 import { MetadataList, SectionPanel, WorkspacePage } from '../../components/WorkspacePage'
+import { forgetKnowledgeTask } from '../../lib/longTaskRecovery'
+import EvidenceLocatorBanner from '../../components/EvidenceLocatorBanner'
 
 const PHASE_LABELS: Record<string, string> = {
   queued: '等待處理',
@@ -35,6 +37,11 @@ export default function AssetDetailPage() {
     finally { setLoading(false) }
   }, [assetId])
   useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    if (asset && ['ready', 'failed', 'completed'].includes(asset.job?.status || asset.status)) {
+      forgetKnowledgeTask(asset.id)
+    }
+  }, [asset])
   if (loading) return <AsyncState loading>{null}</AsyncState>
   if (error || !asset) return <AsyncState error={error || '找不到資產'} onRetry={load}>{null}</AsyncState>
   const retry = async () => { try { await knowledgeAssetApi.retry(asset.id); toast.success('已重新排入處理'); await load() } catch (reason) { toast.error(formatErrorWithTrace(parseApiError(reason, '無法重試'))) } }
@@ -50,6 +57,7 @@ export default function AssetDetailPage() {
     ? '內容處理服務目前不可用。原始來源已保留，可稍後重新處理；若持續失敗，請管理員檢查解析與索引服務。'
     : '系統已保留原始來源，請重新處理；若持續失敗，請聯絡管理員查看服務狀態。'
   return <WorkspacePage title={asset.title} subtitle={`${asset.asset_kind} · ${asset.source_system} · ${asset.data_classification}`} backTo="/knowledge/assets" backLabel="回所有資產" actions={<><LifecycleBadge status={asset.job?.status || asset.status} answerReady={asset.job?.status === 'ready'} />{(asset.job?.status === 'failed' || asset.status === 'failed') && <button className="btn-outline" onClick={() => void retry()}><RefreshCw className="h-4 w-4" />重新處理</button>}</>}>
+    <EvidenceLocatorBanner />
     {failed && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span><strong className="block">來源處理失敗</strong><span className="mt-1 block">{failureMessage}</span></span></div>}
     <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-5">

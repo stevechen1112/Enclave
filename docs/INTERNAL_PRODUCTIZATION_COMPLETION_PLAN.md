@@ -219,7 +219,7 @@ Enclave 已有可運作的正式環境與正式網域，也已具備完整的產
 - 成本超限會阻擋或降級，不會無上限消耗。
 - 完成 P5 Code Review 後才能進 P6。
 
-**2026-08-28 狀態：** IN PROGRESS／ENVIRONMENT HOLD。容量 profile、2× load
+**2026-08-28 狀態：** ENGINEERING COMPLETE／LIVE VALIDATION WAIVED。容量 profile、2× load
 runner、grounded retrieval、即時 telemetry、live ingestion／tenant isolation
 reconciliation、成本報表與 quota guardrail，以及 fail-closed evidence gate 已完成；
 P5 evidence schema v2 已將三種 profile 分別綁定 profile-sized environment，並逐樣本
@@ -227,9 +227,10 @@ P5 evidence schema v2 已將三種 profile 分別綁定 profile-sized environmen
 capacity／degradation／72 小時 soak 不得在目前與 production
 共用的 4C／8GB Docker host 執行，runner 與 environment capture 已會自動拒絕該
 環境。待取得無其他 Enclave project 的獨立 Lite／Standard／Enterprise 資源後，
-完成三份 15 分鐘 2× capacity report、四種 live degradation、Standard 72 小時
-soak 與最終 Code Review，才能開放 P6。詳見
-`PHASE_P5_CAPACITY_STABILITY_HOLD_2026-08-28.md`。
+完成三份 15 分鐘 2× capacity report、四種 live degradation 與 Standard 72 小時
+soak。產品負責人已接受本輪不宣稱上述商用 SLO，將這些項目標記為
+`WAIVED / NOT RUN` 並開放 P6；詳見
+`decisions/P5_LIVE_VALIDATION_WAIVER_2026-08-28.md`。此豁免不是測試 PASS。
 
 ---
 
@@ -237,12 +238,22 @@ soak 與最終 Code Review，才能開放 P6。詳見
 
 **優先級：P1**
 
+**2026-08-28 狀態：** INTERNAL SOFTWARE GATE PASS。axe／ARIA／keyboard／focus／contrast、
+六 persona capability deep-link contract、完整 async／offline／quota／provider-disabled／
+long-task recovery state、文件／圖片／音訊／影片 evidence locator、desktop／Pixel 7／
+iPhone 15 emulation／Galaxy Tab S9 responsive media intake、slow-network、visual regression
+與 performance budget 已完成；P6 Playwright 29 passed，frontend 108 tests、相關 backend
+39 tests 通過，Code Review 無未處理 Critical／High finding。實體 iPhone／Android
+camera／microphone、數小時真機上傳與真實工廠噪音 ASR 品質仍屬 Commercial GA
+實體裝置 campaign，不由本 internal software gate 宣稱 PASS。詳見
+`reports/P6_UIUX_DEVICE_CODE_REVIEW_2026-08-28.md`。
+
 ### 已有基礎
 
 - 六 persona、responsive workspace、手機入口及 isolated browser acceptance 已通過。
 - Frontend 目前缺少明確的 automated accessibility test inventory。
 
-### 待完成
+### 已完成（內部 software gate）
 
 - 加入 axe／ARIA／keyboard navigation／focus order／contrast 自動檢查。
 - 建立 persona × capability × route contract E2E，驗證隱藏選單不能靠 deep link 繞過。

@@ -1,7 +1,7 @@
 /**
  * Cross-page async UI — loading / empty / error with retry + request ID (UIUX §10)
  */
-import { Loader2, RefreshCw, Inbox, CloudOff } from 'lucide-react'
+import { Loader2, RefreshCw, Inbox, CloudOff, TriangleAlert } from 'lucide-react'
 import clsx from 'clsx'
 import type { ApiErrorInfo } from '../lib/apiError'
 
@@ -16,6 +16,7 @@ type Props = {
   onRetry?: () => void
   skeleton?: React.ReactNode
   className?: string
+  partial?: string | null
   children: React.ReactNode
 }
 
@@ -30,6 +31,7 @@ export default function AsyncState({
   onRetry,
   skeleton,
   className,
+  partial,
   children,
 }: Props) {
   if (loading) {
@@ -90,5 +92,13 @@ export default function AsyncState({
     )
   }
 
-  return <>{children}</>
+  return <>
+    {partial && (
+      <div role="status" className="mb-4 flex items-start gap-2 rounded-xl border border-highlight/30 bg-highlight-soft p-3 text-sm text-highlight">
+        <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <span><strong className="font-semibold">部分資料暫時無法載入。</strong> {partial}</span>
+      </div>
+    )}
+    {children}
+  </>
 }

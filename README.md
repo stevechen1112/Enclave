@@ -16,10 +16,10 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 | 工作區程式基線 | Phase B–M、影片 F1–F3、UI/UX UX-A–UX-D 已完成並通過各階段 Code Review |
 | 核心架構 | 多租戶平台、Enterprise Knowledge Kernel、多模態 Ingestion Fabric、Workflow Kernel、Domain Pack Runtime 已建立 |
 | 最新瀏覽器驗收 | P0 核准 release 的 authenticated canonical routes、Owner 核心平台、六種 Demo persona、Asset Library、統一 Intake、Review、手機版與權限邊界均 PASS |
-| 前端最新回歸 | 25 個測試檔／88 項測試通過；14 項 staging Playwright E2E、ESLint、TypeScript 與 Vite production build 通過 |
+| 前端最新回歸 | 31 個測試檔／108 項測試通過；P6 Playwright 29 項、ESLint、TypeScript 與 Vite production build 通過 |
 | 後端架構基線 | P4 全量回歸 1,314 passed／12 skipped／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
 | 正式站 | [https://kachu.tw](https://kachu.tw) 已正式上線；P0 核准 release 已通過 source／schema／route machine parity 與瀏覽器驗收 |
-| 產品化 Phase | P0–P4 PASS；P5 內部實作與 evidence schema v2 已完成 review，正式三 profile capacity、四種 degradation 與 72 小時 soak 因缺少隔離硬體維持 ENVIRONMENT HOLD |
+| 產品化 Phase | P0–P4 PASS；P5 工程與內部 review 完成，商用規模 live evidence 為 WAIVED／NOT RUN；P6 internal software gate 與 Code Review PASS；實體裝置 campaign 保留為 Commercial GA gate |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；外部滲透、法律／現場簽核、真機弱網噪音與跨產業多模態 holdout 尚待完成 |
 
@@ -35,6 +35,7 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 - `docs/PHASE_P3_MULTIMODAL_GOLDEN_CORPUS_CODE_REVIEW.md`
 - `docs/PHASE_P4_RESILIENCE_DR_CODE_REVIEW.md`
 - `docs/reports/P4_RESILIENCE_EVIDENCE_2026-08-28.json`
+- `docs/reports/P6_UIUX_DEVICE_CODE_REVIEW_2026-08-28.md`
 - `docs/UIUX_BROWSER_ACCEPTANCE_2026-08-27.md`
 
 ---

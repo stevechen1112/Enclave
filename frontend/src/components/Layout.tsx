@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import {
@@ -15,6 +15,8 @@ import {
 import ReadinessBanner from './ReadinessBanner'
 import InferenceBanner from './InferenceBanner'
 import CommandPalette from './CommandPalette'
+import ConnectivityBanner from './ConnectivityBanner'
+import LongTaskRecoveryBanner from './LongTaskRecoveryBanner'
 
 const NAV_ICONS: Record<string, typeof LayoutGrid> = {
   '/overview': LayoutGrid,
@@ -30,6 +32,9 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileDrawerRef = useRef<HTMLElement>(null)
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null)
 
   const nav = usePrimaryNav()
   const home = useDefaultHomePath()
@@ -44,7 +49,10 @@ export default function Layout() {
   useEffect(() => {
     if (!userMenuOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setUserMenuOpen(false)
+      if (e.key === 'Escape') {
+        setUserMenuOpen(false)
+        userMenuButtonRef.current?.focus()
+      }
     }
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target
@@ -63,10 +71,37 @@ export default function Layout() {
   useEffect(() => {
     if (!sidebarOpen) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSidebarOpen(false)
+      if (e.key === 'Escape') {
+        setSidebarOpen(false)
+        window.requestAnimationFrame(() => mobileMenuButtonRef.current?.focus())
+        return
+      }
+      if (e.key !== 'Tab') return
+      const focusable = [...(mobileDrawerRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+      ) || [])].filter(element => element.offsetParent !== null)
+      if (!focusable.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
     }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    const frame = window.requestAnimationFrame(() => {
+      mobileDrawerRef.current?.querySelector<HTMLElement>('[data-mobile-menu-close]')?.focus()
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKey)
+    }
   }, [sidebarOpen])
 
   useEffect(() => {
@@ -87,13 +122,21 @@ export default function Layout() {
     navigate('/login')
   }
 
+  const closeSidebar = () => {
+    const shouldRestore = sidebarOpen
+    setSidebarOpen(false)
+    if (shouldRestore) {
+      window.requestAnimationFrame(() => mobileMenuButtonRef.current?.focus())
+    }
+  }
+
   const sidebarContent = (
     <>
       <div className="flex h-16 items-center gap-2.5 border-b border-sidebar-line px-4">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent shadow-sm">
           <Shield className="h-5 w-5 text-white" aria-hidden />
         </div>
-        <Link to={home} className="min-w-0 text-lg font-semibold tracking-tight text-sidebar-fg" onClick={() => setSidebarOpen(false)}>
+        <Link to={home} className="min-w-0 text-lg font-semibold tracking-tight text-sidebar-fg" onClick={closeSidebar}>
           <span className="block truncate">{orgLabel}</span>
           {orgLabel !== 'Enclave' && (
             <span className="block text-xs font-normal text-sidebar-muted">Enclave</span>
@@ -101,9 +144,10 @@ export default function Layout() {
         </Link>
         <button
           type="button"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
           className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg md:hidden"
           aria-label="關閉選單"
+          data-mobile-menu-close
         >
           <X className="h-5 w-5" />
         </button>
@@ -113,14 +157,14 @@ export default function Layout() {
         {canAddKnowledge && (
           <Link
             to="/knowledge/new"
-            onClick={() => setSidebarOpen(false)}
+            onClick={closeSidebar}
             className="mb-4 flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent px-3 text-sm font-semibold text-white shadow-sm hover:brightness-105"
           >
             <Plus className="h-4 w-4" aria-hidden />
             新增知識
           </Link>
         )}
-        <button type="button" onClick={() => setCommandOpen(true)} className="mb-3 flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg" aria-label="搜尋可用功能">
+        <button type="button" onClick={() => { closeSidebar(); setCommandOpen(true) }} className="mb-3 flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg" aria-label="搜尋可用功能">
           <Search className="h-5 w-5" aria-hidden />
           <span className="flex-1 text-left">搜尋功能</span><kbd className="rounded border border-sidebar-line px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
         </button>
@@ -131,7 +175,7 @@ export default function Layout() {
               key={item.to}
               to={item.to}
               end={item.end}
-              onClick={() => setSidebarOpen(false)}
+              onClick={closeSidebar}
               className={({ isActive }) =>
                 clsx(
                   'flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium transition-colors duration-150',
@@ -151,11 +195,11 @@ export default function Layout() {
       <div className="border-t border-sidebar-line p-3">
         <div className="relative" data-user-menu>
           <button
+            ref={userMenuButtonRef}
             type="button"
             onClick={() => setUserMenuOpen(v => !v)}
             className="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2 text-left hover:bg-sidebar-hover"
             aria-expanded={userMenuOpen}
-            aria-haspopup="menu"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-sidebar-fg">
@@ -167,7 +211,6 @@ export default function Layout() {
           </button>
           {userMenuOpen && (
             <div
-              role="menu"
               // The account control sits at the bottom of the sidebar.  Keep
               // its menu inside the viewport by overlaying it above the
               // trigger instead of expanding the sidebar below the fold.
@@ -176,7 +219,6 @@ export default function Layout() {
               {canCreate && (
                 <Link
                   to="/create"
-                  role="menuitem"
                   onClick={() => { setUserMenuOpen(false); setSidebarOpen(false) }}
                   className="flex min-h-11 items-center gap-2.5 px-4 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
                 >
@@ -186,7 +228,6 @@ export default function Layout() {
               )}
               <Link
                 to="/me/usage"
-                role="menuitem"
                 onClick={() => { setUserMenuOpen(false); setSidebarOpen(false) }}
                 className="flex min-h-11 items-center gap-2.5 px-4 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
               >
@@ -195,7 +236,6 @@ export default function Layout() {
               </Link>
               <button
                 type="button"
-                role="menuitem"
                 onClick={handleLogout}
                 className="flex min-h-11 w-full items-center gap-2.5 px-4 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
               >
@@ -211,6 +251,7 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-wash">
+      <a href="#main-content" className="skip-link">跳到主要內容</a>
       <aside className="hidden w-60 flex-col border-r border-sidebar-line bg-sidebar md:flex">
         {sidebarContent}
       </aside>
@@ -218,23 +259,26 @@ export default function Layout() {
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-ink/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={closeSidebar}
           aria-hidden
         />
       )}
-      <aside
-        className={clsx(
-          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sidebar-line bg-sidebar transition-transform duration-200 md:hidden',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-        )}
-        aria-hidden={!sidebarOpen}
-      >
-        {sidebarContent}
-      </aside>
+      {sidebarOpen && (
+        <aside
+          ref={mobileDrawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="行動版主要選單"
+          className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sidebar-line bg-sidebar md:hidden"
+        >
+          {sidebarContent}
+        </aside>
+      )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-14 items-center gap-3 border-b border-line bg-surface px-4 md:hidden">
           <button
+            ref={mobileMenuButtonRef}
             type="button"
             onClick={() => setSidebarOpen(true)}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-ink hover:bg-wash"
@@ -248,7 +292,9 @@ export default function Layout() {
 
         <InferenceBanner />
         <ReadinessBanner />
-        <main className="flex-1 overflow-hidden">
+        <ConnectivityBanner />
+        <LongTaskRecoveryBanner />
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-hidden">
           <Outlet />
         </main>
       </div>

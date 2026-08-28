@@ -57,7 +57,18 @@ export function parseApiError(err: unknown, fallback = '操作失敗，請稍後
     const status = err.response?.status
     const data = err.response?.data
     const requestId = pickRequestId(data, err.response?.headers as Record<string, unknown> | undefined)
-    const message = detailMessage(data) || err.message || fallback
+    const detail = detailMessage(data) || ''
+    const normalized = detail.toLocaleLowerCase()
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+    const message = offline
+      ? '裝置目前離線；恢復網路後即可重試。'
+      : status === 408 || err.code === 'ECONNABORTED'
+        ? '操作等候逾時；原始資料不會因此遺失，請重試或稍後查看處理進度。'
+        : status === 429 && /quota|額度|用量|limit/.test(normalized)
+          ? '本期額度已用完；系統已停止新增消耗，請聯絡管理員調整額度。'
+          : status === 503 && /provider|模型|推論|disabled|unavailable|未啟用/.test(normalized)
+            ? 'AI 處理服務目前未啟用或暫時不可用；既有知識仍可瀏覽。'
+            : detail || err.message || fallback
     const retryable =
       !status ||
       status === 408 ||
