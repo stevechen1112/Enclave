@@ -43,6 +43,8 @@ def _driver_plan(
     driver_dir = tmp_path / "scripts" / "p5_degradation_drivers"
     driver_dir.mkdir(parents=True, exist_ok=True)
     driver = driver_dir / "test_driver.py"
+    integrity = tmp_path / "scripts" / "run_p5_integrity_probe.py"
+    integrity.write_text("# trusted test integrity probe\n", encoding="utf-8")
     driver.write_text(
         """import argparse, json
 p=argparse.ArgumentParser()
@@ -51,6 +53,7 @@ p.add_argument('--p5-step', required=True)
 p.add_argument('--source-commit', required=True)
 p.add_argument('--probe-exit', type=int, default=0)
 p.add_argument('--false-completion', type=int, default=0)
+p.add_argument('--integrity-script', required=True)
 a=p.parse_args()
 if a.p5_step == 'verify':
  print(json.dumps({'schema_version':1,'scenario':a.p5_scenario,
@@ -75,6 +78,8 @@ raise SystemExit(a.probe_exit if a.p5_step == 'probe' else 0)
             step,
             "--source-commit",
             SOURCE_COMMIT,
+            "--integrity-script",
+            str(integrity),
         ]
         if step == "probe":
             argv += ["--probe-exit", str(probe_exit)]
@@ -84,6 +89,12 @@ raise SystemExit(a.probe_exit if a.p5_step == 'probe' else 0)
             "argv": argv,
             "driver": "scripts/p5_degradation_drivers/test_driver.py",
             "driver_sha256": digest,
+            "trusted_files": [
+                {
+                    "repo_path": "scripts/run_p5_integrity_probe.py",
+                    "sha256": digest,
+                }
+            ],
         }
     return {
         "schema_version": 1,
@@ -133,10 +144,19 @@ def test_degradation_runner_rejects_unknown_scenario():
 def test_degradation_runner_rejects_arbitrary_inline_commands(tmp_path):
     module = _load_script("run_p5_degradation.py")
     plan = _driver_plan(module, tmp_path, "provider_slow")
+    trusted = plan["commands"]["baseline"]["trusted_files"]
+    integrity = tmp_path / "scripts" / "run_p5_integrity_probe.py"
     plan["commands"]["probe"] = {
-        "argv": [sys.executable, "-c", "print('fake pass')"],
+        "argv": [
+            sys.executable,
+            "-c",
+            "print('fake pass')",
+            "--integrity-script",
+            str(integrity),
+        ],
         "driver": "scripts/p5_degradation_drivers/test_driver.py",
         "driver_sha256": plan["commands"]["baseline"]["driver_sha256"],
+        "trusted_files": trusted,
     }
     with pytest.raises(ValueError, match="execute its pinned driver"):
         module.execute_plan(plan, timeout=5, environment=_environment())
@@ -164,6 +184,22 @@ def test_degradation_runner_rejects_driver_from_another_commit(tmp_path):
     module = _load_script("run_p5_degradation.py")
     plan = _driver_plan(module, tmp_path, "provider_slow")
     module._committed_driver_sha256 = lambda _driver, _commit: "f" * 64
+    with pytest.raises(ValueError, match="does not match source_commit"):
+        module.execute_plan(plan, timeout=5, environment=_environment())
+
+
+def test_degradation_runner_requires_committed_integrity_probe(tmp_path):
+    module = _load_script("run_p5_degradation.py")
+    plan = _driver_plan(module, tmp_path, "provider_slow")
+    plan["commands"]["verify"]["trusted_files"] = []
+    with pytest.raises(ValueError, match="trusted_files"):
+        module.execute_plan(plan, timeout=5, environment=_environment())
+
+
+def test_degradation_runner_rejects_integrity_probe_hash_mismatch(tmp_path):
+    module = _load_script("run_p5_degradation.py")
+    plan = _driver_plan(module, tmp_path, "provider_slow")
+    plan["commands"]["verify"]["trusted_files"][0]["sha256"] = "f" * 64
     with pytest.raises(ValueError, match="does not match source_commit"):
         module.execute_plan(plan, timeout=5, environment=_environment())
 

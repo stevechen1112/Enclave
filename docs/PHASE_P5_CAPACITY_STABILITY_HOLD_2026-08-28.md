@@ -36,8 +36,10 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
 - Environment evidence 實測、runtime image ID、source commit、artifact hash 與
   co-resident Enclave project gate。
 - Degradation evidence 綁定 commit／Compose／tenant／environment；只接受同 commit
-  且雜湊相符的版本控制 driver，禁止敏感資訊進 argv，並要求 recovery、data loss、
-  false completion 與 cross-tenant leak 的實際觀測。
+  且雜湊相符的版本控制 driver 與 integrity probe，禁止敏感資訊進 argv，並要求
+  recovery、data loss、false completion 與 cross-tenant leak 的實際觀測。四種
+  live driver、plan generator 與中斷復原流程已完成內部實作，但在專用主機執行前
+  仍維持 NOT RUN，不得把單元測試視為 live evidence。
 
 ## 尚未完成、不可偽造的正式證據
 
@@ -77,5 +79,5 @@ P5 並未完成，因此不能宣稱產品化計畫 all done，也不能進入 P
 ## 持續推進原則
 
 Environment HOLD 只凍結上述正式 live evidence，不凍結內部工程。等待專用主機期間，
-仍應持續完成 driver 實作、測試覆蓋、runbook、artifact schema、review findings 與
-部署自動化；不得因外部環境尚未到位而停止整個產品化計畫，也不得跳過 P5 進 P6。
+仍應持續完成測試覆蓋、runbook、artifact schema、review findings 與部署自動化；
+不得因外部環境尚未到位而停止整個產品化計畫，也不得跳過 P5 進 P6。

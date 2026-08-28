@@ -45,10 +45,10 @@ def _argv(value: Any, name: str) -> list[str]:
     return value
 
 
-def _committed_driver_sha256(driver_value: str, source_commit: str) -> str:
+def _committed_driver_sha256(file_value: str, source_commit: str) -> str:
     try:
         result = subprocess.run(
-            ["git", "show", f"{source_commit}:{driver_value}"],
+            ["git", "show", f"{source_commit}:{file_value}"],
             cwd=ROOT,
             capture_output=True,
             timeout=30,
@@ -60,7 +60,7 @@ def _committed_driver_sha256(driver_value: str, source_commit: str) -> str:
         raise ValueError("driver is not present in the plan source_commit")
     try:
         diff = subprocess.run(
-            ["git", "diff", "--quiet", source_commit, "--", driver_value],
+            ["git", "diff", "--quiet", source_commit, "--", file_value],
             cwd=ROOT,
             capture_output=True,
             timeout=30,
@@ -100,6 +100,44 @@ def _command(
         raise ValueError(f"commands.{name}.driver does not exist")
     if _committed_driver_sha256(driver_value, source_commit) != driver_hash:
         raise ValueError(f"commands.{name}.driver_sha256 does not match source_commit")
+    trusted_files = value.get("trusted_files")
+    if not isinstance(trusted_files, list) or not trusted_files:
+        raise ValueError(f"commands.{name}.trusted_files must be a non-empty array")
+    trusted_by_repo_path: dict[str, Path] = {}
+    for index, trusted in enumerate(trusted_files):
+        if not isinstance(trusted, dict):
+            raise TypeError(f"commands.{name}.trusted_files[{index}] must be an object")
+        repo_path = str(trusted.get("repo_path") or "")
+        expected_hash = str(trusted.get("sha256") or "")
+        relative = Path(repo_path)
+        if not repo_path or relative.is_absolute():
+            raise ValueError(f"commands.{name}.trusted_files[{index}] path is invalid")
+        resolved = (ROOT / relative).resolve()
+        try:
+            resolved.relative_to((ROOT / "scripts").resolve())
+        except ValueError as exc:
+            raise ValueError(
+                f"commands.{name}.trusted_files[{index}] must be under scripts"
+            ) from exc
+        if not resolved.is_file():
+            raise ValueError(f"commands.{name}.trusted_files[{index}] does not exist")
+        if _committed_driver_sha256(repo_path, source_commit) != expected_hash:
+            raise ValueError(
+                f"commands.{name}.trusted_files[{index}] does not match source_commit"
+            )
+        trusted_by_repo_path[repo_path] = resolved
+    integrity_path = "scripts/run_p5_integrity_probe.py"
+    if integrity_path not in trusted_by_repo_path:
+        raise ValueError(f"commands.{name} must pin {integrity_path}")
+    try:
+        integrity_index = argv.index("--integrity-script")
+        configured_integrity = Path(argv[integrity_index + 1])
+    except (ValueError, IndexError) as exc:
+        raise ValueError(f"commands.{name}.argv requires --integrity-script") from exc
+    if not configured_integrity.is_absolute():
+        configured_integrity = ROOT / configured_integrity
+    if configured_integrity.resolve() != trusted_by_repo_path[integrity_path]:
+        raise ValueError(f"commands.{name}.argv integrity script is not the pinned file")
     sensitive_flags = ("password", "secret", "token", "api-key", "authorization")
     if any(
         item.startswith("-")

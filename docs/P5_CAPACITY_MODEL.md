@@ -83,10 +83,15 @@
    source commit、Compose project 與 tenant；baseline／inject／probe／recover／verify
    每一步都只能執行 `scripts/p5_degradation_drivers/` 下、存在於相同 source
    commit 且 SHA-256 相符的 driver，不接受 shell／inline Python 偽造證據。
+   由 driver 呼叫的 integrity probe 也必須列入 `trusted_files`，並同樣通過
+   source commit、工作樹與 SHA-256 三重比對。四份 plan 應由
+   `scripts/prepare_p5_degradation_plans.py` 從 PASS environment evidence 產生，
+   不要人工拼接 argv。
    密碼、token、secret 與 API key 只能由環境變數注入，不得出現在 argv 或
    transcript。verify 必須輸出 scenario／commit／tenant 綁定、非空觀測紀錄、
    `data_loss=0`、`false_completion=0`、`cross_tenant_leak=0` 與
    `recovered=true`；總 gate 會再次逐項比對。
+   詳細執行與中斷復原程序見 `runbooks/P5_DEGRADATION_DRILLS.md`。
 4. 容量與降級短測通過後，才以 `scripts/run_p5_soak.py` 啟動 Standard profile
    的 1× 預估尖峰 72 小時測試。Runner 拒絕任何短於 259,200 秒的正式 run，
    並要求同一環境的 live grounding evidence，避免長時間跑在空知識庫上。
