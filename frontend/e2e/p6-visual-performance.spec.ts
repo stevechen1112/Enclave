@@ -6,7 +6,10 @@ async function demoLogin(page: Page) {
   expect(response.ok(), await response.text()).toBe(true)
   const { access_token: token } = await response.json()
   await page.goto('/login')
-  await page.evaluate(value => window.localStorage.setItem('token', value), token)
+  await page.evaluate(value => {
+    window.localStorage.setItem('token', value)
+    window.localStorage.setItem('enclave_readiness_dismissed_v1', '1')
+  }, token)
 }
 
 test.use({ reducedMotion: 'reduce' })
