@@ -1,8 +1,10 @@
 from app.packs.application_support import ModuleTenantEligibility
+from app.packs.training_knowhow.knowledge_provider import ApprovedKnowhowProvider
 from app.platform.packs import (
-    ApplicationDataPolicy, ApplicationManifest, PackContribution,
-    PackDependency, PackManifest, UIModuleContribution,
-    WorkflowHandlerContribution,
+    APIRouterContribution, ApplicationDataPolicy, ApplicationManifest,
+    PackContribution, PackManifest, ProjectorContribution,
+    ReviewProviderContribution, TaskHandlerContribution,
+    UIModuleContribution, WorkflowHandlerContribution,
 )
 
 
@@ -19,7 +21,6 @@ def build_training_knowhow_pack() -> PackContribution:
                 "workflow.task", "workflow.form", "workflow.approval"
             ),
             module_keys=("training_knowhow",),
-            dependencies=(PackDependency("mka", "1.0.0"),),
         ),
         applications=(ApplicationManifest(
             application_key="training.knowhow",
@@ -41,6 +42,37 @@ def build_training_knowhow_pack() -> PackContribution:
                 export_required_before_remove=False,
             ),
         ),),
+        knowledge_providers=(ApprovedKnowhowProvider(),),
+        task_handlers=(
+            TaskHandlerContribution(
+                handler_key="training_knowhow.long_interview.transcribe",
+                handler_version="1.0.0",
+                task_name="tasks.transcribe_knowledge_capture",
+                handler_path="app.tasks.mka_tasks.transcribe_knowledge_capture",
+            ),
+            TaskHandlerContribution(
+                handler_key="training_knowhow.audio.retention",
+                handler_version="1.0.0",
+                task_name="tasks.purge_mka_retention",
+                handler_path="app.tasks.mka_tasks.purge_mka_retention",
+            ),
+        ),
+        projectors=(
+            ProjectorContribution(
+                projector_key="training_knowhow.capture.asset",
+                projector_version="1.0.0",
+                source_kinds=("audio",),
+                artifact_kinds=("chunk_manifest",),
+                projector_path="app.services.asset_projection.finalize_capture_asset_revision",
+            ),
+            ProjectorContribution(
+                projector_key="training_knowhow.capture.transcript",
+                projector_version="1.0.0",
+                source_kinds=("audio",),
+                artifact_kinds=("transcript_segment",),
+                projector_path="app.services.asset_projection.project_capture_transcript_segments",
+            ),
+        ),
         workflow_handlers=tuple(
             WorkflowHandlerContribution(
                 handler_key=key,
@@ -59,6 +91,16 @@ def build_training_knowhow_pack() -> PackContribution:
             ),
             required_capability_keys=("knowledge.knowhow.read",),
             bundle_key="mka",
+        ),),
+        api_routers=(APIRouterContribution(
+            router_key="training_knowhow.api",
+            router_version="1.0.0",
+            router_path="app.packs.training_knowhow.api:router",
+        ),),
+        review_providers=(ReviewProviderContribution(
+            provider_key="training_knowhow.knowledge_review",
+            provider_version="1.0.0",
+            provider_path="app.packs.training_knowhow.reviews:MKAReviewProvider",
         ),),
         tenant_eligibility=ModuleTenantEligibility("training_knowhow"),
     )

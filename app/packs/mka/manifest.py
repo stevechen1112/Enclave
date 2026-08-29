@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from sqlalchemy import func, or_
 
-from app.packs.mka.knowledge_provider import ApprovedKnowhowProvider
 from app.platform.packs import (
     APIRouterContribution,
     LifecycleHookContribution,
@@ -12,9 +11,6 @@ from app.platform.packs import (
     PackManifest,
     PackTenantContext,
     PermissionResolverContribution,
-    ProjectorContribution,
-    ReviewProviderContribution,
-    TaskHandlerContribution,
     UIModuleContribution,
 )
 
@@ -68,8 +64,7 @@ def build_mka_pack() -> PackContribution:
             pack_version="1.0.0",
             display_name="Manufacturing Knowledge Applications",
             capability_keys=(
-                "knowledge.knowhow.read",
-                "application.knowledge_interview",
+                "mka.workspace",
             ),
             required_platform_capability_keys=(
                 "workflow.task",
@@ -84,37 +79,6 @@ def build_mka_pack() -> PackContribution:
                 "mka.module.admin",
             ),
             metadata={"owner": "manufacturing-applications", "stability": "beta"},
-        ),
-        knowledge_providers=(ApprovedKnowhowProvider(),),
-        task_handlers=(
-            TaskHandlerContribution(
-                handler_key="mka.long_interview.transcribe",
-                handler_version="1.0.0",
-                task_name="tasks.transcribe_knowledge_capture",
-                handler_path="app.tasks.mka_tasks.transcribe_knowledge_capture",
-            ),
-            TaskHandlerContribution(
-                handler_key="mka.audio.retention",
-                handler_version="1.0.0",
-                task_name="tasks.purge_mka_retention",
-                handler_path="app.tasks.mka_tasks.purge_mka_retention",
-            ),
-        ),
-        projectors=(
-            ProjectorContribution(
-                projector_key="mka.capture.asset",
-                projector_version="1.0.0",
-                source_kinds=("audio",),
-                artifact_kinds=("chunk_manifest",),
-                projector_path="app.services.asset_projection.finalize_capture_asset_revision",
-            ),
-            ProjectorContribution(
-                projector_key="mka.capture.transcript",
-                projector_version="1.0.0",
-                source_kinds=("audio",),
-                artifact_kinds=("transcript_segment",),
-                projector_path="app.services.asset_projection.project_capture_transcript_segments",
-            ),
         ),
         ui_modules=(
             UIModuleContribution(
@@ -154,13 +118,6 @@ def build_mka_pack() -> PackContribution:
                 hook_version="1.0.0",
                 event_key="tenant.provisioned",
                 hook_path="app.packs.mka.lifecycle:provision_tenant",
-            ),
-        ),
-        review_providers=(
-            ReviewProviderContribution(
-                provider_key="mka.knowledge_review",
-                provider_version="1.0.0",
-                provider_path="app.packs.mka.reviews:MKAReviewProvider",
             ),
         ),
         tenant_eligibility=MKATenantEligibility(),

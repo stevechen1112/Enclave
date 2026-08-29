@@ -6,7 +6,7 @@
 
 **實作進度：** A0 PASS；A1 PASS；A2 PASS；A3 PASS；A4 PASS
 
-**物理脫鉤追加進度：** A5 PASS；A6 進行中；A7–A8 待進行
+**物理脫鉤追加進度：** A5 PASS；A6 PASS；A7 進行中；A8 待進行
 
 ## 1. 目標結構
 

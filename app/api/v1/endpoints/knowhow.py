@@ -14,7 +14,7 @@ from app.api.deps_permissions import (
     require_knowhow_author,
 )
 from app.models.user import User
-from app.services.mka_persistence import (
+from app.packs.training_knowhow.persistence import (
     MKAConflictError,
     MKAForbiddenError,
     MKANotFoundError,

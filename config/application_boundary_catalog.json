@@ -30,6 +30,11 @@
     "app/composition/packs.py",
     "app/composition/approval_objects.py"
   ],
+  "deprecated_pack_import_bridges": [
+    "app/api/v1/endpoints/knowhow.py",
+    "app/api/v1/endpoints/voice.py",
+    "app/services/mka_persistence.py"
+  ],
   "frontend_bundle_composition_root": "frontend/src/modules/installed.ts",
   "deprecated_core_compatibility_aliases": {
     "module_keys": [

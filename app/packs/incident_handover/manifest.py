@@ -1,7 +1,7 @@
 from app.packs.application_support import ModuleTenantEligibility
 from app.platform.packs import (
     ApplicationDataPolicy, ApplicationManifest, PackContribution,
-    PackDependency, PackManifest, WorkflowHandlerContribution,
+    PackManifest, WorkflowHandlerContribution,
 )
 
 
@@ -25,7 +25,6 @@ def build_incident_handover_pack() -> PackContribution:
                 "workflow.task", "workflow.form", "workflow.approval"
             ),
             module_keys=("incident_handover",),
-            dependencies=(PackDependency("mka", "1.0.0"),),
         ),
         applications=(ApplicationManifest(
             application_key="operations.incident_handover",

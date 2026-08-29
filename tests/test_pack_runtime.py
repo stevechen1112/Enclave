@@ -86,7 +86,10 @@ def test_mka_manifest_registers_all_backend_contribution_types():
     ]
     assert len(registry.task_handlers()) == 2
     assert len(registry.projectors()) == 2
-    assert [item.router_key for item in registry.api_routers()] == ["mka.api"]
+    assert [item.router_key for item in registry.api_routers()] == [
+        "mka.api",
+        "training_knowhow.api",
+    ]
     assert [item.resolver_key for item in registry.permission_resolvers()] == [
         "mka.permissions"
     ]
@@ -207,6 +210,40 @@ def test_one_application_pack_can_be_physically_excluded() -> None:
     assert "training_knowhow.workspace" in {
         item.ui_key for item in registry.ui_modules()
     }
+
+
+def test_sales_pack_deploys_without_mka_compatibility_shell() -> None:
+    registry = build_pack_registry(
+        deployment_capabilities={
+            "mka": False,
+            "sales_quote": True,
+            "incident_handover": False,
+            "quality_8d": False,
+            "training_knowhow": False,
+        }
+    )
+    assert registry.deployed_pack_keys == ("sales_quote",)
+    assert registry.api_routers() == ()
+    assert registry.workflow_handler("quote", "sales_quote") is not None
+
+
+def test_training_pack_deploys_without_mka_compatibility_shell() -> None:
+    registry = build_pack_registry(
+        deployment_capabilities={
+            "mka": False,
+            "sales_quote": False,
+            "incident_handover": False,
+            "quality_8d": False,
+            "training_knowhow": True,
+        }
+    )
+    assert registry.deployed_pack_keys == ("training_knowhow",)
+    assert [item.router_key for item in registry.api_routers()] == [
+        "training_knowhow.api"
+    ]
+    assert registry.workflow_handler(
+        "interview", "training_knowhow"
+    ) is not None
 
 
 def test_disabled_pack_has_no_api_or_worker_surface():

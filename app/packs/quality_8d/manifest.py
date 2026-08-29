@@ -1,7 +1,7 @@
 from app.packs.application_support import ModuleTenantEligibility
 from app.platform.packs import (
     ApplicationDataPolicy, ApplicationManifest, PackContribution,
-    PackDependency, PackManifest, WorkflowHandlerContribution,
+    PackManifest, WorkflowHandlerContribution,
 )
 
 
@@ -16,7 +16,6 @@ def build_quality_8d_pack() -> PackContribution:
                 "workflow.task", "workflow.form", "workflow.approval"
             ),
             module_keys=("quality_8d",),
-            dependencies=(PackDependency("mka", "1.0.0"),),
         ),
         applications=(ApplicationManifest(
             application_key="quality.8d",

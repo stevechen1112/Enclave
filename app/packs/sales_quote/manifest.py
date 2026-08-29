@@ -3,7 +3,6 @@ from app.platform.packs import (
     ApplicationDataPolicy,
     ApplicationManifest,
     PackContribution,
-    PackDependency,
     PackManifest,
     UIModuleContribution,
     WorkflowHandlerContribution,
@@ -21,7 +20,6 @@ def build_sales_quote_pack() -> PackContribution:
                 "workflow.task", "workflow.form", "workflow.approval"
             ),
             module_keys=("sales_quote",),
-            dependencies=(PackDependency("mka", "1.0.0"),),
         ),
         applications=(ApplicationManifest(
             application_key="sales.quote",

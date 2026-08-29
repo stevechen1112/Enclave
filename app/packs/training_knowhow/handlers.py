@@ -8,7 +8,7 @@ training = build_form_handler("training_checklist")
 
 
 def interview(ctx):
-    from app.services.mka_persistence import MKARepository
+    from app.packs.training_knowhow.persistence import MKARepository
     from app.services.task_engine import TaskResult
 
     repo = MKARepository(ctx.db)

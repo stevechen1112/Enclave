@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.models.user import User
-from app.services.mka_persistence import (
+from app.packs.training_knowhow.persistence import (
     MKAConflictError,
     MKANotFoundError,
     MKARepository,

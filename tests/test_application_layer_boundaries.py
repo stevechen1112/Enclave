@@ -63,7 +63,9 @@ def test_core_roots_do_not_import_application_implementation() -> None:
 
 
 def test_backend_pack_imports_are_owned_or_composed_only() -> None:
-    allowlist = set(_catalog()["pack_composition_import_allowlist"])
+    catalog = _catalog()
+    allowlist = set(catalog["pack_composition_import_allowlist"])
+    allowlist.update(catalog["deprecated_pack_import_bridges"])
     violations: list[str] = []
     for path in APP.rglob("*.py"):
         relative = path.relative_to(ROOT).as_posix()
