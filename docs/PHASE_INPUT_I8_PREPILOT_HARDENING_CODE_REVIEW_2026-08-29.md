@@ -54,3 +54,12 @@
 - I7 live capacity/degradation/72h soak。
 
 因此本次 hardening 工程通過，但 I8 field gate 與 Commercial GA 仍維持 HOLD。
+
+## Production deployment follow-up
+
+2026-08-29 已部署 `production-e34477b86f0e`，schema 為
+`input_i8_pilot_evidence_001`。正式網域驗證 15／15 PASS；合成公司管理角色的
+登入後桌面與 390×844 窄螢幕巡檢 PASS，console error／warning 為 0。
+
+此結果解除本報告原列的「登入後人工視覺巡檢」待辦，但不等同真實第一租戶
+Pilot、實體 iPhone／Android 驗證或 14–28 天 field evidence。

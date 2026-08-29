@@ -1,6 +1,6 @@
 {
   "phase": "Input I8",
-  "generated_at": "2026-08-29T06:30:49+08:00",
+  "generated_at": "2026-08-29T08:40:00+08:00",
   "engineering_status": "PASS",
   "field_gate_status": "HOLD",
   "field_status": "PILOT_NOT_STARTED",
@@ -32,7 +32,12 @@
     "eslint": "PASS",
     "vite_production_build": "PASS",
     "migration_roundtrip": "PASS",
-    "i6_i8_rls_tables": "8/8 enabled, forced, one tenant_isolation policy each",
-    "authenticated_browser_visual_review": "PENDING_LOGIN_AUTHORIZATION"
+    "i6_i8_rls_tables_test_environment": "8/8 enabled, forced, one tenant_isolation policy each",
+    "production_release": "production-e34477b86f0e",
+    "production_source_commit": "e34477b86f0e4f4cb2d0130345283395ba1b5f88",
+    "production_schema_head": "input_i8_pilot_evidence_001",
+    "production_verification": "15/15 PASS",
+    "production_rls": "110 enabled, 0 FORCE; dedicated deployment/database remains required for the first real tenant",
+    "authenticated_browser_visual_review": "PASS with synthetic company-admin persona; no production records created"
   }
 }
