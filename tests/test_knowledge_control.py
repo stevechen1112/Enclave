@@ -278,7 +278,7 @@ async def test_chunk_reads_are_isolated_by_document_revision(client, superuser_h
 async def test_knowhow_hot_path_excludes_unreviewed_expired_and_future_cards(client, superuser_headers, test_engine):
     from sqlalchemy.orm import sessionmaker
     from app.models.mka import KnowhowCardModel
-    from app.services.mka_persistence import MKARepository
+    from app.packs.training_knowhow.persistence import MKARepository
 
     me = (await client.get("/api/v1/users/me", headers=superuser_headers)).json()
     tenant_id = uuid.UUID(me["tenant_id"]); reviewer_id = uuid.UUID(me["id"])

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib
+import subprocess
+import sys
 from pathlib import Path
 from uuid import uuid4
 
@@ -84,10 +86,11 @@ def test_mka_manifest_registers_all_backend_contribution_types():
     assert [provider.provider_key for provider in registry.knowledge_providers()] == [
         "mka.approved_knowhow"
     ]
-    assert len(registry.task_handlers()) == 2
+    assert len(registry.task_handlers()) == 0
     assert len(registry.projectors()) == 2
     assert [item.router_key for item in registry.api_routers()] == [
         "mka.api",
+        "sales_quote.api",
         "training_knowhow.api",
     ]
     assert [item.resolver_key for item in registry.permission_resolvers()] == [
@@ -179,13 +182,7 @@ def test_task_handler_descriptors_resolve_to_existing_callables():
 def test_deployment_flag_removes_every_mka_backend_contribution():
     registry = build_pack_registry(deployment_capabilities={"mka": False})
 
-    assert registry.pack_keys == (
-        "mka",
-        "sales_quote",
-        "incident_handover",
-        "quality_8d",
-        "training_knowhow",
-    )
+    assert registry.pack_keys == ()
     assert registry.deployed_pack_keys == ()
     assert registry.knowledge_providers() == ()
     assert registry.task_handlers() == ()
@@ -197,19 +194,90 @@ def test_deployment_flag_removes_every_mka_backend_contribution():
     assert registry.permission_keys() == ()
 
 
-def test_one_application_pack_can_be_physically_excluded() -> None:
-    registry = build_pack_registry(
-        deployment_capabilities={"mka": True, "sales_quote": False}
+def test_settings_can_deploy_sales_pack_without_compatibility_shell(monkeypatch):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "PACK_MKA_ENABLED", False)
+    monkeypatch.setattr(settings, "PACK_SALES_QUOTE_ENABLED", True)
+    monkeypatch.setattr(settings, "PACK_INCIDENT_HANDOVER_ENABLED", False)
+    monkeypatch.setattr(settings, "PACK_QUALITY_8D_ENABLED", False)
+    monkeypatch.setattr(settings, "PACK_TRAINING_KNOWHOW_ENABLED", False)
+
+    assert build_pack_registry().pack_keys == ("sales_quote",)
+
+
+@pytest.mark.parametrize(
+    "excluded",
+    ["sales_quote", "incident_handover", "quality_8d", "training_knowhow"],
+)
+def test_excluded_pack_is_not_imported_in_fresh_process(excluded: str) -> None:
+    flags = {
+        "mka": True,
+        "sales_quote": excluded != "sales_quote",
+        "incident_handover": excluded != "incident_handover",
+        "quality_8d": excluded != "quality_8d",
+        "training_knowhow": excluded != "training_knowhow",
+    }
+    code = (
+        "import sys; "
+        "from app.composition.packs import build_pack_registry; "
+        f"build_pack_registry(deployment_capabilities={flags!r}); "
+        f"assert 'app.packs.{excluded}.manifest' not in sys.modules"
     )
-    assert "sales_quote" not in registry.deployed_pack_keys
-    assert registry.workflow_handler("quote", "sales_quote") is None
-    assert registry.workflow_handler("quality_8d", "quality_8d") is not None
-    assert "sales_quote.entry" not in {
-        item.ui_key for item in registry.ui_modules()
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=Path(__file__).parents[1],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    ("excluded", "handler_key", "module_key", "ui_key", "router_key"),
+    [
+        (
+            "sales_quote",
+            "quote",
+            "sales_quote",
+            "sales_quote.entry",
+            "sales_quote.api",
+        ),
+        ("incident_handover", "incident", "incident_handover", None, None),
+        ("quality_8d", "quality_8d", "quality_8d", None, None),
+        (
+            "training_knowhow",
+            "interview",
+            "training_knowhow",
+            "training_knowhow.workspace",
+            "training_knowhow.api",
+        ),
+    ],
+)
+def test_each_application_pack_can_be_physically_excluded(
+    excluded: str,
+    handler_key: str,
+    module_key: str,
+    ui_key: str | None,
+    router_key: str | None,
+) -> None:
+    application_keys = {
+        "sales_quote",
+        "incident_handover",
+        "quality_8d",
+        "training_knowhow",
     }
-    assert "training_knowhow.workspace" in {
-        item.ui_key for item in registry.ui_modules()
-    }
+    flags = {"mka": True, **{key: key != excluded for key in application_keys}}
+    registry = build_pack_registry(deployment_capabilities=flags)
+
+    assert excluded not in registry.pack_keys
+    assert registry.workflow_handler(handler_key, module_key) is None
+    assert application_keys - {excluded} <= set(registry.pack_keys)
+    if ui_key:
+        assert ui_key not in {item.ui_key for item in registry.ui_modules()}
+    if router_key:
+        assert router_key not in {item.router_key for item in registry.api_routers()}
 
 
 def test_sales_pack_deploys_without_mka_compatibility_shell() -> None:
@@ -222,8 +290,10 @@ def test_sales_pack_deploys_without_mka_compatibility_shell() -> None:
             "training_knowhow": False,
         }
     )
-    assert registry.deployed_pack_keys == ("sales_quote",)
-    assert registry.api_routers() == ()
+    assert registry.pack_keys == ("sales_quote",)
+    assert [item.router_key for item in registry.api_routers()] == [
+        "sales_quote.api"
+    ]
     assert registry.workflow_handler("quote", "sales_quote") is not None
 
 
@@ -237,7 +307,7 @@ def test_training_pack_deploys_without_mka_compatibility_shell() -> None:
             "training_knowhow": True,
         }
     )
-    assert registry.deployed_pack_keys == ("training_knowhow",)
+    assert registry.pack_keys == ("training_knowhow",)
     assert [item.router_key for item in registry.api_routers()] == [
         "training_knowhow.api"
     ]

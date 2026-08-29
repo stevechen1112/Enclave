@@ -243,8 +243,14 @@ class Settings(BaseSettings):
     # 職能模組 Router（稽核文件 §10 P1）
     MODULE_ROUTER_ENABLED: bool = True
     # Pack flags express what this deployment can host. TenantModuleBinding is
-    # still the authority for whether a company may use an MKA capability.
+    # still the authority for whether a company may use an application.
     PACK_MKA_ENABLED: bool = True
+    # None preserves the historical PACK_MKA_ENABLED master switch. Deployments
+    # can override any application independently with its dedicated flag.
+    PACK_SALES_QUOTE_ENABLED: bool | None = None
+    PACK_INCIDENT_HANDOVER_ENABLED: bool | None = None
+    PACK_QUALITY_8D_ENABLED: bool | None = None
+    PACK_TRAINING_KNOWHOW_ENABLED: bool | None = None
 
     # ── P2：Know-how 與長文件 ──
     # Know-how Card（稽核文件 §7.4 P0、§11.4）
@@ -433,6 +439,22 @@ class Settings(BaseSettings):
                     ("KNOWHOW_CARD_ENABLED", self.KNOWHOW_CARD_ENABLED),
                     ("MODULE_ROUTER_ENABLED", self.MODULE_ROUTER_ENABLED),
                     ("PACK_MKA_ENABLED", self.PACK_MKA_ENABLED),
+                    (
+                        "PACK_SALES_QUOTE_ENABLED",
+                        self.PACK_SALES_QUOTE_ENABLED is not False,
+                    ),
+                    (
+                        "PACK_INCIDENT_HANDOVER_ENABLED",
+                        self.PACK_INCIDENT_HANDOVER_ENABLED is not False,
+                    ),
+                    (
+                        "PACK_QUALITY_8D_ENABLED",
+                        self.PACK_QUALITY_8D_ENABLED is not False,
+                    ),
+                    (
+                        "PACK_TRAINING_KNOWHOW_ENABLED",
+                        self.PACK_TRAINING_KNOWHOW_ENABLED is not False,
+                    ),
                 )
                 if not enabled
             ]

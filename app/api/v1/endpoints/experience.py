@@ -27,6 +27,14 @@ def _capabilities_for(user: User) -> list[str]:
     return capabilities_for_user(user)
 
 
+def _field_work_available(ui_modules: list[dict[str, Any]]) -> bool:
+    """Derive field-work access from the current Workflow bundle contract."""
+    return any(
+        "workflow.job.home" in manifest.get("route_keys", [])
+        for manifest in ui_modules
+    )
+
+
 def _filter_task_workspace_entries(
     entries: list[dict[str, Any]], accessible_task_keys: set[str]
 ) -> list[dict[str, Any]]:
@@ -321,9 +329,7 @@ def experience_bootstrap(
         }
         ui_modules = []
 
-    field_work_available = any(
-        "mka.job.home" in manifest.get("route_keys", []) for manifest in ui_modules
-    )
+    field_work_available = _field_work_available(ui_modules)
     if field_work_available and "field_work" not in caps:
         caps.append("field_work")
     capability_catalog = build_capability_catalog(

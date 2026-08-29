@@ -1,5 +1,6 @@
 from app.packs.application_support import ModuleTenantEligibility
 from app.platform.packs import (
+    APIRouterContribution,
     ApplicationDataPolicy,
     ApplicationManifest,
     PackContribution,
@@ -48,6 +49,11 @@ def build_sales_quote_pack() -> PackContribution:
             route_keys=("sales_quote.redirect",),
             required_capability_keys=("workflow.form",),
             bundle_key="sales_quote",
+        ),),
+        api_routers=(APIRouterContribution(
+            router_key="sales_quote.api",
+            router_version="1.0.0",
+            router_path="app.packs.sales_quote.api:router",
         ),),
         tenant_eligibility=ModuleTenantEligibility("sales_quote"),
     )

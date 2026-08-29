@@ -364,7 +364,7 @@ def seed_demo_tenant(db: Session) -> dict[str, Any]:
         seed_canonical_task_definitions,
         seed_default_job_roles,
     )
-    from app.services.mka_persistence import MKARepository
+    from app.services.workflow_repository import WorkflowRepository
 
     tenant = db.query(Tenant).filter(Tenant.id == DEMO_TENANT_ID).first()
     if tenant is not None and not tenant.is_demo:
@@ -470,7 +470,7 @@ def seed_demo_tenant(db: Session) -> dict[str, Any]:
         user.active_job_role_id = role.id
     db.flush()
 
-    MKARepository(db).ensure_form_definitions(tenant_id=tenant.id)
+    WorkflowRepository(db).ensure_form_definitions(tenant_id=tenant.id)
 
     scene_id = _stable_id(tenant.id, "scene", "eq100")
     scene = db.query(SceneRegistry).filter(SceneRegistry.id == scene_id).first()

@@ -36,7 +36,7 @@ from app.models.permission import Department
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.services.mka_module_seed import seed_canonical_task_definitions
-from app.services.mka_persistence import MKARepository
+from app.packs.training_knowhow.persistence import MKARepository
 from app.services.task_engine import TaskAccessDenied, TaskEngine
 
 
@@ -167,7 +167,7 @@ class TestQuoteEndToEnd:
         )
         assert form.values_json["subtotal"] == 24000.0
         # 未核准不可匯出（guarded action）
-        from app.services.mka_persistence import MKAConflictError
+        from app.packs.training_knowhow.persistence import MKAConflictError
         with pytest.raises(MKAConflictError, match="not approved"):
             repo.assert_form_exportable(
                 tenant_id=tenant.id, instance_id=form_id,
@@ -456,8 +456,8 @@ class TestReviewFixes:
         """GET /knowhow 與 GET /knowhow/{id} 不洩漏他人草稿。"""
         from fastapi import HTTPException
 
-        from app.api.v1.endpoints.knowhow import get_knowhow, list_knowhow
-        from app.services.mka_persistence import MKARepository
+        from app.packs.training_knowhow.endpoints.knowhow import get_knowhow, list_knowhow
+        from app.packs.training_knowhow.persistence import MKARepository
 
         tenant = _tenant(db, "Z")
         owner = _user(db, tenant, "owner@z.com")

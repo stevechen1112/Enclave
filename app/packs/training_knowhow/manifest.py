@@ -3,7 +3,7 @@ from app.packs.training_knowhow.knowledge_provider import ApprovedKnowhowProvide
 from app.platform.packs import (
     APIRouterContribution, ApplicationDataPolicy, ApplicationManifest,
     PackContribution, PackManifest, ProjectorContribution,
-    ReviewProviderContribution, TaskHandlerContribution,
+    ReviewProviderContribution,
     UIModuleContribution, WorkflowHandlerContribution,
 )
 
@@ -43,20 +43,6 @@ def build_training_knowhow_pack() -> PackContribution:
             ),
         ),),
         knowledge_providers=(ApprovedKnowhowProvider(),),
-        task_handlers=(
-            TaskHandlerContribution(
-                handler_key="training_knowhow.long_interview.transcribe",
-                handler_version="1.0.0",
-                task_name="tasks.transcribe_knowledge_capture",
-                handler_path="app.tasks.mka_tasks.transcribe_knowledge_capture",
-            ),
-            TaskHandlerContribution(
-                handler_key="training_knowhow.audio.retention",
-                handler_version="1.0.0",
-                task_name="tasks.purge_mka_retention",
-                handler_path="app.tasks.mka_tasks.purge_mka_retention",
-            ),
-        ),
         projectors=(
             ProjectorContribution(
                 projector_key="training_knowhow.capture.asset",

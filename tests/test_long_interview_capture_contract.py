@@ -61,6 +61,6 @@ def test_capture_status_response_does_not_expose_transcript_unless_requested():
 
 
 def test_long_interview_worker_is_registered_with_celery():
-    from app.tasks.mka_tasks import transcribe_knowledge_capture
+    from app.tasks.input_capture_tasks import transcribe_knowledge_capture
 
     assert transcribe_knowledge_capture.name == "tasks.transcribe_knowledge_capture"

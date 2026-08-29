@@ -1,4 +1,4 @@
-"""Know-how interview mode: consent → STT → segment → extract → draft card."""
+"""Training-pack interview: consent → segment → extract → draft card."""
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional

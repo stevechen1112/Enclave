@@ -24,7 +24,7 @@ from app.models.permission import Department
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.core.authorization import AuthorizationContext
-from app.services.mka_persistence import (
+from app.packs.training_knowhow.persistence import (
     MKAConflictError,
     MKAForbiddenError,
     MKAPersistenceError,
@@ -401,7 +401,7 @@ def test_form_and_approval_mutations_use_row_locks():
 
 def test_form_endpoints_forward_actor_context_and_request_defaults_are_isolated():
     import app.api.v1.endpoints.forms as forms_endpoint
-    from app.api.v1.endpoints.knowhow import KnowhowCreateRequest
+    from app.packs.training_knowhow.endpoints.knowhow import KnowhowCreateRequest
     from app.api.v1.endpoints.voice import TranscriptConfirmRequest
 
     source = inspect.getsource(forms_endpoint)
@@ -578,8 +578,13 @@ async def test_chat_call_chain_forwards_request_db_to_retrieval(db, monkeypatch)
 
 
 def test_voice_transcript_persistence_and_high_risk_confirmation(db):
+    from app.services.interaction_repository import (
+        InteractionConflictError,
+        InteractionRepository,
+    )
+
     tenant, user = _identity(db)
-    repo = MKARepository(db)
+    repo = InteractionRepository(db)
     row = repo.save_transcript(
         tenant_id=tenant.id,
         user_id=user.id,
@@ -594,7 +599,7 @@ def test_voice_transcript_persistence_and_high_risk_confirmation(db):
         risk_level="high",
     )
     assert row.transcript_metadata["segments"][0]["text"] == "料號 P-100"
-    with pytest.raises(MKAConflictError, match="must be confirmed"):
+    with pytest.raises(InteractionConflictError, match="must be confirmed"):
         repo.resolve_interaction(
             tenant_id=tenant.id, user_id=user.id, session_id=row.id
         )
@@ -776,7 +781,7 @@ def test_assert_form_exportable_pre_check(db):
 
 def test_render_form_export_task_stores_artifact(db, tmp_path, monkeypatch):
     import app.services.rls as rls_module
-    import app.tasks.mka_tasks as mka_tasks
+    import app.tasks.workflow_tasks as mka_tasks
     from app.config import settings
     from app.services import storage as storage_module
 

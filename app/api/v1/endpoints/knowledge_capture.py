@@ -527,7 +527,7 @@ def complete_capture(
 
     queue_enqueued = True
     try:
-        from app.tasks.mka_tasks import transcribe_knowledge_capture
+        from app.tasks.input_capture_tasks import transcribe_knowledge_capture
 
         transcribe_knowledge_capture.delay(str(current_user.tenant_id), str(session_id))
     except Exception:
@@ -552,7 +552,7 @@ def retry_capture(
     row.error = {}
     db.commit()
     try:
-        from app.tasks.mka_tasks import transcribe_knowledge_capture
+        from app.tasks.input_capture_tasks import transcribe_knowledge_capture
 
         transcribe_knowledge_capture.delay(str(current_user.tenant_id), str(session_id))
     except Exception as exc:

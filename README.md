@@ -488,6 +488,8 @@ Production DB secrets 已分為三檔：`.env.production`（application）、`.e
 |---|---|
 | `docs/MODULAR_MULTIMODAL_KNOWLEDGE_PLATFORM_ARCHITECTURE.md` | 目標架構、依賴規則與 Phase B–G |
 | `docs/INPUT_PLATFORM_CAPABILITY_MAP_AND_IMPLEMENTATION_PLAN.md` | Input 平台現況、能力差距、驗收指標與 I0–I8 實作／Code Review 計畫 |
+| `docs/APPLICATION_DECOUPLING_IMPLEMENTATION_PLAN_2026-08-29.md` | 核心／Workflow／應用層 A0–A8 脫鉤實作計畫與完成狀態 |
+| `docs/PHASE_APPLICATION_A8_PHYSICAL_REMOVAL_FINAL_CODE_REVIEW_2026-08-29.md` | 四個應用物理排除矩陣、全量測試、瀏覽器驗收與最終 Code Review |
 | `docs/PHASE_INPUT_I0_CONTRACT_EVIDENCE_CODE_REVIEW_2026-08-29.md` | Input I0 capability contract、sealed evidence、telemetry baseline 與最終 PASS Review |
 | `docs/ARCHITECTURE_AUTHORITY_AND_UIUX_REFACTOR_PLAN.md` | Phase H–M 權威收斂與 UI/UX 計畫 |
 | `docs/UIUX_EXPERIENCE_CONVERGENCE_PLAN.md` | UX-A–UX-D 體驗收斂計畫 |

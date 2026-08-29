@@ -1,4 +1,4 @@
-"""Authenticated OpenAI Realtime voice sessions for task workspaces.
+"""Sales-quote owned Realtime voice sessions.
 
 The browser sends only SDP to this endpoint.  The permanent OpenAI key and the
 session/tool policy stay on the Enclave backend.  Realtime function calls are

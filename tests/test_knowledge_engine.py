@@ -169,7 +169,7 @@ def test_incomplete_safety_procedure_is_never_answerable():
 
 def test_knowhow_scope_requires_role_and_named_equipment():
     from types import SimpleNamespace
-    from app.packs.mka.knowledge_provider import ApprovedKnowhowProvider
+    from app.packs.training_knowhow.knowledge_provider import ApprovedKnowhowProvider
     from app.platform.knowledge import KnowledgeContributionContext
 
     card = SimpleNamespace(
@@ -199,7 +199,7 @@ def test_knowhow_scope_requires_role_and_named_equipment():
 
 def test_high_risk_knowhow_requires_formal_authority():
     from types import SimpleNamespace
-    from app.packs.mka.knowledge_provider import ApprovedKnowhowProvider
+    from app.packs.training_knowhow.knowledge_provider import ApprovedKnowhowProvider
     from app.platform.knowledge import KnowledgeContributionContext
 
     card = SimpleNamespace(

@@ -110,7 +110,9 @@ def test_fair_scheduler_round_robins_tenants(test_engine):
         tenant_sequence = [
             row.tenant_id for row in selected if row.tenant_id in {first.id, second.id}
         ]
-        assert tenant_sequence[:2] == [first.id, second.id]
+        # Jobs flushed in the same transaction can share created_at; UUID is
+        # then the stable tie-breaker, so either tenant may lead the round.
+        assert set(tenant_sequence[:2]) == {first.id, second.id}
         assert tenant_sequence[2:] == [first.id, first.id]
     finally:
         db.close()

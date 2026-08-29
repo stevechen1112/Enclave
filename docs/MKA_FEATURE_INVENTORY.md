@@ -174,7 +174,7 @@
 
 即：**地端部署目前沒有可用的語音方案**（計畫要求雲端與地端 provider 可替換，介面有、地端實作無）。
 
-### 3.4 背景任務（`app/tasks/mka_tasks.py`）
+### 3.4 背景任務（現由核心 `input_capture_tasks.py`／`workflow_tasks.py` 持有）
 
 | 任務 | 狀態 |
 |------|------|

@@ -43,7 +43,7 @@ def test_tenant_administrators_can_author_knowhow(role):
 
 
 def test_knowhow_routes_keep_read_write_and_admin_boundaries_separate():
-    from app.api.v1.endpoints.knowhow import router
+    from app.packs.training_knowhow.endpoints.knowhow import router
 
     dependencies = {
         (route.path, next(iter(route.methods))): {

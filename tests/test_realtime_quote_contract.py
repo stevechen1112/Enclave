@@ -4,7 +4,7 @@ import pytest
 
 
 def test_quote_realtime_tools_never_expose_submit_or_export():
-    from app.api.v1.endpoints.realtime_voice import _instructions, _tool_parameters
+    from app.packs.sales_quote.endpoints.realtime_voice import _instructions, _tool_parameters
 
     parameters = _tool_parameters()
     assert parameters["additionalProperties"] is False
@@ -22,7 +22,7 @@ def test_quote_realtime_tools_never_expose_submit_or_export():
 
 
 def test_quote_state_calculates_totals_and_requires_user_review():
-    from app.api.v1.endpoints.realtime_voice import _quote_state
+    from app.packs.sales_quote.endpoints.realtime_voice import _quote_state
 
     run = SimpleNamespace(
         id="00000000-0000-0000-0000-000000000001",
@@ -49,7 +49,7 @@ def test_quote_state_calculates_totals_and_requires_user_review():
 
 
 def test_quote_tool_value_validation_rejects_bad_dates_and_ranges():
-    from app.api.v1.endpoints.realtime_voice import _coerce_quote_value, _quote_schema
+    from app.packs.sales_quote.endpoints.realtime_voice import _coerce_quote_value, _quote_schema
 
     fields = {field.name: field for field in _quote_schema().fields}
     with pytest.raises(ValueError):

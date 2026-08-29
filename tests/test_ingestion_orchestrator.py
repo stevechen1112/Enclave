@@ -243,7 +243,7 @@ def test_legacy_workers_are_wired_to_common_ingestion_orchestrator():
     document_worker = (root / "app" / "tasks" / "document_tasks.py").read_text(
         encoding="utf-8"
     )
-    audio_worker = (root / "app" / "tasks" / "mka_tasks.py").read_text(encoding="utf-8")
+    audio_worker = (root / "app" / "tasks" / "input_capture_tasks.py").read_text(encoding="utf-8")
 
     assert document_worker.count("get_ingestion_orchestrator") >= 4
     assert "document_capabilities" in document_worker

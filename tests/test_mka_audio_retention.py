@@ -155,11 +155,11 @@ def test_purge_task_registered_in_beat():
 
     source = inspect.getsource(celery_module)
     assert "tasks.purge_mka_retention" in source
-    assert "app.tasks.mka_tasks" in source
+    assert "app.tasks.input_capture_tasks" in source
 
 
 def test_purge_task_uses_rls_bypass():
-    import app.tasks.mka_tasks as mka_tasks
+    import app.tasks.input_capture_tasks as mka_tasks
 
     source = inspect.getsource(mka_tasks.purge_mka_retention)
     assert "apply_rls_bypass" in source

@@ -1,4 +1,4 @@
-"""Tenant-scoped DB API for governed know-how cards."""
+"""Training-pack API for governed know-how cards."""
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID

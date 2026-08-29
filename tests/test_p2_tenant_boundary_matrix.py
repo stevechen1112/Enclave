@@ -6,7 +6,7 @@ import inspect
 
 
 def test_background_cross_tenant_purge_uses_only_maintenance_identity() -> None:
-    from app.tasks.mka_tasks import purge_mka_retention
+    from app.tasks.input_capture_tasks import purge_mka_retention
 
     source = inspect.getsource(purge_mka_retention.run)
     assert "MaintenanceSessionLocal()" in source
@@ -62,7 +62,7 @@ def test_signed_media_routes_scope_before_generating_object_response() -> None:
 
 
 def test_pack_and_realtime_routes_derive_tenant_from_authenticated_user() -> None:
-    from app.api.v1.endpoints.realtime_voice import _own_quote_run
+    from app.packs.sales_quote.endpoints.realtime_voice import _own_quote_run
     from app.packs.mka import api as mka_api
 
     pack_source = inspect.getsource(mka_api)

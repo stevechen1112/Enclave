@@ -6,10 +6,18 @@ from unittest.mock import MagicMock, patch
 
 from app.api.v1.endpoints.experience import (
     _capabilities_for,
+    _field_work_available,
     _inference_boundary,
     _pack_states,
     experience_bootstrap,
 )
+
+
+def test_field_work_uses_current_workflow_route_contract():
+    assert _field_work_available(
+        [{"route_keys": ["workflow.job.home", "workflow.forms.mine"]}]
+    )
+    assert not _field_work_available([{"route_keys": ["mka.job.home"]}])
 
 
 def test_capabilities_admin_has_admin_home():

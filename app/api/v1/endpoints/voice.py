@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.models.user import User
-from app.packs.training_knowhow.persistence import (
-    MKAConflictError,
-    MKANotFoundError,
-    MKARepository,
+from app.services.interaction_repository import (
+    InteractionConflictError,
+    InteractionNotFoundError,
+    InteractionRepository,
     interaction_to_dict,
 )
 
@@ -76,10 +76,10 @@ class TranscriptConfirmRequest(BaseModel):
     confirmed_fields: Dict[str, Any] = Field(default_factory=dict)
 
 
-def _raise_mka(exc: Exception) -> None:
-    if isinstance(exc, MKANotFoundError):
+def _raise_interaction_error(exc: Exception) -> None:
+    if isinstance(exc, InteractionNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, MKAConflictError):
+    if isinstance(exc, InteractionConflictError):
         raise HTTPException(status_code=409, detail=str(exc))
     raise HTTPException(status_code=400, detail=str(exc))
 
@@ -191,7 +191,7 @@ async def transcribe_voice(
         "term_corrected": raw_text != result.text,
     }
     try:
-        row = MKARepository(db).save_transcript(
+        row = InteractionRepository(db).save_transcript(
             tenant_id=current_user.tenant_id,
             user_id=current_user.id,
             text=stored_text,
@@ -235,7 +235,7 @@ async def transcribe_voice(
         }
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_interaction_error(exc)
 
 
 @router.post("/voice/sessions/{session_id}/confirm")
@@ -246,7 +246,7 @@ def confirm_transcript(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     try:
-        row = MKARepository(db).confirm_transcript(
+        row = InteractionRepository(db).confirm_transcript(
             tenant_id=current_user.tenant_id,
             user_id=current_user.id,
             session_id=session_id,
@@ -258,7 +258,7 @@ def confirm_transcript(
         return interaction_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_interaction_error(exc)
 
 
 @router.post("/voice/sessions/{session_id}/resolve")
@@ -269,7 +269,7 @@ def resolve_voice_session(
 ):
     """Complete a session; high-risk sessions fail closed until confirmation."""
     try:
-        row = MKARepository(db).resolve_interaction(
+        row = InteractionRepository(db).resolve_interaction(
             tenant_id=current_user.tenant_id,
             user_id=current_user.id,
             session_id=session_id,
@@ -279,7 +279,7 @@ def resolve_voice_session(
         return interaction_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_interaction_error(exc)
 
 
 @router.post("/voice/synthesize")

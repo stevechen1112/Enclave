@@ -6,7 +6,7 @@
 
 **實作進度：** A0 PASS；A1 PASS；A2 PASS；A3 PASS；A4 PASS
 
-**物理脫鉤追加進度：** A5 PASS；A6 PASS；A7 PASS；A8 待進行
+**物理脫鉤追加進度：** A5 PASS；A6 PASS；A7 PASS；A8 PASS
 
 ## 1. 目標結構
 
@@ -97,3 +97,5 @@ Independent Applications
 - A6：四個既有應用各自成為後端 deployable Pack；MKA 只保留待拆的相容 shell。
 - A7：前端共享 Workflow routes 與四個 application bundles 分離。
 - A8：逐一從 composition 排除每個 Pack，執行完整測試、Code Review 與瀏覽器驗收。
+
+A8 最終證據見 `PHASE_APPLICATION_A8_PHYSICAL_REMOVAL_FINAL_CODE_REVIEW_2026-08-29.md`。

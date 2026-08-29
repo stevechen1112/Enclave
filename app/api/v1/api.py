@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
     wiki,
     operations,
     agent_approvals,
+    audio_policy,
     graph,
     generate,
     kb,
@@ -85,6 +86,7 @@ api_router.include_router(internal_service_auth.router, tags=["internal-service-
 api_router.include_router(mcp.router, tags=["mcp"])
 # P1-1 — Voice STT/TTS
 api_router.include_router(voice.router, tags=["voice"])
+api_router.include_router(audio_policy.router, tags=["audio-policy"])
 api_router.include_router(knowledge_control.router, tags=["knowledge-control"])
 api_router.include_router(knowledge_assets.router)
 api_router.include_router(review_items.router)

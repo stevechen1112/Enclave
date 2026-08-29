@@ -40,10 +40,8 @@ def test_boundary_catalog_has_disjoint_product_layers() -> None:
     assert core
     assert workflow
     assert core.isdisjoint(workflow)
-    assert (
-        catalog["legacy_mka_aggregate"]["status"]
-        == "backend_split_frontend_pending"
-    )
+    assert catalog["legacy_mka_aggregate"]["status"] == "physically_split"
+    assert catalog["deprecated_pack_import_bridges"] == []
     assert (
         catalog["legacy_mka_aggregate"]["new_application_registration"]
         == "dedicated_pack_required"

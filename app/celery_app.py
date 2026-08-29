@@ -43,6 +43,8 @@ import app.tasks.connector_tasks  # noqa: F401, E402
 import app.tasks.video_tasks  # noqa: F401, E402
 import app.tasks.audio_tasks  # noqa: F401, E402
 import app.tasks.upload_tasks  # noqa: F401, E402
+import app.tasks.input_capture_tasks  # noqa: F401, E402
+import app.tasks.workflow_tasks  # noqa: F401, E402
 
 from app.composition.pack_surfaces import import_pack_task_modules  # noqa: E402
 from app.composition.packs import build_pack_registry  # noqa: E402
@@ -81,8 +83,7 @@ celery_app.conf.beat_schedule = {
     },
 }
 
-if "app.tasks.mka_tasks" in _deployed_pack_task_modules:
-    celery_app.conf.beat_schedule["purge-mka-retention"] = {
-        "task": "tasks.purge_mka_retention",
-        "schedule": 86400.0,
-    }
+celery_app.conf.beat_schedule["purge-input-retention"] = {
+    "task": "tasks.purge_mka_retention",
+    "schedule": 86400.0,
+}
