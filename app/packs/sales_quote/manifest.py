@@ -45,9 +45,9 @@ def build_sales_quote_pack() -> PackContribution:
             ui_key="sales_quote.entry",
             ui_version="1.0.0",
             module_key="sales_quote",
-            route_keys=("mka.quote.redirect",),
+            route_keys=("sales_quote.redirect",),
             required_capability_keys=("workflow.form",),
-            bundle_key="mka",
+            bundle_key="sales_quote",
         ),),
         tenant_eligibility=ModuleTenantEligibility("sales_quote"),
     )

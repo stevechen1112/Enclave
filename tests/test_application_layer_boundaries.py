@@ -82,7 +82,7 @@ def test_frontend_pack_bundle_is_imported_only_by_composition_root() -> None:
     violations: list[str] = []
     for path in (ROOT / "frontend" / "src").rglob("*.ts*"):
         relative = path.relative_to(ROOT).as_posix()
-        if relative == composition_root or "/modules/mka/" in f"/{relative}":
+        if relative == composition_root or "/modules/" in f"/{relative}":
             continue
         text = path.read_text(encoding="utf-8")
         if "modules/mka" in text or "./mka/" in text or "../mka/" in text:

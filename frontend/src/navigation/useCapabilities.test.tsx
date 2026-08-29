@@ -45,7 +45,7 @@ describe('manifest-driven navigation', () => {
         pack_key: 'mka',
         ui_key: 'mka.workspace',
         version: '1.0.0',
-        route_keys: ['mka.job.home'],
+        route_keys: ['workflow.job.home'],
         required_capabilities: [],
         navigation: [{ to: '/job', label: '現場作業' }],
       }],

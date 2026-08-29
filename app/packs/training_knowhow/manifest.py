@@ -87,10 +87,10 @@ def build_training_knowhow_pack() -> PackContribution:
             ui_version="1.0.0",
             module_key="training_knowhow",
             route_keys=(
-                "mka.knowhow.list", "mka.knowhow.interview", "mka.knowhow.detail"
+                "training_knowhow.list", "training_knowhow.interview", "training_knowhow.detail"
             ),
             required_capability_keys=("knowledge.knowhow.read",),
-            bundle_key="mka",
+            bundle_key="training_knowhow",
         ),),
         api_routers=(APIRouterContribution(
             router_key="training_knowhow.api",
