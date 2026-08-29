@@ -44,10 +44,8 @@ export default function ChatPage() {
   const [streamStatus, setStreamStatus] = useState<string | null>(null)
   const [streamingContent, setStreamingContent] = useState('')
   const [streamingSources, setStreamingSources] = useState<ChatSource[]>([])
-  // 手機上證據抽屜預設關閉（bottom sheet 會蓋住半個螢幕）；桌機預設開啟
-  const [evidenceOpen, setEvidenceOpen] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches,
-  )
+  // A 款使用覆蓋式證據抽屜，所有裝置皆由使用者主動開啟。
+  const [evidenceOpen, setEvidenceOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [deleteConvId, setDeleteConvId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -128,10 +126,15 @@ export default function ChatPage() {
 
   const drawerSources = useMemo(() => {
     if (sending && streamingSources.length) return streamingSources
+    let latestUserIndex = -1
+    let latestAssistantIndex = -1
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role === 'assistant' && messages[i].sources?.length) {
-        return messages[i].sources!
-      }
+      if (latestUserIndex < 0 && messages[i].role === 'user') latestUserIndex = i
+      if (latestAssistantIndex < 0 && messages[i].role === 'assistant') latestAssistantIndex = i
+      if (latestUserIndex >= 0 && latestAssistantIndex >= 0) break
+    }
+    if (latestAssistantIndex > latestUserIndex && messages[latestAssistantIndex].sources?.length) {
+      return messages[latestAssistantIndex].sources!
     }
     return [] as ChatSource[]
   }, [messages, sending, streamingSources])
@@ -395,6 +398,12 @@ export default function ChatPage() {
       ? messages[messages.length - 1].suggestions
       : undefined
 
+  const latestQuestionIndex = messages.map(message => message.role).lastIndexOf('user')
+  const latestAnswerIndex = messages.map(message => message.role).lastIndexOf('assistant')
+  const latestQuestionMessage = latestQuestionIndex >= 0 ? messages[latestQuestionIndex] : undefined
+  const latestQuestion = latestQuestionMessage?.content
+  const latestAnswer = latestAnswerIndex > latestQuestionIndex ? messages[latestAnswerIndex] : undefined
+
   const retryLoadMessages = () => {
     if (!activeConvId) return
     setMessagesError(null)
@@ -408,7 +417,7 @@ export default function ChatPage() {
     setSearchResults(null)
   }
 
-  // ──── 對話側欄內容（桌機靜態欄＋手機 drawer 共用）────
+  // 對話記錄改為所有裝置共用的抽屜，主畫面保留給答案決策頁。
   const sidebarBody = (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-line px-4 py-3">
@@ -425,7 +434,7 @@ export default function ChatPage() {
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="icon-btn md:hidden"
+            className="icon-btn"
             aria-label="關閉對話記錄"
           >
             <X className="h-5 w-5" aria-hidden />
@@ -549,16 +558,11 @@ export default function ChatPage() {
   )
 
   return (
-    <div className="flex h-full">
+    <div className="relative flex h-full overflow-hidden bg-wash">
       <h1 className="sr-only">企業知識問答</h1>
-      {/* ──── Conversation sidebar（桌機）──── */}
-      <div className="hidden w-72 flex-col border-r border-line bg-surface md:flex">
-        {sidebarBody}
-      </div>
-
-      {/* ──── Conversation drawer（手機）──── */}
+      {/* Conversation history is intentionally secondary to the decision workspace. */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="對話記錄">
+        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="對話記錄">
           <button
             type="button"
             className="absolute inset-0 h-full w-full cursor-default bg-ink/40"
@@ -566,7 +570,7 @@ export default function ChatPage() {
             aria-label="關閉對話記錄"
             tabIndex={-1}
           />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] animate-fade-in bg-surface shadow-lift">
+          <div className="absolute inset-y-0 left-0 w-80 max-w-[88vw] animate-fade-in bg-surface shadow-lift">
             {sidebarBody}
           </div>
         </div>
@@ -574,25 +578,28 @@ export default function ChatPage() {
 
       {/* ──── Chat area ──── */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2 border-b border-line bg-surface px-3 py-2 md:px-4">
-          <div className="flex min-w-0 items-center gap-1">
+        {/* A concept: compact product bar, with history and evidence as secondary tools. */}
+        <div className="border-b border-line bg-surface">
+          <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center gap-2 px-3 md:px-6">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="icon-btn md:hidden"
+              className="icon-btn shrink-0"
               aria-label="開啟對話記錄"
             >
               <Menu className="h-5 w-5" aria-hidden />
             </button>
-            <h2 className="truncate font-display text-sm font-semibold text-ink md:hidden">問答</h2>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">企業知識 · 答案決策頁</p>
+              <h2 className="truncate text-sm font-semibold text-ink">
+                {latestQuestion || '今天想確認什麼？'}
+              </h2>
+            </div>
             {testKnowledge && canTestKnowledge && (
-              <span className="chip-highlight shrink-0">
+              <span className="chip-highlight hidden shrink-0 sm:inline-flex">
                 <FlaskConical className="h-3 w-3" aria-hidden /> 測試知識
               </span>
             )}
-          </div>
-          <div className="flex items-center gap-1">
             {canTestKnowledge && (
               <button
                 type="button"
@@ -600,7 +607,7 @@ export default function ChatPage() {
                 aria-checked={testKnowledge}
                 onClick={toggleTestKnowledge}
                 className={clsx(
-                  'btn-outline hidden min-h-11 px-3 text-xs sm:inline-flex',
+                  'btn-outline hidden min-h-11 px-3 text-xs lg:inline-flex',
                   testKnowledge && 'border-accent/40 bg-accent-soft text-accent-ink',
                 )}
               >
@@ -611,26 +618,22 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={() => setEvidenceOpen(v => !v)}
-              className="icon-btn"
+              className={clsx('btn-outline min-h-11 shrink-0 px-3 text-xs', evidenceOpen && 'border-accent/40 bg-accent-soft text-accent-ink')}
               aria-label={evidenceOpen ? '關閉證據' : '開啟證據'}
             >
               {evidenceOpen
-                ? <PanelRightClose className="h-5 w-5" aria-hidden />
-                : <PanelRightOpen className="h-5 w-5" aria-hidden />}
+                ? <PanelRightClose className="h-4 w-4" aria-hidden />
+                : <PanelRightOpen className="h-4 w-4" aria-hidden />}
+              <span className="hidden sm:inline">證據 {drawerSources.length || ''}</span>
             </button>
-            <button
-              type="button"
-              onClick={handleNewChat}
-              className="icon-btn md:hidden"
-              aria-label="新對話"
-            >
+            <button type="button" onClick={handleNewChat} className="icon-btn shrink-0" aria-label="新對話">
               <Plus className="h-5 w-5" aria-hidden />
             </button>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-5 md:px-6">
+        <div className="flex-1 overflow-y-auto px-3 py-5 md:px-6 md:py-7">
           {messages.length === 0 && !streamingContent ? (
             <EmptyState
               userName={user?.full_name}
@@ -638,7 +641,47 @@ export default function ChatPage() {
               onPick={setInput}
             />
           ) : (
-            <div className="mx-auto max-w-3xl space-y-4">
+            <div className="mx-auto max-w-5xl space-y-6">
+              {latestQuestion && (
+                <section className="animate-rise-in" aria-label="目前問題與回答處理狀態">
+                  <div className="flex items-start gap-3 md:gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-lg font-bold text-accent">?</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-muted">目前問題</p>
+                      <h3 className="mt-1 whitespace-pre-wrap font-display text-xl font-semibold leading-relaxed text-ink md:text-2xl">
+                        {latestQuestion}
+                      </h3>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="chip-neutral">僅搜尋可存取知識</span>
+                        {sceneContext && Object.entries(sceneContext).slice(0, 3).map(([key, value]) => (
+                          <span key={key} className="chip-accent">{value}</span>
+                        ))}
+                        {latestAnswer?.sources?.length ? (
+                          <span className="chip-success">{latestAnswer.sources.length} 份證據</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-5 grid grid-cols-2 gap-2 md:grid-cols-4">
+                    {[
+                      ['理解問題', true],
+                      ['搜尋可存取知識', Boolean(retrieval || drawerSources.length || streamingContent || !sending)],
+                      ['過濾權限與版本', Boolean(drawerSources.length || streamingContent || !sending)],
+                      ['建立可追溯回答', !sending],
+                    ].map(([label, complete], index) => (
+                      <div key={String(label)} className="card flex min-h-12 items-center gap-2 px-3 py-2 text-xs text-muted">
+                        <span className={clsx(
+                          'flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-bold',
+                          complete ? 'bg-success-soft text-success' : index === 3 && streamingContent ? 'bg-highlight-soft text-highlight' : 'bg-wash text-muted',
+                        )}>
+                          {complete ? '✓' : index + 1}
+                        </span>
+                        <span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
               {messagesError && (
                 <div className="card flex items-center justify-between gap-3 border-danger/30 bg-danger-soft px-4 py-3 text-sm text-danger">
                   <span className="min-w-0 flex-1">{messagesError}</span>
@@ -651,73 +694,104 @@ export default function ChatPage() {
                   </button>
                 </div>
               )}
-              {messages.map(msg => (
-                <div key={msg.id} className={clsx('animate-fade-in flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  <div
-                    className={clsx(
-                      'max-w-[92%] rounded-2xl px-4 py-3 text-base leading-relaxed md:max-w-[80%] md:px-5 md:text-sm',
-                      msg.role === 'user'
-                        ? 'rounded-br-md bg-accent text-white shadow-card'
-                        : 'card rounded-bl-md text-ink',
-                    )}
-                  >
-                    {msg.role === 'assistant' ? (
-                      <div>
-                        <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 border-b border-line pb-2 text-xs text-muted">
-                          <span>根據 {msg.sources?.length ?? 0} 份公司文件回答</span>
-                          <span>
-                            資料更新至{' '}
-                            {msg.sources?.find(s => s.updated_at)?.updated_at
-                              ? new Date(msg.sources.find(s => s.updated_at)!.updated_at!).toLocaleDateString()
-                              : '未知'}
-                          </span>
-                        </div>
-                        {(() => {
-                          // Historical API messages omit sources — do not invent empty-answer banners
-                          const kind =
-                            msg.emptyKind ??
-                            (msg.sources == null
-                              ? null
-                              : classifyEmptyAnswer({ sources: msg.sources }))
-                          if (!kind) return null
-                          const meta = EMPTY_ANSWER_LABEL[kind]
-                          return (
-                            <RiskBanner
-                              level={kind === 'system_unavailable' ? 'danger' : 'warning'}
-                              title={meta.title}
-                              description={meta.description}
-                              className="mb-3"
-                            />
-                          )
-                        })()}
-                        {msg.content ? <MarkdownRenderer content={msg.content} /> : null}
-                        {msg.sources && msg.sources.length > 0 && (
-                          <SourcePanel sources={msg.sources} defaultOpen={!evidenceOpen} />
-                        )}
-                        {msg.id && !msg.id.startsWith('ai-err-') && (
-                          <FeedbackButtons messageId={msg.id} />
-                        )}
+              {messages.map((msg, index) => {
+                if (msg.role === 'user') {
+                  const isLatest = msg.id === latestQuestionMessage?.id
+                  if (isLatest) return null
+                  return (
+                    <details key={msg.id} className="card animate-fade-in overflow-hidden">
+                      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-muted">較早問題：{msg.content}</summary>
+                    </details>
+                  )
+                }
+
+                const kind = msg.emptyKind ?? (msg.sources == null ? null : classifyEmptyAnswer({ sources: msg.sources }))
+                const emptyMeta = kind ? EMPTY_ANSWER_LABEL[kind] : null
+                const isLatestAnswer = msg.id === latestAnswer?.id
+
+                if (!isLatestAnswer && index < latestQuestionIndex) {
+                  return (
+                    <details key={msg.id} className="card animate-fade-in overflow-hidden">
+                      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-muted">展開較早回答</summary>
+                      <div className="border-t border-line px-4 py-4 text-sm leading-relaxed text-ink">
+                        <MarkdownRenderer content={msg.content} />
                       </div>
-                    ) : (
-                      <span className="whitespace-pre-wrap">{msg.content}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                    </details>
+                  )
+                }
+
+                return (
+                  <article key={msg.id} className={clsx('panel animate-fade-in', !isLatestAnswer && 'opacity-90')}>
+                    <header className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-4 md:px-6">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-sm font-bold text-white">K</div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-ink">知識助理</h4>
+                        <p className="text-xs text-muted">
+                          {msg.sources?.length
+                            ? `${msg.sources.length} 份企業證據 · 逐項可核對`
+                            : '回答會清楚標示證據狀態'}
+                        </p>
+                      </div>
+                      {msg.sources?.length ? <span className="chip-success ml-auto">● 證據可追溯</span> : null}
+                    </header>
+                    <div className="p-4 md:p-6">
+                      {emptyMeta && (
+                        <RiskBanner
+                          level={kind === 'system_unavailable' ? 'danger' : 'warning'}
+                          title={emptyMeta.title}
+                          description={emptyMeta.description}
+                          className="mb-4"
+                        />
+                      )}
+                      {msg.content ? (
+                        <div className="rounded-2xl border-l-4 border-accent bg-accent-soft/35 px-4 py-4 text-[15px] leading-relaxed md:px-5">
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">直接回答</p>
+                          <MarkdownRenderer content={msg.content} />
+                        </div>
+                      ) : null}
+                      {msg.sources && msg.sources.length > 0 && !evidenceOpen && (
+                        <div className="mt-4 rounded-2xl border border-line bg-wash/70 p-3">
+                          <SourcePanel sources={msg.sources} defaultOpen={false} />
+                        </div>
+                      )}
+                      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                        <button type="button" onClick={() => setEvidenceOpen(true)} className="btn-outline min-h-11 px-4 text-xs">
+                          <PanelRightOpen className="h-4 w-4" aria-hidden /> 查看答案證據
+                        </button>
+                        {msg.id && !msg.id.startsWith('ai-err-') && <FeedbackButtons messageId={msg.id} />}
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
 
               {/* ──── Streaming in-progress ──── */}
               {sending && streamingContent && (
-                <div className="flex animate-fade-in justify-start">
-                  <div className="card max-w-[92%] rounded-bl-md px-4 py-3 text-base leading-relaxed text-ink md:max-w-[80%] md:px-5 md:text-sm">
-                    <MarkdownRenderer content={streamingContent} />
-                    {streamingSources.length > 0 && <SourcePanel sources={streamingSources} />}
+                <article className="panel animate-fade-in">
+                  <header className="flex items-center gap-3 border-b border-line px-4 py-4 md:px-6">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent text-sm font-bold text-white">K</div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-semibold text-ink">正在建立可追溯回答</h4>
+                      <p className="truncate text-xs text-muted">{streamStatus || '已完成檢索，正在整理直接結論與依據'}</p>
+                    </div>
+                    <Loader2 className="h-5 w-5 animate-spin text-accent" aria-hidden />
+                  </header>
+                  <div className="p-4 md:p-6">
+                    <div className="rounded-2xl border-l-4 border-accent bg-accent-soft/35 px-4 py-4 text-[15px] leading-relaxed md:px-5">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">回答產生中</p>
+                      <MarkdownRenderer content={streamingContent} />
+                    </div>
+                    {streamingSources.length > 0 && !evidenceOpen && <SourcePanel sources={streamingSources} defaultOpen={false} />}
                   </div>
-                </div>
+                </article>
               )}
 
               {/* T7-14: Typing indicator (before first token arrives) */}
               {sending && !streamingContent && (
-                <TypingIndicator status={streamStatus || '正在搜尋可存取知識…'} />
+                <div className="panel p-5 md:p-7">
+                  <TypingIndicator status={streamStatus || '正在搜尋可存取知識、核對權限與版本…'} />
+                  <p className="mt-3 text-center text-xs text-muted">系統不會把無權限、已撤銷或不適用的內容直接拿來回答。</p>
+                </div>
               )}
 
               {/* T7-6: Follow-up suggestions (after stream completes) */}
@@ -764,56 +838,46 @@ export default function ChatPage() {
 
       {/* Evidence drawer — desktop right / mobile bottom sheet */}
       {evidenceOpen && (
-        <aside
-          className={clsx(
-            'border-line bg-surface',
-            'fixed inset-x-0 bottom-0 z-30 max-h-[45vh] overflow-y-auto rounded-t-2xl border-t p-4 shadow-lift md:static md:z-0 md:max-h-none md:w-80 md:rounded-none md:border-l md:border-t-0 md:shadow-none',
-          )}
-          aria-label="證據抽屜"
-        >
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-sm font-semibold text-ink">證據</h2>
-            <button
-              type="button"
-              className="icon-btn md:hidden"
-              onClick={() => setEvidenceOpen(false)}
-              aria-label="關閉證據"
-            >
-              <X className="h-5 w-5" aria-hidden />
-            </button>
-          </div>
-          {retrieval?.degraded && (
-            <RiskBanner
-              level="warning"
-              title={retrieval.label || '目前僅使用本機主索引'}
-              description={retrieval.request_id ? `追蹤：${retrieval.request_id}` : undefined}
-              className="mb-3"
-            />
-          )}
-          {!retrieval?.degraded && retrieval?.label && drawerSources.length > 0 && (
-            <p className="mb-2 text-xs text-muted">{retrieval.label}</p>
-          )}
-          {drawerSources.length === 0 ? (
-            <div className="card px-4 py-4">
-              <p className="text-sm leading-relaxed text-muted">
-                回答產生後，此處會顯示可核對的文件證據。沒有證據時不應把答案當成確定事實。
-              </p>
+        <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="答案證據">
+          <button
+            type="button"
+            className="absolute inset-0 h-full w-full cursor-default bg-ink/40"
+            onClick={() => setEvidenceOpen(false)}
+            aria-label="關閉證據"
+            tabIndex={-1}
+          />
+          <aside className="absolute inset-y-0 right-0 w-[34rem] max-w-[94vw] animate-fade-in overflow-y-auto border-l border-line bg-surface p-4 shadow-lift md:p-6">
+            <div className="mb-4 flex items-center justify-between border-b border-line pb-4">
+              <div>
+                <p className="text-xs font-semibold text-accent">答案依據</p>
+                <h2 className="mt-1 font-display text-lg font-semibold text-ink">可核對的企業證據</h2>
+              </div>
+              <button type="button" className="icon-btn" onClick={() => setEvidenceOpen(false)} aria-label="關閉證據">
+                <X className="h-5 w-5" aria-hidden />
+              </button>
             </div>
-          ) : (
-            <SourcePanel sources={drawerSources} defaultOpen />
-          )}
-        </aside>
-      )}
-
-      {!evidenceOpen && (
-        <button
-          type="button"
-          onClick={() => setEvidenceOpen(true)}
-          className="hidden w-12 flex-col items-center justify-start border-l border-line bg-surface pt-4 text-muted transition-colors hover:text-accent md:flex"
-          aria-label="開啟證據抽屜"
-        >
-          <PanelRightOpen className="h-5 w-5" aria-hidden />
-        </button>
+            {retrieval?.degraded && (
+              <RiskBanner
+                level="warning"
+                title={retrieval.label || '目前僅使用本機主索引'}
+                description={retrieval.request_id ? `追蹤：${retrieval.request_id}` : undefined}
+                className="mb-3"
+              />
+            )}
+            {!retrieval?.degraded && retrieval?.label && drawerSources.length > 0 && (
+              <p className="mb-3 text-xs text-muted">{retrieval.label}</p>
+            )}
+            {drawerSources.length === 0 ? (
+              <div className="card px-4 py-4">
+                <p className="text-sm leading-relaxed text-muted">
+                  回答產生後，此處會顯示文件版本、頁碼、工作表或影片時間點。沒有證據時，不應把答案當成確定事實。
+                </p>
+              </div>
+            ) : (
+              <SourcePanel sources={drawerSources} defaultOpen />
+            )}
+          </aside>
+        </div>
       )}
 
       <ConfirmDialog
