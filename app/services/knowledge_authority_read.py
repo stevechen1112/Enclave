@@ -213,30 +213,19 @@ def _applicability_allows(
             return False
     module_key = str((revision.metadata_json or {}).get("module_key") or "")
     if module_key:
-        from sqlalchemy import func, or_
+        from app.platform.knowledge import is_core_query_mode
 
-        from app.models.mka import TenantModuleBinding
-
-        enabled = (
-            db.query(TenantModuleBinding.id)
-            .filter(
-                TenantModuleBinding.tenant_id == authz.tenant_id,
-                TenantModuleBinding.module_key == module_key,
-                TenantModuleBinding.enabled.is_(True),
-                TenantModuleBinding.license_state.in_(["trial", "active"]),
-                or_(
-                    TenantModuleBinding.effective_from.is_(None),
-                    TenantModuleBinding.effective_from <= func.now(),
-                ),
-                or_(
-                    TenantModuleBinding.effective_to.is_(None),
-                    TenantModuleBinding.effective_to > func.now(),
-                ),
+        if not is_core_query_mode(module_key):
+            from app.composition.application_entitlements import (
+                is_application_module_enabled,
             )
-            .first()
-        )
-        if enabled is None:
-            return False
+
+            if not is_application_module_enabled(
+                db=db,
+                tenant_id=authz.tenant_id,
+                module_key=module_key,
+            ):
+                return False
     return unit.status == "active"
 
 

@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from app.packs.mka.manifest import MKA_MODULE_KEYS, build_mka_pack
+from app.platform.knowledge import is_legacy_ask_task, query_mode_keys
 from app.services.mka_module_seed import CANONICAL_MODULES
 
 
@@ -91,3 +92,22 @@ def test_legacy_mka_aggregate_is_frozen_until_split() -> None:
     assert seeded == expected
     assert tuple(MKA_MODULE_KEYS) == expected
     assert manifest.module_keys == expected
+
+
+def test_core_query_modes_are_not_application_modules() -> None:
+    catalog = _catalog()
+    aliases = tuple(
+        catalog["deprecated_core_compatibility_aliases"]["module_keys"]
+    )
+    assert query_mode_keys() == aliases
+    assert set(query_mode_keys()).isdisjoint(MKA_MODULE_KEYS)
+    task_aliases = tuple(
+        catalog["deprecated_core_compatibility_aliases"]["task_keys"]
+    )
+    assert all(is_legacy_ask_task(key) for key in task_aliases)
+
+
+def test_knowledge_authority_has_no_direct_mka_entitlement_dependency() -> None:
+    path = ROOT / "app" / "services" / "knowledge_authority_read.py"
+    imported = {name for _line, name in _imports(path)}
+    assert "app.models.mka" not in imported

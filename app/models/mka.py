@@ -49,7 +49,7 @@ class JobModule(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     module_key = Column(
         String, nullable=False, index=True
-    )  # spec_sop | sales_quote | incident_handover | quality_8d | training_knowhow
+    )  # application module key; core Ask modes are not stored here
     tenant_id = Column(
         UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=True, index=True
     )  # null = 全租戶可用
@@ -749,7 +749,7 @@ class TaskDefinition(Base):
     )  # null = 全域定義
     task_key = Column(
         String, nullable=False, index=True
-    )  # ask | quote | incident | handover | quality_8d | interview | training | daily_report
+    )  # quote | incident | handover | quality_8d | interview | training | daily_report
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     version = Column(String, default="1.0", nullable=False)

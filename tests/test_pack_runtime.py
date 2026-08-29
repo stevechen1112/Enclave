@@ -73,7 +73,6 @@ def test_mka_manifest_registers_all_backend_contribution_types():
     assert contribution is not None
     assert contribution.manifest.pack_version == "1.0.0"
     assert contribution.manifest.module_keys == (
-        "spec_sop",
         "sales_quote",
         "incident_handover",
         "quality_8d",
@@ -273,6 +272,32 @@ def test_registry_rejects_duplicate_ui_route_keys():
 
     with pytest.raises(ValueError, match="duplicate ui route"):
         PackRegistry([with_ui("alpha", "alpha.ui"), with_ui("beta", "beta.ui")])
+
+
+def test_registry_assigns_one_pack_owner_per_application_module():
+    def with_module(pack_key: str, module_key: str) -> PackContribution:
+        return PackContribution(
+            manifest=PackManifest(
+                pack_key=pack_key,
+                pack_version="1.0.0",
+                display_name=pack_key,
+                capability_keys=(f"{pack_key}.read",),
+                module_keys=(module_key,),
+                tenant_binding_required=False,
+            )
+        )
+
+    registry = PackRegistry([with_module("quality", "quality_8d")])
+    assert registry.pack_key_for_module("quality_8d") == "quality"
+    assert registry.pack_key_for_module("missing") is None
+
+    with pytest.raises(ValueError, match="duplicate module key"):
+        PackRegistry(
+            [
+                with_module("quality", "shared_module"),
+                with_module("operations", "shared_module"),
+            ]
+        )
 
 
 def test_ui_default_home_must_be_one_of_its_navigation_paths():

@@ -331,26 +331,31 @@ class TestHandlers:
         assert card.status == "pending_review"
         assert result.output_refs["approval_id"]
 
-    def test_unimplemented_handler_fails_loudly(self, db):
+    def test_ask_is_not_a_workflow_task(self, db):
         tenant, user, _ = _sales_user(db)
-        # ask 掛在 spec_sop 模組下，補上模組與 binding 才能過存取檢查
-        db.add(JobModule(
-            id=uuid.uuid4(), module_key="spec_sop", tenant_id=None,
-            name="規格查詢", status="enabled", allowed_roles=["employee"],
-        ))
-        db.add(TenantModuleBinding(
-            id=uuid.uuid4(), tenant_id=tenant.id, module_key="spec_sop",
-            enabled=True, config_version=0,
-        ))
+        # Production compatibility: an old enabled row may still exist. The
+        # runtime must keep it inert because Ask is now a core capability.
+        db.add(
+            TaskDefinition(
+                id=uuid.uuid4(),
+                tenant_id=None,
+                task_key="ask",
+                name="Legacy Ask",
+                handler_key="ask",
+                module_key="spec_sop",
+                version="1.0",
+                status="enabled",
+            )
+        )
         db.commit()
         engine = TaskEngine(db)
-        # ask 不限職能，但 handler 尚未實作
-        run, _ = engine.start_run(
-            user=user, task_key="ask", idempotency_key="idem-00000022",
-            inputs={"question": "P-100 的扭力？"},
-        )
-        with pytest.raises(TaskHandlerNotImplemented):
-            engine.execute(run, user)
+        with pytest.raises(TaskEngineError, match="ask"):
+            engine.start_run(
+                user=user,
+                task_key="ask",
+                idempotency_key="idem-00000022",
+                inputs={"question": "P-100 的扭力？"},
+            )
 
 
 class TestQuoteVerticalSlice:

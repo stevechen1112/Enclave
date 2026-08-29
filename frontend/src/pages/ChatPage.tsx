@@ -193,6 +193,8 @@ export default function ChatPage() {
     let sources: ChatSource[] = []
     let hadStreamError = false
     let lastRetrieval: RetrievalInfo | null = null
+    const legacyModule = searchParams.get('module') || undefined
+    const knowledgeMode = searchParams.get('mode') || (legacyModule === 'spec_sop' ? 'spec_sop' : undefined)
 
     try {
       await chatApi.stream(
@@ -200,7 +202,8 @@ export default function ChatPage() {
           question,
           conversation_id: activeConvId,
           scene_context: sceneContext || undefined,
-          module_key: searchParams.get('module') || undefined,
+          knowledge_mode: knowledgeMode === 'spec_sop' ? knowledgeMode : undefined,
+          module_key: legacyModule === 'spec_sop' ? undefined : legacyModule,
         },
         (event: SSEEvent) => {
           switch (event.type) {

@@ -4,6 +4,8 @@
 **狀態：** Approved implementation baseline
 **產品決策：** 核心持續增強；場景應用必須可選、可替換、可停用並最終可乾淨移除
 
+**實作進度：** A0 PASS；A1 PASS；A2 待進行
+
 ## 1. 目標結構
 
 ```text

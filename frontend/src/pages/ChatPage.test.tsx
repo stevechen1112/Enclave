@@ -95,4 +95,22 @@ describe('ChatPage A decision workspace', () => {
     expect(screen.getByRole('dialog', { name: '答案證據' })).toBeInTheDocument()
     expect(screen.getByText('A 系列機台安全操作標準')).toBeInTheDocument()
   })
+
+  it('sends spec SOP as a core knowledge mode instead of an application module', async () => {
+    vi.mocked(chatApi.stream).mockResolvedValue(undefined)
+    render(
+      <MemoryRouter initialEntries={['/ask?mode=spec_sop']}>
+        <ChatPage />
+      </MemoryRouter>,
+    )
+
+    await userEvent.type(await screen.findByLabelText('問題輸入'), 'A-03 的復歸 SOP？')
+    await userEvent.click(screen.getByRole('button', { name: '送出' }))
+
+    await waitFor(() => expect(chatApi.stream).toHaveBeenCalled())
+    expect(vi.mocked(chatApi.stream).mock.calls[0][0]).toMatchObject({
+      knowledge_mode: 'spec_sop',
+      module_key: undefined,
+    })
+  })
 })

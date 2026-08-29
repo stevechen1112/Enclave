@@ -19,7 +19,6 @@ from app.platform.packs import (
 )
 
 MKA_MODULE_KEYS = (
-    "spec_sop",
     "sales_quote",
     "incident_handover",
     "quality_8d",
@@ -65,7 +64,7 @@ def build_mka_pack() -> PackContribution:
                 "knowledge.knowhow.read",
                 "workflow.approval",
                 "workflow.fixed_form",
-                "ingestion.long_interview",
+                "application.knowledge_interview",
             ),
             module_keys=MKA_MODULE_KEYS,
             permission_keys=(

@@ -55,7 +55,6 @@ class CompatibilityMatrix:
     def _register_defaults(self) -> None:
         """註冊預設相容性。"""
         defaults = [
-            ("spec_sop", "1.0", "2.0", True, "", []),
             ("sales_quote", "1.0", "2.0", True, "", []),
             ("incident_handover", "1.0", "2.0", True, "", []),
             ("quality_8d", "1.0", "2.0", True, "需 Knowledge Compiler pack", ["knowledge_compiler"]),

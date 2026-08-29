@@ -16,13 +16,12 @@ class TestCompatibilityMatrix:
         matrix = CompatibilityMatrix()
         entries = matrix.list_entries()
         keys = [e["module_key"] for e in entries]
-        assert "spec_sop" in keys
         assert "sales_quote" in keys
         assert "incident_handover" in keys
 
     def test_check_compatible(self):
         matrix = CompatibilityMatrix()
-        ok, reason = matrix.check_compatibility("spec_sop", "1.0")
+        ok, reason = matrix.check_compatibility("sales_quote", "1.0")
         assert ok is True
 
     def test_check_incompatible_unknown(self):
@@ -75,7 +74,7 @@ class TestModuleAdminService:
 
             result = svc.enable_for_tenant(
                 tenant_id=uuid4(),
-                module_key="spec_sop",
+                module_key="sales_quote",
             )
             assert result["enabled"] is True
 
@@ -95,4 +94,4 @@ class TestModuleAdminService:
         mock_db = MagicMock()
         svc = ModuleAdminService(mock_db)
         matrix = svc.get_compatibility_matrix()
-        assert len(matrix) >= 5
+        assert len(matrix) == 4

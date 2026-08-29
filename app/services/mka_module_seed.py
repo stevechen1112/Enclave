@@ -8,22 +8,6 @@ from sqlalchemy.orm import Session
 
 CANONICAL_MODULES: list[dict[str, Any]] = [
     {
-        "module_key": "spec_sop",
-        "name": "規格與 SOP",
-        "description": "產品／設備／版本 scoped 規格查詢、差異比對、步驟 checklist",
-        "allowed_roles": ["owner", "admin", "employee"],
-        "knowledge_scope_policy": {"doc_types": ["sop", "spec"], "require_version": True},
-        "supported_intents": ["lookup_spec", "compare_versions", "sop_steps"],
-        "allowed_tools": ["retrieve_sop", "diff_versions", "checklist_from_steps"],
-        "form_definition_ids": [],
-        "ux_entrypoints": [{"key": "ask_sop", "label": "查規格／SOP", "path": "/ask?module=spec_sop"}],
-        "metrics_config": {"track": ["task_completion", "evidence_gaps"]},
-        "default_config": {
-            "require_version_citation": True,
-            "max_context_chunks": 8,
-        },
-    },
-    {
         "module_key": "sales_quote",
         "name": "業務報價",
         "description": "語音開單、規格／歷史報價／MOQ／交期工具、公司版型預覽",
@@ -187,17 +171,6 @@ CANONICAL_TASKS: list[dict[str, Any]] = [
         },
     },
     {
-        "task_key": "ask",
-        "name": "問知識庫",
-        "handler_key": "ask",
-        "module_key": "spec_sop",
-        "applicable_job_role_keys": [],
-        "required_capabilities": ["ask"],
-        "risk_level": "low",
-        "output_bindings": [],
-        "input_schema": {"type": "object", "properties": {"question": {"type": "string"}}},
-    },
-    {
         "task_key": "training",
         "name": "新人訓練",
         "handler_key": "training",
@@ -252,45 +225,45 @@ DEFAULT_JOB_ROLES: list[dict[str, Any]] = [
         "role_key": "sales",
         "name": "業務",
         "description": "報價、拜訪、請款",
-        "default_module_keys": ["sales_quote", "spec_sop"],
+        "default_module_keys": ["sales_quote"],
     },
     {
         "role_key": "equipment",
         "name": "設備／現場",
         "description": "異常、維修、交接",
-        "default_module_keys": ["incident_handover", "spec_sop"],
+        "default_module_keys": ["incident_handover"],
     },
     {
         "role_key": "quality",
         "name": "品保",
         "description": "客訴、8D、CAPA",
-        "default_module_keys": ["quality_8d", "spec_sop"],
+        "default_module_keys": ["quality_8d"],
     },
     {
         "role_key": "master",
         "name": "班長／師傅",
         "description": "現場經驗、異常協助與新人傳承",
-        "default_module_keys": ["training_knowhow", "incident_handover", "spec_sop"],
+        "default_module_keys": ["training_knowhow", "incident_handover"],
     },
     {
         "role_key": "supervisor",
         "name": "主管",
         "description": "審核與跨職能工作台",
         "default_module_keys": [
-            "spec_sop", "sales_quote", "incident_handover", "quality_8d", "training_knowhow",
+            "sales_quote", "incident_handover", "quality_8d", "training_knowhow",
         ],
     },
     {
         "role_key": "newcomer",
         "name": "新人",
         "description": "訓練與必讀",
-        "default_module_keys": ["training_knowhow", "spec_sop"],
+        "default_module_keys": ["training_knowhow"],
     },
 ]
 
 
 def seed_canonical_modules(db: Session, tenant_id: UUID | None = None) -> int:
-    """Upsert 五個正式模組（tenant_id=None 為全租戶定義）。"""
+    """Upsert application modules (tenant_id=None means global definitions)."""
     from app.models.mka import JobModule
 
     count = 0

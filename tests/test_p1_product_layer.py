@@ -519,13 +519,13 @@ class TestModuleRouter:
         router = get_module_router(db=db)
         modules = router.list_modules()
         for key in (
-            "spec_sop",
             "sales_quote",
             "incident_handover",
             "quality_8d",
             "training_knowhow",
         ):
             assert key in modules
+        assert "spec_sop" not in modules
 
     def test_get_module(self, db):
         router = get_module_router(db=db)
@@ -560,7 +560,7 @@ class TestModuleRouter:
         modules = router.get_available_modules(authz)
         module_names = [m.name for m in modules]
         assert "sales_quote" in module_names
-        assert "spec_sop" in module_names
+        assert "spec_sop" not in module_names
 
     def test_get_available_modules_no_binding_means_opt_in(self, db):
         """新租戶無 binding → 看不到任何全域模組（opt-in 語意）。"""
@@ -599,7 +599,7 @@ class TestModuleRouter:
         self._bind_all(db, authz.tenant_id)
         names = [m.name for m in router.get_available_modules(authz)]
         assert "sales_quote" in names
-        assert "spec_sop" in names
+        assert "spec_sop" not in names
 
     def test_real_authorization_context_viewer_gets_no_modules(self, db):
         router = get_module_router(db=db)
@@ -644,12 +644,14 @@ class TestModuleRouter:
         names = [m.name for m in router.get_available_modules(insider)]
         assert "dept_only" in names
 
-    def test_get_retrieval_scope(self, db):
+    def test_spec_sop_scope_is_a_core_query_mode(self, db):
+        from app.platform.knowledge import get_query_mode
+
         router = get_module_router(db=db)
-        authz = MagicMock()
-        authz.department_id = None
-        scope = router.get_retrieval_scope("spec_sop", authz)
-        assert scope.get("doc_type") == ["sop", "spec"]
+        assert router.get_retrieval_scope("spec_sop", MagicMock()) == {}
+        mode = get_query_mode("spec_sop")
+        assert mode is not None
+        assert mode.retrieval_scope.get("doc_type") == ["sop", "spec"]
 
     def test_get_forms_for_module(self, db):
         router = get_module_router(db=db)

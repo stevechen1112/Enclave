@@ -31,8 +31,11 @@ class ModuleRegistry:
     ) -> List[Dict[str, Any]]:
         """列出模組（含全租戶 + 租戶專屬）。"""
         from app.models.mka import JobModule
+        from app.platform.knowledge import query_mode_keys
 
-        query = self.db.query(JobModule)
+        query = self.db.query(JobModule).filter(
+            JobModule.module_key.notin_(query_mode_keys())
+        )
         if not include_disabled:
             query = query.filter(JobModule.status.in_(["enabled", "draft"]))
 
@@ -50,6 +53,10 @@ class ModuleRegistry:
 
     def get_module(self, module_key: str, tenant_id: Optional[UUID] = None) -> Optional[Dict[str, Any]]:
         """取得單一模組。"""
+        from app.platform.knowledge import is_core_query_mode
+
+        if is_core_query_mode(module_key):
+            return None
         from app.models.mka import JobModule
         from sqlalchemy import or_
 
@@ -79,10 +86,14 @@ class ModuleRegistry:
         - ["sales", ...]：模組有 allowed_job_role_keys 時需交集。
         """
         from app.models.mka import JobModule, TenantModuleBinding
+        from app.platform.knowledge import query_mode_keys
         from sqlalchemy import or_
 
         # 1. 取得所有 enabled 模組
-        query = self.db.query(JobModule).filter(JobModule.status == "enabled")
+        query = self.db.query(JobModule).filter(
+            JobModule.status == "enabled",
+            JobModule.module_key.notin_(query_mode_keys()),
+        )
         query = query.filter(
             or_(JobModule.tenant_id.is_(None), JobModule.tenant_id == tenant_id)
         )

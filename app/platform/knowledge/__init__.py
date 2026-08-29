@@ -8,6 +8,13 @@ from app.platform.knowledge.providers import (
     KnowledgeProviderFailure,
     KnowledgeProviderRegistry,
 )
+from app.platform.knowledge.query_modes import (
+    KnowledgeQueryMode,
+    get_query_mode,
+    is_core_query_mode,
+    is_legacy_ask_task,
+    query_mode_keys,
+)
 
 __all__ = [
     "KnowledgeCandidate",
@@ -16,4 +23,9 @@ __all__ = [
     "KnowledgeProvider",
     "KnowledgeProviderFailure",
     "KnowledgeProviderRegistry",
+    "KnowledgeQueryMode",
+    "get_query_mode",
+    "is_core_query_mode",
+    "is_legacy_ask_task",
+    "query_mode_keys",
 ]

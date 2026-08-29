@@ -166,9 +166,7 @@ class TestModuleJobRoleAllowlist:
     def test_module_with_allowlist_requires_matching_job_role(self, db):
         tenant, user = _user(db)
         _module(db, "sales_quote", allowed_job_role_keys=["sales"])
-        _module(db, "spec_sop")  # 不限職能
         _bind(db, tenant, "sales_quote")
-        _bind(db, tenant, "spec_sop")
         sales = _role(db, tenant, "sales", "業務", ["sales_quote"])
         _assign(db, tenant, user, sales, primary=True)
 
@@ -180,7 +178,7 @@ class TestModuleJobRoleAllowlist:
                 user_department_ids=[], job_role_keys=["sales"],
             )
         ]
-        assert set(keys) == {"sales_quote", "spec_sop"}
+        assert keys == ["sales_quote"]
 
         keys_no_role = [
             m["module_key"]
@@ -189,7 +187,7 @@ class TestModuleJobRoleAllowlist:
                 user_department_ids=[], job_role_keys=[],
             )
         ]
-        assert keys_no_role == ["spec_sop"]
+        assert keys_no_role == []
 
     def test_job_role_keys_none_skips_filter(self, db):
         tenant, _ = _user(db)

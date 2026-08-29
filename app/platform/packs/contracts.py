@@ -373,6 +373,13 @@ class PackRegistry:
     def get(self, pack_key: str) -> PackContribution | None:
         return self._packs.get(pack_key)
 
+    def pack_key_for_module(self, module_key: str) -> str | None:
+        """Return the owning Pack without importing its implementation."""
+        for pack_key, contribution in self._packs.items():
+            if module_key in contribution.manifest.module_keys:
+                return pack_key
+        return None
+
     def is_deployed(self, pack_key: str) -> bool:
         return pack_key in self._packs and self._deployment_capabilities.get(
             pack_key, True
@@ -533,6 +540,14 @@ class PackRegistry:
             visit(pack_key)
 
     def _assert_unique_contribution_keys(self, contribution: PackContribution) -> None:
+        existing_module_keys = {
+            module_key
+            for pack in self._packs.values()
+            for module_key in pack.manifest.module_keys
+        }
+        if existing_module_keys.intersection(contribution.manifest.module_keys):
+            raise ValueError("duplicate module key across packs")
+
         existing_providers = {
             str(getattr(provider, "provider_key", ""))
             for pack in self._packs.values()

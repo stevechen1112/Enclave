@@ -30,11 +30,18 @@
     "app/composition/packs.py"
   ],
   "frontend_bundle_composition_root": "frontend/src/modules/installed.ts",
+  "deprecated_core_compatibility_aliases": {
+    "module_keys": [
+      "spec_sop"
+    ],
+    "task_keys": [
+      "ask"
+    ]
+  },
   "legacy_mka_aggregate": {
     "status": "frozen_pending_split",
     "new_application_registration": "dedicated_pack_required",
     "module_keys": [
-      "spec_sop",
       "sales_quote",
       "incident_handover",
       "quality_8d",

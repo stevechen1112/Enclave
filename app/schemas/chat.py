@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ConversationBase(BaseModel):
@@ -46,7 +46,22 @@ class ChatRequest(BaseModel):
     top_k: int = Field(default=3, ge=1, le=20, description="Number of KB chunks to retrieve")
     # MKA SceneContext — 限定設備／料號／產品等檢索範圍
     scene_context: Optional[Dict[str, Any]] = None
+    knowledge_mode: Optional[Literal["spec_sop"]] = None
+    # Legacy application scope. spec_sop is accepted only as a compatibility
+    # alias and is normalized to the core knowledge_mode by the endpoint.
     module_key: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_scope_contract(self):
+        if (
+            self.knowledge_mode is not None
+            and self.module_key is not None
+            and self.module_key != "spec_sop"
+        ):
+            raise ValueError(
+                "knowledge_mode and application module_key are mutually exclusive"
+            )
+        return self
 
 
 class ChatResponse(BaseModel):

@@ -110,6 +110,10 @@ class TaskEngine:
 
     def resolve_definition(self, tenant_id: UUID, task_key: str):
         """租戶覆寫優先；全域（tenant_id NULL）fallback；取最新 enabled 版本。"""
+        from app.platform.knowledge import is_legacy_ask_task
+
+        if is_legacy_ask_task(task_key):
+            return None
         from app.models.mka import TaskDefinition
 
         rows = (

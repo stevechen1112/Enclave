@@ -182,8 +182,9 @@ async def chat_stream(
     user_id = current_user.id
     conversation_id_val = conversation.id
 
-    # 明確指定 module_key 時的授權（必須在 SSE 開始前 403）
-    _assert_chat_module_access(db, current_user, getattr(request, "module_key", None))
+    module_key, knowledge_mode = _chat_scopes(request)
+    # 明確指定 application module 時的授權（必須在 SSE 開始前 403）
+    _assert_chat_module_access(db, current_user, module_key)
     from app.services.job_context import build_effective_job_context
 
     _job_role_keys = list(
@@ -227,13 +228,16 @@ async def chat_stream(
                 scene_to_filter_dict,
             )
 
-            module_key = getattr(request, "module_key", None)
             module_scope, module_label = _module_retrieval_scope(
-                stream_db, authz, module_key, job_role_keys=_job_role_keys
+                stream_db,
+                authz,
+                module_key,
+                knowledge_mode=knowledge_mode,
+                job_role_keys=_job_role_keys,
             )
             if module_label:
                 yield _sse(
-                    {"type": "status", "content": f"已切換至 {module_label} 模組"}
+                    {"type": "status", "content": f"已套用 {module_label}"}
                 )
 
             scene_filter = scene_to_filter_dict(getattr(request, "scene_context", None))
@@ -433,7 +437,8 @@ async def chat(
     )
 
     authz = AuthorizationContext.from_user(current_user)
-    _assert_chat_module_access(db, current_user, getattr(request, "module_key", None))
+    module_key, knowledge_mode = _chat_scopes(request)
+    _assert_chat_module_access(db, current_user, module_key)
     from app.services.job_context import build_effective_job_context
 
     _job_role_keys = list(
@@ -452,7 +457,11 @@ async def chat(
     from app.services.scene_scope import scene_question_hint, scene_to_filter_dict
 
     module_scope, _ = _module_retrieval_scope(
-        db, authz, getattr(request, "module_key", None), job_role_keys=_job_role_keys
+        db,
+        authz,
+        module_key,
+        knowledge_mode=knowledge_mode,
+        job_role_keys=_job_role_keys,
     )
     scene_ctx = getattr(request, "scene_context", None)
     filter_dict = {**module_scope, **scene_to_filter_dict(scene_ctx)}
@@ -788,6 +797,15 @@ async def rag_dashboard(
 # ──────────── 內部 helper ────────────
 
 
+def _chat_scopes(request: Any) -> tuple[Optional[str], Optional[str]]:
+    """Normalize the former spec_sop module alias into a core query mode."""
+    module_key = getattr(request, "module_key", None)
+    knowledge_mode = getattr(request, "knowledge_mode", None)
+    if module_key == "spec_sop":
+        return None, knowledge_mode or "spec_sop"
+    return module_key, knowledge_mode
+
+
 def _assert_chat_module_access(
     db: Session, current_user: User, module_key: Optional[str]
 ) -> None:
@@ -813,13 +831,19 @@ def _module_retrieval_scope(
     db: Session,
     authz: Any,
     module_key: Optional[str],
+    knowledge_mode: Optional[str] = None,
     job_role_keys: Optional[List[str]] = None,
 ) -> tuple:
-    """僅在請求明確帶 module_key 時才套用該模組的檢索範圍。
+    """Apply a core query mode or an entitled application retrieval scope.
 
-    回傳 (scope_dict, module_label)；未指定或模組不可用時回傳 ({}, None)，
+    回傳 (scope_dict, label)；未指定或模組不可用時回傳 ({}, None)，
     避免一般問答被預設模組的 knowledge_scope_policy 限縮。
     """
+    from app.platform.knowledge import get_query_mode
+
+    mode = get_query_mode(knowledge_mode)
+    if mode is not None:
+        return dict(mode.retrieval_scope), mode.label
     if not module_key:
         return {}, None
     from app.config import settings

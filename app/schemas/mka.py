@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 # ── JobModule（§4.1）──
 
 class JobModuleBase(BaseModel):
-    module_key: str = Field(..., description="spec_sop | sales_quote | incident_handover | quality_8d | training_knowhow")
+    module_key: str = Field(..., description="sales_quote | incident_handover | quality_8d | training_knowhow")
     name: str
     description: Optional[str] = None
     version: str = "1.0"

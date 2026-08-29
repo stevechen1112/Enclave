@@ -375,6 +375,7 @@ export interface ChatRequest {
   question: string
   conversation_id?: string | null
   top_k?: number
+  knowledge_mode?: 'spec_sop' | null
   module_key?: string | null
   scene_context?: Record<string, string>
 }

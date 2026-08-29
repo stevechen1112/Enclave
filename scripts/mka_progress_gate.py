@@ -318,7 +318,7 @@ def check_module_contract():
     """MKA-P0-MODULE-CONTRACT: 模組不是 prompt（以正式 seed 契約為準）。"""
     from app.services.mka_module_seed import CANONICAL_MODULES
     keys = [m["module_key"] for m in CANONICAL_MODULES]
-    required = {"spec_sop", "sales_quote", "incident_handover", "quality_8d", "training_knowhow"}
+    required = {"sales_quote", "incident_handover", "quality_8d", "training_knowhow"}
     if not required.issubset(set(keys)):
         return False, f"canonical modules incomplete: {keys}"
     # 模組必須有 knowledge/intent/tools/forms/approval 契約欄位
@@ -645,7 +645,7 @@ def check_module_compatibility():
     """MKA-P4-REGISTRY: 相容性矩陣存在且檢查正確。"""
     from app.services.module_admin import CompatibilityMatrix
     matrix = CompatibilityMatrix()
-    ok, _ = matrix.check_compatibility("spec_sop", "1.0")
+    ok, _ = matrix.check_compatibility("sales_quote", "1.0")
     if not ok:
         return False, "compatible module rejected"
     ok, reason = matrix.check_compatibility("quality_8d", "1.0", enabled_packs=[])
@@ -786,7 +786,7 @@ def check_module_db_router():
     if "procurement" in router and "_register_defaults" in router:
         return False, "legacy in-memory defaults still present"
     seed = (PROJECT_ROOT / "app" / "services" / "mka_module_seed.py").read_text(encoding="utf-8")
-    for key in ("spec_sop", "sales_quote", "incident_handover", "quality_8d", "training_knowhow"):
+    for key in ("sales_quote", "incident_handover", "quality_8d", "training_knowhow"):
         if key not in seed:
             return False, f"canonical module missing: {key}"
     return True, "DB module router + 5 canonical modules"

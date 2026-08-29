@@ -90,7 +90,7 @@ def main() -> None:
         # ── Demo A ──
         r = client.post("/chat/chat", headers=sales, json={
             "question": "P-200 的 v2.0 和 v2.1 規格差在哪？",
-            "module_key": "spec_sop",
+            "knowledge_mode": "spec_sop",
         })
         ans = extract_answer(r.json()) if r.status_code == 200 else ""
         hits = sum(1 for kw in ("IP65", "CAN", "溫度", "IP54") if kw in ans)
