@@ -242,9 +242,10 @@ class TestModuleAccessGuards:
         _assign(db, tenant, user, sales, primary=True)
         assert_form_access(db, user, "quote")
 
-    def test_assert_form_access_unclaimed_form_open(self, db):
+    def test_assert_form_access_unclaimed_form_fails_closed(self, db):
         tenant, user = _user(db)
-        assert_form_access(db, user, "orphan_form")  # 無模組認領 → 開放
+        with pytest.raises(ModuleAccessDenied):
+            assert_form_access(db, user, "orphan_form")
 
 
 class TestTenantConfigMerge:

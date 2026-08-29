@@ -9,19 +9,15 @@ from app.api import deps
 from app.api.v1.endpoints import (
     audio_policy,
     enterprise,
-    form_templates,
-    forms,
     interaction,
     interview,
     job_modules,
     job_roles,
     knowhow,
-    mka_approvals,
     mka_metrics,
     realtime_voice,
     scene,
     scene_admin,
-    tasks,
     terms,
 )
 from app.models.user import User
@@ -46,18 +42,14 @@ def require_mka_pack_enabled(
 
 
 router = APIRouter(dependencies=[Depends(require_mka_pack_enabled)])
-router.include_router(mka_approvals.router, tags=["mka-approvals"])
 router.include_router(knowhow.router, tags=["knowhow"])
-router.include_router(forms.router, tags=["forms"])
 router.include_router(interaction.router, tags=["interaction"])
 router.include_router(scene.router, tags=["scene"])
 router.include_router(scene_admin.router, tags=["scene-admin"])
 router.include_router(job_modules.router, tags=["job-modules"])
 router.include_router(job_roles.router, tags=["job-roles"])
-router.include_router(tasks.router, tags=["tasks"])
 router.include_router(terms.router, tags=["terms"])
 router.include_router(audio_policy.router, tags=["audio-policy"])
-router.include_router(form_templates.router, tags=["form-templates"])
 router.include_router(enterprise.router, tags=["enterprise"])
 router.include_router(mka_metrics.router, tags=["mka-metrics"])
 router.include_router(interview.router, tags=["interview"])

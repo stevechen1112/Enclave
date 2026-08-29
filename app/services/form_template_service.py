@@ -167,7 +167,7 @@ class FormTemplateService:
         return get_storage_backend()
 
     def list_templates(self, tenant_id: UUID, form_key: Optional[str] = None) -> List[Any]:
-        from app.models.mka import FormTemplate
+        from app.models.workflow import FormTemplate
         q = self.db.query(FormTemplate).filter(FormTemplate.tenant_id == tenant_id)
         if form_key:
             q = q.filter(FormTemplate.form_key == form_key)
@@ -184,7 +184,7 @@ class FormTemplateService:
         content: bytes,
         version: str = "1.0",
     ) -> Any:
-        from app.models.mka import FormTemplate
+        from app.models.workflow import FormTemplate
 
         lower = filename.lower()
         if lower.endswith(".docx"):
@@ -228,7 +228,7 @@ class FormTemplateService:
         return row
 
     def update_mapping(self, *, tenant_id: UUID, template_id: UUID, mapping: Dict[str, str]) -> Any:
-        from app.models.mka import FormTemplate
+        from app.models.workflow import FormTemplate
         row = (
             self.db.query(FormTemplate)
             .filter(FormTemplate.id == template_id, FormTemplate.tenant_id == tenant_id)
@@ -241,7 +241,7 @@ class FormTemplateService:
         return row
 
     def activate(self, *, tenant_id: UUID, template_id: UUID) -> Any:
-        from app.models.mka import FormDefinition, FormTemplate
+        from app.models.workflow import FormDefinition, FormTemplate
         from datetime import datetime, timezone
 
         row = (
@@ -288,7 +288,7 @@ class FormTemplateService:
         template_id: UUID,
         values: Dict[str, Any],
     ) -> Tuple[bytes, str, str]:
-        from app.models.mka import FormTemplate
+        from app.models.workflow import FormTemplate
 
         row = (
             self.db.query(FormTemplate)
@@ -308,7 +308,7 @@ class FormTemplateService:
         raise ValueError(f"unsupported format: {row.format}")
 
     def get_active(self, tenant_id: UUID, form_key: str) -> Optional[Any]:
-        from app.models.mka import FormTemplate
+        from app.models.workflow import FormTemplate
         return (
             self.db.query(FormTemplate)
             .filter(

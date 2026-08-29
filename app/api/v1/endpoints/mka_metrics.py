@@ -96,7 +96,7 @@ def metrics_summary(
     voice_ratio = (voice / (voice + typed)) if (voice + typed) else None
 
     # form draft backlog
-    from app.models.mka import FormInstance
+    from app.models.workflow import FormInstance
     draft_count = (
         db.query(func.count(FormInstance.id))
         .filter(

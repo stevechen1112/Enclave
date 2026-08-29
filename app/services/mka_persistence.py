@@ -19,11 +19,13 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 from app.models.mka import (
+    InteractionSession,
+    KnowhowCardModel,
+)
+from app.models.workflow import (
     ApprovalPolicy,
     FormDefinition,
     FormInstance,
-    InteractionSession,
-    KnowhowCardModel,
     MKAApprovalRequest,
 )
 from app.services.fixed_form import (
@@ -125,7 +127,7 @@ def form_instance_to_dict(row: FormInstance) -> Dict[str, Any]:
     form_key = None
     try:
         from sqlalchemy.orm import object_session
-        from app.models.mka import FormDefinition as _FormDefinition
+        from app.models.workflow import FormDefinition as _FormDefinition
 
         db = object_session(row)
         if db is not None and row.form_definition_id:
@@ -1132,7 +1134,7 @@ class MKARepository:
         if "mka_task_runs" not in inspect(self.db.connection()).get_table_names():
             return
 
-        from app.models.mka import TaskRun, TaskRunEvent
+        from app.models.workflow import TaskRun, TaskRunEvent
 
         reference_key = {
             "form": "form_instance_id",

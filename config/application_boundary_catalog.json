@@ -38,6 +38,9 @@
       "ask"
     ]
   },
+  "workflow_compatibility_bridges": [
+    "app/services/workflow_repository.py"
+  ],
   "legacy_mka_aggregate": {
     "status": "frozen_pending_split",
     "new_application_registration": "dedicated_pack_required",

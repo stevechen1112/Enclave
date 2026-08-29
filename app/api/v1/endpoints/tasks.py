@@ -140,7 +140,7 @@ def list_task_runs(
     current_user: User = Depends(deps.get_current_verified_user),
 ) -> List[Dict[str, Any]]:
     """我的 TaskRun 清單（工作台 resume 用）。"""
-    from app.models.mka import TaskRun
+    from app.models.workflow import TaskRun
 
     q = db.query(TaskRun).filter(
         TaskRun.tenant_id == current_user.tenant_id,
@@ -211,7 +211,7 @@ def parse_task_run_text(
         )
 
     # 以任務綁定表單的實際欄位作為抽取目標。
-    from app.models.mka import TaskDefinition
+    from app.models.workflow import TaskDefinition
 
     definition = (
         db.query(TaskDefinition)
@@ -349,7 +349,7 @@ def list_task_definitions_admin(
 ) -> List[Dict[str, Any]]:
     """全部定義（全域 + 本租戶覆寫，含版本）— 設定中心用。"""
     _require_admin(current_user)
-    from app.models.mka import TaskDefinition
+    from app.models.workflow import TaskDefinition
 
     rows = (
         db.query(TaskDefinition)
@@ -375,7 +375,7 @@ def override_task_definition(
 ) -> Dict[str, Any]:
     """建立租戶覆寫版本（不改全域定義；版本號自動遞增）。"""
     _require_admin(current_user)
-    from app.models.mka import TaskDefinition
+    from app.models.workflow import TaskDefinition
 
     base = get_task_engine(db).resolve_definition(current_user.tenant_id, task_key)
     if base is None:
@@ -435,7 +435,7 @@ def update_task_definition_status(
 ) -> Dict[str, Any]:
     """調整租戶覆寫定義的狀態（全域定義不可改）。"""
     _require_admin(current_user)
-    from app.models.mka import TaskDefinition
+    from app.models.workflow import TaskDefinition
 
     if body.status not in {"enabled", "disabled", "deprecated"}:
         raise HTTPException(status_code=422, detail="invalid status")
@@ -473,7 +473,7 @@ def list_run_events(
     current_user: User = Depends(deps.get_current_verified_user),
 ) -> List[Dict[str, Any]]:
     """單一 run 的事件流（本人或管理員）。"""
-    from app.models.mka import TaskRunEvent
+    from app.models.workflow import TaskRunEvent
 
     run = _get_own_run(db, current_user, run_id)
     rows = (
@@ -495,7 +495,7 @@ def list_run_events(
 
 
 def _get_own_run(db: Session, user: User, run_id: UUID):
-    from app.models.mka import TaskRun
+    from app.models.workflow import TaskRun
 
     run = (
         db.query(TaskRun)

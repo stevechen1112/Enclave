@@ -190,17 +190,18 @@ def assert_module_access(db: Session, user: Any, module_key: str) -> Dict[str, A
 def assert_form_access(db: Session, user: Any, form_key: str) -> None:
     """表單直接 URL 授權：表單所屬模組必須對目前 EffectiveJobContext 可用。
 
-    無模組認領的表單（未掛進任何 JobModule）維持開放，避免阻斷舊資料。
+    無應用認領的 form definition 不可建立新資料；歷史 instance 仍由 owner／
+    reviewer 的 instance ACL 讀取，不以開放新表單的方式維持相容。
     """
+    if form_key not in available_form_keys(db, user):
+        raise ModuleAccessDenied(f"目前職能／角色無權使用表單：{form_key}")
+
+
+def available_form_keys(db: Session, user: Any) -> set[str]:
+    """Return forms claimed by at least one application enabled for the actor."""
     from app.services.module_registry import get_module_registry
 
     registry = get_module_registry(db)
-    claiming = [
-        m for m in registry.list_modules(tenant_id=user.tenant_id)
-        if form_key in [str(f) for f in (m.get("form_definition_ids") or [])]
-    ]
-    if not claiming:
-        return
     ctx = build_effective_job_context(db, user)
     available = registry.get_available_modules(
         tenant_id=user.tenant_id,
@@ -208,9 +209,11 @@ def assert_form_access(db: Session, user: Any, form_key: str) -> None:
         user_department_ids=list(ctx.department_ids),
         job_role_keys=list(ctx.active_job_role_keys),
     )
-    available_keys = {m["module_key"] for m in available}
-    if not any(m["module_key"] in available_keys for m in claiming):
-        raise ModuleAccessDenied(f"目前職能／角色無權使用表單：{form_key}")
+    return {
+        str(form_key)
+        for module in available
+        for form_key in (module.get("form_definition_ids") or [])
+    }
 
 
 def module_allowed_for_context(module: Dict[str, Any], ctx: EffectiveJobContext) -> bool:

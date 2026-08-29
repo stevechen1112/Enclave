@@ -8,15 +8,15 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.api.deps_permissions import allow_all_authenticated
 from app.models.user import User
-from app.services.mka_persistence import (
-    MKAConflictError,
-    MKAForbiddenError,
-    MKANotFoundError,
-    MKARepository,
+from app.services.workflow_repository import (
+    WorkflowConflictError,
+    WorkflowForbiddenError,
+    WorkflowNotFoundError,
+    WorkflowRepository,
     approval_to_dict,
 )
 
-router = APIRouter(prefix="/approvals", tags=["mka-approvals"])
+router = APIRouter(prefix="/approvals", tags=["workflow-approvals"])
 
 
 class ApprovalDecisionRequest(BaseModel):
@@ -25,12 +25,12 @@ class ApprovalDecisionRequest(BaseModel):
     reason: str = ""
 
 
-def _raise_mka(exc: Exception) -> None:
-    if isinstance(exc, MKANotFoundError):
+def _raise_workflow(exc: Exception) -> None:
+    if isinstance(exc, WorkflowNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, MKAForbiddenError):
+    if isinstance(exc, WorkflowForbiddenError):
         raise HTTPException(status_code=403, detail=str(exc))
-    if isinstance(exc, MKAConflictError):
+    if isinstance(exc, WorkflowConflictError):
         raise HTTPException(status_code=409, detail=str(exc))
     raise HTTPException(status_code=400, detail=str(exc))
 
@@ -81,7 +81,7 @@ def list_approval_policies(
     current_user: User = Depends(allow_all_authenticated),
 ):
     _require_admin(current_user)
-    from app.models.mka import ApprovalPolicy
+    from app.models.workflow import ApprovalPolicy
 
     rows = (
         db.query(ApprovalPolicy)
@@ -101,7 +101,7 @@ def upsert_approval_policy(
     _require_admin(current_user)
     if body.object_type not in {"form", "knowhow", "tool"}:
         raise HTTPException(status_code=422, detail="invalid object_type")
-    from app.models.mka import ApprovalPolicy
+    from app.models.workflow import ApprovalPolicy
 
     row = (
         db.query(ApprovalPolicy)
@@ -140,7 +140,7 @@ def approval_inbox(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(allow_all_authenticated),
 ):
-    rows = MKARepository(db).list_approvals(
+    rows = WorkflowRepository(db).list_approvals(
         tenant_id=current_user.tenant_id, status=status
     )
     return [approval_to_dict(row) for row in rows if _can_review(row, current_user)]
@@ -153,14 +153,14 @@ def get_approval(
     current_user: User = Depends(allow_all_authenticated),
 ):
     try:
-        row = MKARepository(db).get_approval(
+        row = WorkflowRepository(db).get_approval(
             tenant_id=current_user.tenant_id, approval_id=approval_id
         )
         if not _can_review(row, current_user):
-            raise MKAForbiddenError("reviewer role not allowed for current approval step")
+            raise WorkflowForbiddenError("reviewer role not allowed for current approval step")
         return approval_to_dict(row)
     except Exception as exc:
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 def _decide(
@@ -172,7 +172,7 @@ def _decide(
     current_user: User,
 ):
     try:
-        row = MKARepository(db).decide_approval(
+        row = WorkflowRepository(db).decide_approval(
             tenant_id=current_user.tenant_id,
             approval_id=approval_id,
             reviewer_id=current_user.id,
@@ -188,7 +188,7 @@ def _decide(
         return approval_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/{approval_id}/approve")

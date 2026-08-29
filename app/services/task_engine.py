@@ -14,6 +14,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from app.platform.workflow import (
+    TASK_STATUS_TRANSITIONS,
+    TERMINAL_TASK_STATUSES,
+)
 from app.services.job_context import (
     EffectiveJobContext,
     ModuleAccessDenied,
@@ -22,24 +26,11 @@ from app.services.job_context import (
 )
 
 if TYPE_CHECKING:
-    from app.models.mka import TaskRun
+    from app.models.workflow import TaskRun
 
 logger = logging.getLogger(__name__)
 
-# ── 統一狀態機 ────────────────────────────────────────────────────────────────
-
-TASK_STATUS_TRANSITIONS: Dict[str, set] = {
-    "draft": {"in_progress", "failed"},
-    "in_progress": {"waiting_review", "executed", "failed"},
-    "waiting_review": {"approved", "rejected", "failed"},
-    "approved": {"executed", "exported", "failed"},
-    "rejected": {"draft", "failed"},
-    "executed": {"exported"},
-    "exported": set(),
-    "failed": {"draft"},
-}
-
-TERMINAL_STATUSES = {"exported"}
+TERMINAL_STATUSES = TERMINAL_TASK_STATUSES
 
 
 class TaskEngineError(Exception):
@@ -96,7 +87,7 @@ class TaskEngine:
         payload: Optional[Dict[str, Any]] = None,
     ) -> None:
         """寫入 TaskRun 事件（Phase 7 可觀測性）。"""
-        from app.models.mka import TaskRunEvent
+        from app.models.workflow import TaskRunEvent
 
         self.db.add(TaskRunEvent(
             tenant_id=run.tenant_id,
@@ -114,7 +105,7 @@ class TaskEngine:
 
         if is_legacy_ask_task(task_key):
             return None
-        from app.models.mka import TaskDefinition
+        from app.models.workflow import TaskDefinition
 
         rows = (
             self.db.query(TaskDefinition)
@@ -145,7 +136,7 @@ class TaskEngine:
         Task discovery and workspace navigation share this method so the UI
         cannot advertise an entry that the runtime will reject.
         """
-        from app.models.mka import TaskDefinition
+        from app.models.workflow import TaskDefinition
 
         rows = (
             self.db.query(TaskDefinition)
@@ -222,7 +213,7 @@ class TaskEngine:
         scene: Optional[Dict[str, Any]] = None,
     ):
         """建立 TaskRun（idempotent）。回傳 (run, created)。"""
-        from app.models.mka import TaskRun
+        from app.models.workflow import TaskRun
 
         existing = (
             self.db.query(TaskRun)
@@ -319,7 +310,7 @@ class TaskEngine:
 
     def execute(self, run: Any, user: Any) -> TaskResult:
         """執行 run 對應的 typed handler。"""
-        from app.models.mka import TaskDefinition
+        from app.models.workflow import TaskDefinition
 
         # Validate before invoking the handler.  Form/knowhow handlers persist
         # side effects, so checking only the eventual state transition is too
@@ -384,9 +375,9 @@ def _form_backed_handler(form_key: str) -> TaskHandler:
         import uuid as _uuid
 
         from app.services.fixed_form import get_form_registry
-        from app.services.mka_persistence import MKARepository
+        from app.services.workflow_repository import WorkflowRepository
 
-        repo = MKARepository(ctx.db)
+        repo = WorkflowRepository(ctx.db)
         instance = repo.create_form_instance(
             tenant_id=ctx.user.tenant_id,
             owner_id=ctx.user.id,
@@ -488,9 +479,9 @@ def _lookup_knowledge_price(
 
 def _quote_handler(ctx: TaskRunContext) -> TaskResult:
     """報價垂直切片：知識補值 → 建立表單 → 規則計算 → 缺欄位清單 → waiting_review。"""
-    from app.services.mka_persistence import MKARepository
+    from app.services.workflow_repository import WorkflowRepository
 
-    repo = MKARepository(ctx.db)
+    repo = WorkflowRepository(ctx.db)
     values = dict(ctx.inputs.get("values") or {})
     # parse-text／語音可能留下字串數字；送審前正規化，避免 validate 因型別失敗
     for key in ("quantity", "unit_price", "tax_rate"):

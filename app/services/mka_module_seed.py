@@ -197,7 +197,7 @@ CANONICAL_TASKS: list[dict[str, Any]] = [
 
 def seed_canonical_task_definitions(db: Session) -> int:
     """upsert 全域（tenant_id NULL）正式任務定義，回傳處理筆數。"""
-    from app.models.mka import TaskDefinition
+    from app.models.workflow import TaskDefinition
 
     count = 0
     for spec in CANONICAL_TASKS:

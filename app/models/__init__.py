@@ -71,13 +71,26 @@ from app.models.input_pilot import (
     InputPilotDailyMetric,
     InputPilotIncident,
 )
-# MKA: 製造業知識助理領域模型
+# Workflow Kernel: domain-neutral task, form and approval persistence
+from app.models.workflow import (
+    ApprovalPolicy,
+    FormDefinition,
+    FormInstance,
+    FormTemplate,
+    MKAApprovalRequest,
+    RuleSet,
+    TaskDefinition,
+    TaskRun,
+    TaskRunEvent,
+    WorkflowApprovalRequest,
+)
+
+# MKA: manufacturing application compatibility and domain models
 from app.models.mka import (
     JobModule, TenantModuleBinding, InteractionSession,
-    TenantTermDictionary, FormDefinition, FormInstance,
-    RuleSet, ApprovalPolicy, MKAApprovalRequest, KnowhowCardModel,
+    TenantTermDictionary, KnowhowCardModel,
     MKAAudioPolicy, MKATaskCost, SceneRegistry, JobRole,
-    UserJobRoleAssignment, FormTemplate, MKAWriteRequest,
+    UserJobRoleAssignment, MKAWriteRequest,
     MKAWriteAudit, MKAEvent, KnowhowLineage, MKAReviewReminder,
     KnowledgeCaptureSession, KnowledgeCaptureChunk, KnowledgeCaptureTranscriptSegment,
 )

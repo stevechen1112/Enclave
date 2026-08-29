@@ -13,7 +13,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from app.models.mka import MKAApprovalRequest, TaskRun, TaskRunEvent
+from app.models.workflow import MKAApprovalRequest, TaskRun, TaskRunEvent
 
 _DONE_STATUSES = {"waiting_review", "approved", "rejected", "executed", "exported"}
 

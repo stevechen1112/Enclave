@@ -9,7 +9,8 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.models.mka import ApprovalPolicy, KnowhowCardModel, MKAApprovalRequest
+from app.models.mka import KnowhowCardModel
+from app.models.workflow import ApprovalPolicy, MKAApprovalRequest
 from app.models.user import User
 from app.services.mka_persistence import MKARepository
 

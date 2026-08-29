@@ -39,6 +39,10 @@ from app.api.v1.endpoints import (
     upload_sessions,
     knowledge_capture,
     input_pilots,
+    form_templates,
+    forms,
+    mka_approvals,
+    tasks,
 )
 
 api_router = APIRouter()
@@ -89,6 +93,12 @@ api_router.include_router(deprecations.router, tags=["deprecations"])
 api_router.include_router(input_capabilities.router)
 api_router.include_router(upload_sessions.router)
 api_router.include_router(input_pilots.router)
+# Workflow Kernel surfaces are part of the base product. Applications register
+# definitions and handlers; they do not own these shared URLs.
+api_router.include_router(tasks.router, tags=["workflow-tasks"])
+api_router.include_router(forms.router, tags=["workflow-forms"])
+api_router.include_router(mka_approvals.router, tags=["workflow-approvals"])
+api_router.include_router(form_templates.router, tags=["workflow-form-templates"])
 api_router.include_router(
     knowledge_capture.router,
     prefix="/knowledge/captures",

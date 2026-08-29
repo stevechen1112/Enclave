@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.api import deps
 from app.models.user import User
-from app.services.mka_persistence import (
-    MKAConflictError,
-    MKAForbiddenError,
-    MKANotFoundError,
-    MKARepository,
+from app.services.workflow_repository import (
+    WorkflowConflictError,
+    WorkflowForbiddenError,
+    WorkflowNotFoundError,
+    WorkflowRepository,
     form_definition_to_dict,
     form_instance_to_dict,
     approval_to_dict,
@@ -60,12 +60,12 @@ _EXPORT_MEDIA_TYPES = {
 }
 
 
-def _raise_mka(exc: Exception) -> None:
-    if isinstance(exc, MKANotFoundError):
+def _raise_workflow(exc: Exception) -> None:
+    if isinstance(exc, WorkflowNotFoundError):
         raise HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, MKAForbiddenError):
+    if isinstance(exc, WorkflowForbiddenError):
         raise HTTPException(status_code=403, detail=str(exc))
-    if isinstance(exc, MKAConflictError):
+    if isinstance(exc, WorkflowConflictError):
         raise HTTPException(status_code=409, detail=str(exc))
     raise HTTPException(status_code=400, detail=str(exc))
 
@@ -88,7 +88,11 @@ async def list_forms(
     from app.config import settings
     if not settings.FIXED_FORM_ENABLED:
         raise HTTPException(status_code=404, detail="Fixed Form not enabled")
-    rows = MKARepository(db).list_form_definitions(tenant_id=current_user.tenant_id)
+    rows = WorkflowRepository(db).list_form_definitions(tenant_id=current_user.tenant_id)
+    from app.services.job_context import available_form_keys
+
+    allowed = available_form_keys(db, current_user)
+    rows = [row for row in rows if row.form_key in allowed]
     db.commit()
     return {
         "forms": [row.form_key for row in rows],
@@ -114,7 +118,7 @@ async def get_form_schema(
     except ModuleAccessDenied as exc:
         raise HTTPException(status_code=403, detail=str(exc))
     try:
-        row = MKARepository(db).get_form_definition(
+        row = WorkflowRepository(db).get_form_definition(
             tenant_id=current_user.tenant_id, form_key=form_name
         )
         db.commit()
@@ -123,7 +127,7 @@ async def get_form_schema(
         return payload
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/forms/{form_name}/validate")
@@ -147,7 +151,7 @@ async def validate_form(
 
     # 與建單／validate_form 同一條 schema 來源：租戶 DB 的 FormDefinition
     try:
-        result = MKARepository(db).validate_form_values(
+        result = WorkflowRepository(db).validate_form_values(
             tenant_id=current_user.tenant_id,
             form_key=form_name,
             values=request.values,
@@ -156,7 +160,7 @@ async def validate_form(
         return result
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/forms/{form_name}/instances")
@@ -177,7 +181,7 @@ def create_form_instance(
     except ModuleAccessDenied as exc:
         raise HTTPException(status_code=403, detail=str(exc))
     try:
-        row = MKARepository(db).create_form_instance(
+        row = WorkflowRepository(db).create_form_instance(
             tenant_id=current_user.tenant_id,
             owner_id=current_user.id,
             form_key=form_name,
@@ -191,7 +195,7 @@ def create_form_instance(
         return form_instance_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.get("/forms/instances")
@@ -201,7 +205,7 @@ def list_my_form_instances(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     """我的草稿／待審／已核准 instance 清單。"""
-    from app.models.mka import FormInstance
+    from app.models.workflow import FormInstance
 
     q = db.query(FormInstance).filter(FormInstance.tenant_id == current_user.tenant_id)
     is_reviewer = bool(
@@ -225,14 +229,14 @@ def get_form_instance(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     try:
-        row = MKARepository(db).get_form_instance(
+        row = WorkflowRepository(db).get_form_instance(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
         )
         return form_instance_to_dict(row)
     except Exception as exc:
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.patch("/forms/instances/{instance_id}")
@@ -243,7 +247,7 @@ def patch_form_instance(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     try:
-        row = MKARepository(db).patch_form_instance(
+        row = WorkflowRepository(db).patch_form_instance(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
@@ -256,7 +260,7 @@ def patch_form_instance(
         return form_instance_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/forms/instances/{instance_id}/calculate")
@@ -267,7 +271,7 @@ def calculate_form_instance(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     try:
-        row = MKARepository(db).calculate_form(
+        row = WorkflowRepository(db).calculate_form(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
@@ -278,7 +282,7 @@ def calculate_form_instance(
         return form_instance_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/forms/instances/{instance_id}/validate")
@@ -289,7 +293,7 @@ def validate_form_instance(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     try:
-        row = MKARepository(db).validate_form(
+        row = WorkflowRepository(db).validate_form(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
@@ -300,7 +304,7 @@ def validate_form_instance(
         return form_instance_to_dict(row)
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/forms/instances/{instance_id}/submit")
@@ -311,7 +315,7 @@ def submit_form_instance(
     current_user: User = Depends(deps.get_current_verified_user),
 ):
     try:
-        row, approval = MKARepository(db).submit_form(
+        row, approval = WorkflowRepository(db).submit_form(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             submitted_by=current_user.id,
@@ -327,7 +331,7 @@ def submit_form_instance(
         }
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.post("/forms/instances/{instance_id}/export")
@@ -347,20 +351,20 @@ def export_form_instance(
         raise HTTPException(status_code=404, detail="Fixed Form not enabled")
 
     fmt = (request.format or "").lower()
-    if fmt not in MKARepository._EXPORT_FORMATS:
+    if fmt not in WorkflowRepository._EXPORT_FORMATS:
         raise HTTPException(
             status_code=400, detail=f"unsupported export format: {request.format}"
         )
 
     if request.async_export:
         try:
-            MKARepository(db).assert_form_exportable(
+            WorkflowRepository(db).assert_form_exportable(
                 tenant_id=current_user.tenant_id,
                 instance_id=instance_id,
                 **_actor_kwargs(current_user),
             )
         except Exception as exc:
-            _raise_mka(exc)
+            _raise_workflow(exc)
         from app.tasks.mka_tasks import render_form_export
         task = render_form_export.delay(
             str(current_user.tenant_id),
@@ -375,7 +379,7 @@ def export_form_instance(
 
     from app.observability.business_metrics import record_mka_form_export
     try:
-        result = MKARepository(db).export_form(
+        result = WorkflowRepository(db).export_form(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
@@ -384,7 +388,7 @@ def export_form_instance(
         db.commit()
     except Exception as exc:
         db.rollback()
-        _raise_mka(exc)
+        _raise_workflow(exc)
     record_mka_form_export(format=result.format, success=result.success)
     if not result.success:
         raise HTTPException(status_code=500, detail=result.error or "export render failed")
@@ -407,14 +411,14 @@ def list_form_exports(
     if not settings.FIXED_FORM_ENABLED:
         raise HTTPException(status_code=404, detail="Fixed Form not enabled")
     try:
-        row = MKARepository(db).get_form_instance(
+        row = WorkflowRepository(db).get_form_instance(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
         )
         return {"exports": row.export_artifacts or []}
     except Exception as exc:
-        _raise_mka(exc)
+        _raise_workflow(exc)
 
 
 @router.get("/forms/instances/{instance_id}/exports/{artifact_index}/download")
@@ -429,13 +433,13 @@ def download_form_export(
     if not settings.FIXED_FORM_ENABLED:
         raise HTTPException(status_code=404, detail="Fixed Form not enabled")
     try:
-        row = MKARepository(db).get_form_instance(
+        row = WorkflowRepository(db).get_form_instance(
             tenant_id=current_user.tenant_id,
             instance_id=instance_id,
             **_actor_kwargs(current_user),
         )
     except Exception as exc:
-        _raise_mka(exc)
+        _raise_workflow(exc)
     artifacts = list(row.export_artifacts or [])
     if artifact_index < 0 or artifact_index >= len(artifacts):
         raise HTTPException(status_code=404, detail="export artifact not found")
