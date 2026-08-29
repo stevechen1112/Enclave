@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "phase": "Input I4",
+  "status": "SEALED_INTERNAL_SYNTHETIC",
+  "frozen_at": "2026-08-29T00:00:00Z",
+  "purpose": "Manufacturing-shaped parser quality regression; not customer or field certification",
+  "entries": [
+    {
+      "id": "maintenance-txt",
+      "path": "artifacts/input/i4_corpus/maintenance_procedure.txt",
+      "sha256": "8ca7fdd46e887d2209c36eb8bce25b2bb8556c9081dbef64cbfa5c7adf029f4c",
+      "bytes": 121,
+      "extension": ".txt",
+      "category": "maintenance_procedure",
+      "condition": "utf8_multilingual",
+      "positive_control": true,
+      "expectations": [
+        "MNT-2048",
+        "CNC-M2048",
+        "WO-829"
+      ]
+    },
+    {
+      "id": "inspection-csv",
+      "path": "artifacts/input/i4_corpus/incoming_inspection.csv",
+      "sha256": "3f7ec20491a2a8370ea177ad20cdb300cfee2e5fc705a3d4a79d997fe5d85903",
+      "bytes": 91,
+      "extension": ".csv",
+      "category": "incoming_inspection",
+      "condition": "row_cell",
+      "positive_control": true,
+      "expectations": [
+        "IQC-240829",
+        "AX-2048",
+        "HOLD"
+      ]
+    },
+    {
+      "id": "manual-pdf",
+      "path": "tests/fixtures/nas_share/quality_manual.pdf",
+      "sha256": "f0793bab1f60c2dcbc3cf720d8f2acd6edac9e4051d9ad4bde9645a73c018458",
+      "bytes": 1512,
+      "extension": ".pdf",
+      "category": "equipment_manual",
+      "condition": "text_page",
+      "positive_control": true,
+      "expectations": [
+        "Manufacturing Quality Manual",
+        "Incoming inspection"
+      ]
+    },
+    {
+      "id": "sop-docx",
+      "path": "artifacts/input/i4_corpus/cnc_changeover_sop.docx",
+      "sha256": "8d6c01c127eb8feff64c2a22dea471f388b2be05eee0dbaff90cbb9594bf4d4a",
+      "bytes": 36977,
+      "extension": ".docx",
+      "category": "sop",
+      "condition": "headings_table",
+      "positive_control": true,
+      "expectations": [
+        "CNC-M2048",
+        "LOTO-OK"
+      ]
+    },
+    {
+      "id": "bom-xlsx",
+      "path": "artifacts/input/i4_corpus/assembly_bom.xlsx",
+      "sha256": "4043f2e2300a5240ee2a1ea2261a83cf03a64bf69eb90eb9106ffa996582eeed",
+      "bytes": 5659,
+      "extension": ".xlsx",
+      "category": "bom",
+      "condition": "formula_merged_hidden",
+      "positive_control": true,
+      "expectations": [
+        "AX-2048",
+        "=C2*D2",
+        "ECN-104"
+      ]
+    },
+    {
+      "id": "inspection-pptx",
+      "path": "artifacts/input/i4_corpus/first_article_inspection.pptx",
+      "sha256": "c90316b3fb22ceafa3c22658b2ea7e5d4aa530eff497544912d7e53ad704dd4c",
+      "bytes": 29464,
+      "extension": ".pptx",
+      "category": "inspection",
+      "condition": "multi_slide",
+      "positive_control": true,
+      "expectations": [
+        "OD-42.00",
+        "NCR-STOP"
+      ]
+    },
+    {
+      "id": "nameplate-png",
+      "path": "artifacts/input/i4_corpus/equipment_nameplate.png",
+      "sha256": "62211df7bfe19b110150cb4a003556fbb43ce7e3f386f23cca24a67dcb7e6dc4",
+      "bytes": 34706,
+      "extension": ".png",
+      "category": "nameplate",
+      "condition": "clean",
+      "positive_control": true,
+      "expectations": [
+        "CNC-M2048",
+        "SN-771042",
+        "6.5 BAR"
+      ]
+    },
+    {
+      "id": "nameplate-jpg",
+      "path": "artifacts/input/i4_corpus/equipment_nameplate.jpg",
+      "sha256": "7ce4d9ee282c73d49fa954bca5c331bfc93a709d7c4bf4b86e6020f778b2948b",
+      "bytes": 81700,
+      "extension": ".jpg",
+      "category": "nameplate",
+      "condition": "clean_jpeg",
+      "positive_control": true,
+      "expectations": [
+        "CNC-M2048",
+        "SN-771042",
+        "6.5 BAR"
+      ]
+    },
+    {
+      "id": "nameplate-jpeg",
+      "path": "artifacts/input/i4_corpus/equipment_nameplate.jpeg",
+      "sha256": "7ce4d9ee282c73d49fa954bca5c331bfc93a709d7c4bf4b86e6020f778b2948b",
+      "bytes": 81700,
+      "extension": ".jpeg",
+      "category": "nameplate",
+      "condition": "clean_jpeg_alias",
+      "positive_control": true,
+      "expectations": [
+        "CNC-M2048",
+        "SN-771042",
+        "6.5 BAR"
+      ]
+    },
+    {
+      "id": "rotated-label-png",
+      "path": "artifacts/input/i4_corpus/rotated_part_label.png",
+      "sha256": "7cc66a09a13dd25b41069610689ecd2d0d66531dbae9dbc7f31f8d3f280895a8",
+      "bytes": 30217,
+      "extension": ".png",
+      "category": "part_label",
+      "condition": "rotated_90",
+      "positive_control": true,
+      "expectations": [
+        "AX-2048",
+        "L240829"
+      ]
+    },
+    {
+      "id": "lowlight-tag-png",
+      "path": "artifacts/input/i4_corpus/lowlight_inspection_tag.png",
+      "sha256": "6ebb8bc28ea2ada6aa6215834906f57bbf9fe742c494250331e738920be3955b",
+      "bytes": 23529,
+      "extension": ".png",
+      "category": "inspection_tag",
+      "condition": "low_light",
+      "positive_control": true,
+      "expectations": [
+        "IPQC-204",
+        "NCR-STOP"
+      ]
+    },
+    {
+      "id": "multipage-tiff",
+      "path": "artifacts/input/i4_corpus/multipage_scan_form.tiff",
+      "sha256": "5c9390df9331f6866956d8e7420c62768008e1c39431468c4110a1c1ee182c8e",
+      "bytes": 42544,
+      "extension": ".tiff",
+      "category": "scanned_form",
+      "condition": "two_page",
+      "positive_control": true,
+      "expectations": [
+        "IQC-204",
+        "BR-7710",
+        "ACCEPT",
+        "OP-07"
+      ]
+    }
+  ],
+  "declared_gaps": [
+    "real handwritten shop-floor annotations",
+    "customer-owned legacy DOC/XLS samples",
+    "physical-device HEIC variants",
+    "real damaged and oily paper samples",
+    "provider production drift replay requires configured credentials"
+  ],
+  "corpus_sha256": "559527f5bc3e9488e90b9fa90d70cf6ef49f9146ed9050b5102a1f78b9a0ef65"
+}

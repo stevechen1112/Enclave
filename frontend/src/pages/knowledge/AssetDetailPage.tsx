@@ -16,6 +16,14 @@ const PHASE_LABELS: Record<string, string> = {
   fetch: '讀取來源',
   parsing: '解析內容',
   processing: '內容處理',
+  audio_probe: '檢查音訊格式',
+  audio_chunking: '建立安全處理分段',
+  transcript_partial: '逐段產生逐字稿',
+  proxy_ready: '預覽已可播放',
+  probe_complete: '媒體格式檢查完成',
+  audio_demuxed: '音訊軌分段完成',
+  keyframes_extracted: '關鍵畫面擷取完成',
+  visual_partial: '逐張辨識畫面文字',
   embedding: '建立搜尋索引',
   review_required: '等待人工覆核',
   ready: '處理完成',
@@ -63,7 +71,7 @@ export default function AssetDetailPage() {
       <div className="space-y-5">
         <SectionPanel title="來源與專業工具" description="原始來源與衍生內容使用相同資產身分、權限及版本。">
           <div className="flex min-h-64 flex-col items-center justify-center rounded-xl bg-wash p-6 text-center text-muted">
-            {professionalTool ? <Link className="btn-primary" to={professionalTool.to}>{professionalTool.label}</Link> : asset.asset_kind === 'web_page' && typeof asset.metadata.source_url === 'string' ? <a className="btn-outline" href={asset.metadata.source_url} target="_blank" rel="noreferrer">開啟原始網址</a> : <p>此來源已安全保存；完成處理後，可引用內容與證據會在這個資產工作區持續更新。</p>}
+            {asset.asset_kind === 'audio' && asset.preview_url ? <div className="w-full max-w-2xl"><p className="mb-3 text-sm text-ink">可先播放瀏覽器相容預覽；逐字稿會分段出現在覆核佇列。</p><audio controls preload="metadata" src={asset.preview_url} className="w-full" aria-label={`${asset.title} 音訊預覽`} /></div> : professionalTool ? <Link className="btn-primary" to={professionalTool.to}>{professionalTool.label}</Link> : asset.asset_kind === 'web_page' && typeof asset.metadata.source_url === 'string' ? <a className="btn-outline" href={asset.metadata.source_url} target="_blank" rel="noreferrer">開啟原始網址</a> : <p>此來源已安全保存；完成處理後，可引用內容與證據會在這個資產工作區持續更新。</p>}
           </div>
         </SectionPanel>
         <SectionPanel title="處理能力" description="由系統依來源類型選擇，完成狀態仍以後端工作紀錄為準。">

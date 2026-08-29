@@ -362,10 +362,13 @@ def process_video_file(
     runner: Callable[..., subprocess.CompletedProcess[str]] = _run,
     stt: Callable[[str], tuple[list[dict[str, Any]], float | None]] = default_stt,
     ocr: Callable[[str], tuple[str, float | None]] = default_ocr,
+    progress: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> VideoProcessingResult:
     from app.config import settings
 
     probe = probe or probe_video(path, runner=runner)
+    if progress:
+        progress("probe_complete", {"probe": probe.to_dict()})
     audio_paths: list[str] = []
     if probe.has_audio:
         audio_paths = extract_audio_chunks(
@@ -374,6 +377,8 @@ def process_video_file(
             chunk_seconds=int(settings.VIDEO_AUDIO_CHUNK_SECONDS),
             runner=runner,
         )
+    if progress:
+        progress("audio_demuxed", {"chunk_count": len(audio_paths)})
     transcript_segments: list[VideoTranscriptSegment] = []
     for chunk_index, audio_path in enumerate(audio_paths):
         offset_ms = chunk_index * int(settings.VIDEO_AUDIO_CHUNK_SECONDS) * 1000
@@ -417,10 +422,30 @@ def process_video_file(
                     confidence=confidence,
                 )
             )
+        if progress:
+            progress(
+                "transcript_partial",
+                {
+                    "completed_chunks": chunk_index + 1,
+                    "total_chunks": len(audio_paths),
+                    "transcript_count": len(transcript_segments),
+                },
+            )
 
     keyframes = extract_keyframes(path, output_dir, probe, runner=runner)
-    for keyframe in keyframes:
+    if progress:
+        progress("keyframes_extracted", {"keyframe_count": len(keyframes)})
+    for index, keyframe in enumerate(keyframes, start=1):
         keyframe.ocr_text, keyframe.ocr_confidence = ocr(keyframe.path)
+        if progress:
+            progress(
+                "visual_partial",
+                {
+                    "completed_keyframes": index,
+                    "total_keyframes": len(keyframes),
+                    "ocr_ready": True,
+                },
+            )
     return VideoProcessingResult(
         probe=probe,
         transcript_segments=transcript_segments,
@@ -477,6 +502,35 @@ def _upsert_artifact(
         db.add(artifact)
         db.flush()
     return artifact
+
+
+def project_media_proxy(
+    db: Session,
+    revision: AssetRevision,
+    *,
+    artifact_uri: str,
+    storage_key: str,
+    byte_size: int,
+    media_type: str = "video/mp4",
+    browser_profile: str = "h264_aac_yuv420p_faststart",
+) -> DerivedArtifact:
+    """Persist one immutable browser-safe review proxy for a revision."""
+
+    return _upsert_artifact(
+        db,
+        revision,
+        artifact_kind="media_proxy",
+        artifact_uri=artifact_uri,
+        quality_state="ready",
+        metadata={
+            "storage_key": storage_key,
+            "media_type": media_type,
+            "byte_size": max(0, int(byte_size)),
+            "browser_profile": browser_profile,
+        },
+        provider="core.media_proxy",
+        provider_version="1.0",
+    )
 
 
 def _ensure_video_evidence(

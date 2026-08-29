@@ -41,36 +41,6 @@ export interface InteractionSessionInfo {
   scene_context: Record<string, unknown>
 }
 
-export interface KnowledgeCaptureSessionInfo {
-  id: string
-  title: string
-  equipment_id: string | null
-  interviewee: string | null
-  interviewer: string | null
-  status: 'recording' | 'uploading' | 'queued' | 'transcribing' | 'ready_for_review' | 'failed' | 'aborted'
-  received_chunks: number
-  expected_chunks: number | null
-  total_duration_ms: number
-  error: Record<string, unknown>
-  transcript?: string | null
-  transcript_metadata?: Record<string, unknown>
-  created_at: string | null
-  completed_at: string | null
-}
-
-export interface KnowledgeCaptureTranscript {
-  session_id: string
-  status: string
-  transcript: string | null
-  segments: Array<{
-    id: string
-    speaker: string | null
-    start_ms: number
-    end_ms: number
-    text: string
-    raw_text: string
-  }>
-}
 
 export interface SceneContext {
   site_id: string
@@ -214,46 +184,6 @@ export const voiceApi = {
     api
       .post('/voice/synthesize', { text, voice: opts?.voice, speed: opts?.speed }, { responseType: 'blob', timeout: 30000 })
       .then(r => r.data as Blob),
-}
-
-export const knowledgeCaptureApi = {
-  create: (body: {
-    title: string
-    equipment_id?: string
-    interviewee?: string
-    interviewer?: string
-    consent: boolean
-    consent_version?: string
-  }) => api.post<KnowledgeCaptureSessionInfo>('/knowledge-captures', body).then(r => r.data),
-  uploadChunk: (
-    sessionId: string,
-    input: { sequence: number; offsetMs: number; durationMs: number; sha256: string; blob: Blob },
-  ) => {
-    const form = new FormData()
-    const extension = input.blob.type.includes('ogg') ? 'ogg' : input.blob.type.includes('mpeg') ? 'mp3' : input.blob.type.includes('mp4') ? 'm4a' : 'webm'
-    form.append('file', input.blob, `interview-${input.sequence}.${extension}`)
-    form.append('sequence', String(input.sequence))
-    form.append('offset_ms', String(input.offsetMs))
-    form.append('duration_ms', String(input.durationMs))
-    form.append('sha256', input.sha256)
-    return api.post<{ id: string; sequence: number; duplicate: boolean; received_chunks: number }>(
-      `/knowledge-captures/${sessionId}/chunks`,
-      form,
-      { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 },
-    ).then(r => r.data)
-  },
-  complete: (sessionId: string, finalSequence: number, totalDurationMs: number) =>
-    api.post<KnowledgeCaptureSessionInfo & { queue_enqueued: boolean }>(`/knowledge-captures/${sessionId}/complete`, {
-      final_sequence: finalSequence,
-      total_duration_ms: totalDurationMs,
-    }).then(r => r.data),
-  retry: (sessionId: string) => api.post<KnowledgeCaptureSessionInfo>(`/knowledge-captures/${sessionId}/retry`).then(r => r.data),
-  get: (sessionId: string) => api.get<KnowledgeCaptureSessionInfo>(`/knowledge-captures/${sessionId}`).then(r => r.data),
-  transcript: (sessionId: string) => api.get<KnowledgeCaptureTranscript>(`/knowledge-captures/${sessionId}/transcript`).then(r => r.data),
-  correctSegment: (sessionId: string, segmentId: string, correctedText: string) =>
-    api.patch<{ id: string; text: string }>(`/knowledge-captures/${sessionId}/transcript/segments/${segmentId}`, {
-      corrected_text: correctedText,
-    }).then(r => r.data),
 }
 
 // ─── Scene ───

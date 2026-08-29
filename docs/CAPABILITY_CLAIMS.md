@@ -1,5 +1,7 @@
 # 能力宣稱邊界（Capability Claims）
 
+> **歷史時點文件（2026-08-02）**：本文件保留當時 capability gate 結果，不代表 2026-08-28 Input Platform 現況。Input 格式、runtime、環境驗證與產品化邊界以 `INPUT_PLATFORM_CAPABILITY_MAP_AND_IMPLEMENTATION_PLAN.md`、`artifacts/input/i0_golden_corpus_manifest.json` 與最新 Phase Review 為準；不得把本文的局部測試推廣成所有格式或現場條件。
+
 > 來源：`CAPABILITY_ACTIVATION_AND_VALUE_PROOF_PLAN.md` 閘門結果（2026-08-02）。  
 > 決策產物：`artifacts/capability_fanout_decision.json`。  
 > **接線完成 ≠ 價值證明完成。**  

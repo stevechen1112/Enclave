@@ -30,6 +30,7 @@ _WORKFLOW_PREFIXES = _INTERACTION_PREFIXES + (
     "/api/v1/knowhow",
     "/api/v1/interview",
     "/api/v1/knowledge-captures",
+    "/api/v1/knowledge/captures",
     "/api/v1/scene",
     "/api/v1/mka-approvals",
 )

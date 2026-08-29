@@ -19,6 +19,16 @@ from app.models.document import DocumentChunk as DChunk  # alias for task use
 logger = logging.getLogger(__name__)
 
 
+def _document_job_idempotency_key(asset, document_id: str, version: int) -> str:
+    """Reuse the intake key so worker retries converge on the pre-created job."""
+    return str(
+        (getattr(asset, "metadata_json", None) or {}).get(
+            "intake_idempotency_key"
+        )
+        or f"document:{document_id}:{version}"
+    )
+
+
 # ── Embedding helpers ────────────────────────────────────────────────────────
 
 
@@ -120,7 +130,9 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                 tenant_id=UUID(tenant_id),
                 asset_revision_id=source_projection.revision.id,
                 capabilities=document_capabilities(source_projection.asset.asset_kind),
-                idempotency_key=f"document:{document_id}:{doc.version or 1}",
+                idempotency_key=_document_job_idempotency_key(
+                    source_projection.asset, document_id, doc.version or 1
+                ),
                 correlation_id=document_id,
             )
             ingestion_job_id = job.id
@@ -193,7 +205,11 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     else "enclave"
                 ),
                 provider_version=artifact.version,
-                metadata={"parse_artifact": artifact.model_dump()},
+                metadata={
+                    **metadata,
+                    "quality_sampling_enabled": True,
+                    "parse_artifact": artifact.model_dump(),
+                },
             )
             if ingestion_job_id is None:
                 source_projection = project_document(
@@ -214,7 +230,9 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     capabilities=document_capabilities(
                         source_projection.asset.asset_kind
                     ),
-                    idempotency_key=f"document:{document_id}:{doc.version or 1}",
+                    idempotency_key=_document_job_idempotency_key(
+                        source_projection.asset, document_id, doc.version or 1
+                    ),
                     correlation_id=document_id,
                 )
                 ingestion_job_id = job.id
@@ -689,7 +707,9 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             tenant_id=UUID(tenant_id),
             asset_revision_id=source_projection.revision.id,
             capabilities=document_capabilities(source_projection.asset.asset_kind),
-            idempotency_key=f"document:{document_id}:{doc.version or 1}",
+            idempotency_key=_document_job_idempotency_key(
+                source_projection.asset, document_id, doc.version or 1
+            ),
             correlation_id=document_id,
         )
         ingestion_job_id = ingestion_job.id

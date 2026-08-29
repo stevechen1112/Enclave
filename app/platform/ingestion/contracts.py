@@ -82,6 +82,11 @@ class IngestionAdapterRegistry:
     def adapter_keys(self) -> tuple[str, ...]:
         return tuple(self._adapters)
 
+    @property
+    def adapters(self) -> tuple[IngestionAdapter, ...]:
+        """Return an immutable registry snapshot for discovery and audits."""
+        return tuple(self._adapters.values())
+
     def select(self, request: IngestionRequest) -> IngestionAdapter:
         candidates = [
             adapter

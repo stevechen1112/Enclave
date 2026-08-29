@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { docApi, kbApi } from '../api'
+import { docApi, kbApi, knowledgeAssetApi } from '../api'
 import api from '../api'
-import type { Document } from '../types'
+import type { Document, InputCapabilityContract } from '../types'
 import { Upload, FileText, Trash2, Loader2, Clock, RefreshCw, History, X, GitBranch } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { format } from 'date-fns'
@@ -14,6 +14,7 @@ import AsyncState from '../components/AsyncState'
 import PageHeader from '../components/PageHeader'
 import { useHasCapability } from '../navigation/useCapabilities'
 import { parseApiError, formatErrorWithTrace, type ApiErrorInfo } from '../api'
+import { buildDropAccept } from '../lib/inputCapabilities'
 
 function formatFileSize(bytes: number | null) {
   if (!bytes) return '—'
@@ -54,6 +55,7 @@ export default function DocumentsPage() {
   const [uploadTotal, setUploadTotal] = useState(0)
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
   const [selectedDept, setSelectedDept] = useState<string>('')
+  const [inputCapabilities, setInputCapabilities] = useState<InputCapabilityContract>()
 
   const canManage = useHasCapability('upload_documents')
   const [revokeTarget, setRevokeTarget] = useState<Document | null>(null)
@@ -102,6 +104,10 @@ export default function DocumentsPage() {
       .catch((err) => {
         toast.error(formatErrorWithTrace(parseApiError(err, '無法載入部門篩選')))
       })
+  }, [])
+
+  useEffect(() => {
+    void knowledgeAssetApi.capabilities().then(setInputCapabilities).catch(() => undefined)
   }, [])
 
   const loadDocs = useCallback(async () => {
@@ -155,18 +161,14 @@ export default function DocumentsPage() {
     loadDocs()
   }, [loadDocs])
 
+  const documentAccept = useMemo(() => buildDropAccept(inputCapabilities ? {
+    ...inputCapabilities,
+    formats: inputCapabilities.formats.filter(format => ['document', 'spreadsheet', 'image'].includes(format.asset_kind)),
+  } : undefined), [inputCapabilities])
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
-      'text/plain': ['.txt'],
-      'text/csv': ['.csv'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-    },
-    disabled: !canManage || uploading,
+    accept: documentAccept,
+    disabled: !canManage || uploading || !inputCapabilities,
     multiple: true,
   })
 

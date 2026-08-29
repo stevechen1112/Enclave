@@ -22,14 +22,23 @@ def get_by_tenant(db: Session, tenant_id: UUID, skip: int = 0, limit: int = 100)
     ).offset(skip).limit(limit).all()
 
 
-def create(db: Session, *, obj_in: DocumentCreate, tenant_id: UUID, uploaded_by: UUID, file_size: int) -> Document:
+def create(
+    db: Session,
+    *,
+    obj_in: DocumentCreate,
+    tenant_id: UUID,
+    uploaded_by: UUID,
+    file_size: int,
+    department_id: UUID | None = None,
+) -> Document:
     db_obj = Document(
         filename=obj_in.filename,
         file_type=obj_in.file_type,
         tenant_id=tenant_id,
         uploaded_by=uploaded_by,
+        department_id=department_id,
         file_size=file_size,
-        status="uploading"
+        status="uploading",
     )
     db.add(db_obj)
     db.flush()

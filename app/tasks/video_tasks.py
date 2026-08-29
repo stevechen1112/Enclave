@@ -60,7 +60,9 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
         from app.services.storage import build_storage_key, get_storage_backend
         from app.services.video_processing import (
             VideoPolicyError,
+            probe_video,
             process_video_file,
+            project_media_proxy,
             project_video_result,
         )
 
@@ -78,17 +80,61 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
             else:
                 raise VideoPolicyError("video storage identity is unavailable")
 
-            result = process_video_file(local_video, temp_dir)
+            def progress(phase: str, readiness: dict) -> None:
+                orchestrator.transition(
+                    db,
+                    job,
+                    to_status="running",
+                    phase=phase,
+                    readiness={
+                        "searchable": False,
+                        "partial": phase.endswith("_partial"),
+                        "requires_human_review": phase.endswith("_partial"),
+                        **readiness,
+                    },
+                    details=readiness,
+                )
+                db.commit()
+
+            from app.config import settings
+            from app.services.media_productization import create_browser_video_proxy
+
+            accepted_probe = probe_video(local_video)
             expected_probe = dict((revision.metadata_json or {}).get("probe") or {})
             if expected_probe and (
-                expected_probe.get("video_codec") != result.probe.video_codec
+                expected_probe.get("video_codec") != accepted_probe.video_codec
                 or abs(
                     int(expected_probe.get("duration_ms") or 0)
-                    - result.probe.duration_ms
+                    - accepted_probe.duration_ms
                 )
                 > 1000
             ):
                 raise VideoPolicyError("worker probe differs from accepted upload")
+
+            if settings.MEDIA_PROXY_ENABLED:
+                proxy_path = str(Path(temp_dir) / "review-proxy.mp4")
+                create_browser_video_proxy(local_video, proxy_path)
+                proxy_object_id = uuid.uuid5(
+                    uuid.NAMESPACE_URL, f"enclave:{revision.id}:media-proxy:v1"
+                )
+                proxy_key = build_storage_key(tenant_uuid, proxy_object_id, ".mp4")
+                proxy_size = os.path.getsize(proxy_path)
+                proxy_uri = backend.put(proxy_key, proxy_path)
+                project_media_proxy(
+                    db,
+                    revision,
+                    artifact_uri=proxy_uri,
+                    storage_key=proxy_key,
+                    byte_size=proxy_size,
+                )
+                progress(
+                    "proxy_ready",
+                    {"preview_ready": True, "proxy_media_type": "video/mp4"},
+                )
+
+            result = process_video_file(
+                local_video, temp_dir, probe=accepted_probe, progress=progress
+            )
 
             for keyframe in result.keyframes:
                 object_id = uuid.uuid5(

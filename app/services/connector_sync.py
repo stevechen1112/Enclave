@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.connector import ConnectorInstance
+from app.models.connector import ConnectorInstance, ConnectorResource
 from app.models.document import Document
 from app.models.outbox import SyncCursor
 from app.services.connector_manager import ConnectorManager
@@ -155,6 +155,8 @@ class ConnectorSyncService:
                 "resources": config.get("mock_resources", []),
                 "acl_entries": config.get("mock_acl_entries", []),
                 "cursor": config.get("cursor", "simulated-cursor"),
+                "snapshot_complete": bool(config.get("mock_snapshot_complete", False)),
+                "delete_semantics": "tombstone",
             }
         return {
             "status": "error",
@@ -167,16 +169,21 @@ class ConnectorSyncService:
         connector: ConnectorInstance,
         resources: List[Dict[str, Any]],
         uploaded_by: Optional[UUID] = None,
+        batch_id: Optional[UUID] = None,
     ) -> List[str]:
         """
         將 connector resources 寫入 Enclave canonical documents，並觸發解析索引。
         """
         from app.config import settings
+        from app.services.asset_projection import project_document
+        from app.services.connector_asset import materialize_connector_asset
+        from app.services.connector_batch import ConnectorBatchService
         from app.tasks.document_tasks import process_document_task
 
         created_ids: List[str] = []
         upload_root = Path(settings.UPLOAD_DIR) / str(connector.tenant_id)
         upload_root.mkdir(parents=True, exist_ok=True)
+        batch_service = ConnectorBatchService()
 
         for item in resources:
             src = item.get("file_path")
@@ -195,8 +202,26 @@ class ConnectorSyncService:
                         src = downloaded
                         item["file_path"] = downloaded  # 更新 item 供後續使用
                     else:
+                        if batch_id:
+                            batch_service.mark(
+                                db,
+                                tenant_id=connector.tenant_id,
+                                batch_id=batch_id,
+                                source_record_id=str(item.get("source_record_id") or ""),
+                                succeeded=False,
+                                error_code="content_unavailable",
+                            )
                         continue
                 else:
+                    if batch_id:
+                        batch_service.mark(
+                            db,
+                            tenant_id=connector.tenant_id,
+                            batch_id=batch_id,
+                            source_record_id=str(item.get("source_record_id") or ""),
+                            succeeded=False,
+                            error_code="materialize_disabled",
+                        )
                     continue
             src_path = Path(src)
             content_hash = (
@@ -218,28 +243,77 @@ class ConnectorSyncService:
                 content_hash
             ):
                 created_ids.append(str(existing.id))
+                resource_row = (
+                    db.query(ConnectorResource)
+                    .filter(
+                        ConnectorResource.tenant_id == connector.tenant_id,
+                        ConnectorResource.connector_instance_id == connector.id,
+                        ConnectorResource.source_record_id == item["source_record_id"],
+                    )
+                    .first()
+                )
+                if resource_row:
+                    resource_row.document_id = existing.id
+                if batch_id:
+                    projection = project_document(db, existing)
+                    batch_service.mark(
+                        db,
+                        tenant_id=connector.tenant_id,
+                        batch_id=batch_id,
+                        source_record_id=str(item["source_record_id"]),
+                        succeeded=True,
+                        asset_id=projection.asset.id,
+                        revision_id=projection.revision.id if projection.revision else None,
+                    )
                 continue
 
-            doc_id = uuid4()
+            doc_id = existing.id if existing else uuid4()
             dest = upload_root / f"{doc_id}{src_path.suffix.lower() or '.bin'}"
             shutil.copy2(src_path, dest)
 
-            doc = Document(
-                id=doc_id,
+            # Canonical asset/revision is the primary persistence path. Document
+            # remains a parser compatibility bridge and can be retired later.
+            asset, revision = materialize_connector_asset(
+                db,
                 tenant_id=connector.tenant_id,
-                filename=item.get("title") or src_path.name,
-                file_type=src_path.suffix.lstrip(".").lower() or "bin",
-                file_path=str(dest),
-                file_size=dest.stat().st_size,
-                source_type="connector",
                 source_system=connector.connector_type,
-                source_record_id=item["source_record_id"],
-                external_version=item.get("source_version"),
-                content_hash=content_hash,
-                status="processing",
-                uploaded_by=uploaded_by,
+                resource={**item, "content_hash": content_hash},
+                content_uri=str(dest),
+                byte_size=dest.stat().st_size,
+                created_by=uploaded_by,
             )
-            persisted = self._flush_document_idempotently(db, doc)
+
+            if existing:
+                existing.filename = item.get("title") or src_path.name
+                existing.file_type = src_path.suffix.lstrip(".").lower() or "bin"
+                existing.file_path = str(dest)
+                existing.file_size = dest.stat().st_size
+                existing.external_version = item.get("source_version")
+                existing.content_hash = content_hash
+                existing.version = revision.revision
+                existing.status = "processing"
+                existing.error_message = None
+                existing.source_asset_id = asset.id
+                doc = existing
+            else:
+                doc = Document(
+                    id=doc_id,
+                    tenant_id=connector.tenant_id,
+                    filename=item.get("title") or src_path.name,
+                    file_type=src_path.suffix.lstrip(".").lower() or "bin",
+                    file_path=str(dest),
+                    file_size=dest.stat().st_size,
+                    source_type="connector",
+                    source_system=connector.connector_type,
+                    source_record_id=item["source_record_id"],
+                    external_version=item.get("source_version"),
+                    content_hash=content_hash,
+                    version=revision.revision,
+                    status="processing",
+                    uploaded_by=uploaded_by,
+                    source_asset_id=asset.id,
+                )
+            persisted = doc if existing else self._flush_document_idempotently(db, doc)
             if persisted is not doc:
                 try:
                     dest.unlink(missing_ok=True)
@@ -247,9 +321,7 @@ class ConnectorSyncService:
                     logger.warning("failed to clean duplicate connector copy %s", dest)
                 created_ids.append(str(persisted.id))
                 continue
-            from app.services.asset_projection import project_document
-
-            project_document(
+            projection = project_document(
                 db,
                 doc,
                 content_uri=str(dest),
@@ -257,6 +329,27 @@ class ConnectorSyncService:
                 ingestion_status="pending",
             )
             created_ids.append(str(doc_id))
+            resource_row = (
+                db.query(ConnectorResource)
+                .filter(
+                    ConnectorResource.tenant_id == connector.tenant_id,
+                    ConnectorResource.connector_instance_id == connector.id,
+                    ConnectorResource.source_record_id == item["source_record_id"],
+                )
+                .first()
+            )
+            if resource_row:
+                resource_row.document_id = doc.id
+            if batch_id:
+                batch_service.mark(
+                    db,
+                    tenant_id=connector.tenant_id,
+                    batch_id=batch_id,
+                    source_record_id=str(item["source_record_id"]),
+                    succeeded=True,
+                    asset_id=projection.asset.id,
+                    revision_id=projection.revision.id if projection.revision else None,
+                )
 
             try:
                 process_document_task.delay(
@@ -276,6 +369,10 @@ class ConnectorSyncService:
                     doc.status = "failed"
                     doc.error_message = str(exc)[:500]
 
+        if batch_id:
+            batch_service.recount(
+                db, tenant_id=connector.tenant_id, batch_id=batch_id
+            )
         db.commit()
         return created_ids
 
@@ -295,14 +392,29 @@ class ConnectorSyncService:
         live_ids = {
             r["source_record_id"] for r in resources if r.get("source_record_id")
         }
-        existing_docs = (
-            db.query(Document)
+        scoped_source_ids = {
+            str(value)
+            for (value,) in db.query(ConnectorResource.source_record_id)
             .filter(
-                Document.tenant_id == connector.tenant_id,
-                Document.source_system == connector.connector_type,
-                Document.tombstoned_at.is_(None),
+                ConnectorResource.tenant_id == connector.tenant_id,
+                ConnectorResource.connector_instance_id == connector.id,
             )
             .all()
+        }
+        document_query = db.query(Document).filter(
+            Document.tenant_id == connector.tenant_id,
+            Document.source_system == connector.connector_type,
+            Document.tombstoned_at.is_(None),
+        )
+        # Pre-I6 direct service callers did not create ConnectorResource rows.
+        # Keep that compatibility path; production run_sync always scopes by
+        # connector resources before lifecycle reconciliation.
+        if scoped_source_ids:
+            document_query = document_query.filter(
+                Document.source_record_id.in_(scoped_source_ids)
+            )
+        existing_docs = (
+            document_query.all()
         )
         existing_source_ids = {
             str(doc.source_record_id) for doc in existing_docs if doc.source_record_id
@@ -352,6 +464,7 @@ class ConnectorSyncService:
         connector = (
             db.query(ConnectorInstance)
             .filter(ConnectorInstance.id == connector_id)
+            .with_for_update()
             .first()
         )
         if not connector:
@@ -427,28 +540,61 @@ class ConnectorSyncService:
                 e.setdefault("mapped_subject_type", "user")
                 mapped_entries.append(e)
             acl_entries = mapped_entries
-            self._principal_service.apply_acl_entries(
-                db, connector.tenant_id, acl_entries
+        acl_result = {"applied": 0, "revoked": 0}
+        snapshot_complete = bool(result.get("snapshot_complete", False))
+        live_source_ids = {
+            str(item["source_record_id"])
+            for item in resources
+            if item.get("source_record_id")
+        }
+        if snapshot_complete:
+            acl_result = self._principal_service.replace_acl_snapshot(
+                db,
+                connector.tenant_id,
+                acl_entries,
+                source_record_ids=live_source_ids,
             )
         elif acl_entries:
-            self._principal_service.apply_acl_entries(
+            acl_result["applied"] = self._principal_service.apply_acl_entries(
                 db, connector.tenant_id, acl_entries
             )
 
         count = self._manager.record_sync(db, connector_id, resources)
 
         lifecycle = {"tombstoned": 0, "renamed": 0}
-        # 僅在拿到完整資源清單時才 reconcile deletes（空清單 = 未知，不可刪）
-        if materialize and resources:
+        # Delete/rename reconciliation is allowed only for an explicitly complete
+        # snapshot. Empty complete snapshots are meaningful; partial pages are not.
+        if (
+            materialize
+            and snapshot_complete
+            and result.get("delete_semantics", "tombstone") == "tombstone"
+        ):
             lifecycle = self.reconcile_deletes_and_renames(db, connector, resources)
 
         doc_ids: List[str] = []
+        batch_id: UUID | None = None
         if materialize and resources:
+            from app.services.connector_batch import ConnectorBatchService
+
+            batch = ConnectorBatchService().create(
+                db,
+                tenant_id=connector.tenant_id,
+                connector_instance_id=connector.id,
+                resources=resources,
+                shared_metadata={
+                    "connector_type": connector.connector_type,
+                    "snapshot_id": result.get("snapshot_id"),
+                    "snapshot_complete": snapshot_complete,
+                },
+                created_by=uploaded_by,
+            )
+            batch_id = batch.id
             doc_ids = self.materialize_to_documents(
                 db,
                 connector,
                 resources,
                 uploaded_by=uploaded_by,
+                batch_id=batch_id,
             )
 
         new_cursor = result.get("cursor")
@@ -459,6 +605,8 @@ class ConnectorSyncService:
                 "cursor": new_cursor,
                 "mode": mode,
                 "pending_remote": False,
+                "snapshot_complete": snapshot_complete,
+                "snapshot_id": result.get("snapshot_id"),
             }
         cursor_row.last_success_at = datetime.now(timezone.utc)
         cursor_row.watermark = datetime.now(timezone.utc)
@@ -477,6 +625,7 @@ class ConnectorSyncService:
                 "tenant_id": str(connector.tenant_id),
                 "resource_count": count,
                 "document_ids": doc_ids,
+                "batch_id": str(batch_id) if batch_id else None,
                 "mode": mode,
                 "full_reindex": full_reindex,
             },
@@ -487,8 +636,12 @@ class ConnectorSyncService:
             "connector_id": str(connector_id),
             "synced_resources": count,
             "acl_entries": len(acl_entries),
+            "acl_applied": acl_result["applied"],
+            "acl_revoked": acl_result["revoked"],
+            "snapshot_complete": snapshot_complete,
             "mode": mode,
             "document_ids": doc_ids,
+            "batch_id": str(batch_id) if batch_id else None,
             "lifecycle": lifecycle,
         }
 

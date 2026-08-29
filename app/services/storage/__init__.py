@@ -101,6 +101,18 @@ class _ObservedStorageBackend:
     def presigned_url(self, key: str, expires: int = 3600) -> str:
         return self._call("presigned_url", key, expires)
 
+    def create_multipart(self, key: str) -> str:
+        return self._call("create_multipart", key)
+
+    def upload_part(self, key: str, upload_id: str, part_number: int, source_path: str) -> str:
+        return self._call("upload_part", key, upload_id, part_number, source_path)
+
+    def complete_multipart(self, key: str, upload_id: str, parts: list[tuple[int, str]]) -> str:
+        return self._call("complete_multipart", key, upload_id, parts)
+
+    def abort_multipart(self, key: str, upload_id: str) -> None:
+        self._call("abort_multipart", key, upload_id)
+
 
 def get_storage_backend() -> StorageBackend:
     """依 ``STORAGE_BACKEND`` 設定回傳後端單例（local 預設，行為與舊版一致）。"""

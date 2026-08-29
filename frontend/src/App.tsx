@@ -39,6 +39,7 @@ const ModulesPage = lazy(() => import('./pages/system/ModulesPage'))
 const HealthPage = lazy(() => import('./pages/system/HealthPage'))
 const BackupPage = lazy(() => import('./pages/system/BackupPage'))
 const DeployPage = lazy(() => import('./pages/system/DeployPage'))
+const InputPilotPage = lazy(() => import('./pages/system/InputPilotPage'))
 const CreateLayout = lazy(() => import('./pages/create/CreateLayout'))
 const TenantAdminPage = lazy(() => import('./pages/system/TenantAdminPage'))
 
@@ -193,6 +194,7 @@ function AppRoutes() {
             <Route path="modules" element={<ModulesPage />} />
             <Route path="tenant-admin" element={<TenantAdminPage />} />
             <Route path="health" element={<HealthPage />} />
+            <Route path="input-pilot" element={<InputPilotPage />} />
             <Route path="backup" element={<BackupPage />} />
             <Route path="deploy" element={<DeployPage />} />
             <Route path="operations" element={<Navigate to="/system/health" replace />} />

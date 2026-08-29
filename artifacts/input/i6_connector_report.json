@@ -1,0 +1,17 @@
+{
+  "phase": "Input I6",
+  "profile": "local_large_tree",
+  "file_count": 1000,
+  "first_scan_seconds": 4.4211,
+  "snapshot_complete": true,
+  "replay_cursor_equal": true,
+  "replay_snapshot_equal": true,
+  "rename_delete_changes_snapshot": true,
+  "customer_sandbox": {
+    "sharepoint": "PENDING_CREDENTIALS",
+    "google_drive": "PENDING_CREDENTIALS",
+    "nas_smb_local": "PASS"
+  },
+  "claim_boundary": "Local deterministic connector acceptance only; this is not a customer SharePoint/Google Drive certification or production capacity result.",
+  "status": "PASS"
+}

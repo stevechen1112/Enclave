@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import PageHeader from '../../components/PageHeader'
 import LongInterviewRecorder from '../../components/mka/LongInterviewRecorder'
 import api from '../../api'
-import { knowledgeCaptureApi, type KnowledgeCaptureSessionInfo } from '../../services/mka'
+import { captureApi, type CaptureSessionInfo } from '../../platform/input/captureApi'
 
 const CAPTURE_STATUS_LABEL: Record<string, string> = {
   recording: '錄音中',
@@ -21,7 +21,7 @@ export default function InterviewPage() {
   const [title, setTitle] = useState('')
   const [equipmentId, setEquipmentId] = useState('')
   const [transcript, setTranscript] = useState('')
-  const [capture, setCapture] = useState<KnowledgeCaptureSessionInfo | null>(null)
+  const [capture, setCapture] = useState<CaptureSessionInfo | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [extracted, setExtracted] = useState<Record<string, unknown> | null>(null)
   const notifiedReadyRef = useRef(false)
@@ -30,10 +30,10 @@ export default function InterviewPage() {
     if (!capture || !['queued', 'transcribing'].includes(capture.status)) return
     const check = async () => {
       try {
-        const latest = await knowledgeCaptureApi.get(capture.id)
+        const latest = await captureApi.get(capture.id)
         setCapture(latest)
         if (latest.status === 'ready_for_review') {
-          const result = await knowledgeCaptureApi.transcript(latest.id)
+          const result = await captureApi.transcript(latest.id)
           const completedTranscript = result.transcript || ''
           setTranscript(completedTranscript)
           if (!notifiedReadyRef.current) {
@@ -134,7 +134,7 @@ export default function InterviewPage() {
           <div className="rounded-xl border border-line bg-surface p-3 text-sm text-muted">
             訪談狀態：<span className="font-medium text-ink">{CAPTURE_STATUS_LABEL[capture.status] || '處理中'}</span>
             {capture.status === 'failed' && (
-              <button type="button" className="ml-3 text-accent underline" onClick={() => void knowledgeCaptureApi.retry(capture.id).then(setCapture).catch(() => toast.error('無法重新排入轉寫'))}>
+              <button type="button" className="ml-3 text-accent underline" onClick={() => void captureApi.retry(capture.id).then(setCapture).catch(() => toast.error('無法重新排入轉寫'))}>
                 重新排入轉寫
               </button>
             )}

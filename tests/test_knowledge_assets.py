@@ -21,7 +21,7 @@ from app.api.v1.endpoints.knowledge_assets import (
     tombstone_asset,
     _validate_source_url,
 )
-from app.models.asset import AssetRevision, SourceAsset
+from app.models.asset import AssetRevision, DerivedArtifact, SourceAsset
 from app.models.audit import UsageRecord
 from app.models.ingestion import IngestionJob, IngestionJobEvent
 from app.models.mka import JobRole, MKATaskCost
@@ -45,6 +45,7 @@ def _session():
         User.__table__,
         SourceAsset.__table__,
         AssetRevision.__table__,
+        DerivedArtifact.__table__,
         UsageRecord.__table__,
         MKATaskCost.__table__,
         IngestionJob.__table__,
@@ -150,6 +151,50 @@ def test_capture_and_connector_records_use_one_contract():
         assert audio["asset_kind"] == "audio"
         assert audio["job"]["adapter_key"] == "core.long_interview_audio"
         assert "transcribe" in audio["job"]["requested_capabilities"]
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_audio_asset_detail_exposes_only_signed_proxy_url():
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        created = _reference(
+            db,
+            user,
+            source_url=None,
+            capture_manifest=json.dumps({"capture_id": "audio-preview-1"}),
+            media_type="audio/wav",
+        )
+        asset = db.query(SourceAsset).filter(
+            SourceAsset.id == UUID(created["id"])
+        ).one()
+        revision = db.query(AssetRevision).filter(
+            AssetRevision.asset_id == asset.id
+        ).one()
+        proxy = DerivedArtifact(
+            tenant_id=asset.tenant_id,
+            asset_revision_id=revision.id,
+            artifact_kind="media_proxy",
+            content_hash="f" * 64,
+            provider="core.media_proxy",
+            provider_version="1.0",
+            quality_state="ready",
+            artifact_uri="s3://private/audio.mp3",
+            metadata_json={
+                "storage_key": f"{asset.tenant_id}/audio.mp3",
+                "media_type": "audio/mpeg",
+            },
+        )
+        db.add(proxy)
+        db.commit()
+
+        detail = get_asset(asset.id, db=db, current_user=user)
+        assert detail["preview_url"].startswith(
+            f"/api/v1/media/artifacts/{proxy.id}/content?token="
+        )
+        assert "s3://private" not in detail["preview_url"]
     finally:
         db.close()
         engine.dispose()

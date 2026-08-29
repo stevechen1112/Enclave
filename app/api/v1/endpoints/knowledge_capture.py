@@ -7,10 +7,11 @@ networks and be processed after recording has finished.
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import tempfile
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -19,17 +20,21 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api import deps
-from app.api.deps_permissions import require_knowhow_author
+from app.api.deps_permissions import check_document_permission
 from app.models.mka import (
     KnowledgeCaptureChunk,
     KnowledgeCaptureSession,
     KnowledgeCaptureTranscriptSegment,
 )
 from app.models.user import User
-from app.services.audio_retention import get_policy_db
+from app.services.audio_retention import get_policy_db, set_policy_db
+from app.services.intake_context import IntakeContextError, parse_intake_context
 from app.services.storage import build_storage_key, get_storage_backend
+from app.services.term_dictionary import get_term_dictionary_service
 
-router = APIRouter(prefix="/knowledge-captures", tags=["knowledge-captures"])
+router = APIRouter()
+
+_DATA_CLASSIFICATIONS = {"public", "internal", "confidential", "restricted"}
 
 _ALLOWED_MIME_TYPES = {
     "audio/webm": "webm",
@@ -43,16 +48,33 @@ _ALLOWED_MIME_TYPES = {
 
 class CreateCaptureBody(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    equipment_id: Optional[str] = Field(default=None, max_length=120)
-    interviewee: Optional[str] = Field(default=None, max_length=120)
-    interviewer: Optional[str] = Field(default=None, max_length=120)
+    equipment_id: str | None = Field(default=None, max_length=120)
+    interviewee: str | None = Field(default=None, max_length=120)
+    interviewer: str | None = Field(default=None, max_length=120)
     consent: bool = False
-    consent_version: str = Field(default="long-interview-v1", min_length=1, max_length=80)
+    consent_version: str = Field(default="core-capture-v1", min_length=1, max_length=80)
+    source_module: str = Field(default="core", min_length=1, max_length=80)
+    purpose: str = Field(default="knowledge_capture", min_length=1, max_length=120)
+    department_id: UUID | None = None
+    data_classification: str = Field(default="confidential", max_length=32)
+    context_metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class CompleteCaptureBody(BaseModel):
     final_sequence: int = Field(ge=0, le=239)
     total_duration_ms: int = Field(ge=1, le=60 * 60 * 1000)
+
+
+class UpdateCapturePolicyBody(BaseModel):
+    save_audio: bool | None = None
+    save_transcript: bool | None = None
+    audio_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    transcript_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    encrypt_at_rest: bool | None = None
+    audit_downloads: bool | None = None
+    capture_max_duration_seconds: int | None = Field(
+        default=None, ge=60, le=24 * 60 * 60
+    )
 
 
 class CorrectSegmentBody(BaseModel):
@@ -78,8 +100,8 @@ def _session_or_404(db: Session, current_user: User, session_id: UUID) -> Knowle
     return row
 
 
-def _session_to_dict(row: KnowledgeCaptureSession, *, include_transcript: bool = False) -> Dict[str, Any]:
-    data: Dict[str, Any] = {
+def _session_to_dict(row: KnowledgeCaptureSession, *, include_transcript: bool = False) -> dict[str, Any]:
+    data: dict[str, Any] = {
         "id": str(row.id),
         "title": row.title,
         "equipment_id": row.equipment_id,
@@ -92,6 +114,12 @@ def _session_to_dict(row: KnowledgeCaptureSession, *, include_transcript: bool =
         "error": row.error or {},
         "created_at": row.created_at.isoformat() if row.created_at else None,
         "completed_at": row.completed_at.isoformat() if row.completed_at else None,
+        "source_asset_id": str(row.source_asset_id) if row.source_asset_id else None,
+        "capture_metadata": dict(row.transcript_metadata or {}).get("capture", {}),
+        "policy": {
+            **dict(row.audio_policy_snapshot or {}),
+            **dict(row.transcript_policy_snapshot or {}),
+        },
     }
     if include_transcript:
         data["transcript"] = row.transcript
@@ -99,16 +127,118 @@ def _session_to_dict(row: KnowledgeCaptureSession, *, include_transcript: bool =
     return data
 
 
+def _terminology_snapshot(db: Session, tenant_id: UUID) -> dict[str, Any]:
+    terms = get_term_dictionary_service(db).list_terms(tenant_id)
+    normalized = sorted(
+        {
+            str(item.get("term") or "").strip()
+            for item in terms
+            if str(item.get("term") or "").strip()
+        }
+    )
+    encoded = json.dumps(normalized, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return {
+        "terminology_count": len(normalized),
+        "terminology_sha256": hashlib.sha256(encoded).hexdigest(),
+    }
+
+
+@router.get("/policy")
+def get_capture_policy(
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    from app.config import settings
+
+    check_document_permission(current_user, "create")
+    retention = get_policy_db(db, current_user.tenant_id)
+    return {
+        "consent_version": "core-capture-v1",
+        "max_duration_seconds": min(
+            retention.capture_max_duration_seconds,
+            settings.LONG_INTERVIEW_MAX_SECONDS,
+        ),
+        "chunk_max_seconds": settings.LONG_INTERVIEW_CHUNK_MAX_SECONDS,
+        "chunk_max_bytes": settings.LONG_INTERVIEW_CHUNK_MAX_BYTES,
+        "max_chunks": settings.LONG_INTERVIEW_MAX_CHUNKS,
+        "audio_retention_days": retention.audio_retention_days,
+        "transcript_retention_days": retention.transcript_retention_days,
+        "save_audio": retention.save_audio,
+        "save_transcript": retention.save_transcript,
+        "encrypt_at_rest": retention.encrypt_at_rest,
+        **_terminology_snapshot(db, current_user.tenant_id),
+        "default_metadata": {
+            "data_classification": "confidential",
+            "source_module": "core",
+            "purpose": "knowledge_capture",
+        },
+        "device_limitations": [
+            "lock_screen_or_app_switch_may_interrupt_browser_capture",
+            "keep_page_open_until_the_current_chunk_is_saved",
+            "available_storage_is_controlled_by_the_browser_and_device",
+        ],
+    }
+
+
+@router.put("/policy")
+def update_capture_policy(
+    body: UpdateCapturePolicyBody,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    if not (
+        current_user.is_superuser or current_user.role in {"owner", "admin"}
+    ):
+        raise HTTPException(status_code=403, detail="capture policy requires admin")
+    fields = body.model_dump(exclude_none=True)
+    if not fields:
+        raise HTTPException(status_code=400, detail="no fields to update")
+    set_policy_db(db, current_user.tenant_id, **fields)
+    db.commit()
+    return get_capture_policy(db=db, current_user=current_user)
+
+
 @router.post("")
 def create_capture(
     body: CreateCaptureBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    from app.config import settings
+    from app.models.permission import Department
+
+    check_document_permission(current_user, "create")
     if not body.consent:
         raise HTTPException(status_code=400, detail="consent is required before recording")
+    if body.data_classification not in _DATA_CLASSIFICATIONS:
+        raise HTTPException(status_code=400, detail="unsupported data classification")
+    if body.department_id is not None:
+        department = (
+            db.query(Department.id)
+            .filter(
+                Department.tenant_id == current_user.tenant_id,
+                Department.id == body.department_id,
+                Department.is_active.is_(True),
+            )
+            .first()
+        )
+        if department is None:
+            raise HTTPException(status_code=400, detail="department is not active in this tenant")
+    try:
+        context = parse_intake_context(
+            json.dumps(body.context_metadata, ensure_ascii=False)
+            if body.context_metadata
+            else None
+        )
+    except IntakeContextError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     policy = get_policy_db(db, current_user.tenant_id)
+    terminology = _terminology_snapshot(db, current_user.tenant_id)
+    max_duration_seconds = min(
+        policy.capture_max_duration_seconds,
+        settings.LONG_INTERVIEW_MAX_SECONDS,
+    )
     now = _utcnow()
     row = KnowledgeCaptureSession(
         tenant_id=current_user.tenant_id,
@@ -123,10 +253,22 @@ def create_capture(
             "save_audio": policy.save_audio,
             "audio_retention_days": policy.audio_retention_days,
             "encrypt_at_rest": policy.encrypt_at_rest,
+            "max_duration_seconds": max_duration_seconds,
+            "chunk_max_seconds": settings.LONG_INTERVIEW_CHUNK_MAX_SECONDS,
         },
         transcript_policy_snapshot={
             "save_transcript": policy.save_transcript,
             "transcript_retention_days": policy.transcript_retention_days,
+            **terminology,
+        },
+        transcript_metadata={
+            "capture": {
+                "source_module": body.source_module.strip(),
+                "purpose": body.purpose.strip(),
+                "department_id": str(body.department_id) if body.department_id else None,
+                "data_classification": body.data_classification,
+                "context_metadata": context,
+            }
         },
         audio_expires_at=now + timedelta(days=policy.audio_retention_days),
         transcript_expires_at=now + timedelta(days=policy.transcript_retention_days),
@@ -150,10 +292,11 @@ async def upload_chunk(
     duration_ms: int = Form(..., ge=1, le=90 * 1000),
     sha256: str = Form(..., min_length=64, max_length=64),
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
-    from app.config import settings
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    check_document_permission(current_user, "create")
     from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+    from app.config import settings
 
     enforce_ingestion_queue_capacity()
 
@@ -162,7 +305,14 @@ async def upload_chunk(
         raise HTTPException(status_code=409, detail=f"capture is {row.status}")
     if duration_ms > settings.LONG_INTERVIEW_CHUNK_MAX_SECONDS * 1000:
         raise HTTPException(status_code=400, detail="audio chunk duration exceeds limit")
-    if offset_ms + duration_ms > settings.LONG_INTERVIEW_MAX_SECONDS * 1000:
+    session_max_seconds = min(
+        int(
+            (row.audio_policy_snapshot or {}).get("max_duration_seconds")
+            or settings.LONG_INTERVIEW_MAX_SECONDS
+        ),
+        settings.LONG_INTERVIEW_MAX_SECONDS,
+    )
+    if offset_ms + duration_ms > session_max_seconds * 1000:
         raise HTTPException(status_code=400, detail="interview duration exceeds limit")
 
     mime_type = (file.content_type or "").split(";", 1)[0].strip().lower()
@@ -326,8 +476,11 @@ def complete_capture(
     session_id: UUID,
     body: CompleteCaptureBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    from app.config import settings
+
+    check_document_permission(current_user, "create")
     row = _session_or_404(db, current_user, session_id)
     if row.status in {"queued", "transcribing", "ready_for_review"}:
         return {**_session_to_dict(row), "queue_enqueued": True, "idempotent": True}
@@ -345,8 +498,17 @@ def complete_capture(
     expected = list(range(body.final_sequence + 1))
     if [chunk.sequence for chunk in chunks] != expected:
         raise HTTPException(status_code=409, detail="some audio chunks have not been uploaded")
-    if len(chunks) > 240:
+    if len(chunks) > settings.LONG_INTERVIEW_MAX_CHUNKS:
         raise HTTPException(status_code=400, detail="too many audio chunks")
+    session_max_seconds = min(
+        int(
+            (row.audio_policy_snapshot or {}).get("max_duration_seconds")
+            or settings.LONG_INTERVIEW_MAX_SECONDS
+        ),
+        settings.LONG_INTERVIEW_MAX_SECONDS,
+    )
+    if body.total_duration_ms > session_max_seconds * 1000:
+        raise HTTPException(status_code=400, detail="interview duration exceeds limit")
 
     recorded_duration = sum(int(chunk.duration_ms or 0) for chunk in chunks)
     # The browser's clock is advisory; reject wildly inconsistent final metadata.
@@ -380,8 +542,9 @@ def complete_capture(
 def retry_capture(
     session_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    check_document_permission(current_user, "create")
     row = _session_or_404(db, current_user, session_id)
     if row.status not in {"queued", "failed"}:
         raise HTTPException(status_code=409, detail=f"capture cannot be retried from {row.status}")
@@ -401,8 +564,9 @@ def retry_capture(
 def get_capture(
     session_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    check_document_permission(current_user, "create")
     row = _session_or_404(db, current_user, session_id)
     return _session_to_dict(row, include_transcript=True)
 
@@ -411,8 +575,9 @@ def get_capture(
 def get_capture_transcript(
     session_id: UUID,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    check_document_permission(current_user, "create")
     row = _session_or_404(db, current_user, session_id)
     segments = (
         db.query(KnowledgeCaptureTranscriptSegment)
@@ -450,8 +615,9 @@ def correct_capture_transcript_segment(
     segment_id: UUID,
     body: CorrectSegmentBody,
     db: Session = Depends(deps.get_db),
-    current_user: User = Depends(require_knowhow_author),
-) -> Dict[str, Any]:
+    current_user: User = Depends(deps.get_current_active_user),
+) -> dict[str, Any]:
+    check_document_permission(current_user, "create")
     row = _session_or_404(db, current_user, session_id)
     if row.status != "ready_for_review":
         raise HTTPException(status_code=409, detail="transcript is not ready for correction")

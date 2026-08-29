@@ -127,6 +127,29 @@ class TestLocalBackend(unittest.TestCase):
         self.assertTrue(self.backend.presigned_url(self.key).startswith("file://"))
         self.assertIn(uri, self.backend.presigned_url(self.key))
 
+    def test_multipart_accepts_out_of_order_parts_and_completes_in_order(self):
+        upload_id = self.backend.create_multipart(self.key)
+        sources = {}
+        for number, payload in ((2, b"world"), (1, b"hello ")):
+            sources[number] = self._write_tmp(payload)
+            self.backend.upload_part(self.key, upload_id, number, sources[number])
+        uri = self.backend.complete_multipart(
+            self.key, upload_id, [(2, "ignored-local-etag"), (1, "ignored-local-etag")]
+        )
+        self.assertTrue(os.path.isabs(uri))
+        self.assertEqual(self.backend.get_bytes(self.key), b"hello world")
+        for source in sources.values():
+            os.remove(source)
+
+    def test_multipart_abort_is_idempotent(self):
+        upload_id = self.backend.create_multipart(self.key)
+        source = self._write_tmp(b"discard")
+        self.backend.upload_part(self.key, upload_id, 1, source)
+        self.backend.abort_multipart(self.key, upload_id)
+        self.backend.abort_multipart(self.key, upload_id)
+        self.assertFalse(self.backend.exists(self.key))
+        os.remove(source)
+
 
 class TestS3Backend(unittest.TestCase):
     def setUp(self):
@@ -193,6 +216,27 @@ class TestS3Backend(unittest.TestCase):
         _, kwargs = self.mock_client.generate_presigned_url.call_args
         self.assertEqual(kwargs["Params"]["Key"], self.key)
         self.assertEqual(kwargs["ExpiresIn"], 60)
+
+    def test_native_multipart_contract(self):
+        self.mock_client.create_multipart_upload.return_value = {"UploadId": "provider-1"}
+        self.mock_client.upload_part.return_value = {"ETag": '"etag-1"'}
+        upload_id = self.backend.create_multipart(self.key)
+        source = tempfile.mktemp()
+        with open(source, "wb") as stream:
+            stream.write(b"part")
+        try:
+            etag = self.backend.upload_part(self.key, upload_id, 1, source)
+            uri = self.backend.complete_multipart(self.key, upload_id, [(1, etag)])
+            self.assertEqual(uri, f"s3://enclave-docs/{self.key}")
+            self.mock_client.complete_multipart_upload.assert_called_once()
+        finally:
+            os.remove(source)
+
+    def test_native_multipart_abort(self):
+        self.backend.abort_multipart(self.key, "provider-1")
+        self.mock_client.abort_multipart_upload.assert_called_once_with(
+            Bucket="enclave-docs", Key=self.key, UploadId="provider-1"
+        )
 
 
 class TestFactory(unittest.TestCase):

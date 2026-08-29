@@ -30,6 +30,7 @@ class AudioPolicyUpdateRequest(BaseModel):
     transcript_retention_days: Optional[int] = Field(None, ge=1, le=3650)
     encrypt_at_rest: Optional[bool] = None
     audit_downloads: Optional[bool] = None
+    capture_max_duration_seconds: Optional[int] = Field(None, ge=60, le=24 * 60 * 60)
 
 
 # ── Public endpoints ──

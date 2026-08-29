@@ -1,0 +1,1072 @@
+{
+  "schema_version": 1,
+  "phase": "Input I4",
+  "run_id": "26e764f0-e6c6-4a03-9847-df172ef10774",
+  "corpus_sha256": "559527f5bc3e9488e90b9fa90d70cf6ef49f9146ed9050b5102a1f78b9a0ef65",
+  "corpus_status": "SEALED_INTERNAL_SYNTHETIC",
+  "status": "PASS",
+  "manifest_errors": [],
+  "formats": {
+    ".csv": {
+      "extension": ".csv",
+      "gate": {
+        "key": "table-row-cell-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.02,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 3,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".docx": {
+      "extension": ".docx",
+      "gate": {
+        "key": "docx-paragraph-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.03,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 2,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".jpeg": {
+      "extension": ".jpeg",
+      "gate": {
+        "key": "image-ocr-region-v1",
+        "min_content_accuracy": 0.92,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.98,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 3,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".jpg": {
+      "extension": ".jpg",
+      "gate": {
+        "key": "image-ocr-region-v1",
+        "min_content_accuracy": 0.92,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.98,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 3,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".pdf": {
+      "extension": ".pdf",
+      "gate": {
+        "key": "pdf-page-v1",
+        "min_content_accuracy": 0.98,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.99,
+        "review_below_confidence": 0.9,
+        "sample_rate": 0.05,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 2,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".png": {
+      "extension": ".png",
+      "gate": {
+        "key": "image-ocr-region-v1",
+        "min_content_accuracy": 0.92,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.98,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 7,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".pptx": {
+      "extension": ".pptx",
+      "gate": {
+        "key": "pptx-slide-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.03,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 2,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".tiff": {
+      "extension": ".tiff",
+      "gate": {
+        "key": "tiff-ocr-page-region-v1",
+        "min_content_accuracy": 0.9,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.97,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 4,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".txt": {
+      "extension": ".txt",
+      "gate": {
+        "key": "text-exact-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.01,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 3,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    },
+    ".xlsx": {
+      "extension": ".xlsx",
+      "gate": {
+        "key": "xlsx-row-cell-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.03,
+        "max_provider_regression": 0.03
+      },
+      "status": "PASS",
+      "sample_count": 3,
+      "parse_success": 1.0,
+      "content_accuracy": 1.0,
+      "locator_coverage": 1.0,
+      "failures": []
+    }
+  },
+  "failure_samples": {
+    ".csv": {
+      "extension": ".csv",
+      "gate": {
+        "key": "table-row-cell-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.02,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".csv:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".docx": {
+      "extension": ".docx",
+      "gate": {
+        "key": "docx-paragraph-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.03,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".docx:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".jpeg": {
+      "extension": ".jpeg",
+      "gate": {
+        "key": "image-ocr-region-v1",
+        "min_content_accuracy": 0.92,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.98,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".jpeg:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".jpg": {
+      "extension": ".jpg",
+      "gate": {
+        "key": "image-ocr-region-v1",
+        "min_content_accuracy": 0.92,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.98,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".jpg:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".pdf": {
+      "extension": ".pdf",
+      "gate": {
+        "key": "pdf-page-v1",
+        "min_content_accuracy": 0.98,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.99,
+        "review_below_confidence": 0.9,
+        "sample_rate": 0.05,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".pdf:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".png": {
+      "extension": ".png",
+      "gate": {
+        "key": "image-ocr-region-v1",
+        "min_content_accuracy": 0.92,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.98,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".png:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".pptx": {
+      "extension": ".pptx",
+      "gate": {
+        "key": "pptx-slide-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.03,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".pptx:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".tiff": {
+      "extension": ".tiff",
+      "gate": {
+        "key": "tiff-ocr-page-region-v1",
+        "min_content_accuracy": 0.9,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 0.97,
+        "review_below_confidence": 0.82,
+        "sample_rate": 0.1,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".tiff:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".txt": {
+      "extension": ".txt",
+      "gate": {
+        "key": "text-exact-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.01,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".txt:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    },
+    ".xlsx": {
+      "extension": ".xlsx",
+      "gate": {
+        "key": "xlsx-row-cell-v1",
+        "min_content_accuracy": 1.0,
+        "min_locator_coverage": 1.0,
+        "min_parse_success": 1.0,
+        "review_below_confidence": 0.8,
+        "sample_rate": 0.03,
+        "max_provider_regression": 0.03
+      },
+      "status": "FAIL",
+      "sample_count": 1,
+      "parse_success": 1.0,
+      "content_accuracy": 0.217391,
+      "locator_coverage": 0.0,
+      "failures": [
+        {
+          "id": ".xlsx:negative-control",
+          "parse_success": true,
+          "content_accuracy": 0.21739130434782605,
+          "locator_complete": false,
+          "reason": "deliberate negative control"
+        }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "maintenance-txt",
+      "extension": ".txt",
+      "category": "maintenance_procedure",
+      "condition": "utf8_multilingual",
+      "sha256": "8ca7fdd46e887d2209c36eb8bce25b2bb8556c9081dbef64cbfa5c7adf029f4c",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.0,
+      "structure_policy": {},
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "MNT-2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "CNC-M2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "WO-829",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "inspection-csv",
+      "extension": ".csv",
+      "category": "incoming_inspection",
+      "condition": "row_cell",
+      "sha256": "3f7ec20491a2a8370ea177ad20cdb300cfee2e5fc705a3d4a79d997fe5d85903",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.0,
+      "structure_policy": {},
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "IQC-240829",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "AX-2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "HOLD",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "manual-pdf",
+      "extension": ".pdf",
+      "category": "equipment_manual",
+      "condition": "text_page",
+      "sha256": "f0793bab1f60c2dcbc3cf720d8f2acd6edac9e4051d9ad4bde9645a73c018458",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.0,
+      "structure_policy": {},
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "Manufacturing Quality Manual",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "Incoming inspection",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "sop-docx",
+      "extension": ".docx",
+      "category": "sop",
+      "condition": "headings_table",
+      "sha256": "8d6c01c127eb8feff64c2a22dea471f388b2be05eee0dbaff90cbb9594bf4d4a",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.0,
+      "structure_policy": {},
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "CNC-M2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "LOTO-OK",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "bom-xlsx",
+      "extension": ".xlsx",
+      "category": "bom",
+      "condition": "formula_merged_hidden",
+      "sha256": "4043f2e2300a5240ee2a1ea2261a83cf03a64bf69eb90eb9106ffa996582eeed",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.72,
+      "ocr_confidence": 0.0,
+      "structure_policy": {
+        "formula_policy": "preserve_formula_expression",
+        "formulas_detected": 2,
+        "formula_cells": [
+          {
+            "worksheet": "BOM",
+            "cell": "E2",
+            "formula": "=C2*D2"
+          },
+          {
+            "worksheet": "BOM",
+            "cell": "E3",
+            "formula": "=C3*D3"
+          }
+        ],
+        "merged_cell_policy": "preserve_anchor_and_range",
+        "merged_cells_detected": 1,
+        "merged_ranges": {
+          "BOM": [
+            "A5:E5"
+          ]
+        },
+        "hidden_sheet_policy": "exclude_and_require_explicit_review",
+        "hidden_sheets": [
+          "成本_機密"
+        ]
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "AX-2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "=C2*D2",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "ECN-104",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "inspection-pptx",
+      "extension": ".pptx",
+      "category": "inspection",
+      "condition": "multi_slide",
+      "sha256": "c90316b3fb22ceafa3c22658b2ea7e5d4aa530eff497544912d7e53ad704dd4c",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.0,
+      "structure_policy": {
+        "slide_policy": "preserve_slide_number_as_page",
+        "notes_policy": "include_with_slide",
+        "table_policy": "preserve_row_order"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "OD-42.00",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "NCR-STOP",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "nameplate-png",
+      "extension": ".png",
+      "category": "nameplate",
+      "condition": "clean",
+      "sha256": "62211df7bfe19b110150cb4a003556fbb43ce7e3f386f23cca24a67dcb7e6dc4",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.935,
+      "structure_policy": {
+        "orientation_policy": "exif_transpose",
+        "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+        "low_light_policy": "autocontrast_when_mean_luma_below_85",
+        "preprocessing": [
+          "exif_transpose"
+        ],
+        "bbox_policy": "ocr_line_regions",
+        "multi_page_policy": "preserve_frame_as_page"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "CNC-M2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "SN-771042",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "6.5 BAR",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "nameplate-jpg",
+      "extension": ".jpg",
+      "category": "nameplate",
+      "condition": "clean_jpeg",
+      "sha256": "7ce4d9ee282c73d49fa954bca5c331bfc93a709d7c4bf4b86e6020f778b2948b",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.93375,
+      "structure_policy": {
+        "orientation_policy": "exif_transpose",
+        "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+        "low_light_policy": "autocontrast_when_mean_luma_below_85",
+        "preprocessing": [
+          "exif_transpose"
+        ],
+        "bbox_policy": "ocr_line_regions",
+        "multi_page_policy": "preserve_frame_as_page"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "CNC-M2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "SN-771042",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "6.5 BAR",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "nameplate-jpeg",
+      "extension": ".jpeg",
+      "category": "nameplate",
+      "condition": "clean_jpeg_alias",
+      "sha256": "7ce4d9ee282c73d49fa954bca5c331bfc93a709d7c4bf4b86e6020f778b2948b",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.93375,
+      "structure_policy": {
+        "orientation_policy": "exif_transpose",
+        "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+        "low_light_policy": "autocontrast_when_mean_luma_below_85",
+        "preprocessing": [
+          "exif_transpose"
+        ],
+        "bbox_policy": "ocr_line_regions",
+        "multi_page_policy": "preserve_frame_as_page"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "CNC-M2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "SN-771042",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "6.5 BAR",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "rotated-label-png",
+      "extension": ".png",
+      "category": "part_label",
+      "condition": "rotated_90",
+      "sha256": "7cc66a09a13dd25b41069610689ecd2d0d66531dbae9dbc7f31f8d3f280895a8",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.5,
+      "ocr_confidence": 0.935,
+      "structure_policy": {
+        "orientation_policy": "exif_transpose",
+        "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+        "low_light_policy": "autocontrast_when_mean_luma_below_85",
+        "preprocessing": [
+          "exif_transpose",
+          "page_1:rotate_180_confidence_selected"
+        ],
+        "bbox_policy": "ocr_line_regions",
+        "multi_page_policy": "preserve_frame_as_page"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "AX-2048",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "L240829",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "lowlight-tag-png",
+      "extension": ".png",
+      "category": "inspection_tag",
+      "condition": "low_light",
+      "sha256": "6ebb8bc28ea2ada6aa6215834906f57bbf9fe742c494250331e738920be3955b",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.5,
+      "ocr_confidence": 0.9266666666666667,
+      "structure_policy": {
+        "orientation_policy": "exif_transpose",
+        "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+        "low_light_policy": "autocontrast_when_mean_luma_below_85",
+        "preprocessing": [
+          "exif_transpose",
+          "page_1:low_light_contrast"
+        ],
+        "bbox_policy": "ocr_line_regions",
+        "multi_page_policy": "preserve_frame_as_page"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "IPQC-204",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "NCR-STOP",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "multipage-tiff",
+      "extension": ".tiff",
+      "category": "scanned_form",
+      "condition": "two_page",
+      "sha256": "5c9390df9331f6866956d8e7420c62768008e1c39431468c4110a1c1ee182c8e",
+      "parse_success": true,
+      "parse_engine": "native",
+      "quality_score": 0.8,
+      "ocr_confidence": 0.9249999999999999,
+      "structure_policy": {
+        "orientation_policy": "exif_transpose",
+        "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+        "low_light_policy": "autocontrast_when_mean_luma_below_85",
+        "preprocessing": [
+          "exif_transpose"
+        ],
+        "bbox_policy": "ocr_line_regions",
+        "multi_page_policy": "preserve_frame_as_page"
+      },
+      "provider_attempts": [
+        {
+          "provider": "native",
+          "status": "adopted"
+        }
+      ],
+      "field_results": [
+        {
+          "expected": "IQC-204",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "BR-7710",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "ACCEPT",
+          "found": true,
+          "locator_complete": true
+        },
+        {
+          "expected": "OP-07",
+          "found": true,
+          "locator_complete": true
+        }
+      ],
+      "error": null
+    }
+  ],
+  "declared_gaps": [
+    "real handwritten shop-floor annotations",
+    "customer-owned legacy DOC/XLS samples",
+    "physical-device HEIC variants",
+    "real damaged and oily paper samples",
+    "provider production drift replay requires configured credentials"
+  ],
+  "provider_drift": {
+    ".csv": {
+      "extension": ".csv",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".docx": {
+      "extension": ".docx",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".jpeg": {
+      "extension": ".jpeg",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".jpg": {
+      "extension": ".jpg",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".pdf": {
+      "extension": ".pdf",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".png": {
+      "extension": ".png",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".pptx": {
+      "extension": ".pptx",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".tiff": {
+      "extension": ".tiff",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".txt": {
+      "extension": ".txt",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    },
+    ".xlsx": {
+      "extension": ".xlsx",
+      "status": "PASS",
+      "max_provider_regression": 0.03,
+      "regressions": {
+        "parse_success": 0.0,
+        "content_accuracy": 0.0,
+        "locator_coverage": 0.0
+      },
+      "failed_metrics": {}
+    }
+  }
+}

@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 import app.models  # noqa: F401
 from app.composition.ingestion import build_ingestion_adapter_registry
 from app.models.asset import AssetRevision, SourceAsset
-from app.models.ingestion import IngestionJob, IngestionJobEvent
+from app.models.ingestion import IngestionJob, IngestionJobEvent, InputOperationMetric
 from app.models.mka import JobRole
 from app.models.permission import Department
 from app.models.tenant import Tenant
@@ -42,6 +42,7 @@ def ingestion_db():
         AssetRevision.__table__,
         IngestionJob.__table__,
         IngestionJobEvent.__table__,
+        InputOperationMetric.__table__,
     ):
         table.create(engine, checkfirst=True)
     session = sessionmaker(bind=engine)()

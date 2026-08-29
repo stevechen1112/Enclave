@@ -1,15 +1,26 @@
-"""Base-pack worker for long-form audio knowledge assets."""
+"""Resumable, bounded worker for long-form audio knowledge assets."""
 
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+import os
+import tempfile
+from pathlib import Path
 from uuid import UUID
 
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+def _segment_digest(*, text: str, start_ms: int, end_ms: int, speaker: str | None) -> str:
+    payload = json.dumps(
+        [text, start_ms, end_ms, speaker], ensure_ascii=False, separators=(",", ":")
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 @celery_app.task(name="tasks.process_audio_asset", bind=True, max_retries=2)
@@ -19,146 +30,186 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
     revision_uuid = UUID(revision_id)
     job_uuid = UUID(job_id)
     try:
-        from app.models.asset import (
-            AssetRevision,
-            DerivedArtifact,
-            EvidenceSpan,
-            SourceAsset,
-        )
+        from app.models.asset import AssetRevision, DerivedArtifact, EvidenceSpan, SourceAsset
         from app.models.ingestion import IngestionJob
         from app.services.ingestion_orchestrator import get_ingestion_orchestrator
         from app.services.rls import apply_rls_context
 
         apply_rls_context(db, tenant_uuid)
-        revision = (
-            db.query(AssetRevision)
-            .filter(
-                AssetRevision.tenant_id == tenant_uuid,
-                AssetRevision.id == revision_uuid,
-            )
-            .one()
-        )
-        asset = (
-            db.query(SourceAsset)
-            .filter(
-                SourceAsset.tenant_id == tenant_uuid,
-                SourceAsset.id == revision.asset_id,
-            )
-            .one()
-        )
-        job = (
-            db.query(IngestionJob)
-            .filter(IngestionJob.tenant_id == tenant_uuid, IngestionJob.id == job_uuid)
-            .one()
-        )
+        revision = db.query(AssetRevision).filter(
+            AssetRevision.tenant_id == tenant_uuid, AssetRevision.id == revision_uuid
+        ).one()
+        asset = db.query(SourceAsset).filter(
+            SourceAsset.tenant_id == tenant_uuid, SourceAsset.id == revision.asset_id
+        ).one()
+        job = db.query(IngestionJob).filter(
+            IngestionJob.tenant_id == tenant_uuid, IngestionJob.id == job_uuid
+        ).one()
         if job.status in {"review_required", "ready"}:
             return {"job_id": job_id, "status": job.status, "idempotent": True}
 
         orchestrator = get_ingestion_orchestrator()
         if job.status in {"queued", "failed"}:
-            orchestrator.transition(db, job, to_status="running", phase="transcribing")
+            orchestrator.transition(db, job, to_status="running", phase="audio_probe")
         revision.ingestion_status = "processing"
         db.commit()
 
-        from app.services.storage import get_storage_backend
+        from app.config import settings
+        from app.services.media_productization import (
+            create_browser_audio_proxy,
+            extract_audio_chunks,
+            probe_audio,
+        )
+        from app.services.storage import build_storage_key, get_storage_backend
+        from app.services.video_processing import project_media_proxy
         from app.services.voice_gateway import transcribe_long_interview_chunk
 
-        storage_key = str((asset.metadata_json or {}).get("storage_key") or "")
-        if not storage_key:
+        metadata = dict(revision.metadata_json or {})
+        storage_key = str(metadata.get("storage_key") or "")
+        if not storage_key and not os.path.isfile(revision.content_uri):
             raise RuntimeError("audio storage identity is unavailable")
-        audio_data = get_storage_backend().get_bytes(storage_key)
-        result = transcribe_long_interview_chunk(
-            audio_data,
-            filename=str((asset.metadata_json or {}).get("filename") or "audio.webm"),
-            content_type=revision.media_type,
-        )
-        segments = list(result.segments or [])
-        if not segments and result.text.strip():
-            segments = [
-                {
-                    "start": 0,
-                    "end": max(float(result.duration_seconds or 0), 0.001),
-                    "text": result.text,
-                    "speaker": None,
-                }
-            ]
-        if not segments:
-            raise RuntimeError("transcription returned no usable content")
 
+        backend = get_storage_backend()
         artifact_ids: list[str] = []
-        for sequence, segment in enumerate(segments, start=1):
-            text = str(segment.get("text") or "").strip()
-            if not text:
-                continue
-            digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-            artifact = (
-                db.query(DerivedArtifact)
-                .filter(
-                    DerivedArtifact.tenant_id == tenant_uuid,
-                    DerivedArtifact.asset_revision_id == revision.id,
-                    DerivedArtifact.artifact_kind == "transcript_segment",
-                    DerivedArtifact.provider == "openai",
-                    DerivedArtifact.provider_version == "long_interview_stt",
-                    DerivedArtifact.content_hash == digest,
+        with tempfile.TemporaryDirectory(prefix="enclave-audio-") as temp_dir:
+            suffix = Path(str(metadata.get("filename") or ".webm")).suffix or ".webm"
+            local_audio = str(Path(temp_dir) / f"source{suffix}")
+            if os.path.isfile(revision.content_uri):
+                local_audio = revision.content_uri
+            else:
+                backend.get_to_file(storage_key, local_audio)
+
+            probe = probe_audio(local_audio)
+            revision.duration_ms = probe.duration_ms
+            if settings.MEDIA_PROXY_ENABLED:
+                from uuid import NAMESPACE_URL, uuid5
+
+                proxy_path = str(Path(temp_dir) / "review-proxy.mp3")
+                create_browser_audio_proxy(local_audio, proxy_path)
+                proxy_object_id = uuid5(
+                    NAMESPACE_URL, f"enclave:{revision.id}:audio-media-proxy:v1"
                 )
-                .first()
+                proxy_key = build_storage_key(tenant_uuid, proxy_object_id, ".mp3")
+                proxy_size = os.path.getsize(proxy_path)
+                proxy_uri = backend.put(proxy_key, proxy_path)
+                project_media_proxy(
+                    db,
+                    revision,
+                    artifact_uri=proxy_uri,
+                    storage_key=proxy_key,
+                    byte_size=proxy_size,
+                    media_type="audio/mpeg",
+                    browser_profile="mp3_mono_44k_96k",
+                )
+            orchestrator.transition(
+                db, job, to_status="running", phase="audio_chunking",
+                readiness={
+                    "searchable": False, "partial": False,
+                    "requires_human_review": False, "probe": probe.to_dict(),
+                    "preview_ready": bool(settings.MEDIA_PROXY_ENABLED),
+                },
             )
-            if artifact is None:
-                artifact = DerivedArtifact(
-                    tenant_id=tenant_uuid,
-                    asset_revision_id=revision.id,
-                    artifact_kind="transcript_segment",
-                    content_hash=digest,
-                    provider="openai",
-                    provider_version="long_interview_stt",
-                    quality_state="review_required",
-                    confidence=result.confidence if result.confidence > 0 else None,
-                    content=text,
-                    metadata_json={"sequence": sequence, "language": result.language},
-                )
-                db.add(artifact)
-                db.flush()
-            start_ms = max(0, int(float(segment.get("start") or 0) * 1000))
-            end_ms = max(start_ms + 1, int(float(segment.get("end") or 0) * 1000))
-            span = (
-                db.query(EvidenceSpan.id)
-                .filter(
-                    EvidenceSpan.tenant_id == tenant_uuid,
-                    EvidenceSpan.artifact_id == artifact.id,
-                    EvidenceSpan.start_ms == start_ms,
-                    EvidenceSpan.end_ms == end_ms,
-                )
-                .first()
+            db.commit()
+
+            chunks = extract_audio_chunks(
+                local_audio, temp_dir, chunk_seconds=int(settings.AUDIO_CHUNK_SECONDS)
             )
-            if span is None:
-                db.add(
-                    EvidenceSpan(
-                        tenant_id=tenant_uuid,
-                        artifact_id=artifact.id,
-                        asset_revision_id=revision.id,
-                        locator_kind="audio",
-                        start_ms=start_ms,
-                        end_ms=end_ms,
-                        speaker=segment.get("speaker"),
+            if not chunks:
+                raise RuntimeError("audio chunking returned no decodable audio")
+
+            for chunk_index, chunk_path in enumerate(chunks):
+                with open(chunk_path, "rb") as stream:
+                    result = transcribe_long_interview_chunk(
+                        stream.read(), filename=os.path.basename(chunk_path),
+                        content_type="audio/mpeg",
                     )
+                segments = list(result.segments or [])
+                if not segments and result.text.strip():
+                    segments = [{
+                        "start": 0,
+                        "end": max(float(result.duration_seconds or 0), 0.001),
+                        "text": result.text,
+                        "speaker": None,
+                    }]
+                offset_ms = chunk_index * int(settings.AUDIO_CHUNK_SECONDS) * 1000
+                for segment in segments:
+                    text = str(segment.get("text") or "").strip()
+                    if not text:
+                        continue
+                    start_ms = min(
+                        max(0, offset_ms + int(float(segment.get("start") or 0) * 1000)),
+                        max(0, probe.duration_ms - 1),
+                    )
+                    end_ms = min(
+                        probe.duration_ms,
+                        max(start_ms + 1, offset_ms + int(float(segment.get("end") or 0) * 1000)),
+                    )
+                    speaker = str(segment.get("speaker") or "").strip() or None
+                    digest = _segment_digest(
+                        text=text, start_ms=start_ms, end_ms=end_ms, speaker=speaker
+                    )
+                    artifact = db.query(DerivedArtifact).filter(
+                        DerivedArtifact.tenant_id == tenant_uuid,
+                        DerivedArtifact.asset_revision_id == revision.id,
+                        DerivedArtifact.artifact_kind == "transcript_segment",
+                        DerivedArtifact.provider == "openai",
+                        DerivedArtifact.provider_version == "long_interview_stt.i5",
+                        DerivedArtifact.content_hash == digest,
+                    ).first()
+                    if artifact is None:
+                        artifact = DerivedArtifact(
+                            tenant_id=tenant_uuid, asset_revision_id=revision.id,
+                            artifact_kind="transcript_segment", content_hash=digest,
+                            provider="openai", provider_version="long_interview_stt.i5",
+                            quality_state="review_required",
+                            confidence=result.confidence if result.confidence > 0 else None,
+                            content=text,
+                            metadata_json={
+                                "chunk_index": chunk_index, "language": result.language,
+                                "start_ms": start_ms, "end_ms": end_ms,
+                                "candidate_only": True,
+                            },
+                        )
+                        db.add(artifact)
+                        db.flush()
+                    span = db.query(EvidenceSpan.id).filter(
+                        EvidenceSpan.tenant_id == tenant_uuid,
+                        EvidenceSpan.artifact_id == artifact.id,
+                        EvidenceSpan.start_ms == start_ms,
+                        EvidenceSpan.end_ms == end_ms,
+                    ).first()
+                    if span is None:
+                        db.add(EvidenceSpan(
+                            tenant_id=tenant_uuid, artifact_id=artifact.id,
+                            asset_revision_id=revision.id, locator_kind="audio",
+                            start_ms=start_ms, end_ms=end_ms, speaker=speaker,
+                        ))
+                    artifact_ids.append(str(artifact.id))
+
+                artifact_ids = list(dict.fromkeys(artifact_ids))
+                orchestrator.transition(
+                    db, job, to_status="running", phase="transcript_partial",
+                    readiness={
+                        "searchable": False, "partial": True,
+                        "requires_human_review": True,
+                        "completed_chunks": chunk_index + 1, "total_chunks": len(chunks),
+                        "progress_percent": round((chunk_index + 1) * 100 / len(chunks), 1),
+                        "artifact_ids": artifact_ids,
+                    },
+                    details={"completed_chunks": chunk_index + 1, "total_chunks": len(chunks)},
                 )
-            artifact_ids.append(str(artifact.id))
+                db.commit()
 
         if not artifact_ids:
-            raise RuntimeError("transcription contained only empty segments")
-        revision.duration_ms = max(1, int(float(result.duration_seconds or 0) * 1000))
+            raise RuntimeError("transcription returned no usable content")
         revision.ingestion_status = "review_required"
         asset.status = "review_required"
         orchestrator.transition(
-            db,
-            job,
-            to_status="review_required",
-            phase="human_review",
+            db, job, to_status="review_required", phase="human_review",
             quality_state="review_required",
             readiness={
-                "searchable": False,
-                "requires_human_review": True,
-                "artifact_ids": artifact_ids,
+                "searchable": False, "partial": False,
+                "requires_human_review": True, "artifact_ids": artifact_ids,
             },
         )
         db.commit()
@@ -173,44 +224,28 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
             from app.services.rls import apply_rls_context
 
             apply_rls_context(db, tenant_uuid)
-            job = (
-                db.query(IngestionJob)
-                .filter(
-                    IngestionJob.tenant_id == tenant_uuid, IngestionJob.id == job_uuid
-                )
-                .first()
-            )
-            revision = (
-                db.query(AssetRevision)
-                .filter(
-                    AssetRevision.tenant_id == tenant_uuid,
-                    AssetRevision.id == revision_uuid,
-                )
-                .first()
-            )
+            job = db.query(IngestionJob).filter(
+                IngestionJob.tenant_id == tenant_uuid, IngestionJob.id == job_uuid
+            ).first()
+            revision = db.query(AssetRevision).filter(
+                AssetRevision.tenant_id == tenant_uuid, AssetRevision.id == revision_uuid
+            ).first()
             if job is not None and job.status in {"queued", "running"}:
                 if job.status == "queued":
                     get_ingestion_orchestrator().transition(
-                        db, job, to_status="running", phase="transcribing"
+                        db, job, to_status="running", phase="audio_probe"
                     )
                 get_ingestion_orchestrator().fail(
-                    db,
-                    job,
-                    code="audio_processing_failed",
-                    message=str(exc),
-                    phase="transcribing",
+                    db, job, code="audio_processing_failed", message=str(exc),
+                    phase="audio_processing",
                 )
             exhausted = self.request.retries >= self.max_retries
             if revision is not None:
                 revision.ingestion_status = "failed" if exhausted else "pending"
-                asset = (
-                    db.query(SourceAsset)
-                    .filter(
-                        SourceAsset.tenant_id == tenant_uuid,
-                        SourceAsset.id == revision.asset_id,
-                    )
-                    .first()
-                )
+                asset = db.query(SourceAsset).filter(
+                    SourceAsset.tenant_id == tenant_uuid,
+                    SourceAsset.id == revision.asset_id,
+                ).first()
                 if asset is not None:
                     asset.status = "failed" if exhausted else "processing"
             db.commit()

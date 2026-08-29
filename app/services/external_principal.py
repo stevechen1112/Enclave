@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from typing import List, Optional
 from uuid import UUID
 
@@ -112,6 +113,68 @@ class ExternalPrincipalService:
             count += 1
         db.flush()
         return count
+
+    def replace_acl_snapshot(
+        self,
+        db: Session,
+        tenant_id: UUID,
+        entries: List[dict],
+        *,
+        source_record_ids: set[str],
+    ) -> dict[str, int]:
+        """Replace ACLs for a complete source snapshot without widening access.
+
+        Omitted entries are revoked only for source records explicitly included
+        in this complete snapshot. An empty/incomplete provider response cannot
+        erase or broaden unrelated ACL state.
+        """
+
+        grouped: dict[str, list[dict]] = defaultdict(list)
+        for entry in entries:
+            record_id = str(entry.get("source_record_id") or "")
+            if record_id in source_record_ids:
+                grouped[record_id].append(entry)
+
+        scoped_entries = [
+            entry
+            for entry in entries
+            if str(entry.get("source_record_id") or "") in source_record_ids
+        ]
+        applied = self.apply_acl_entries(db, tenant_id, scoped_entries)
+        retained: dict[str, set[tuple[UUID, str]]] = defaultdict(set)
+        for record_id, record_entries in grouped.items():
+            for entry in record_entries:
+                principal = (
+                    db.query(ExternalPrincipal)
+                    .filter(
+                        ExternalPrincipal.tenant_id == tenant_id,
+                        ExternalPrincipal.provider == entry.get("provider", "pipeshub"),
+                        ExternalPrincipal.external_id == entry["principal_external_id"],
+                    )
+                    .first()
+                )
+                if principal:
+                    retained[record_id].add(
+                        (principal.id, entry.get("permission", "read"))
+                    )
+
+        revoked = 0
+        existing = (
+            db.query(SourceAclEntry)
+            .filter(
+                SourceAclEntry.tenant_id == tenant_id,
+                SourceAclEntry.source_record_id.in_(source_record_ids),
+            )
+            .all()
+            if source_record_ids
+            else []
+        )
+        for row in existing:
+            if (row.principal_id, row.permission) not in retained[row.source_record_id]:
+                db.delete(row)
+                revoked += 1
+        db.flush()
+        return {"applied": applied, "revoked": revoked}
 
     def sample_acl_for_source(
         self, db: Session, tenant_id: UUID, source_record_id: str, limit: int = 20,

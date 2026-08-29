@@ -1,6 +1,7 @@
 """Descriptors for the existing document and long-interview processors."""
 
 from app.platform.ingestion import IngestionRequest
+from app.platform.intake import AUDIO_CAPABILITIES, VIDEO_CAPABILITIES
 
 
 def document_capabilities(asset_kind: str) -> tuple[str, ...]:
@@ -38,7 +39,7 @@ class LongInterviewAudioIngestionAdapter:
     adapter_key = "core.long_interview_audio"
     adapter_version = "1.0"
     supported_asset_kinds = ("audio",)
-    capability_keys = ("transcribe", "timestamp", "terminology_correction")
+    capability_keys = AUDIO_CAPABILITIES
     execution_boundary = "tenant_voice_policy"
     priority = 100
 
@@ -52,21 +53,7 @@ class CoreVideoIngestionAdapter:
     adapter_key = "core.video"
     adapter_version = "1.0"
     supported_asset_kinds = ("video",)
-    capability_keys = (
-        "probe_metadata",
-        "demux_audio",
-        "transcribe",
-        "timestamp",
-        "keyframe",
-        "ocr",
-        "diarize",
-        "scene_segment",
-        "action_candidate",
-        "equipment_state",
-        "audio_event",
-        "temporal_align",
-        "procedure_candidate",
-    )
+    capability_keys = VIDEO_CAPABILITIES
     execution_boundary = "governed_media_worker"
     priority = 100
 

@@ -148,7 +148,7 @@ def test_enabled_pack_owns_compatible_api_and_callable_hooks():
 
     assert "/knowhow" in paths
     assert "/job-modules" in paths
-    assert "/knowledge-captures" in paths
+    assert "/knowledge-captures" not in paths
     for item in (*enabled.permission_resolvers(), *enabled.lifecycle_hooks()):
         path = getattr(item, "resolver_path", None) or item.hook_path
         assert callable(load_contribution_object(path))

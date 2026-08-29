@@ -1,0 +1,20 @@
+{
+  "phase": "Input I7",
+  "evaluated_at": "2026-08-29T04:15:00+08:00",
+  "status": "HOLD",
+  "gate": "P5-CAPACITY",
+  "internal_control_plane_tests": "PASS",
+  "live_capacity_profiles": {
+    "lite_15_min_2x": "NOT_RUN",
+    "standard_15_min_2x": "NOT_RUN",
+    "enterprise_15_min_2x": "NOT_RUN"
+  },
+  "degradation_drills": {
+    "provider_slow": "NOT_RUN_LIVE",
+    "quota_exhausted": "NOT_RUN_LIVE",
+    "queue_saturated": "NOT_RUN_LIVE",
+    "sidecar_unavailable": "NOT_RUN_LIVE"
+  },
+  "soak_72_hours": "NOT_RUN",
+  "claim_boundary": "Engineering controls are implemented; production capacity, SLA and tenant-isolation-under-load are not certified until the authoritative live P5 evidence gate passes."
+}

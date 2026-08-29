@@ -1,5 +1,7 @@
 # Enclave 流程能力地圖（Pipeline Strength Map）
 
+> **歷史時點文件（建立於 2026-08-06）**：本地圖保留當時部署與盲測判定，其中格式、OCR、RLS 與部署數字可能已被後續架構取代。2026-08-28 起，Input Platform 現況以 `INPUT_PLATFORM_CAPABILITY_MAP_AND_IMPLEMENTATION_PLAN.md`、runtime capability contract、sealed corpus manifest 與最新 Phase Review 為準。
+
 > **目的**：把整條流程「哪裡強、哪裡弱、哪裡還沒驗證」集中在一份文件，對內指導施工優先序，對外支撐誠實宣稱。
 > **性質**：活文件。每次盲測、E2E、部署或客戶試用後更新；每列必須附證據連結，不許憑印象改評級。
 > **建立**：2026-08-06（整合 STAGE_SUMMARY_2026-08-05、OPEN_GATES、Z3/Z4 盲測、Linode 部署實績與當日生產 E2E）

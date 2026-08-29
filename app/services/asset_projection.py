@@ -83,6 +83,11 @@ def document_quality_state(metadata: dict[str, Any] | None) -> str:
     """Map parser quality into the canonical human-review policy."""
 
     values = dict(metadata or {})
+    if values.get("review_required") or values.get("locator_fallback"):
+        return "review_required"
+    structure = values.get("structure_policy")
+    if isinstance(structure, dict) and structure.get("hidden_sheets"):
+        return "review_required"
     if values.get("errors"):
         return "review_required"
     score = values.get("quality_score")
@@ -91,6 +96,19 @@ def document_quality_state(metadata: dict[str, Any] | None) -> str:
     if values.get("ocr_used"):
         confidence = values.get("ocr_confidence")
         if isinstance(confidence, (int, float)) and float(confidence) < 0.7:
+            return "review_required"
+    extension = str(values.get("file_extension") or "").lower()
+    content_hash = str(values.get("content_hash") or "")
+    if extension and content_hash:
+        from app.services.input_quality import requires_human_review
+
+        if requires_human_review(
+            extension,
+            confidence=float(score) if isinstance(score, (int, float)) else None,
+            content_hash=content_hash,
+            fallback_used=bool(values.get("locator_fallback")),
+            sampling_enabled=bool(values.get("quality_sampling_enabled", False)),
+        ):
             return "review_required"
     return "ready"
 
@@ -298,9 +316,28 @@ def project_document_text_artifact(
     confidence = (
         float(confidence_value) if isinstance(confidence_value, (int, float)) else None
     )
+    asset_kind = projection.asset.asset_kind
+    parse_chunks = parse_artifact.get("chunks") or [
+        {"text": content, "section": "document", "chunk_index": 0}
+    ]
+    inferred_locator_fallback = asset_kind == "image" and any(
+        not dict(raw_chunk or {}).get("bbox")
+        or bool(dict(raw_chunk or {}).get("locator_fallback"))
+        for raw_chunk in parse_chunks
+    )
     quality_state = document_quality_state(
         {
             **dict(metadata or {}),
+            "file_extension": (
+                "." + str(getattr(document, "file_type", "") or "").lower().lstrip(".")
+            ),
+            "content_hash": str(
+                getattr(document, "content_hash", "") or parse_artifact.get("source_hash") or ""
+            ),
+            "locator_fallback": bool(
+                (metadata or {}).get("locator_fallback")
+                or inferred_locator_fallback
+            ),
             "quality_score": parse_artifact.get("confidence"),
             **{
                 key: value
@@ -345,10 +382,6 @@ def project_document_text_artifact(
         artifact.quality_state = quality_state
         artifact.confidence = confidence
 
-    asset_kind = projection.asset.asset_kind
-    parse_chunks = parse_artifact.get("chunks") or [
-        {"text": content, "section": "document", "chunk_index": 0}
-    ]
     for index, raw_chunk in enumerate(parse_chunks):
         chunk = dict(raw_chunk or {})
         chunk_content = str(chunk.get("text") or "").strip()
@@ -415,8 +448,11 @@ def project_document_text_artifact(
         locator_values: dict[str, Any] = {
             "page": chunk.get("page"),
             "section": chunk.get("section") or (hierarchy[-1] if hierarchy else None),
+            "paragraph_index": chunk.get("paragraph_index"),
+            "slide_number": chunk.get("slide_number"),
             "bbox": bbox,
             "coordinate_space": "normalized" if bbox is not None else None,
+            "locator_fallback": bool(chunk.get("locator_fallback", False)),
             "worksheet": chunk.get("worksheet"),
             "table_name": chunk.get("table_name"),
             "row_number": chunk.get("row_number"),
@@ -438,6 +474,7 @@ def project_document_text_artifact(
         if locator_kind == "image" and locator_values["bbox"] is None:
             locator_values["bbox"] = [0.0, 0.0, 1.0, 1.0]
             locator_values["coordinate_space"] = "normalized"
+            locator_values["locator_fallback"] = True
         existing_spans = (
             db.query(EvidenceSpan)
             .filter(
@@ -450,8 +487,11 @@ def project_document_text_artifact(
         comparable_keys = (
             "page",
             "section",
+            "paragraph_index",
+            "slide_number",
             "bbox",
             "coordinate_space",
+            "locator_fallback",
             "worksheet",
             "table_name",
             "row_number",
@@ -501,23 +541,35 @@ def ensure_capture_asset(db: Session, capture: Any) -> SourceAsset:
 
     from app.services.asset_visibility import canonical_asset_acl
 
+    capture_metadata = dict(getattr(capture, "transcript_metadata", None) or {}).get(
+        "capture", {}
+    )
+    department_id = capture_metadata.get("department_id")
+    visibility = "restricted" if department_id else "private"
     asset = SourceAsset(
         tenant_id=capture.tenant_id,
         asset_kind="audio",
         title=capture.title,
-        source_system="mka_capture",
+        source_system="core_capture",
         source_record_id=str(capture.id),
-        data_classification="confidential",
+        data_classification=str(
+            capture_metadata.get("data_classification") or "confidential"
+        ),
         acl_reference={
             **canonical_asset_acl(
                 owner_subject_id=capture.owner_id,
-                visibility="private",
+                visibility=visibility,
+                allowed_department_ids=[department_id] if department_id else None,
             ),
             "consent_version": capture.consent_version,
         },
         metadata_json={
+            "direct_intake": True,
             "capture_session_id": str(capture.id),
             "equipment_id": capture.equipment_id,
+            "source_module": capture_metadata.get("source_module") or "core",
+            "purpose": capture_metadata.get("purpose") or "knowledge_capture",
+            "intake_context": dict(capture_metadata.get("context_metadata") or {}),
         },
         captured_by=capture.owner_id,
         status="pending",

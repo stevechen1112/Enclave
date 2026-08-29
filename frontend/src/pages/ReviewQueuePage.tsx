@@ -43,8 +43,8 @@ function evidenceLabel(evidence: ReviewEvidenceLocator) {
   }
   if (evidence.kind === 'table') return `${evidence.worksheet || evidence.table_name || '表格'} · ${evidence.cell_range || `第 ${evidence.row_number || '?'} 列`}`
   if (evidence.kind === 'external_record') return `${evidence.source_system || '外部系統'} · ${evidence.source_record_id || ''}${evidence.field_path ? ` · ${evidence.field_path}` : ''}`
-  if (evidence.kind === 'image') return `影像${evidence.bbox ? ' · 標記區域' : ''}${evidence.frame_index != null ? ` · frame ${evidence.frame_index}` : ''}`
-  return `文件${evidence.page ? ` · 第 ${evidence.page} 頁` : ''}${evidence.section ? ` · ${evidence.section}` : ''}`
+  if (evidence.kind === 'image') return `影像${evidence.bbox ? ' · 標記區域' : ''}${evidence.locator_fallback ? ' · 整張影像（待確認）' : ''}${evidence.frame_index != null ? ` · frame ${evidence.frame_index}` : ''}`
+  return `文件${evidence.slide_number ? ` · 投影片 ${evidence.slide_number}` : evidence.page ? ` · 第 ${evidence.page} 頁` : ''}${evidence.section ? ` · ${evidence.section}` : ''}${evidence.paragraph_index ? ` · 段落 ${evidence.paragraph_index}` : ''}`
 }
 
 function JsonPreview({ value }: { value: unknown }) {

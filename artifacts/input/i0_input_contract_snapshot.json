@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "contract_version": "input-capabilities.v1",
+  "registry_sha256": "ef69b33db9596fa5842754665184d4f50fd9c4a9e0e17dff11eee18b68b2a583",
+  "route": "/api/v1/knowledge/input-capabilities",
+  "authentication": "active_user_required",
+  "policy": {
+    "generic_resumable_upload": true,
+    "core_capture": true,
+    "capture_modes": ["long_audio", "photo", "video"],
+    "capture_policy_path": "/api/v1/knowledge/captures/policy",
+    "resumable_part_size": 8388608,
+    "resumable_min_part_size": 5242880,
+    "resumable_max_part_size": 16777216,
+    "resumable_max_parts": 10000,
+    "resumable_session_ttl_hours": 24,
+    "accepted_modes": ["file", "source_url", "source_record_id", "capture_manifest"]
+  },
+  "formats": {
+    "document": [".pdf", ".docx", ".doc", ".txt", ".xlsx", ".xls", ".csv", ".html", ".htm", ".md", ".markdown", ".rtf", ".json", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp", ".heic", ".pptx", ".ppt"],
+    "audio": [".mp3", ".wav", ".m4a", ".ogg", ".flac"],
+    "video": [".mp4", ".mov", ".webm", ".mkv"]
+  },
+  "adapters": {
+    "core.document": ["extract_text", "layout", "table", "ocr"],
+    "core.long_interview_audio": ["resumable_upload", "background_progress", "partial_readiness", "transcribe", "timestamp", "terminology_correction"],
+    "core.video": ["resumable_upload", "background_progress", "partial_readiness", "browser_proxy", "probe_metadata", "demux_audio", "transcribe", "timestamp", "keyframe", "ocr", "diarize", "scene_segment", "action_candidate", "equipment_state", "audio_event", "temporal_align", "procedure_candidate"]
+  },
+  "provider_keys": ["native_document", "local_ocr", "llamaparse", "stt", "video_worker", "malware_scan", "storage"]
+}

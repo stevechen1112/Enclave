@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def scan_local_nas(
     """
     掃描 root_path，回傳 connector sync 相容結構。
     """
-    root = Path(root_path)
+    root = Path(root_path).resolve()
     if not root.exists() or not root.is_dir():
         return {
             "status": "error",
@@ -37,13 +37,26 @@ def scan_local_nas(
     resources: List[Dict[str, Any]] = []
     acl_entries: List[Dict[str, Any]] = []
 
+    eligible_paths: list[Path] = []
     for path in sorted(root.rglob("*")):
+        # Never traverse a symlinked file out of the configured share root.
+        if path.is_symlink():
+            continue
         if not path.is_file():
             continue
         if path.suffix.lower() not in (_TEXT_EXTS | _DOC_EXTS):
             continue
-        if len(resources) >= max_files:
-            break
+        try:
+            path.resolve().relative_to(root)
+        except ValueError:
+            continue
+        eligible_paths.append(path)
+
+    selected_paths = eligible_paths[:max_files]
+    snapshot_complete = len(selected_paths) == len(eligible_paths)
+    snapshot_hasher = hashlib.sha256()
+
+    for path in selected_paths:
 
         try:
             data = path.read_bytes()
@@ -54,6 +67,10 @@ def scan_local_nas(
         content_hash = hashlib.sha256(data).hexdigest()
         rel = str(path.relative_to(root)).replace("\\", "/")
         source_record_id = f"nas:{rel}"
+        stat = path.stat()
+        snapshot_hasher.update(
+            f"{source_record_id}\0{content_hash}\0{stat.st_size}\n".encode("utf-8")
+        )
 
         resources.append({
             "source_record_id": source_record_id,
@@ -62,11 +79,11 @@ def scan_local_nas(
             "file_path": str(path.resolve()),
             "mime_type": _guess_mime(path.suffix),
             "content_hash": content_hash,
-            "source_version": str(int(path.stat().st_mtime)),
+            "source_version": str(stat.st_mtime_ns),
             "metadata": {
                 "source": "nas_smb",
                 "path": rel,
-                "size": len(data),
+                "size": stat.st_size,
             },
         })
         acl_entries.append({
@@ -78,12 +95,26 @@ def scan_local_nas(
             "permission": "read",
         })
 
+    snapshot_id = snapshot_hasher.hexdigest()
+    cursor_payload = {
+        "version": 1,
+        "snapshot_id": snapshot_id,
+        "resource_count": len(resources),
+        "snapshot_complete": snapshot_complete,
+    }
+    cursor = "nas-v1:" + json.dumps(
+        cursor_payload, sort_keys=True, separators=(",", ":")
+    )
     return {
         "status": "completed",
         "mode": "nas_local",
         "resources": resources,
         "acl_entries": acl_entries,
-        "cursor": f"nas-scan:{len(resources)}:{int(root.stat().st_mtime)}",
+        "cursor": cursor,
+        "snapshot_id": snapshot_id,
+        "snapshot_complete": snapshot_complete,
+        "delete_semantics": "tombstone",
+        "total_eligible": len(eligible_paths),
     }
 
 

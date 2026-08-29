@@ -2,11 +2,11 @@ import hashlib
 import logging
 import os
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
 from uuid import UUID
 
 import aiofiles
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,7 @@ from app.config import settings
 from app.core.authorization import AuthorizationContext
 from app.crud import crud_document, crud_tenant
 from app.models.document import Document as DocumentModel
+from app.models.permission import Department
 from app.models.user import User
 from app.schemas.document import Document, DocumentCreate
 from app.services.document_readiness import (
@@ -29,6 +30,13 @@ from app.services.document_readiness import (
 from app.services.document_parser import SUPPORTED_FORMATS
 from app.services.document_visibility import apply_document_visibility
 from app.services.kb_scope_policy import resolve_kb_revision_scope
+from app.services.intake_context import (
+    IntakeContextError,
+    apply_intake_metadata,
+    assert_file_replay_matches,
+    find_idempotent_asset,
+    parse_intake_context,
+)
 from app.tasks.document_tasks import process_document_task
 
 router = APIRouter()
@@ -110,6 +118,10 @@ async def upload_document(
     db: Session = Depends(deps.get_db),
     file: UploadFile = File(...),
     current_user: User = Depends(deps.get_current_active_user),
+    idempotency_key: Annotated[str | None, Form()] = None,
+    department_id: Annotated[UUID | None, Form()] = None,
+    data_classification: Annotated[str, Form()] = "internal",
+    context_metadata: Annotated[str | None, Form()] = None,
 ) -> Any:
     """
     上傳文件
@@ -119,22 +131,26 @@ async def upload_document(
     """
     # 權限檢查
     check_document_permission(current_user, "create")
-    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
-
-    enforce_ingestion_queue_capacity()
-
-    # 文件數量配額檢查
-    doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")
-    if not doc_quota.get("allowed", True):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail={
-                "error": "quota_exceeded",
-                "message": doc_quota.get("message", "文件數量配額已超過"),
-                "current": doc_quota.get("current"),
-                "limit": doc_quota.get("limit"),
-            },
+    if idempotency_key and len(idempotency_key) > 500:
+        raise HTTPException(status_code=400, detail="idempotency_key is too long")
+    if data_classification not in {"public", "internal", "confidential", "restricted"}:
+        raise HTTPException(status_code=400, detail="unsupported data classification")
+    try:
+        intake_context = parse_intake_context(context_metadata)
+    except IntakeContextError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if department_id is not None:
+        department = (
+            db.query(Department)
+            .filter(
+                Department.id == department_id,
+                Department.tenant_id == current_user.tenant_id,
+                Department.is_active.is_(True),
+            )
+            .first()
         )
+        if department is None:
+            raise HTTPException(status_code=400, detail="department is unavailable")
 
     # 1. 驗證文件類型（支援所有 Phase 0-2 格式）
     from app.services.document_parser import DocumentParser, SUPPORTED_FORMATS
@@ -159,6 +175,53 @@ async def upload_document(
     if not clean_filename:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="無效的檔名"
+        )
+
+    try:
+        existing_asset = find_idempotent_asset(
+            db,
+            tenant_id=current_user.tenant_id,
+            idempotency_key=idempotency_key,
+        )
+        if existing_asset is not None:
+            assert_file_replay_matches(
+                db,
+                asset=existing_asset,
+                filename=clean_filename,
+                byte_size=getattr(file, "size", None),
+            )
+            existing_document = (
+                db.query(DocumentModel)
+                .filter(
+                    DocumentModel.tenant_id == current_user.tenant_id,
+                    DocumentModel.source_asset_id == existing_asset.id,
+                    DocumentModel.tombstoned_at.is_(None),
+                )
+                .first()
+            )
+            if existing_document is None:
+                raise IntakeContextError(
+                    "idempotency key references an unavailable document"
+                )
+            await file.close()
+            return existing_document
+    except IntakeContextError as exc:
+        await file.close()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
+    doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")
+    if not doc_quota.get("allowed", True):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "quota_exceeded",
+                "message": doc_quota.get("message", "文件數量配額已超過"),
+                "current": doc_quota.get("current"),
+                "limit": doc_quota.get("limit"),
+            },
         )
 
     # 4. 串流寫檔（避免一次把整個檔案讀進記憶體）
@@ -284,6 +347,7 @@ async def upload_document(
             tenant_id=current_user.tenant_id,
             uploaded_by=current_user.id,
             file_size=file_size,
+            department_id=department_id,
         )
     except Exception:
         if os.path.exists(temp_file_path):
@@ -322,12 +386,35 @@ async def upload_document(
     try:
         from app.services.asset_projection import project_document
 
-        project_document(
+        projection = project_document(
             db,
             document,
             content_uri=content_uri,
             content_hash=document.content_hash,
             ingestion_status="pending",
+        )
+        asset = projection.asset
+        asset.data_classification = data_classification
+        apply_intake_metadata(
+            asset,
+            context=intake_context,
+            idempotency_key=idempotency_key,
+        )
+        if projection.revision is None:
+            raise RuntimeError("document source revision is unavailable")
+        from app.ingestion.core_adapters import document_capabilities
+        from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+
+        orchestrator = get_ingestion_orchestrator()
+        job = orchestrator.ensure_job(
+            db,
+            tenant_id=current_user.tenant_id,
+            asset_revision_id=projection.revision.id,
+            capabilities=document_capabilities(asset.asset_kind),
+            idempotency_key=(
+                idempotency_key or f"document:{document.id}:{document.version or 1}"
+            ),
+            correlation_id=str(document.id),
         )
         db.commit()
     except Exception:
@@ -351,11 +438,26 @@ async def upload_document(
         raise
 
     # 6. 觸發背景任務處理
-    process_document_task.delay(
-        document_id=str(document.id),
-        file_path=content_uri,
-        tenant_id=str(current_user.tenant_id),
-    )
+    try:
+        process_document_task.delay(
+            document_id=str(document.id),
+            file_path=content_uri,
+            tenant_id=str(current_user.tenant_id),
+        )
+    except Exception as exc:
+        logger.exception("document job persisted but broker dispatch failed: %s", job.id)
+        orchestrator.fail(
+            db,
+            job,
+            code="broker_dispatch_failed",
+            message=str(exc),
+            phase="dispatching",
+        )
+        document.status = "failed"
+        document.error_message = "background processing could not be dispatched"
+        asset.status = "failed"
+        projection.revision.ingestion_status = "failed"
+        db.commit()
 
     return document
 

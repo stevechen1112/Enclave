@@ -106,6 +106,14 @@ class Settings(BaseSettings):
     STORAGE_DELETE_ON_REVOKE: bool = (
         False  # 撤權時是否實體刪除物件（預設保留 tombstone 行為）
     )
+    # Platform Input transport. Chunks are acknowledged independently and are
+    # kept only until canonical asset intake succeeds or the session expires.
+    UPLOAD_SESSION_PART_SIZE: int = 8 * 1024 * 1024
+    # S3-compatible providers require every non-final part to be at least 5 MiB.
+    UPLOAD_SESSION_MIN_PART_SIZE: int = 5 * 1024 * 1024
+    UPLOAD_SESSION_MAX_PART_SIZE: int = 16 * 1024 * 1024
+    UPLOAD_SESSION_MAX_PARTS: int = 10_000
+    UPLOAD_SESSION_TTL_HOURS: int = 24
 
     # Tenant RLS（ADR-012）：false=shadow（policy 已建、owner 不受 FORCE 約束）；
     # true=enforce（migration 需以同名環境變數重跑才會 FORCE ROW LEVEL SECURITY）
@@ -206,6 +214,12 @@ class Settings(BaseSettings):
     VIDEO_KEYFRAME_MIN_INTERVAL_SECONDS: int = 15
     VIDEO_AUDIO_CHUNK_SECONDS: int = 300
     VIDEO_ALLOWED_CODECS: str = "h264,hevc,vp8,vp9,av1"
+    MEDIA_PROXY_ENABLED: bool = True
+    MEDIA_PROXY_MAX_WIDTH: int = 1280
+    MEDIA_PROXY_VIDEO_BITRATE: str = "1800k"
+    AUDIO_CHUNK_SECONDS: int = 300
+    AUDIO_MAX_SECONDS: int = 4 * 60 * 60
+    AUDIO_ALLOWED_CODECS: str = "mp3,pcm_s16le,aac,vorbis,flac,opus"
 
     # Query embedding cache（ENGINEERING_PLAN §7.2 P0 補強）
     EMBEDDING_CACHE_ENABLED: bool = True

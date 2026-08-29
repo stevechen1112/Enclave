@@ -38,32 +38,22 @@ from app.models.asset import (
     SourceAsset,
 )
 from app.models.ingestion import IngestionJob
+from app.models.permission import Department
 from app.models.user import User
+from app.platform.intake import VIDEO_CAPABILITIES, VIDEO_MEDIA_TYPES
+from app.services.intake_context import (
+    IntakeContextError,
+    apply_intake_metadata,
+    assert_file_replay_matches,
+    find_idempotent_asset,
+    parse_intake_context,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-_VIDEO_TYPES = {
-    ".mp4": "video/mp4",
-    ".mov": "video/quicktime",
-    ".webm": "video/webm",
-    ".mkv": "video/x-matroska",
-}
-_VIDEO_CAPABILITIES = (
-    "probe_metadata",
-    "demux_audio",
-    "transcribe",
-    "timestamp",
-    "keyframe",
-    "ocr",
-    "diarize",
-    "scene_segment",
-    "action_candidate",
-    "equipment_state",
-    "audio_event",
-    "temporal_align",
-    "procedure_candidate",
-)
+_VIDEO_TYPES = dict(VIDEO_MEDIA_TYPES)
+_VIDEO_CAPABILITIES = VIDEO_CAPABILITIES
 
 
 class ArtifactReviewRequest(BaseModel):
@@ -186,17 +176,64 @@ async def upload_video_asset(
     title: Annotated[str | None, Form()] = None,
     equipment_ids: Annotated[str | None, Form()] = None,
     applicable_roles: Annotated[str | None, Form()] = None,
+    idempotency_key: Annotated[str | None, Form()] = None,
+    department_id: Annotated[UUID | None, Form()] = None,
+    data_classification: Annotated[str, Form()] = "confidential",
+    context_metadata: Annotated[str | None, Form()] = None,
 ) -> dict[str, Any]:
     check_document_permission(current_user, "create")
+    if idempotency_key and len(idempotency_key) > 500:
+        raise HTTPException(status_code=400, detail="idempotency_key is too long")
+    if data_classification not in {"public", "internal", "confidential", "restricted"}:
+        raise HTTPException(status_code=400, detail="unsupported data classification")
+    try:
+        intake_context = parse_intake_context(context_metadata)
+    except IntakeContextError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if department_id is not None:
+        department = (
+            db.query(Department)
+            .filter(
+                Department.id == department_id,
+                Department.tenant_id == current_user.tenant_id,
+                Department.is_active.is_(True),
+            )
+            .first()
+        )
+        if department is None:
+            raise HTTPException(status_code=400, detail="department is unavailable")
+    clean_filename = os.path.basename(file.filename or "")
+    extension = Path(clean_filename).suffix.lower()
+    if not clean_filename or extension not in _VIDEO_TYPES:
+        raise HTTPException(status_code=400, detail="unsupported video container")
+    try:
+        existing_asset = find_idempotent_asset(
+            db,
+            tenant_id=current_user.tenant_id,
+            idempotency_key=idempotency_key,
+        )
+        if existing_asset is not None:
+            assert_file_replay_matches(
+                db,
+                asset=existing_asset,
+                filename=clean_filename,
+                byte_size=getattr(file, "size", None),
+            )
+            await file.close()
+            return {
+                **_serialize_asset(db, existing_asset),
+                "deduplicated": True,
+                "dispatched": False,
+            }
+    except IntakeContextError as exc:
+        await file.close()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
     from app.api.ingestion_guard import enforce_ingestion_queue_capacity
 
     enforce_ingestion_queue_capacity()
     if not settings.VIDEO_INGESTION_ENABLED:
         raise HTTPException(status_code=404, detail="video ingestion is not enabled")
-    clean_filename = os.path.basename(file.filename or "")
-    extension = Path(clean_filename).suffix.lower()
-    if not clean_filename or extension not in _VIDEO_TYPES:
-        raise HTTPException(status_code=400, detail="unsupported video container")
 
     descriptor, temp_path = tempfile.mkstemp(prefix="enclave-upload-", suffix=extension)
     os.close(descriptor)
@@ -280,10 +317,17 @@ async def upload_video_asset(
             asset_kind="video",
             title=((title or clean_filename).strip() or clean_filename)[:500],
             source_system="upload",
-            data_classification="confidential",
+            data_classification=data_classification,
             acl_reference={
-                **canonical_asset_acl(owner_subject_id=current_user.id),
+                **canonical_asset_acl(
+                    owner_subject_id=current_user.id,
+                    visibility="restricted" if department_id else "tenant",
+                    allowed_department_ids=(
+                        [department_id] if department_id else []
+                    ),
+                ),
                 "uploaded_by": str(current_user.id),
+                "department_id": str(department_id) if department_id else None,
             },
             metadata_json={
                 "filename": clean_filename,
@@ -294,6 +338,11 @@ async def upload_video_asset(
             status="pending",
             created_by=current_user.id,
             captured_by=current_user.id,
+        )
+        apply_intake_metadata(
+            asset,
+            context=intake_context,
+            idempotency_key=idempotency_key,
         )
         db.add(asset)
         db.flush()
@@ -330,7 +379,7 @@ async def upload_video_asset(
             tenant_id=current_user.tenant_id,
             asset_revision_id=revision.id,
             capabilities=_VIDEO_CAPABILITIES,
-            idempotency_key=f"video:{revision.id}:v1",
+            idempotency_key=idempotency_key or f"video:{revision.id}:v1",
         )
         db.commit()
     except HTTPException:
@@ -366,7 +415,11 @@ async def upload_video_asset(
     except Exception:
         dispatched = False
         logger.exception("video job persisted but broker dispatch failed: %s", job.id)
-    return {**_serialize_asset(db, asset), "dispatched": dispatched}
+    return {
+        **_serialize_asset(db, asset),
+        "deduplicated": False,
+        "dispatched": dispatched,
+    }
 
 
 @router.get("/media/videos/{asset_id}")
@@ -429,6 +482,7 @@ def get_video_review(
     from app.services.media_access import create_media_token
 
     rows = []
+    proxy_url: str | None = None
     for artifact in artifacts:
         decision = decisions.get(artifact.id)
         content: Any = artifact.content
@@ -445,8 +499,7 @@ def get_video_review(
                 content = json.loads(artifact.content)
             except ValueError:
                 content = {"raw": artifact.content}
-        rows.append(
-            {
+        row = {
                 "id": str(artifact.id),
                 "kind": artifact.artifact_kind,
                 "quality_state": artifact.quality_state,
@@ -454,7 +507,7 @@ def get_video_review(
                 "content": content,
                 "metadata": dict(artifact.metadata_json or {}),
                 "content_url": (
-                    f"/api/v1/media/video-artifacts/{artifact.id}/content?token="
+                    f"/api/v1/media/artifacts/{artifact.id}/content?token="
                     + create_media_token(
                         tenant_id=current_user.tenant_id,
                         user_id=current_user.id,
@@ -477,7 +530,9 @@ def get_video_review(
                     else None
                 ),
             }
-        )
+        rows.append(row)
+        if artifact.artifact_kind == "media_proxy":
+            proxy_url = row["content_url"]
     return {
         **_serialize_asset(db, asset),
         "content_url": (
@@ -489,6 +544,7 @@ def get_video_review(
                 resource_id=asset.id,
             )
         ),
+        "proxy_url": proxy_url,
         "artifacts": rows,
     }
 
@@ -566,6 +622,7 @@ def get_video_content(
 
 
 @router.get("/media/video-artifacts/{artifact_id}/content")
+@router.get("/media/artifacts/{artifact_id}/content")
 def get_video_artifact_content(
     artifact_id: UUID,
     db: Annotated[Session, Depends(deps.get_db)],
@@ -599,7 +656,7 @@ def get_video_artifact_content(
         .filter(
             DerivedArtifact.tenant_id == tenant_id,
             DerivedArtifact.id == artifact_id,
-            DerivedArtifact.artifact_kind == "keyframe",
+            DerivedArtifact.artifact_kind.in_({"keyframe", "media_proxy"}),
         )
         .first()
     )
@@ -612,11 +669,13 @@ def get_video_artifact_content(
     if not asset_access_allows(db, asset, authz=authz):
         raise HTTPException(status_code=404, detail="video artifact not found")
     metadata = dict(artifact.metadata_json or {})
+    media_type = str(metadata.get("media_type") or "image/jpeg")
+    extension = ".mp4" if artifact.artifact_kind == "media_proxy" else ".jpg"
     return _object_response(
         storage_key=str(metadata.get("storage_key") or ""),
         local_uri=artifact.artifact_uri,
-        filename=f"{artifact.id}.jpg",
-        media_type="image/jpeg",
+        filename=f"{artifact.id}{extension}",
+        media_type=media_type,
     )
 
 

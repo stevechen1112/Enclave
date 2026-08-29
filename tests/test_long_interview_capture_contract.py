@@ -19,14 +19,28 @@ def test_long_interview_models_are_loaded_into_metadata():
 
 
 def test_long_interview_api_exposes_resumable_lifecycle_routes():
-    from app.api.v1.endpoints.knowledge_capture import router
+    from app.main import app
 
-    paths = {route.path for route in router.routes}
-    assert "/knowledge-captures" in paths
-    assert "/knowledge-captures/{session_id}/chunks" in paths
-    assert "/knowledge-captures/{session_id}/complete" in paths
-    assert "/knowledge-captures/{session_id}/retry" in paths
-    assert "/knowledge-captures/{session_id}/transcript" in paths
+    paths = set(app.openapi()["paths"])
+    assert "/api/v1/knowledge/captures" in paths
+    assert "/api/v1/knowledge/captures/policy" in paths
+    assert "/api/v1/knowledge/captures/{session_id}/chunks" in paths
+    assert "/api/v1/knowledge/captures/{session_id}/complete" in paths
+    assert "/api/v1/knowledge/captures/{session_id}/retry" in paths
+    assert "/api/v1/knowledge/captures/{session_id}/transcript" in paths
+
+
+def test_capture_is_core_and_not_owned_by_mka_pack():
+    from pathlib import Path
+
+    from app.main import app
+
+    core_paths = set(app.openapi()["paths"])
+    assert "/api/v1/knowledge/captures" in core_paths
+    pack_source = (
+        Path(__file__).resolve().parents[1] / "app" / "packs" / "mka" / "api.py"
+    ).read_text(encoding="utf-8")
+    assert "knowledge_capture" not in pack_source
 
 
 def test_capture_status_response_does_not_expose_transcript_unless_requested():

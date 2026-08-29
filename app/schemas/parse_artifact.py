@@ -33,11 +33,14 @@ class ParseChunk(BaseModel):
     bbox: Optional[BBox] = None
     chunk_index: int = 0
     section: Optional[str] = None
+    paragraph_index: Optional[int] = None
+    slide_number: Optional[int] = None
     worksheet: Optional[str] = None
     table_name: Optional[str] = None
     row_number: Optional[int] = None
     column_name: Optional[str] = None
     cell_range: Optional[str] = None
+    locator_fallback: bool = False
 
 
 class ParseArtifact(BaseModel):

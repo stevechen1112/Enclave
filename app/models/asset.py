@@ -13,6 +13,7 @@ import uuid
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     Column,
     DateTime,
@@ -48,6 +49,7 @@ ARTIFACT_KINDS = (
     "ocr_region",
     "table",
     "transcript_segment",
+    "media_proxy",
     "keyframe",
     "video_scene",
     "audio_event",
@@ -314,8 +316,11 @@ class EvidenceSpan(Base):
     locator_kind = Column(String(32), nullable=False)
     page = Column(Integer, nullable=True)
     section = Column(String(500), nullable=True)
+    paragraph_index = Column(Integer, nullable=True)
+    slide_number = Column(Integer, nullable=True)
     bbox = Column(JSON, nullable=True)
     coordinate_space = Column(String(20), nullable=True)
+    locator_fallback = Column(Boolean, nullable=False, default=False)
     worksheet = Column(String(255), nullable=True)
     table_name = Column(String(255), nullable=True)
     row_number = Column(Integer, nullable=True)
@@ -360,6 +365,14 @@ class EvidenceSpan(Base):
         CheckConstraint("page IS NULL OR page >= 1", name="ck_evidence_spans_page"),
         CheckConstraint(
             "row_number IS NULL OR row_number >= 1", name="ck_evidence_spans_row"
+        ),
+        CheckConstraint(
+            "paragraph_index IS NULL OR paragraph_index >= 1",
+            name="ck_evidence_spans_paragraph",
+        ),
+        CheckConstraint(
+            "slide_number IS NULL OR slide_number >= 1",
+            name="ck_evidence_spans_slide",
         ),
         CheckConstraint(
             "frame_index IS NULL OR frame_index >= 0",

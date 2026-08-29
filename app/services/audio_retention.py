@@ -46,6 +46,7 @@ class AudioRetentionPolicy:
     transcript_retention_days: int = 365  # 轉寫保留天數
     encrypt_at_rest: bool = True
     audit_downloads: bool = True
+    capture_max_duration_seconds: int = 3600
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -56,6 +57,7 @@ class AudioRetentionPolicy:
             "transcript_retention_days": self.transcript_retention_days,
             "encrypt_at_rest": self.encrypt_at_rest,
             "audit_downloads": self.audit_downloads,
+            "capture_max_duration_seconds": self.capture_max_duration_seconds,
         }
 
 
@@ -222,6 +224,7 @@ def _policy_from_row(row: MKAAudioPolicy) -> AudioRetentionPolicy:
         transcript_retention_days=int(row.transcript_retention_days or 365),
         encrypt_at_rest=bool(row.encrypt_at_rest),
         audit_downloads=bool(row.audit_downloads),
+        capture_max_duration_seconds=int(row.capture_max_duration_seconds or 3600),
     )
 
 
@@ -242,6 +245,7 @@ def set_policy_db(db: Session, tenant_id: UUID, **fields: Any) -> AudioRetention
         "transcript_retention_days",
         "encrypt_at_rest",
         "audit_downloads",
+        "capture_max_duration_seconds",
     }
     row = db.query(MKAAudioPolicy).filter(MKAAudioPolicy.tenant_id == tenant_id).first()
     if row is None:

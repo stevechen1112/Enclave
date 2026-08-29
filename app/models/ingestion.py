@@ -113,3 +113,48 @@ class IngestionJobEvent(Base):
         CheckConstraint("sequence >= 1", name="ck_ingestion_job_events_sequence"),
         Index("ix_ingestion_job_events_job_created", "job_id", "created_at"),
     )
+
+
+class InputOperationMetric(Base):
+    """Low-cardinality, tenant-scoped Input journey timing evidence."""
+
+    __tablename__ = "input_operation_metrics"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
+    journey = Column(String(32), nullable=False)
+    phase = Column(String(32), nullable=False)
+    workload_kind = Column(String(32), nullable=False)
+    outcome = Column(String(20), nullable=False)
+    duration_ms = Column(Integer, nullable=False)
+    correlation_id = Column(String(255), nullable=True, index=True)
+    details = Column(JSON, nullable=False, default=dict)
+    recorded_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "journey IN ('upload', 'batch', 'document', 'audio', 'video', 'connector')",
+            name="ck_input_operation_metrics_journey",
+        ),
+        CheckConstraint(
+            "phase IN ('acknowledgement', 'transfer', 'queue_wait', 'processing', 'review_readiness')",
+            name="ck_input_operation_metrics_phase",
+        ),
+        CheckConstraint(
+            "outcome IN ('success', 'failed', 'rejected', 'pending')",
+            name="ck_input_operation_metrics_outcome",
+        ),
+        CheckConstraint(
+            "duration_ms >= 0", name="ck_input_operation_metrics_duration"
+        ),
+        Index(
+            "ix_input_operation_metrics_tenant_phase_recorded",
+            "tenant_id",
+            "phase",
+            "recorded_at",
+        ),
+    )

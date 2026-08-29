@@ -138,6 +138,20 @@ def test_document_projection_creates_superseding_revision(asset_db):
     [
         ("pdf", "document", {"text": "marker", "page": 2}, "document", ("page", 2)),
         (
+            "docx",
+            "document",
+            {"text": "marker", "section": "停機確認", "paragraph_index": 3},
+            "document",
+            ("paragraph_index", 3),
+        ),
+        (
+            "pptx",
+            "document",
+            {"text": "marker", "page": 2, "slide_number": 2},
+            "document",
+            ("slide_number", 2),
+        ),
+        (
             "xlsx",
             "spreadsheet",
             {"text": "marker", "worksheet": "檢驗", "cell_range": "B4:F9"},
@@ -147,7 +161,7 @@ def test_document_projection_creates_superseding_revision(asset_db):
         (
             "image",
             "image",
-            {"text": "marker", "bbox": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}},
+            {"text": "marker", "bbox": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}, "locator_fallback": True},
             "image",
             ("bbox", [0.0, 0.0, 1.0, 1.0]),
         ),
@@ -189,9 +203,13 @@ def test_document_parse_projection_creates_typed_evidence(
     )
     evidence = asset_db.query(EvidenceSpan).one()
     assert asset_db.get(SourceAsset, document.source_asset_id).asset_kind == asset_kind
-    assert projected.quality_state == "ready"
+    assert projected.quality_state == (
+        "review_required" if file_type == "image" else "ready"
+    )
     assert evidence.locator_kind == locator_kind
     assert getattr(evidence, coordinate[0]) == coordinate[1]
+    if file_type == "image":
+        assert evidence.locator_fallback is True
 
 
 def test_document_quality_policy_requires_review_for_low_ocr_confidence():

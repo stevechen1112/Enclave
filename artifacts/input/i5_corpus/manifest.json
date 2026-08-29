@@ -1,0 +1,75 @@
+{
+  "schema_version": "input-i5-corpus.v1",
+  "claim_scope": "container_codec_timeline_mechanics_only",
+  "excluded_claims": [
+    "physical_device_origin",
+    "accent_accuracy",
+    "factory_speech_asr_accuracy",
+    "cross_industry_action_or_anomaly_accuracy"
+  ],
+  "files": [
+    {
+      "filename": "browser-capture.webm",
+      "extension": ".webm",
+      "byte_size": 1149834,
+      "sha256": "56d1de5c514d3fbee0856a75368764f120eea0b3a6a6d77762f7604078856785",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "camera-export.mkv",
+      "extension": ".mkv",
+      "byte_size": 1412535,
+      "sha256": "a2aa1ee2f20277d1068e702de0c93d7d06744f264cc8c6df7ead7bdeed465426",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "handover.m4a",
+      "extension": ".m4a",
+      "byte_size": 107140,
+      "sha256": "44ae6f9de36dd631ed0a503421051cdc2cd1f0997789ea85433ef27b6b0748c5",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "inspection.wav",
+      "extension": ".wav",
+      "byte_size": 1152078,
+      "sha256": "433418eb9e6694aadd1d124ae3a63cbed4ae1cb21bf59393b69eaff661939a4f",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "lossless.flac",
+      "extension": ".flac",
+      "byte_size": 1176576,
+      "sha256": "604f903ccd7d344006b1a826dffafad1b6a202400b4ebadfb15d0eda61ebadf1",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "low-quality.ogg",
+      "extension": ".ogg",
+      "byte_size": 30013,
+      "sha256": "4c47ec986a6ac9a1cea5a3fab23cb2d51a78e944dd45810398b909b6ccce4632",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "machine-noise.mp3",
+      "extension": ".mp3",
+      "byte_size": 96428,
+      "sha256": "04203de4b45daa63b960e0292c76d6bbf3d40c128a4c2a8f469a22219632e829",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "machine-sop.mp4",
+      "extension": ".mp4",
+      "byte_size": 1414454,
+      "sha256": "99901935ac48444cd93f2c24b90a30e75ddec70ae03482b09c4b6f80ff1c7fb9",
+      "classification": "synthetic_signal"
+    },
+    {
+      "filename": "phone-export.mov",
+      "extension": ".mov",
+      "byte_size": 1414505,
+      "sha256": "d5d2d7ba36ca14ccf55f62b38c64789d30431ead9bfd31f87b1cecf851e787c6",
+      "classification": "synthetic_signal"
+    }
+  ]
+}

@@ -54,63 +54,66 @@ def _native_evidence_chunks(
         elif kind == "docx":
             from docx import Document as WordDocument
 
+            document = WordDocument(file_path)
             sections: List[ParseChunk] = []
             heading: str | None = None
-            lines: List[str] = []
-
-            def flush() -> None:
-                if not lines:
-                    return
-                sections.append(
-                    ParseChunk(
-                        text="\n".join(lines).strip(),
-                        hierarchy=[heading] if heading else [],
-                        section=heading or "document",
-                        chunk_index=len(sections),
-                    )
-                )
-                lines.clear()
-
-            for paragraph in WordDocument(file_path).paragraphs:
+            for paragraph_index, paragraph in enumerate(document.paragraphs, 1):
                 value = paragraph.text.strip()
                 if not value:
                     continue
                 if str(paragraph.style.name or "").lower().startswith("heading"):
-                    flush()
                     heading = value
-                    lines.append(value)
-                else:
-                    lines.append(value)
-            flush()
+                sections.append(
+                    ParseChunk(
+                        text=value,
+                        hierarchy=[heading] if heading else [],
+                        section=heading or "document",
+                        paragraph_index=paragraph_index,
+                        chunk_index=len(sections),
+                    )
+                )
+            for table_index, table in enumerate(document.tables, 1):
+                for row_index, row in enumerate(table.rows, 1):
+                    value = " | ".join(cell.text.strip() for cell in row.cells)
+                    if value.strip(" |"):
+                        sections.append(
+                            ParseChunk(
+                                text=value,
+                                section=f"table:{table_index}:row:{row_index}",
+                                chunk_index=len(sections),
+                            )
+                        )
             if sections:
                 return sections
         elif kind in {"xlsx", "xls"}:
             from openpyxl import load_workbook
             from openpyxl.utils import get_column_letter
 
-            workbook = load_workbook(file_path, read_only=True, data_only=False)
+            workbook = load_workbook(file_path, read_only=False, data_only=False)
             chunks = []
             try:
                 for sheet in workbook.worksheets:
-                    rows = [
-                        ["" if value is None else str(value) for value in row]
-                        for row in sheet.iter_rows(values_only=True)
-                    ]
-                    content = "\n".join(" | ".join(row) for row in rows).strip()
-                    if not content:
+                    if sheet.sheet_state != "visible":
                         continue
-                    cell_range = (
-                        f"{get_column_letter(sheet.min_column)}{sheet.min_row}:"
-                        f"{get_column_letter(sheet.max_column)}{sheet.max_row}"
-                    )
-                    chunks.append(
-                        ParseChunk(
-                            text=content,
-                            worksheet=sheet.title,
-                            cell_range=cell_range,
-                            chunk_index=len(chunks),
+                    for row_number, row in enumerate(
+                        sheet.iter_rows(values_only=False), sheet.min_row
+                    ):
+                        values = [
+                            "" if cell.value is None else str(cell.value) for cell in row
+                        ]
+                        if not any(value.strip() for value in values):
+                            continue
+                        start = get_column_letter(sheet.min_column)
+                        end = get_column_letter(sheet.min_column + len(values) - 1)
+                        chunks.append(
+                            ParseChunk(
+                                text=" | ".join(values),
+                                worksheet=sheet.title,
+                                row_number=row_number,
+                                cell_range=f"{start}{row_number}:{end}{row_number}",
+                                chunk_index=len(chunks),
+                            )
                         )
-                    )
             finally:
                 workbook.close()
             if chunks:
@@ -129,13 +132,61 @@ def _native_evidence_chunks(
             ]
             if chunks:
                 return chunks
-        elif kind in {"jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp", "image"}:
+        elif kind == "pptx":
+            from pptx import Presentation
+
+            chunks = []
+            for slide_number, slide in enumerate(Presentation(file_path).slides, 1):
+                values = []
+                for shape in slide.shapes:
+                    if getattr(shape, "has_text_frame", False):
+                        values.extend(
+                            paragraph.text.strip()
+                            for paragraph in shape.text_frame.paragraphs
+                            if paragraph.text.strip()
+                        )
+                    if getattr(shape, "has_table", False):
+                        values.extend(
+                            " | ".join(cell.text.strip() for cell in row.cells)
+                            for row in shape.table.rows
+                        )
+                value = "\n".join(values).strip()
+                if value:
+                    chunks.append(
+                        ParseChunk(
+                            text=value,
+                            page=slide_number,
+                            slide_number=slide_number,
+                            section=f"slide:{slide_number}",
+                            chunk_index=len(chunks),
+                        )
+                    )
+            if chunks:
+                return chunks
+        elif kind in {"jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp", "heic", "image"}:
+            declared = metadata.get("evidence_chunks") or []
+            chunks = []
+            for index, item in enumerate(declared):
+                if not isinstance(item, dict) or not str(item.get("text") or "").strip():
+                    continue
+                chunks.append(
+                    ParseChunk(
+                        text=str(item["text"]).strip(),
+                        page=item.get("page"),
+                        bbox=item.get("bbox"),
+                        chunk_index=index,
+                        locator_fallback=bool(item.get("locator_fallback", False)),
+                    )
+                )
+            if chunks:
+                return chunks
             return (
                 [
                     ParseChunk(
                         text=text.strip(),
                         bbox={"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0},
                         chunk_index=0,
+                        locator_fallback=True,
                     )
                 ]
                 if text.strip()

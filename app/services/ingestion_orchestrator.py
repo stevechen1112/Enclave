@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import datetime, timezone
+import os
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +18,7 @@ from app.platform.ingestion import IngestionAdapterRegistry, IngestionRequest
 
 _TRANSITIONS = {
     "queued": {"running", "cancelled"},
-    "running": {"running", "review_required", "ready", "failed", "cancelled"},
+    "running": {"queued", "running", "review_required", "ready", "failed", "cancelled"},
     "failed": {"running", "cancelled"},
     "review_required": {"ready", "failed", "cancelled"},
     "ready": set(),
@@ -27,6 +28,12 @@ _TRANSITIONS = {
 
 class InvalidIngestionTransition(RuntimeError):
     pass
+
+
+class IngestionBackpressure(RuntimeError):
+    def __init__(self, decision: dict[str, Any]):
+        super().__init__(str(decision.get("reason") or "ingestion_backpressure"))
+        self.decision = decision
 
 
 class IngestionOrchestrator:
@@ -96,6 +103,20 @@ class IngestionOrchestrator:
                 raise ValueError("idempotency key belongs to another ingestion request")
             return existing
 
+        # Serialize tenant admission so concurrent uploads cannot all observe a
+        # free slot. Global Redis depth remains the deployment-wide hard stop.
+        from app.models.tenant import Tenant
+        from app.services.input_operations import admission_decision
+
+        db.query(Tenant).filter(Tenant.id == tenant_id).with_for_update().one()
+        decision = admission_decision(
+            db,
+            tenant_id=tenant_id,
+            profile=os.getenv("DEPLOYMENT_PROFILE", "standard"),
+        )
+        if not decision["allowed"]:
+            raise IngestionBackpressure(decision)
+
         job = IngestionJob(
             tenant_id=tenant_id,
             asset_revision_id=revision.id,
@@ -162,13 +183,19 @@ class IngestionOrchestrator:
         if to_status not in _TRANSITIONS.get(from_status, set()):
             raise InvalidIngestionTransition(f"{from_status} -> {to_status}")
         now = datetime.now(timezone.utc)
+        job.status = to_status
         if to_status == "running" and from_status != "running":
             job.attempt = int(job.attempt or 0) + 1
             job.started_at = now
             job.completed_at = None
+            self._record_phase_metric(db, job, phase="queue_wait", now=now)
+        if to_status == "queued" and from_status == "running":
+            job.started_at = None
+            job.completed_at = None
         if to_status in {"ready", "review_required", "failed", "cancelled"}:
             job.completed_at = now
-        job.status = to_status
+            self._record_phase_metric(db, job, phase="processing", now=now)
+            self._record_phase_metric(db, job, phase="review_readiness", now=now)
         job.phase = phase
         if quality_state is not None:
             job.quality_state = quality_state
@@ -179,6 +206,57 @@ class IngestionOrchestrator:
         self._append_event(db, job, from_status=from_status, details=details or {})
         db.flush()
         return job
+
+    @staticmethod
+    def _record_phase_metric(
+        db: Session, job: IngestionJob, *, phase: str, now: datetime
+    ) -> None:
+        from app.services.input_operations import record_input_metric
+
+        if phase == "queue_wait":
+            start = job.created_at
+        elif phase == "processing":
+            start = job.started_at
+        else:
+            start = job.created_at
+        if start is None:
+            return
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        duration_ms = round(max(0.0, (now - start).total_seconds()) * 1000)
+        kind = (
+            db.query(SourceAsset.asset_kind)
+            .join(
+                AssetRevision,
+                (AssetRevision.tenant_id == SourceAsset.tenant_id)
+                & (AssetRevision.asset_id == SourceAsset.id),
+            )
+            .filter(
+                AssetRevision.tenant_id == job.tenant_id,
+                AssetRevision.id == job.asset_revision_id,
+            )
+            .scalar()
+            or "document"
+        )
+        journey = kind if kind in {"audio", "video"} else "document"
+        outcome = (
+            "success"
+            if job.status in {"ready", "review_required"}
+            else "failed"
+            if job.status in {"failed", "cancelled"}
+            else "pending"
+        )
+        record_input_metric(
+            db,
+            tenant_id=job.tenant_id,
+            journey=journey,
+            phase=phase,
+            workload_kind=kind if len(str(kind)) <= 32 else "document",
+            outcome=outcome,
+            duration_ms=duration_ms,
+            correlation_id=str(job.correlation_id or job.id),
+            details={"job_id": str(job.id), "attempt": int(job.attempt or 0)},
+        )
 
     def fail(
         self,

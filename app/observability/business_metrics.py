@@ -51,6 +51,17 @@ if PROMETHEUS_AVAILABLE:
         "enclave_celery_queue_depth",
         "Pending jobs in the Celery broker queue",
     )
+    INPUT_PHASE_DURATION = Histogram(
+        "enclave_input_phase_duration_seconds",
+        "Input journey phase latency without tenant labels",
+        ["journey", "phase", "outcome"],
+        buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 15, 30, 60, 300, 900, 3600),
+    )
+    INPUT_ADMISSION = Counter(
+        "enclave_input_admission_total",
+        "Input admission outcomes without tenant labels",
+        ["reason"],
+    )
 else:
     QUOTA_EXCEEDED = None  # type: ignore[assignment]
     SOURCE_VERIFY_RESULT = None  # type: ignore[assignment]
@@ -60,6 +71,8 @@ else:
     PROVIDER_DURATION = None  # type: ignore[assignment]
     REDIS_MEMORY_RATIO = None  # type: ignore[assignment]
     CELERY_QUEUE_DEPTH = None  # type: ignore[assignment]
+    INPUT_PHASE_DURATION = None  # type: ignore[assignment]
+    INPUT_ADMISSION = None  # type: ignore[assignment]
 
 
 def record_quota_exceeded(axis: str) -> None:
@@ -116,3 +129,19 @@ def set_capacity_runtime_metrics(*, redis_memory_ratio: float, queue_depth: int)
         REDIS_MEMORY_RATIO.set(max(0.0, redis_memory_ratio))
     if CELERY_QUEUE_DEPTH is not None:
         CELERY_QUEUE_DEPTH.set(max(0, queue_depth))
+
+
+def record_input_phase(
+    *, journey: str, phase: str, outcome: str, duration_ms: int
+) -> None:
+    if PROMETHEUS_AVAILABLE and INPUT_PHASE_DURATION is not None:
+        INPUT_PHASE_DURATION.labels(
+            journey=journey,
+            phase=phase,
+            outcome=outcome,
+        ).observe(max(0, duration_ms) / 1000)
+
+
+def record_input_admission(*, reason: str) -> None:
+    if PROMETHEUS_AVAILABLE and INPUT_ADMISSION is not None:
+        INPUT_ADMISSION.labels(reason=reason).inc()

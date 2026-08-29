@@ -6,6 +6,7 @@ import type {
   SSEEvent, FeedbackCreate, FeedbackResponse, SearchResult,
   VideoAsset, VideoAssetDetail,
   KnowledgeAsset, KnowledgeAssetEvent,
+  InputCapabilityContract,
   KnowledgeReviewInbox,
 } from './types'
 import { parseApiError } from './lib/apiError'
@@ -27,6 +28,76 @@ export interface ReleaseMetadata {
   database_schema_heads?: string[]
   schema_matches?: boolean
   canonical_routes?: string[]
+}
+
+export interface InputPilotSummary {
+  id: string
+  name: string
+  status: 'draft' | 'ready' | 'running' | 'hold' | 'accepted' | 'rejected'
+  evidence_mode: 'live' | 'synthetic'
+  journeys: Array<{ key: string; [key: string]: unknown }>
+  started_at?: string | null
+  planned_end_at?: string | null
+  created_at: string
+}
+
+export interface InputPilotGate {
+  status: 'PASS' | 'HOLD'
+  observation_days: number
+  journeys: Record<string, Record<string, number | null>>
+  incident_count: number
+  passed_audits: string[]
+  signed_acceptance: boolean
+  errors: string[]
+}
+
+export interface InputPilotEvidence {
+  metric_rows: number
+  latest_metrics: Array<{
+    id: string
+    metric_date: string
+    journey_key: string
+    total_attempts: number
+    successful_attempts: number
+    retry_count: number
+    manual_correction_count: number
+    processing_p95_ms: number
+    retrieval_checks: number
+    cited_retrievals: number
+    friction_count: number
+    source_evidence_sha256: string
+  }>
+  incidents: Array<{
+    id: string
+    severity: 'low' | 'medium' | 'high' | 'critical'
+    category: string
+    near_miss: boolean
+    status: 'open' | 'mitigated' | 'resolved'
+    data_loss: boolean
+    unauthorized_access: boolean
+    false_completion: boolean
+    summary: string
+    occurred_at: string
+    resolved_at?: string | null
+  }>
+  audits: Array<{
+    id: string
+    audit_type: 'quality' | 'security' | 'permission'
+    status: 'pending' | 'pass' | 'fail'
+    sample_size: number
+    findings: Array<Record<string, unknown>>
+    evidence_sha256: string
+    audited_at: string
+  }>
+  retrospective: { ref: string; sha256: string } | null
+  acceptance: {
+    decision: 'accepted' | 'rejected'
+    signer_name: string
+    signer_role: string
+    signed_document_ref: string
+    signed_document_sha256: string
+    signed_at: string
+  } | null
 }
 
 // ─── Request interceptor: attach JWT ───
@@ -181,6 +252,10 @@ export const videoApi = {
 
 // ─── Unified knowledge intake and Asset Library ───
 export const knowledgeAssetApi = {
+  capabilities: () =>
+    api.get<InputCapabilityContract>('/knowledge/input-capabilities').then(r => r.data),
+  departments: () =>
+    api.get<Array<{ id: string; name: string }>>('/departments/options').then(r => r.data),
   list: (params?: { kind?: string; source_system?: string; processing_status?: string; data_classification?: string; department_id?: string; updated_after?: string; publication_status?: string }) =>
     api.get<KnowledgeAsset[]>('/knowledge/assets', { params }).then(r => r.data),
   get: (assetId: string) =>
@@ -188,8 +263,18 @@ export const knowledgeAssetApi = {
   events: (assetId: string) =>
     api.get<KnowledgeAssetEvent[]>(`/knowledge/assets/${assetId}/events`).then(r => r.data),
   create: (
-    input: { file?: File; title?: string; sourceUrl?: string; sourceSystem?: string; sourceRecordId?: string; dataClassification?: string },
-    onProgress?: (pct: number) => void,
+    input: {
+      file?: File
+      title?: string
+      sourceUrl?: string
+      sourceSystem?: string
+      sourceRecordId?: string
+      dataClassification?: string
+      departmentId?: string
+      idempotencyKey?: string
+      contextMetadata?: Record<string, string | string[]>
+    },
+    options?: { onProgress?: (pct: number) => void; signal?: AbortSignal },
   ) => {
     const form = new FormData()
     if (input.file) form.append('file', input.file, input.file.name.split(/[\\/]/).pop() || input.file.name)
@@ -197,16 +282,78 @@ export const knowledgeAssetApi = {
     if (input.sourceUrl?.trim()) form.append('source_url', input.sourceUrl.trim())
     if (input.sourceSystem?.trim()) form.append('source_system', input.sourceSystem.trim())
     if (input.sourceRecordId?.trim()) form.append('source_record_id', input.sourceRecordId.trim())
+    if (input.departmentId) form.append('department_id', input.departmentId)
+    if (input.idempotencyKey) form.append('idempotency_key', input.idempotencyKey)
+    if (input.contextMetadata && Object.keys(input.contextMetadata).length) {
+      form.append('context_metadata', JSON.stringify(input.contextMetadata))
+    }
     form.append('data_classification', input.dataClassification || 'internal')
     return api.post<KnowledgeAsset>('/knowledge/assets', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      signal: options?.signal,
       onUploadProgress: event => {
-        if (event.total && onProgress) onProgress(Math.round((event.loaded * 100) / event.total))
+        if (event.total && options?.onProgress) options.onProgress(Math.round((event.loaded * 100) / event.total))
       },
     }).then(r => r.data)
   },
   retry: (assetId: string) => api.post(`/knowledge/assets/${assetId}/retry`).then(r => r.data),
   tombstone: (assetId: string) => api.delete(`/knowledge/assets/${assetId}`).then(r => r.data),
+}
+
+export interface UploadSessionState {
+  id: string
+  status: string
+  filename: string
+  media_type: string
+  byte_size: number
+  part_size: number
+  total_parts: number
+  received_bytes: number
+  received_parts: number
+  acknowledged_parts: Array<{ part_number: number; byte_size: number; sha256: string }>
+  expires_at: string
+  asset_id?: string | null
+  content_sha256?: string | null
+}
+
+export const uploadSessionApi = {
+  create: (input: {
+    filename: string
+    mediaType: string
+    byteSize: number
+    partSize?: number
+    idempotencyKey: string
+    title?: string
+    departmentId?: string
+    dataClassification?: string
+    contextMetadata?: Record<string, string | string[]>
+  }) => api.post<UploadSessionState>('/knowledge/upload-sessions', {
+    filename: input.filename.split(/[\\/]/).pop() || input.filename,
+    media_type: input.mediaType || 'application/octet-stream',
+    byte_size: input.byteSize,
+    part_size: input.partSize,
+    idempotency_key: input.idempotencyKey,
+    title: input.title?.trim() || undefined,
+    department_id: input.departmentId,
+    data_classification: input.dataClassification || 'internal',
+    context_metadata: input.contextMetadata || {},
+  }).then(response => response.data),
+  get: (sessionId: string) =>
+    api.get<UploadSessionState>(`/knowledge/upload-sessions/${encodeURIComponent(sessionId)}`).then(response => response.data),
+  putPart: (
+    sessionId: string,
+    partNumber: number,
+    part: Blob,
+    sha256: string,
+    options?: { signal?: AbortSignal },
+  ) => api.put<UploadSessionState>(`/knowledge/upload-sessions/${encodeURIComponent(sessionId)}/parts/${partNumber}`, part, {
+    headers: { 'Content-Type': 'application/octet-stream', 'X-Part-SHA256': sha256 },
+    signal: options?.signal,
+  }).then(response => response.data),
+  commit: (sessionId: string) =>
+    api.post<KnowledgeAsset>(`/knowledge/upload-sessions/${encodeURIComponent(sessionId)}/commit`, {}).then(response => response.data),
+  abort: (sessionId: string) =>
+    api.delete<UploadSessionState>(`/knowledge/upload-sessions/${encodeURIComponent(sessionId)}`).then(response => response.data),
 }
 
 export const knowledgeReviewApi = {
@@ -357,6 +504,27 @@ export const operationsApi = {
     if (!response.ok) throw new Error(`release metadata unavailable: ${response.status}`)
     return response.json() as Promise<ReleaseMetadata>
   }),
+  listInputPilots: () => api.get<InputPilotSummary[]>('/operations/input/pilots').then(r => r.data),
+  createInputPilot: (data: Record<string, unknown>) =>
+    api.post<{ id: string; status: string }>('/operations/input/pilots', data).then(r => r.data),
+  startInputPilot: (pilotId: string) =>
+    api.post(`/operations/input/pilots/${pilotId}/start`).then(r => r.data),
+  inputPilotGate: (pilotId: string) =>
+    api.get<InputPilotGate>(`/operations/input/pilots/${pilotId}/gate`).then(r => r.data),
+  inputPilotEvidence: (pilotId: string) =>
+    api.get<InputPilotEvidence>(`/operations/input/pilots/${pilotId}/evidence`).then(r => r.data),
+  recordInputPilotMetric: (pilotId: string, data: Record<string, unknown>) =>
+    api.post(`/operations/input/pilots/${pilotId}/daily-metrics`, data).then(r => r.data),
+  recordInputPilotIncident: (pilotId: string, data: Record<string, unknown>) =>
+    api.post(`/operations/input/pilots/${pilotId}/incidents`, data).then(r => r.data),
+  resolveInputPilotIncident: (pilotId: string, incidentId: string, data: Record<string, unknown>) =>
+    api.post(`/operations/input/pilots/${pilotId}/incidents/${incidentId}/resolve`, data).then(r => r.data),
+  recordInputPilotAudit: (pilotId: string, data: Record<string, unknown>) =>
+    api.post(`/operations/input/pilots/${pilotId}/audits`, data).then(r => r.data),
+  recordInputPilotRetrospective: (pilotId: string, data: Record<string, unknown>) =>
+    api.post(`/operations/input/pilots/${pilotId}/retrospective`, data).then(r => r.data),
+  recordInputPilotAcceptance: (pilotId: string, data: Record<string, unknown>) =>
+    api.post<InputPilotGate>(`/operations/input/pilots/${pilotId}/acceptance`, data).then(r => r.data),
 }
 
 // ─── Phase 13: KB Maintenance ───

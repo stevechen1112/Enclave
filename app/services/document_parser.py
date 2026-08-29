@@ -29,6 +29,8 @@ from typing import List, Tuple, Dict, Any, Optional
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 
+from app.platform.intake.capabilities import DOCUMENT_TYPE_MAP
+
 # ── 必要依賴 ──
 import pypdf
 from docx import Document as DocxDocument
@@ -55,7 +57,7 @@ except ImportError:
 
 try:
     import pytesseract
-    from PIL import Image
+    from PIL import Image, ImageEnhance, ImageOps, ImageSequence
     _HAS_OCR = True
 except ImportError:
     _HAS_OCR = False
@@ -189,6 +191,10 @@ class QualityReport:
     parse_time_ms: int = 0
     parse_engine: str = "native"  # native / llamaparse
     handwriting_detected: bool = False
+    structure_policy: Dict[str, Any] = field(default_factory=dict)
+    evidence_chunks: List[Dict[str, Any]] = field(default_factory=list)
+    provider_attempts: List[Dict[str, Any]] = field(default_factory=list)
+    locator_fallback: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -204,6 +210,10 @@ class QualityReport:
 
     def compute_quality(self):
         """根據各項指標計算品質分數"""
+        if self.errors:
+            self.quality_score = 0.0
+            self.quality_level = "failed"
+            return
         score = 1.0
         if self.total_chars < 50:
             score -= 0.5
@@ -232,35 +242,7 @@ class QualityReport:
 # 格式映射
 # ═══════════════════════════════════════════════════════════
 
-SUPPORTED_FORMATS: Dict[str, str] = {
-    # Phase 0
-    ".pdf": "pdf",
-    ".docx": "docx",
-    ".doc": "doc",
-    ".txt": "txt",
-    # Phase 1
-    ".xlsx": "xlsx",
-    ".xls": "xls",
-    ".csv": "csv",
-    ".html": "html",
-    ".htm": "html",
-    ".md": "markdown",
-    ".markdown": "markdown",
-    # Phase 2
-    ".rtf": "rtf",
-    ".json": "json",
-    ".jpg": "image",
-    ".jpeg": "image",
-    ".png": "image",
-    ".tiff": "image",
-    ".tif": "image",
-    ".bmp": "image",
-    ".webp": "image",
-    ".heic": "image",
-    # Phase 3
-    ".pptx": "pptx",
-    ".ppt": "ppt",
-}
+SUPPORTED_FORMATS: Dict[str, str] = dict(DOCUMENT_TYPE_MAP)
 
 # LlamaParse 支援的格式（這些格式優先走 LlamaParse 以獲得更好的品質）
 LLAMAPARSE_FORMATS: set = {
@@ -320,6 +302,7 @@ class DocumentParser:
         """
         start = time.time()
         report = QualityReport(format_detected=file_type)
+        provider_attempts: List[Dict[str, Any]] = []
 
         # ── LlamaParse 優先路徑 ──
         from app.config import settings
@@ -332,10 +315,13 @@ class DocumentParser:
             and _ensure_llamaparse()
         ):
             try:
+                provider_attempts.append({"provider": "llamaparse", "status": "attempted"})
                 text, report = cls._parse_with_llamaparse(
                     file_path, file_type, report, llamaparse_key
                 )
                 if text.strip() and report.quality_score >= 0.5:
+                    provider_attempts[-1]["status"] = "adopted"
+                    report.provider_attempts = provider_attempts
                     report.parse_time_ms = int((time.time() - start) * 1000)
                     report.total_chars = len(text)
                     metadata = report.to_dict()
@@ -346,6 +332,7 @@ class DocumentParser:
                     )
                     return text.strip(), metadata
                 else:
+                    provider_attempts[-1]["status"] = "quality_rejected"
                     logger.warning(
                         f"LlamaParse 解析品質不足 ({report.quality_level})，"
                         f"降級到內建解析器"
@@ -353,6 +340,9 @@ class DocumentParser:
                     # 重置 report 給 fallback 使用
                     report = QualityReport(format_detected=file_type)
             except Exception as e:
+                if provider_attempts:
+                    provider_attempts[-1]["status"] = "failed"
+                    provider_attempts[-1]["error_class"] = type(e).__name__
                 logger.warning(f"LlamaParse 解析失敗: {e}，降級到內建解析器")
                 report = QualityReport(format_detected=file_type)
 
@@ -379,6 +369,8 @@ class DocumentParser:
             raise ValueError(f"不支援的文件類型: {file_type}")
 
         text, report = parser(file_path, report)
+        provider_attempts.append({"provider": "native", "status": "adopted"})
+        report.provider_attempts = provider_attempts
 
         report.parse_time_ms = int((time.time() - start) * 1000)
         report.total_chars = len(text)
@@ -543,8 +535,6 @@ class DocumentParser:
             text = "\n\n".join(parts)
             if not text.strip():
                 report.add_error("DOCX 文件內容為空")
-            if table_count > 0:
-                report.add_warning(f"偵測到 {table_count} 個表格，已提取內容")
 
             return text, report
         except Exception as e:
@@ -674,22 +664,50 @@ class DocumentParser:
             return "", report
 
         try:
-            wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
+            # Formula text is source evidence.  Loading data_only=True silently
+            # replaces it with a possibly stale cached value, so I4 preserves
+            # formulas and makes hidden/merged policies explicit.
+            wb = openpyxl.load_workbook(file_path, read_only=False, data_only=False)
             parts: List[str] = []
             table_count = 0
+            formulas_detected = 0
+            merged_cells_detected = 0
+            hidden_sheets: List[str] = []
+            formula_cells: List[Dict[str, str]] = []
+            merged_ranges: Dict[str, List[str]] = {}
 
             for sheet_name in wb.sheetnames:
                 ws = wb[sheet_name]
+                if ws.sheet_state != "visible":
+                    hidden_sheets.append(sheet_name)
+                    continue
                 rows = list(ws.iter_rows(values_only=True))
                 if not rows:
                     report.add_warning(f"工作表「{sheet_name}」為空")
                     continue
 
                 valid_rows = []
-                for row in rows:
+                for row_index, row in enumerate(rows, 1):
                     cleaned = [str(c).strip() if c is not None else "" for c in row]
+                    formulas_detected += sum(value.startswith("=") for value in cleaned)
+                    for column_index, value in enumerate(cleaned, 1):
+                        if value.startswith("="):
+                            formula_cells.append(
+                                {
+                                    "worksheet": sheet_name,
+                                    "cell": openpyxl.utils.get_column_letter(column_index)
+                                    + str(row_index),
+                                    "formula": value,
+                                }
+                            )
                     if any(cleaned):
                         valid_rows.append(cleaned)
+
+                merged_cells_detected += len(ws.merged_cells.ranges)
+                if ws.merged_cells.ranges:
+                    merged_ranges[sheet_name] = [
+                        str(cell_range) for cell_range in ws.merged_cells.ranges
+                    ]
 
                 if not valid_rows:
                     report.add_warning(f"工作表「{sheet_name}」無有效資料")
@@ -708,12 +726,25 @@ class DocumentParser:
             wb.close()
             report.tables_detected = table_count
             report.total_pages = table_count
+            report.structure_policy = {
+                "formula_policy": "preserve_formula_expression",
+                "formulas_detected": formulas_detected,
+                "formula_cells": formula_cells,
+                "merged_cell_policy": "preserve_anchor_and_range",
+                "merged_cells_detected": merged_cells_detected,
+                "merged_ranges": merged_ranges,
+                "hidden_sheet_policy": "exclude_and_require_explicit_review",
+                "hidden_sheets": hidden_sheets,
+            }
+            if hidden_sheets:
+                report.add_warning(
+                    "隱藏工作表未自動發布，需明確覆核：" + "、".join(hidden_sheets)
+                )
 
             if not parts:
                 report.add_error("Excel 文件無可讀取的內容")
                 return "", report
 
-            report.add_warning(f"偵測到 {table_count} 個工作表資料")
             return "\n".join(parts), report
         except Exception as e:
             report.add_error(f"Excel 解析失敗: {e}")
@@ -908,28 +939,143 @@ class DocumentParser:
             return "", report
         try:
             img = Image.open(file_path)
-            report.images_detected = 1
-            report.total_pages = 1
 
             from app.config import settings
             lang, note = _pick_ocr_langs(settings.OCR_LANGS)
             if note:
                 report.add_warning(note)
 
-            data = pytesseract.image_to_data(
-                img, lang=lang, output_type=pytesseract.Output.DICT
-            )
-            words: List[str] = []
+            pages: List[str] = []
             confs: List[float] = []
-            for i, word in enumerate(data["text"]):
-                conf = int(data["conf"][i])
-                if conf > 0 and word.strip():
-                    words.append(word)
-                    confs.append(conf / 100.0)
+            evidence_chunks: List[Dict[str, Any]] = []
+            preprocessing: List[str] = ["exif_transpose"]
+            frame_count = int(getattr(img, "n_frames", 1) or 1)
+            for page_number, source_frame in enumerate(ImageSequence.Iterator(img), 1):
+                frame = ImageOps.exif_transpose(source_frame.copy()).convert("RGB")
+                grayscale = ImageOps.grayscale(frame)
+                histogram = grayscale.histogram()
+                pixel_count = max(1, sum(histogram))
+                mean_luma = sum(index * count for index, count in enumerate(histogram)) / pixel_count
+                if mean_luma < 85:
+                    frame = ImageEnhance.Contrast(ImageOps.autocontrast(frame)).enhance(1.35)
+                    preprocessing.append(f"page_{page_number}:low_light_contrast")
+                def ocr_data(candidate):
+                    return pytesseract.image_to_data(
+                        candidate, lang=lang, output_type=pytesseract.Output.DICT
+                    )
 
-            text = " ".join(words)
+                def ocr_score(payload: Dict[str, Any]) -> float:
+                    values: List[float] = []
+                    for raw_text, raw_confidence in zip(
+                        payload.get("text", []), payload.get("conf", [])
+                    ):
+                        try:
+                            score = float(raw_confidence)
+                        except (TypeError, ValueError):
+                            continue
+                        if str(raw_text or "").strip() and score > 0:
+                            values.append(score)
+                    return sum(values) / len(values) if values else 0.0
+
+                data = ocr_data(frame)
+                initial_score = ocr_score(data)
+                if initial_score < 72:
+                    best_frame, best_data, best_score, best_angle = (
+                        frame,
+                        data,
+                        initial_score,
+                        0,
+                    )
+                    for angle in (90, 180, 270):
+                        candidate = frame.rotate(angle, expand=True)
+                        candidate_data = ocr_data(candidate)
+                        candidate_score = ocr_score(candidate_data)
+                        if candidate_score > best_score:
+                            best_frame, best_data, best_score, best_angle = (
+                                candidate,
+                                candidate_data,
+                                candidate_score,
+                                angle,
+                            )
+                    frame, data = best_frame, best_data
+                    if best_angle:
+                        preprocessing.append(
+                            f"page_{page_number}:rotate_{best_angle}_confidence_selected"
+                        )
+                width, height = frame.size
+                page_words: List[str] = []
+                lines: Dict[Tuple[int, int, int], Dict[str, Any]] = {}
+                for index, raw_word in enumerate(data.get("text", [])):
+                    word = str(raw_word or "").strip()
+                    try:
+                        confidence = float(data.get("conf", [])[index])
+                    except (TypeError, ValueError, IndexError):
+                        confidence = -1
+                    if confidence <= 0 or not word:
+                        continue
+                    score = confidence / 100.0
+                    page_words.append(word)
+                    confs.append(score)
+                    key = (
+                        int(data.get("block_num", [0])[index]),
+                        int(data.get("par_num", [0])[index]),
+                        int(data.get("line_num", [0])[index]),
+                    )
+                    left = int(data.get("left", [0])[index])
+                    top = int(data.get("top", [0])[index])
+                    right = left + int(data.get("width", [0])[index])
+                    bottom = top + int(data.get("height", [0])[index])
+                    line = lines.setdefault(
+                        key,
+                        {
+                            "words": [],
+                            "confidences": [],
+                            "left": left,
+                            "top": top,
+                            "right": right,
+                            "bottom": bottom,
+                        },
+                    )
+                    line["words"].append(word)
+                    line["confidences"].append(score)
+                    line["left"] = min(line["left"], left)
+                    line["top"] = min(line["top"], top)
+                    line["right"] = max(line["right"], right)
+                    line["bottom"] = max(line["bottom"], bottom)
+                pages.append(" ".join(page_words))
+                for line in lines.values():
+                    evidence_chunks.append(
+                        {
+                            "text": " ".join(line["words"]),
+                            "page": page_number if frame_count > 1 else None,
+                            "bbox": {
+                                "x": line["left"] / max(width, 1),
+                                "y": line["top"] / max(height, 1),
+                                "w": (line["right"] - line["left"]) / max(width, 1),
+                                "h": (line["bottom"] - line["top"]) / max(height, 1),
+                            },
+                            "confidence": sum(line["confidences"]) / len(line["confidences"]),
+                            "locator_fallback": False,
+                        }
+                    )
+
+            text = "\n\n".join(pages)
+            report.images_detected = frame_count
+            report.total_pages = frame_count
             report.ocr_used = True
             report.ocr_confidence = sum(confs) / len(confs) if confs else 0.0
+            report.evidence_chunks = evidence_chunks
+            report.locator_fallback = not bool(evidence_chunks)
+            report.structure_policy = {
+                "orientation_policy": "exif_transpose",
+                "rotation_recovery_policy": "confidence_best_of_quadrants_below_0.72",
+                "low_light_policy": "autocontrast_when_mean_luma_below_85",
+                "preprocessing": sorted(set(preprocessing)),
+                "bbox_policy": (
+                    "ocr_line_regions" if evidence_chunks else "whole_image_fallback"
+                ),
+                "multi_page_policy": "preserve_frame_as_page",
+            }
 
             if not text.strip():
                 report.add_error("圖片 OCR 無法辨識文字")
@@ -965,8 +1111,8 @@ class DocumentParser:
                             t = para.text.strip()
                             if t:
                                 # 偵測標題（通常是較大字體或 Title 佔位符）
-                                if shape.shape_type is not None and hasattr(shape, "placeholder_format"):
-                                    if shape.placeholder_format and shape.placeholder_format.idx in (0, 1):
+                                if getattr(shape, "is_placeholder", False):
+                                    if shape.placeholder_format.idx in (0, 1):
                                         slide_parts.append(f"### {t}")
                                         continue
                                 slide_parts.append(t)
@@ -995,12 +1141,15 @@ class DocumentParser:
 
             report.total_pages = len(prs.slides)
             report.tables_detected = table_count
+            report.structure_policy = {
+                "slide_policy": "preserve_slide_number_as_page",
+                "notes_policy": "include_with_slide",
+                "table_policy": "preserve_row_order",
+            }
             text = "\n\n".join(parts)
 
             if not text.strip():
                 report.add_error("PPTX 文件無可讀取的內容")
-            if table_count > 0:
-                report.add_warning(f"偵測到 {table_count} 個投影片表格")
 
             return text, report
         except Exception as e:

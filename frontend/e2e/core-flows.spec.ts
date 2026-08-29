@@ -64,6 +64,9 @@ test.describe('Canonical knowledge experience', () => {
     await expect(page.getByRole('tab', { name: '貼上網址' })).toBeVisible()
     await expect(page.getByRole('tab', { name: '外部紀錄' })).toBeVisible()
     await expect(page.locator('input[type="file"]').first()).toBeAttached()
+    await expect(page.getByText(/此環境可處理/)).toBeVisible()
+    await expect(page.getByRole('combobox', { name: '資料分類' })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: '適用部門（選填）' })).toBeVisible()
   })
 
   test('review inbox is reachable from the knowledge sub-navigation', async ({ page }) => {

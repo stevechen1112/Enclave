@@ -1,0 +1,144 @@
+{
+  "schema_version": "input-i5-evidence.v1",
+  "audio_matrix": {
+    "status": "PASS",
+    "required_extensions": [
+      ".flac",
+      ".m4a",
+      ".mp3",
+      ".ogg",
+      ".wav"
+    ],
+    "missing_extensions": [],
+    "failed_extensions": [],
+    "rows": [
+      {
+        "extension": ".m4a",
+        "filename": "handover.m4a",
+        "status": "PASS",
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "duration_seconds": 12.0,
+        "codecs": [
+          "aac"
+        ]
+      },
+      {
+        "extension": ".wav",
+        "filename": "inspection.wav",
+        "status": "PASS",
+        "format_name": "wav",
+        "duration_seconds": 12.0,
+        "codecs": [
+          "pcm_s16le"
+        ]
+      },
+      {
+        "extension": ".flac",
+        "filename": "lossless.flac",
+        "status": "PASS",
+        "format_name": "flac",
+        "duration_seconds": 12.0,
+        "codecs": [
+          "flac"
+        ]
+      },
+      {
+        "extension": ".ogg",
+        "filename": "low-quality.ogg",
+        "status": "PASS",
+        "format_name": "ogg",
+        "duration_seconds": 12.0,
+        "codecs": [
+          "vorbis"
+        ]
+      },
+      {
+        "extension": ".mp3",
+        "filename": "machine-noise.mp3",
+        "status": "PASS",
+        "format_name": "mp3",
+        "duration_seconds": 12.024,
+        "codecs": [
+          "mp3"
+        ]
+      }
+    ]
+  },
+  "video_matrix": {
+    "status": "PASS",
+    "required_extensions": [
+      ".mkv",
+      ".mov",
+      ".mp4",
+      ".webm"
+    ],
+    "missing_extensions": [],
+    "failed_extensions": [],
+    "rows": [
+      {
+        "extension": ".webm",
+        "filename": "browser-capture.webm",
+        "status": "PASS",
+        "format_name": "matroska,webm",
+        "duration_seconds": 18.008,
+        "codecs": [
+          "vp9",
+          "opus"
+        ]
+      },
+      {
+        "extension": ".mkv",
+        "filename": "camera-export.mkv",
+        "status": "PASS",
+        "format_name": "matroska,webm",
+        "duration_seconds": 18.023,
+        "codecs": [
+          "h264",
+          "aac"
+        ]
+      },
+      {
+        "extension": ".mp4",
+        "filename": "machine-sop.mp4",
+        "status": "PASS",
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "duration_seconds": 18.0,
+        "codecs": [
+          "h264",
+          "aac"
+        ]
+      },
+      {
+        "extension": ".mov",
+        "filename": "phone-export.mov",
+        "status": "PASS",
+        "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+        "duration_seconds": 18.0,
+        "codecs": [
+          "h264",
+          "aac"
+        ]
+      }
+    ]
+  },
+  "timeline_alignment": {
+    "status": "PASS",
+    "sample_count": 9,
+    "boundary_count": 18,
+    "mean_absolute_error_ms": 3.06,
+    "max_absolute_error_ms": 24,
+    "threshold_ms": 100
+  },
+  "queue_degradation_24h": {
+    "status": "NOT_RUN",
+    "reason": "requires a dedicated live worker/storage/provider campaign"
+  },
+  "device_origin": {
+    "status": "PENDING",
+    "reason": "physical-device samples not supplied"
+  },
+  "speech_quality": {
+    "status": "PENDING",
+    "reason": "licensed factory speech ground truth not supplied"
+  }
+}

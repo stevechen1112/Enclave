@@ -26,17 +26,17 @@ export default defineConfig({
     },
     {
       name: 'mobile-chromium',
-      testMatch: /p6-device-media\.spec\.ts/,
+      testMatch: /(p6-device-media|input-i3)\.spec\.ts/,
       use: { ...devices['Pixel 7'] },
     },
     {
       name: 'iphone-chromium-emulation',
-      testMatch: /p6-device-media\.spec\.ts/,
+      testMatch: /(p6-device-media|input-i3)\.spec\.ts/,
       use: { ...devices['iPhone 15'], browserName: 'chromium' },
     },
     {
       name: 'tablet-chromium',
-      testMatch: /p6-device-media\.spec\.ts/,
+      testMatch: /(p6-device-media|input-i3)\.spec\.ts/,
       use: { ...devices['Galaxy Tab S9'] },
     },
   ],

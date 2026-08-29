@@ -75,3 +75,36 @@ class S3CompatibleBackend:
             Params={"Bucket": self._bucket, "Key": key},
             ExpiresIn=expires,
         )
+
+    def create_multipart(self, key: str) -> str:
+        validate_storage_key(key)
+        response = self._client.create_multipart_upload(Bucket=self._bucket, Key=key)
+        return str(response["UploadId"])
+
+    def upload_part(self, key: str, upload_id: str, part_number: int, source_path: str) -> str:
+        validate_storage_key(key)
+        if part_number < 1:
+            raise ValueError("part number must be positive")
+        with open(source_path, "rb") as body:
+            response = self._client.upload_part(
+                Bucket=self._bucket,
+                Key=key,
+                UploadId=upload_id,
+                PartNumber=part_number,
+                Body=body,
+            )
+        return str(response["ETag"])
+
+    def complete_multipart(self, key: str, upload_id: str, parts: list[tuple[int, str]]) -> str:
+        validate_storage_key(key)
+        self._client.complete_multipart_upload(
+            Bucket=self._bucket,
+            Key=key,
+            UploadId=upload_id,
+            MultipartUpload={"Parts": [{"PartNumber": number, "ETag": etag} for number, etag in sorted(parts)]},
+        )
+        return self._uri(key)
+
+    def abort_multipart(self, key: str, upload_id: str) -> None:
+        validate_storage_key(key)
+        self._client.abort_multipart_upload(Bucket=self._bucket, Key=key, UploadId=upload_id)

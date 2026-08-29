@@ -365,3 +365,83 @@ def sample_source_acl(
 ) -> Dict[str, Any]:
     entries = _sync.sample_acl(db, current_user.tenant_id, source_record_id, limit=limit)
     return {"source_record_id": source_record_id, "entries": entries, "count": len(entries)}
+
+
+@router.get("/batches/{batch_id}")
+def get_import_batch(
+    batch_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    from app.models.connector import ImportBatch, ImportBatchItem
+
+    batch = db.query(ImportBatch).filter(
+        ImportBatch.id == batch_id,
+        ImportBatch.tenant_id == current_user.tenant_id,
+    ).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="匯入批次不存在")
+    items = db.query(ImportBatchItem).filter(
+        ImportBatchItem.batch_id == batch.id,
+        ImportBatchItem.tenant_id == current_user.tenant_id,
+    ).order_by(ImportBatchItem.created_at).all()
+    return {
+        "id": str(batch.id),
+        "status": batch.status,
+        "total_items": batch.total_items,
+        "succeeded_items": batch.succeeded_items,
+        "failed_items": batch.failed_items,
+        "shared_metadata": batch.shared_metadata or {},
+        "items": [
+            {
+                "source_record_id": item.source_record_id,
+                "parent_source_id": item.parent_source_id,
+                "status": item.status,
+                "attempts": item.attempts,
+                "asset_id": str(item.asset_id) if item.asset_id else None,
+                "revision_id": str(item.revision_id) if item.revision_id else None,
+                "error_code": item.error_code,
+                "error_detail": item.error_detail,
+            }
+            for item in items
+        ],
+    }
+
+
+@router.post("/batches/{batch_id}/retry-failed")
+def retry_failed_import_items(
+    batch_id: UUID,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(require_admin),
+) -> Dict[str, Any]:
+    _require_connect_pack()
+    from app.models.connector import ConnectorInstance, ImportBatch
+    from app.services.connector_batch import ConnectorBatchService
+
+    batch = db.query(ImportBatch).filter(
+        ImportBatch.id == batch_id,
+        ImportBatch.tenant_id == current_user.tenant_id,
+    ).first()
+    if not batch or not batch.connector_instance_id:
+        raise HTTPException(status_code=404, detail="匯入批次不存在或不可重試")
+    connector = db.query(ConnectorInstance).filter(
+        ConnectorInstance.id == batch.connector_instance_id,
+        ConnectorInstance.tenant_id == current_user.tenant_id,
+    ).first()
+    if not connector:
+        raise HTTPException(status_code=404, detail="連接器不存在")
+    resources = ConnectorBatchService().failed_resources(
+        db, tenant_id=current_user.tenant_id, batch_id=batch.id
+    )
+    document_ids = _sync.materialize_to_documents(
+        db,
+        connector,
+        resources,
+        uploaded_by=current_user.id,
+        batch_id=batch.id,
+    )
+    return {
+        "status": "completed",
+        "retried_items": len(resources),
+        "document_ids": document_ids,
+    }

@@ -35,6 +35,10 @@ from app.api.v1.endpoints import (
     review_items,
     video_assets,
     deprecations,
+    input_capabilities,
+    upload_sessions,
+    knowledge_capture,
+    input_pilots,
 )
 
 api_router = APIRouter()
@@ -82,6 +86,22 @@ api_router.include_router(knowledge_assets.router)
 api_router.include_router(review_items.router)
 api_router.include_router(video_assets.router, tags=["video-assets"])
 api_router.include_router(deprecations.router, tags=["deprecations"])
+api_router.include_router(input_capabilities.router)
+api_router.include_router(upload_sessions.router)
+api_router.include_router(input_pilots.router)
+api_router.include_router(
+    knowledge_capture.router,
+    prefix="/knowledge/captures",
+    tags=["input-captures"],
+)
+# Backwards-compatible MKA-era URL. The implementation and authorization are
+# now core Input concerns; hide the alias from the canonical OpenAPI surface.
+api_router.include_router(
+    knowledge_capture.router,
+    prefix="/knowledge-captures",
+    tags=["input-captures"],
+    include_in_schema=False,
+)
 
 # Optional products contribute their own complete API surface. Disabled packs
 # are absent from the route inventory rather than relying on endpoint-local flags.

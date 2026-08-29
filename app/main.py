@@ -19,6 +19,7 @@ from app.middleware.request_logging import RequestLoggingMiddleware
 from app.middleware.metrics import PrometheusMiddleware, metrics_endpoint, set_app_info
 from app.middleware.demo_access import DemoAccessMiddleware
 from app.logging_config import setup_logging
+from app.services.ingestion_orchestrator import IngestionBackpressure  # noqa: E402
 
 # ── Initialize structured logging ──
 setup_logging()
@@ -158,6 +159,23 @@ if settings.RATE_LIMIT_ENABLED and not settings.is_development:
 
 # Mount API v1
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.exception_handler(IngestionBackpressure)
+async def ingestion_backpressure_handler(
+    _request: Request, exc: IngestionBackpressure
+):
+    """Return actionable retry semantics while preserving the accepted source."""
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        headers={"Retry-After": str(exc.decision.get("retry_after_seconds") or 30)},
+        content={
+            "detail": {
+                "error": "ingestion_backpressure",
+                **exc.decision,
+            }
+        },
+    )
 
 
 @app.get("/")

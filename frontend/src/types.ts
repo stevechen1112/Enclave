@@ -188,6 +188,7 @@ export interface VideoAsset {
 
 export interface VideoAssetDetail extends VideoAsset {
   content_url: string
+  proxy_url: string | null
   artifacts: VideoArtifact[]
 }
 
@@ -233,6 +234,7 @@ export interface KnowledgeAsset {
   revision: KnowledgeAssetRevision | null
   revisions?: KnowledgeAssetRevision[]
   job: KnowledgeAssetJob | null
+  preview_url?: string | null
   deduplicated?: boolean
 }
 
@@ -247,13 +249,70 @@ export interface KnowledgeAssetEvent {
   created_at: string
 }
 
+export interface InputFormatCapability {
+  extension: string
+  media_type: string
+  parser_kind: string
+  asset_kind: string
+  capabilities: string[]
+  evidence_state: 'internally_verified' | 'environment_validation_pending' | 'transitional' | 'not_implemented'
+  ui_default: boolean
+  quality_gate?: {
+    key: string
+    min_content_accuracy: number
+    min_locator_coverage: number
+    min_parse_success: number
+    review_below_confidence: number
+    sample_rate: number
+    max_provider_regression: number
+  }
+  max_bytes: number
+  max_duration_seconds: number | null
+  processing_status: 'configured' | 'disabled' | 'degraded'
+  degradation_reasons: string[]
+}
+
+export interface InputCapabilityContract {
+  contract_version: string
+  registry_sha256: string
+  tenant_id: string
+  policy: {
+    accepted_modes: string[]
+    data_classifications: string[]
+    core_capture: boolean
+    capture_modes: string[]
+    capture_policy_path: string
+    generic_resumable_upload: boolean
+    resumable_part_size: number
+    resumable_min_part_size: number
+    resumable_max_part_size: number
+    resumable_max_parts: number
+    resumable_session_ttl_hours: number
+    video_allowed_codecs: string[]
+  }
+  formats: InputFormatCapability[]
+  providers: Array<{ key: string; status: string; runtime_verified: boolean; detail: string }>
+  quota: {
+    max_documents: number | null
+    current_documents: number
+    remaining_documents: number | null
+    max_storage_bytes: number | null
+    current_storage_bytes: number
+    remaining_storage_bytes: number | null
+    warnings: string[]
+  } | null
+}
+
 export interface ReviewEvidenceLocator {
   id: string
   kind: 'document' | 'table' | 'image' | 'audio' | 'video' | 'external_record'
   page?: number | null
   section?: string | null
+  paragraph_index?: number | null
+  slide_number?: number | null
   bbox?: number[] | Record<string, number> | null
   coordinate_space?: string | null
+  locator_fallback?: boolean
   worksheet?: string | null
   table_name?: string | null
   row_number?: number | null

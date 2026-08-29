@@ -1,4 +1,4 @@
-export interface PendingInterviewChunk {
+export interface PendingCaptureChunk {
   key: string
   sessionId: string
   sequence: number
@@ -23,7 +23,7 @@ function openDb(): Promise<IDBDatabase> {
   })
 }
 
-export async function savePendingInterviewChunk(chunk: PendingInterviewChunk): Promise<void> {
+export async function savePendingCaptureChunk(chunk: PendingCaptureChunk): Promise<void> {
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
@@ -35,11 +35,11 @@ export async function savePendingInterviewChunk(chunk: PendingInterviewChunk): P
   db.close()
 }
 
-export async function listPendingInterviewChunks(sessionId: string): Promise<PendingInterviewChunk[]> {
+export async function listPendingCaptureChunks(sessionId: string): Promise<PendingCaptureChunk[]> {
   const db = await openDb()
-  const items = await new Promise<PendingInterviewChunk[]>((resolve, reject) => {
+  const items = await new Promise<PendingCaptureChunk[]>((resolve, reject) => {
     const request = db.transaction(STORE, 'readonly').objectStore(STORE).getAll()
-    request.onsuccess = () => resolve((request.result as PendingInterviewChunk[])
+    request.onsuccess = () => resolve((request.result as PendingCaptureChunk[])
       .filter(item => item.sessionId === sessionId)
       .sort((a, b) => a.sequence - b.sequence))
     request.onerror = () => reject(request.error ?? new Error('Unable to read offline recording'))
@@ -48,7 +48,7 @@ export async function listPendingInterviewChunks(sessionId: string): Promise<Pen
   return items
 }
 
-export async function removePendingInterviewChunk(key: string): Promise<void> {
+export async function removePendingCaptureChunk(key: string): Promise<void> {
   const db = await openDb()
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')

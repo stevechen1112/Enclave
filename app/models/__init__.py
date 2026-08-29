@@ -9,7 +9,7 @@ from app.models.asset import (
     EvidenceSpan,
     SourceAsset,
 )
-from app.models.ingestion import IngestionJob, IngestionJobEvent
+from app.models.ingestion import IngestionJob, IngestionJobEvent, InputOperationMetric
 from app.models.knowledge_unit import (
     KnowledgeUnitRecord,
     KnowledgeUnitRelease,
@@ -43,6 +43,7 @@ from app.models.gateway_resource import GatewayResource
 from app.models.maintenance_audit import PlatformMaintenanceAudit
 from app.models.connector import (
     ConnectorInstance, ExternalPrincipal, SourceAclEntry, ConnectorResource,
+    ImportBatch, ImportBatchItem,
 )
 from app.models.wiki import WikiPage, WikiRevision
 from app.models.graph import GraphEntity, GraphEdge
@@ -62,6 +63,14 @@ from app.models.billing import BillingRecord
 from app.models.tenant import TenantSSOConfig
 # ADR-013: sidecar 歸屬綁定（未 import 會導致測試 DB create_all 缺表）
 from app.models.sidecar_binding import TenantSidecarBinding
+from app.models.upload import UploadPart, UploadSession
+from app.models.input_pilot import (
+    InputPilot,
+    InputPilotAcceptance,
+    InputPilotAudit,
+    InputPilotDailyMetric,
+    InputPilotIncident,
+)
 # MKA: 製造業知識助理領域模型
 from app.models.mka import (
     JobModule, TenantModuleBinding, InteractionSession,

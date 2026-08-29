@@ -16,7 +16,6 @@ from app.api.v1.endpoints import (
     job_modules,
     job_roles,
     knowhow,
-    knowledge_capture,
     mka_approvals,
     mka_metrics,
     realtime_voice,
@@ -62,5 +61,4 @@ router.include_router(form_templates.router, tags=["form-templates"])
 router.include_router(enterprise.router, tags=["enterprise"])
 router.include_router(mka_metrics.router, tags=["mka-metrics"])
 router.include_router(interview.router, tags=["interview"])
-router.include_router(knowledge_capture.router, tags=["knowledge-captures"])
 router.include_router(realtime_voice.router, tags=["voice-realtime"])

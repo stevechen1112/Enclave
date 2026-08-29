@@ -594,8 +594,20 @@ class MKAAudioPolicy(Base):
     transcript_retention_days = Column(Integer, default=365)
     encrypt_at_rest = Column(Boolean, default=True)
     audit_downloads = Column(Boolean, default=True)
+    # Legacy table name retained for migration compatibility; capture policy is
+    # now a core Input concern rather than an MKA product setting.
+    capture_max_duration_seconds = Column(
+        Integer, nullable=False, default=3600, server_default="3600"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    __table_args__ = (
+        CheckConstraint(
+            "capture_max_duration_seconds BETWEEN 60 AND 86400",
+            name="ck_capture_policy_max_duration",
+        ),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

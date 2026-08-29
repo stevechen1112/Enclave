@@ -9,14 +9,16 @@ Enclave 的核心不是單一聊天機器人，也不是把多套 AI 工具 UI �
 Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期；回答與應用
 輸出都必須服從租戶、權限、版本、證據與發布治理。
 
-## 目前狀態（2026-08-28）
+## 目前狀態（2026-08-29）
 
 | 項目 | 狀態 |
 |---|---|
 | 工作區程式基線 | Phase B–M、影片 F1–F3、UI/UX UX-A–UX-D 已完成並通過各階段 Code Review |
 | 核心架構 | 多租戶平台、Enterprise Knowledge Kernel、多模態 Ingestion Fabric、Workflow Kernel、Domain Pack Runtime 已建立 |
 | 最新瀏覽器驗收 | Production release `production-dc3c9ef57d237` 的 authenticated canonical routes、六種 Demo persona、Asset Library、統一 Intake、Evidence locator、響應式介面與權限邊界均完成驗收；過期 session 可自動回到登入頁，重新進入工作空間 PASS |
-| 前端最新回歸 | 31 個測試檔／108 項測試通過；P6 staging Playwright 29 項、ESLint、TypeScript 與 Vite production build 通過；production burst 全套受到既定 IP rate limit 限制，不列為全套 PASS |
+| 前端最新回歸 | Input I8 pre-pilot hardening 後為 36 個測試檔／121 項測試通過；ESLint、TypeScript 與 Vite production build 通過；登入後人工視覺巡檢與 iPhone Safari／Android Chrome 實機仍待認證 |
+| 後端最新回歸 | Input I8 pre-pilot hardening：1,500 passed／12 skipped／0 failed；I6–I8 新增 8 表的 migration round-trip 與 FORCE RLS 8/8 驗證通過 |
+| Input 平台化 | Input I0–I8 內部工程與逐階段 Code Review 已完成。I8 已具 tenant-scoped Pilot ledger、14–28 天 fail-closed gate，以及可操作每日指標、Incident、Audit、retrospective、signed acceptance 的證據工作台；I6–I8 新增 8 表已補齊並驗證 FORCE RLS。I7 live capacity 與 I8 真實第一租戶 Pilot 均仍為 HOLD，不得宣稱 SLA／GA 或現場驗收完成 |
 | 後端架構基線 | P4 全量回歸 1,314 passed／12 skipped／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
 | 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `production-dc3c9ef57d237`（source `dc3c9ef57d23787479073389253596c88edb5572`、schema `p5_cost_guardrails_001`）；source／image／schema／route parity 與 production verification 15／15 PASS |
 | 產品化 Phase | P0–P4 PASS；P5 工程與內部 review 完成，商用規模 live evidence 為 WAIVED／NOT RUN；P6 internal software gate 與 Code Review PASS；實體裝置 campaign 保留為 Commercial GA gate |
@@ -40,6 +42,17 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 - `docs/reports/P6_UIUX_DEVICE_CODE_REVIEW_2026-08-28.md`
 - `docs/decisions/P5_LIVE_VALIDATION_WAIVER_2026-08-28.md`
 - `docs/UIUX_BROWSER_ACCEPTANCE_2026-08-27.md`
+- `docs/PHASE_INPUT_I0_CONTRACT_EVIDENCE_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I1_INTAKE_UX_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I2_RESUMABLE_UPLOAD_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I3_CORE_CAPTURE_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I4_DOCUMENT_IMAGE_QUALITY_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I5_AUDIO_VIDEO_PRODUCTIZATION_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I6_CONNECTOR_BULK_IMPORT_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I7_CAPACITY_RESILIENCE_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I8_FIRST_TENANT_PILOT_CODE_REVIEW_2026-08-29.md`
+- `docs/PHASE_INPUT_I8_PREPILOT_HARDENING_CODE_REVIEW_2026-08-29.md`
+- `docs/reports/INPUT_I3_DEVICE_VALIDATION_MATRIX_2026-08-29.md`
 
 ### 第一個租戶導入定位
 
@@ -458,6 +471,8 @@ Production DB secrets 已分為三檔：`.env.production`（application）、`.e
 | 文件 | 用途 |
 |---|---|
 | `docs/MODULAR_MULTIMODAL_KNOWLEDGE_PLATFORM_ARCHITECTURE.md` | 目標架構、依賴規則與 Phase B–G |
+| `docs/INPUT_PLATFORM_CAPABILITY_MAP_AND_IMPLEMENTATION_PLAN.md` | Input 平台現況、能力差距、驗收指標與 I0–I8 實作／Code Review 計畫 |
+| `docs/PHASE_INPUT_I0_CONTRACT_EVIDENCE_CODE_REVIEW_2026-08-29.md` | Input I0 capability contract、sealed evidence、telemetry baseline 與最終 PASS Review |
 | `docs/ARCHITECTURE_AUTHORITY_AND_UIUX_REFACTOR_PLAN.md` | Phase H–M 權威收斂與 UI/UX 計畫 |
 | `docs/UIUX_EXPERIENCE_CONVERGENCE_PLAN.md` | UX-A–UX-D 體驗收斂計畫 |
 | `docs/FINAL_MODULAR_PLATFORM_CODE_REVIEW.md` | Phase B–G 與影片 F1–F3 最終審查 |

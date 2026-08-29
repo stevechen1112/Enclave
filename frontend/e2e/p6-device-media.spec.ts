@@ -55,8 +55,11 @@ test.describe('P6 device and media intake', () => {
     await expect(page.getByText('line-photo.png')).toBeVisible()
     await expect(page.getByText('factory-noise.wav')).toBeVisible()
     await expect(page.getByText('changeover.mp4')).toBeVisible()
-    await expect(page.getByText(/長時間轉寫、說話者與時間碼/)).toBeVisible()
-    await expect(page.getByText(/跨模態時間軸/)).toBeVisible()
+    await expect(page.getByText(/此環境可處理/)).toBeVisible()
+    await expect(page.getByRole('listitem').filter({ hasText: 'factory-noise.wav' })).toContainText(/語音轉寫|等待能力檢查/)
+    await expect(page.getByRole('listitem').filter({ hasText: 'changeover.mp4' })).toContainText(/關鍵畫面|等待能力檢查/)
+    await expect(page.getByRole('combobox', { name: '資料分類' })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: '適用部門（選填）' })).toBeVisible()
 
     const primaryButton = page.getByRole('button', { name: '加入 3 筆公司知識' })
     const box = await primaryButton.boundingBox()

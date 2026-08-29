@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "contract_version": "input-capabilities.v1",
+  "status": "FROZEN_WITH_DECLARED_GAPS",
+  "frozen_at": "2026-08-28T00:00:00Z",
+  "purpose": "Input I0 contract and regression seed; this is not a manufacturing quality certification",
+  "corpus_sha256": "3cd9a619569244fe6886e1b9120ae311019143af4f137a61e93077c13f28f6e4",
+  "entries": [
+    {
+      "id": "document-text-basic",
+      "path": "tests/fixtures/sample.txt",
+      "sha256": "526a4cb726b8b12553d78f5d890b73471767a94c36806a168f18cac5d89a45b3",
+      "bytes": 764,
+      "modalities": ["document"],
+      "evidence_class": "raw_fixture",
+      "expectations": ["extract_text"]
+    },
+    {
+      "id": "document-markdown-basic",
+      "path": "tests/fixtures/sample.md",
+      "sha256": "b2cc2b4348fa542f751e36aac15c356f5b8eec25b31f2f6503a5dc81b264faa1",
+      "bytes": 1102,
+      "modalities": ["document"],
+      "evidence_class": "raw_fixture",
+      "expectations": ["extract_text", "layout"]
+    },
+    {
+      "id": "spreadsheet-csv-basic",
+      "path": "tests/fixtures/sample.csv",
+      "sha256": "f856b9a3c50126e70cbcc6f497d48d56dbdac669388cd3bd1d61366a23ad9e32",
+      "bytes": 294,
+      "modalities": ["spreadsheet"],
+      "evidence_class": "raw_fixture",
+      "expectations": ["extract_text", "table"]
+    },
+    {
+      "id": "document-pdf-basic",
+      "path": "tests/fixtures/nas_share/quality_manual.pdf",
+      "sha256": "f0793bab1f60c2dcbc3cf720d8f2acd6edac9e4051d9ad4bde9645a73c018458",
+      "bytes": 1512,
+      "modalities": ["document", "connector"],
+      "evidence_class": "raw_fixture",
+      "expectations": ["extract_text", "nas_discovery"]
+    },
+    {
+      "id": "image-scanned-page",
+      "path": "artifacts/_blind_tax113_p1.png",
+      "sha256": "a9f2ef1d8a4b13ef236ad1e5cd18fdfab2e2e3dced32185d3a1b11dc0572f2a6",
+      "bytes": 92590,
+      "modalities": ["image"],
+      "evidence_class": "historical_raw_fixture",
+      "expectations": ["ocr", "bbox_evidence"]
+    },
+    {
+      "id": "multimodal-contract-evidence",
+      "path": "artifacts/quality/p3_contract_candidate.json",
+      "sha256": "935ff232caff064805b3370cc00844417f8ff78de013da92e549f6ef3d4e2791",
+      "bytes": 5542,
+      "modalities": ["audio", "video"],
+      "evidence_class": "contract_only",
+      "expectations": ["terminal_state", "evidence_locator", "review_routing"]
+    },
+    {
+      "id": "multimodal-degraded-evidence",
+      "path": "artifacts/quality/p3_degraded.json",
+      "sha256": "f35b04e03eccaccd61252eb085a8abcdfe5919ecc787b3d19ec5a185b7226157",
+      "bytes": 5534,
+      "modalities": ["audio", "video"],
+      "evidence_class": "contract_only",
+      "expectations": ["degradation", "no_false_completion"]
+    }
+  ],
+  "coverage": {
+    "document": {"level": "sealed_fixture", "quality_certified": false},
+    "spreadsheet": {"level": "sealed_fixture", "quality_certified": false},
+    "image": {"level": "historical_fixture", "quality_certified": false},
+    "audio": {"level": "contract_only", "quality_certified": false},
+    "video": {"level": "contract_only", "quality_certified": false},
+    "url": {"level": "automated_contract_test", "quality_certified": false},
+    "connector": {"level": "fixture_only", "quality_certified": false}
+  },
+  "declared_gaps": [
+    {"id": "real-manufacturing-office-corpus", "planned_phase": "Input I4"},
+    {"id": "low-light-rotated-handwritten-image-corpus", "planned_phase": "Input I4"},
+    {"id": "raw-noisy-long-audio-corpus", "planned_phase": "Input I5"},
+    {"id": "raw-long-video-device-codec-corpus", "planned_phase": "Input I5"},
+    {"id": "physical-ios-android-capture-matrix", "planned_phase": "Input I3"},
+    {"id": "customer-oauth-and-nas-scale-corpus", "planned_phase": "Input I6"}
+  ]
+}

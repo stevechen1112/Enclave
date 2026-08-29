@@ -42,6 +42,7 @@ import app.tasks.reconciliation_tasks  # noqa: F401, E402
 import app.tasks.connector_tasks  # noqa: F401, E402
 import app.tasks.video_tasks  # noqa: F401, E402
 import app.tasks.audio_tasks  # noqa: F401, E402
+import app.tasks.upload_tasks  # noqa: F401, E402
 
 from app.composition.pack_surfaces import import_pack_task_modules  # noqa: E402
 from app.composition.packs import build_pack_registry  # noqa: E402
@@ -73,6 +74,10 @@ celery_app.conf.beat_schedule = {
     "refresh-knowledge-freshness": {
         "task": "tasks.refresh_knowledge_freshness",
         "schedule": 86400.0,
+    },
+    "expire-upload-sessions": {
+        "task": "tasks.expire_upload_sessions",
+        "schedule": 3600.0,
     },
 }
 

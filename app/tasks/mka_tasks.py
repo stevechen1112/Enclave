@@ -293,6 +293,7 @@ def transcribe_knowledge_capture(self, tenant_id: str, session_id: str):
         )
         capture.transcript = "\n\n".join(transcript_parts) if save_transcript else None
         capture.transcript_metadata = {
+            **dict(capture.transcript_metadata or {}),
             "provider": settings.VOICE_STT_PROVIDER,
             "model": settings.LONG_INTERVIEW_STT_MODEL,
             "segment_count": db.query(KnowledgeCaptureTranscriptSegment)

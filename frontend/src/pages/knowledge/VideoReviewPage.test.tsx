@@ -35,6 +35,7 @@ const DETAIL = {
   media_type: 'video/mp4',
   probe: {},
   content_url: '/api/v1/media/videos/asset-1/content?token=signed',
+  proxy_url: '/api/v1/media/artifacts/proxy-1/content?token=signed',
   job: { id: 'job-1', status: 'review_required', phase: 'human_review', quality_state: 'review_required', readiness: {}, error: {} },
   artifacts: [
     {
@@ -70,7 +71,7 @@ describe('VideoReviewPage', () => {
     const { container } = renderPage()
     expect(await screen.findByRole('heading', { name: '機台復歸示範' })).toBeInTheDocument()
     expect(screen.getAllByText('先確認壓力歸零')).toHaveLength(2)
-    expect(container.querySelector('video')).toHaveAttribute('src', DETAIL.content_url)
+    expect(container.querySelector('video')).toHaveAttribute('src', DETAIL.proxy_url)
     expect(screen.getAllByText('0:01')).toHaveLength(2)
   })
 

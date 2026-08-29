@@ -118,8 +118,17 @@ export default function VideoReviewPage() {
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.65fr)]">
         <section className="space-y-5">
           <div className="overflow-hidden rounded-xl border border-line bg-black shadow-card">
-            <video ref={videoRef} controls preload="metadata" src={detail.content_url} className="aspect-video w-full" aria-label={detail.title} />
+            <video ref={videoRef} controls preload="metadata" src={detail.proxy_url || detail.content_url} className="aspect-video w-full" aria-label={detail.title} />
           </div>
+
+          {detail.job?.status === 'running' && (
+            <div className="card p-4" role="status" aria-live="polite">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span>{detail.job.phase === 'transcript_partial' ? '逐段產生逐字稿，已完成內容可先檢視' : '背景處理中，原檔已安全保存'}</span>
+                {typeof detail.job.readiness.progress_percent === 'number' && <span className="font-mono text-accent">{String(detail.job.readiness.progress_percent)}%</span>}
+              </div>
+            </div>
+          )}
 
           <div className="card p-5">
             <h2 className="mb-3 flex items-center gap-2 font-semibold"><Clock3 size={18} />語音逐字時間軸</h2>

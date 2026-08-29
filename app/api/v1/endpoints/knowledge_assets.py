@@ -37,26 +37,28 @@ from app.ingestion.core_adapters import (
     LongInterviewAudioIngestionAdapter,
     document_capabilities,
 )
-from app.models.asset import ASSET_KINDS, AssetRevision, SourceAsset
+from app.models.asset import ASSET_KINDS, AssetRevision, DerivedArtifact, SourceAsset
 from app.models.ingestion import IngestionJob, IngestionJobEvent
 from app.models.document import Document
 from app.models.permission import Department
 from app.models.user import User
 from app.platform.assets import AssetAccessPolicy
+from app.platform.intake import AUDIO_CAPABILITIES, AUDIO_MEDIA_TYPES, VIDEO_MEDIA_TYPES
 from app.services.asset_visibility import asset_access_allows, canonical_asset_acl
 from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+from app.services.intake_context import (
+    IntakeContextError,
+    apply_intake_metadata,
+    assert_file_replay_matches,
+    find_idempotent_asset,
+    parse_intake_context,
+)
 
 router = APIRouter(prefix="/knowledge/assets", tags=["knowledge-assets"])
 logger = logging.getLogger(__name__)
 
-_AUDIO_TYPES = {
-    ".mp3": "audio/mpeg",
-    ".wav": "audio/wav",
-    ".m4a": "audio/mp4",
-    ".ogg": "audio/ogg",
-    ".flac": "audio/flac",
-}
-_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".mkv"}
+_AUDIO_TYPES = dict(AUDIO_MEDIA_TYPES)
+_VIDEO_EXTENSIONS = set(VIDEO_MEDIA_TYPES)
 _DATA_CLASSIFICATIONS = {"public", "internal", "confidential", "restricted"}
 _UNSET = object()
 
@@ -392,7 +394,44 @@ def get_asset(
         asset_id=asset_id,
         authz=AuthorizationContext.from_user(current_user),
     )
-    return _asset_dict(db, asset, include_history=True)
+    payload = _asset_dict(db, asset, include_history=True)
+    if asset.asset_kind in {"audio", "video"}:
+        current = (
+            db.query(AssetRevision)
+            .filter(
+                AssetRevision.tenant_id == current_user.tenant_id,
+                AssetRevision.asset_id == asset.id,
+                AssetRevision.revision == asset.current_revision,
+            )
+            .first()
+        )
+        proxy = (
+            db.query(DerivedArtifact)
+            .filter(
+                DerivedArtifact.tenant_id == current_user.tenant_id,
+                DerivedArtifact.asset_revision_id == current.id,
+                DerivedArtifact.artifact_kind == "media_proxy",
+            )
+            .order_by(DerivedArtifact.created_at.desc())
+            .first()
+            if current is not None
+            else None
+        )
+        if proxy is not None:
+            from app.services.media_access import create_media_token
+
+            payload["preview_url"] = (
+                f"/api/v1/media/artifacts/{proxy.id}/content?token="
+                + create_media_token(
+                    tenant_id=current_user.tenant_id,
+                    user_id=current_user.id,
+                    resource_kind="video_artifact",
+                    resource_id=proxy.id,
+                )
+            )
+        else:
+            payload["preview_url"] = None
+    return payload
 
 
 @router.get("/{asset_id}/status")
@@ -438,11 +477,9 @@ async def create_asset(
     idempotency_key: Annotated[str | None, Form()] = None,
     department_id: Annotated[UUID | None, Form()] = None,
     data_classification: Annotated[str, Form()] = "internal",
+    context_metadata: Annotated[str | None, Form()] = None,
 ) -> dict[str, Any]:
     check_document_permission(current_user, "create")
-    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
-
-    enforce_ingestion_queue_capacity()
     if idempotency_key and len(idempotency_key) > 500:
         raise HTTPException(status_code=400, detail="idempotency_key is too long")
     if capture_manifest and len(capture_manifest.encode("utf-8")) > 64 * 1024:
@@ -451,6 +488,10 @@ async def create_asset(
         )
     if data_classification not in _DATA_CLASSIFICATIONS:
         raise HTTPException(status_code=400, detail="unsupported data classification")
+    try:
+        intake_context = parse_intake_context(context_metadata)
+    except IntakeContextError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     department_id = _validated_department(
         db, tenant_id=current_user.tenant_id, department_id=department_id
     )
@@ -462,6 +503,46 @@ async def create_asset(
             status_code=400,
             detail="provide exactly one of file, source_url, source_record_id, or capture_manifest",
         )
+    try:
+        existing_asset = find_idempotent_asset(
+            db,
+            tenant_id=current_user.tenant_id,
+            idempotency_key=idempotency_key,
+        )
+        if existing_asset is not None:
+            if file is not None:
+                clean_name = os.path.basename(file.filename or "")
+                assert_file_replay_matches(
+                    db,
+                    asset=existing_asset,
+                    filename=clean_name,
+                    byte_size=getattr(file, "size", None),
+                )
+                await file.close()
+            elif source_url is not None:
+                normalized_url = _validate_source_url(source_url)
+                if (
+                    existing_asset.source_system != "web"
+                    or existing_asset.source_record_id != normalized_url
+                ):
+                    raise IntakeContextError(
+                        "idempotency key belongs to another source"
+                    )
+            elif source_record_id is not None:
+                expected_system = f"api:{str(source_system or '').strip()}"
+                if (
+                    existing_asset.source_system != expected_system
+                    or existing_asset.source_record_id != source_record_id.strip()
+                ):
+                    raise IntakeContextError(
+                        "idempotency key belongs to another source"
+                    )
+            return {**_asset_dict(db, existing_asset), "deduplicated": True}
+    except IntakeContextError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
     if file is not None:
         extension = Path(os.path.basename(file.filename or "")).suffix.lower()
         if extension in _VIDEO_EXTENSIONS:
@@ -474,6 +555,10 @@ async def create_asset(
                 title=title,
                 equipment_ids=None,
                 applicable_roles=None,
+                idempotency_key=idempotency_key,
+                department_id=department_id,
+                data_classification=data_classification,
+                context_metadata=context_metadata,
             )
             asset = (
                 db.query(SourceAsset)
@@ -483,19 +568,18 @@ async def create_asset(
                 )
                 .one()
             )
-            asset.data_classification = data_classification
-            asset.acl_reference = canonical_asset_acl(
-                owner_subject_id=current_user.id,
-                visibility="restricted" if department_id else "tenant",
-                allowed_department_ids=[department_id] if department_id else [],
-            )
-            db.commit()
             return {**_asset_dict(db, asset), "deduplicated": False}
         if extension not in _AUDIO_TYPES:
             from app.api.v1.endpoints.documents import upload_document
 
             document = await upload_document(
-                db=db, file=file, current_user=current_user
+                db=db,
+                file=file,
+                current_user=current_user,
+                idempotency_key=idempotency_key,
+                department_id=department_id,
+                data_classification=data_classification,
+                context_metadata=context_metadata,
             )
             asset_id = getattr(document, "source_asset_id", None)
             if asset_id is None:
@@ -511,13 +595,8 @@ async def create_asset(
                 .one()
             )
             asset.title = (title or asset.title)[:500]
-            asset.data_classification = data_classification
-            asset.acl_reference = canonical_asset_acl(
-                owner_subject_id=current_user.id,
-                visibility="restricted" if department_id else "tenant",
-                allowed_department_ids=[department_id] if department_id else [],
-            )
             db.commit()
+            db.refresh(asset)
             return {**_asset_dict(db, asset), "deduplicated": False}
         return await _create_audio_asset(
             db=db,
@@ -527,6 +606,7 @@ async def create_asset(
             idempotency_key=idempotency_key,
             department_id=department_id,
             data_classification=data_classification,
+            intake_context=intake_context,
         )
     if source_url is not None:
         return _create_url_asset(
@@ -536,6 +616,8 @@ async def create_asset(
             source_url=source_url,
             department_id=department_id,
             data_classification=data_classification,
+            idempotency_key=idempotency_key,
+            intake_context=intake_context,
         )
     return _create_reference_asset(
         db=db,
@@ -549,6 +631,7 @@ async def create_asset(
         idempotency_key=idempotency_key,
         department_id=department_id,
         data_classification=data_classification,
+        intake_context=intake_context,
     )
 
 
@@ -560,6 +643,8 @@ def _create_url_asset(
     source_url: str,
     department_id: UUID | None,
     data_classification: str,
+    idempotency_key: str | None,
+    intake_context: dict[str, Any],
 ) -> dict[str, Any]:
     """Bridge URL intake to the proven Document URL worker.
 
@@ -615,6 +700,9 @@ def _create_url_asset(
         "direct_intake": True,
         "source_url": source_url,
     }
+    apply_intake_metadata(
+        asset, context=intake_context, idempotency_key=idempotency_key
+    )
     db.commit()
 
     dispatched = True
@@ -648,6 +736,7 @@ async def _create_audio_asset(
     idempotency_key: str | None,
     department_id: UUID | None,
     data_classification: str,
+    intake_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     clean_name = os.path.basename(file.filename or "")
     extension = Path(clean_name).suffix.lower()
@@ -772,6 +861,9 @@ async def _create_audio_asset(
             status="processing",
             created_by=current_user.id,
         )
+        apply_intake_metadata(
+            asset, context=intake_context, idempotency_key=idempotency_key
+        )
         db.add(asset)
         db.flush()
         revision = AssetRevision(
@@ -792,7 +884,7 @@ async def _create_audio_asset(
             db,
             tenant_id=current_user.tenant_id,
             asset_revision_id=revision.id,
-            capabilities=("transcribe", "timestamp", "terminology_correction"),
+            capabilities=AUDIO_CAPABILITIES,
             idempotency_key=idempotency_key,
         )
         db.commit()
@@ -850,6 +942,7 @@ def _create_reference_asset(
     idempotency_key: str | None,
     department_id: UUID | None,
     data_classification: str,
+    intake_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if source_url:
         source_url = _validate_source_url(source_url)
@@ -992,6 +1085,9 @@ def _create_reference_asset(
         current_revision=1,
         status="processing",
         created_by=current_user.id,
+    )
+    apply_intake_metadata(
+        asset, context=intake_context, idempotency_key=idempotency_key
     )
     db.add(asset)
     db.flush()

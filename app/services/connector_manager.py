@@ -87,6 +87,7 @@ class ConnectorManager:
                 db.query(ConnectorResource)
                 .filter(
                     ConnectorResource.connector_instance_id == connector_id,
+                    ConnectorResource.tenant_id == connector.tenant_id,
                     ConnectorResource.source_record_id == item["source_record_id"],
                 )
                 .first()
@@ -94,7 +95,9 @@ class ConnectorManager:
             if existing:
                 existing.source_version = item.get("source_version")
                 existing.content_hash = item.get("content_hash")
+                existing.acl_hash = item.get("acl_hash")
                 existing.sync_state = "synced"
+                existing.metadata_json = item.get("metadata", {})
             else:
                 db.add(
                     ConnectorResource(
