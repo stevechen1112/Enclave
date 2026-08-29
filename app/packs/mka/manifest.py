@@ -34,7 +34,7 @@ class MKATenantEligibility:
     def is_enabled(self, context: PackTenantContext) -> bool:
         from app.models.mka import TenantModuleBinding
 
-        query = context.db.query(TenantModuleBinding.id).filter(
+        query = context.db.query(TenantModuleBinding).filter(
             TenantModuleBinding.tenant_id == context.tenant_id,
             TenantModuleBinding.enabled.is_(True),
             TenantModuleBinding.license_state.in_(["trial", "active"]),
@@ -53,7 +53,14 @@ class MKATenantEligibility:
             query = query.filter(TenantModuleBinding.module_key == context.module_key)
         else:
             query = query.filter(TenantModuleBinding.module_key.in_(MKA_MODULE_KEYS))
-        return query.first() is not None
+        for binding in query.all():
+            lifecycle = dict(
+                (binding.config_json or {}).get("_application_lifecycle") or {}
+            )
+            if lifecycle and lifecycle.get("state") != "enabled":
+                continue
+            return True
+        return False
 
 
 def build_mka_pack() -> PackContribution:

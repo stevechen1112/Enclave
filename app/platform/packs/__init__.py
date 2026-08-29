@@ -17,6 +17,11 @@ from app.platform.packs.contracts import (
     TaskHandlerContribution,
     UIModuleContribution,
 )
+from app.platform.packs.lifecycle import (
+    APPLICATION_LIFECYCLE_STATES,
+    APPLICATION_LIFECYCLE_TRANSITIONS,
+    can_transition_application,
+)
 
 __all__ = [
     "APIRouterContribution",
@@ -34,4 +39,7 @@ __all__ = [
     "ReviewProviderContribution",
     "TaskHandlerContribution",
     "UIModuleContribution",
+    "APPLICATION_LIFECYCLE_STATES",
+    "APPLICATION_LIFECYCLE_TRANSITIONS",
+    "can_transition_application",
 ]

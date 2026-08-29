@@ -181,6 +181,12 @@ class ModuleBindingUpdate(BaseModel):
     enabled: bool
 
 
+class ModuleLifecycleRequest(BaseModel):
+    export_receipt: Optional[str] = None
+    data_disposition: Optional[str] = None
+    data_disposition_receipt: Optional[str] = None
+
+
 @router.put("/job-modules/{module_key}/binding")
 def set_module_binding(
     module_key: str,
@@ -190,35 +196,125 @@ def set_module_binding(
 ) -> Dict[str, Any]:
     """租戶 opt-in 啟用／停用模組。"""
     _require_admin(current_user)
-    from app.models.mka import TenantModuleBinding
+    from app.services.application_lifecycle import (
+        ApplicationLifecycleError,
+        ApplicationLifecycleService,
+    )
     from app.services.module_registry import get_module_registry
 
     registry = get_module_registry(db)
     if registry.get_module(module_key, tenant_id=None) is None:
         raise HTTPException(status_code=404, detail="module not found")
-    binding = (
-        db.query(TenantModuleBinding)
-        .filter(
-            TenantModuleBinding.tenant_id == current_user.tenant_id,
-            TenantModuleBinding.module_key == module_key,
+    try:
+        binding = ApplicationLifecycleService(db).set_enabled_compat(
+            current_user.tenant_id,
+            module_key,
+            enabled=body.enabled,
+            actor_id=current_user.id,
         )
-        .first()
-    )
-    if binding is None:
-        binding = TenantModuleBinding(
-            tenant_id=current_user.tenant_id,
-            module_key=module_key,
-            enabled=False,
-            license_state="trial",
-            config_json={},
-            config_version=0,
-        )
-        db.add(binding)
-    binding.enabled = body.enabled
+    except ApplicationLifecycleError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     db.commit()
     return {
         "module_key": module_key,
         "enabled": binding.enabled,
+        "config_version": binding.config_version,
+    }
+
+
+@router.get("/job-modules/{module_key}/lifecycle")
+def get_module_lifecycle(
+    module_key: str,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_verified_user),
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    from app.services.application_lifecycle import ApplicationLifecycleService
+
+    service = ApplicationLifecycleService(db)
+    try:
+        application = service.get_application(module_key)
+        binding = service.get_binding(current_user.tenant_id, module_key)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {
+        "application_key": application.application_key,
+        "module_key": module_key,
+        "state": service.state(binding),
+        "data_policy": {
+            "disable_behavior": application.data_policy.disable_behavior,
+            "archive_behavior": application.data_policy.archive_behavior,
+            "removal_behavior": application.data_policy.removal_behavior,
+            "export_required_before_remove": (
+                application.data_policy.export_required_before_remove
+            ),
+        },
+        "history": list(
+            ((binding.config_json or {}).get(service.METADATA_KEY) or {}).get(
+                "history"
+            )
+            or []
+        ) if binding is not None else [],
+    }
+
+
+@router.post("/job-modules/{module_key}/lifecycle/{action}")
+def transition_module_lifecycle(
+    module_key: str,
+    action: str,
+    body: ModuleLifecycleRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_verified_user),
+) -> Dict[str, Any]:
+    _require_admin(current_user)
+    from app.services.application_lifecycle import (
+        ApplicationLifecycleError,
+        ApplicationLifecycleService,
+    )
+
+    service = ApplicationLifecycleService(db)
+    try:
+        if action == "install":
+            binding = service.install(
+                current_user.tenant_id, module_key, actor_id=current_user.id
+            )
+        elif action == "enable":
+            binding = service.enable(
+                current_user.tenant_id, module_key, actor_id=current_user.id
+            )
+        elif action == "disable":
+            binding = service.disable(
+                current_user.tenant_id, module_key, actor_id=current_user.id
+            )
+        elif action == "archive":
+            binding = service.get_binding(current_user.tenant_id, module_key)
+            if service.state(binding) == "enabled":
+                service.disable(
+                    current_user.tenant_id, module_key, actor_id=current_user.id
+                )
+            binding = service.archive(
+                current_user.tenant_id, module_key, actor_id=current_user.id
+            )
+        elif action == "remove":
+            if not body.data_disposition:
+                raise ApplicationLifecycleError("data_disposition is required")
+            binding = service.remove(
+                current_user.tenant_id,
+                module_key,
+                actor_id=current_user.id,
+                export_receipt=body.export_receipt,
+                data_disposition=body.data_disposition,
+                data_disposition_receipt=body.data_disposition_receipt,
+            )
+        else:
+            raise HTTPException(status_code=404, detail="unknown lifecycle action")
+    except ApplicationLifecycleError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    db.commit()
+    return {
+        "module_key": module_key,
+        "state": service.state(binding),
+        "enabled": bool(binding.enabled),
         "config_version": binding.config_version,
     }
 

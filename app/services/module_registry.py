@@ -148,30 +148,18 @@ class ModuleRegistry:
         config: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """啟用租戶模組。"""
-        from app.models.mka import TenantModuleBinding
+        from app.services.application_lifecycle import ApplicationLifecycleService
 
-        existing = (
-            self.db.query(TenantModuleBinding)
-            .filter(
-                TenantModuleBinding.tenant_id == tenant_id,
-                TenantModuleBinding.module_key == module_key,
-            )
-            .first()
+        binding = ApplicationLifecycleService(self.db).set_enabled_compat(
+            tenant_id, module_key, enabled=True
         )
-
-        if existing:
-            existing.enabled = True
-            if config:
-                existing.config_json = config
-        else:
-            binding = TenantModuleBinding(
-                tenant_id=tenant_id,
-                module_key=module_key,
-                enabled=True,
-                license_state="trial",
-                config_json=config or {},
-            )
-            self.db.add(binding)
+        if config:
+            envelope = dict(binding.config_json or {})
+            lifecycle = envelope.get("_application_lifecycle")
+            envelope.update(config)
+            if lifecycle is not None:
+                envelope["_application_lifecycle"] = lifecycle
+            binding.config_json = envelope
 
         self.db.commit()
         logger.info(f"Module {module_key} enabled for tenant {tenant_id}")
@@ -179,23 +167,14 @@ class ModuleRegistry:
 
     def disable_module(self, tenant_id: UUID, module_key: str) -> bool:
         """停用租戶模組。"""
-        from app.models.mka import TenantModuleBinding
+        from app.services.application_lifecycle import ApplicationLifecycleService
 
-        binding = (
-            self.db.query(TenantModuleBinding)
-            .filter(
-                TenantModuleBinding.tenant_id == tenant_id,
-                TenantModuleBinding.module_key == module_key,
-            )
-            .first()
+        ApplicationLifecycleService(self.db).set_enabled_compat(
+            tenant_id, module_key, enabled=False
         )
-
-        if binding:
-            binding.enabled = False
-            self.db.commit()
-            logger.info(f"Module {module_key} disabled for tenant {tenant_id}")
-            return True
-        return False
+        self.db.commit()
+        logger.info(f"Module {module_key} disabled for tenant {tenant_id}")
+        return True
 
     def update_config(
         self,
@@ -216,7 +195,13 @@ class ModuleRegistry:
         )
 
         if binding:
-            binding.config_json = config
+            envelope = dict(config)
+            lifecycle = dict(
+                (binding.config_json or {}).get("_application_lifecycle") or {}
+            )
+            if lifecycle:
+                envelope["_application_lifecycle"] = lifecycle
+            binding.config_json = envelope
             self.db.commit()
             return True
         return False
