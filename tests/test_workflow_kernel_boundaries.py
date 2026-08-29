@@ -85,7 +85,7 @@ def test_workflow_kernel_does_not_import_mka_or_application_packs() -> None:
     assert violations == []
 
 
-def test_workflow_repository_is_a_closed_compatibility_bridge() -> None:
+def test_workflow_repository_is_independent_from_application_persistence() -> None:
     from app.services.workflow_repository import WorkflowRepository
 
     catalog = json.loads(
@@ -93,12 +93,13 @@ def test_workflow_repository_is_a_closed_compatibility_bridge() -> None:
             encoding="utf-8"
         )
     )
-    assert catalog["workflow_compatibility_bridges"] == [
-        "app/services/workflow_repository.py"
-    ]
+    assert catalog["workflow_compatibility_bridges"] == []
     assert hasattr(WorkflowRepository, "create_form_instance")
     assert hasattr(WorkflowRepository, "decide_approval")
     assert not hasattr(WorkflowRepository, "create_knowhow")
+    imports = _absolute_imports(ROOT / "app/services/workflow_repository.py")
+    assert "app.services.mka_persistence" not in imports
+    assert "app.models.mka" not in imports
     for relative in (
         "app/api/v1/endpoints/forms.py",
         "app/api/v1/endpoints/mka_approvals.py",
@@ -106,6 +107,20 @@ def test_workflow_repository_is_a_closed_compatibility_bridge() -> None:
         imports = _absolute_imports(ROOT / relative)
         assert "app.services.mka_persistence" not in imports
         assert "app.services.workflow_repository" in imports
+
+
+def test_task_engine_contains_no_application_handler_implementation() -> None:
+    source = (ROOT / "app/services/task_engine.py").read_text(encoding="utf-8")
+    for vocabulary in (
+        "quote",
+        "incident",
+        "handover",
+        "quality_8d",
+        "training",
+        "interview",
+        "mka_persistence",
+    ):
+        assert vocabulary not in source
 
 
 def test_shared_workflow_routers_are_not_owned_by_mka_pack() -> None:

@@ -16,6 +16,7 @@ from app.platform.packs.contracts import (
     ReviewProviderContribution,
     TaskHandlerContribution,
     UIModuleContribution,
+    WorkflowHandlerContribution,
 )
 from app.platform.packs.lifecycle import (
     APPLICATION_LIFECYCLE_STATES,
@@ -39,6 +40,7 @@ __all__ = [
     "ReviewProviderContribution",
     "TaskHandlerContribution",
     "UIModuleContribution",
+    "WorkflowHandlerContribution",
     "APPLICATION_LIFECYCLE_STATES",
     "APPLICATION_LIFECYCLE_TRANSITIONS",
     "can_transition_application",

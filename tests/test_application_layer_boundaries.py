@@ -6,6 +6,7 @@ import ast
 import json
 from pathlib import Path
 
+from app.composition.packs import build_pack_registry
 from app.packs.mka.manifest import MKA_MODULE_KEYS, build_mka_pack
 from app.platform.knowledge import is_legacy_ask_task, query_mode_keys
 from app.services.mka_module_seed import CANONICAL_MODULES
@@ -33,13 +34,16 @@ def _imports(path: Path) -> list[tuple[int, str]]:
 
 def test_boundary_catalog_has_disjoint_product_layers() -> None:
     catalog = _catalog()
-    assert catalog["schema_version"] == 1
+    assert catalog["schema_version"] == 2
     core = set(catalog["core_capabilities"])
     workflow = set(catalog["workflow_capabilities"])
     assert core
     assert workflow
     assert core.isdisjoint(workflow)
-    assert catalog["legacy_mka_aggregate"]["status"] == "frozen_pending_split"
+    assert (
+        catalog["legacy_mka_aggregate"]["status"]
+        == "backend_split_frontend_pending"
+    )
     assert (
         catalog["legacy_mka_aggregate"]["new_application_registration"]
         == "dedicated_pack_required"
@@ -84,14 +88,19 @@ def test_frontend_pack_bundle_is_imported_only_by_composition_root() -> None:
     assert violations == []
 
 
-def test_legacy_mka_aggregate_is_frozen_until_split() -> None:
-    """A sixth scenario must be a dedicated Pack, not another MKA seed entry."""
+def test_legacy_mka_modules_have_dedicated_pack_owners() -> None:
     expected = tuple(_catalog()["legacy_mka_aggregate"]["module_keys"])
     seeded = tuple(spec["module_key"] for spec in CANONICAL_MODULES)
     manifest = build_mka_pack().manifest
+    registry = build_pack_registry(deployment_capabilities={"mka": True})
     assert seeded == expected
     assert tuple(MKA_MODULE_KEYS) == expected
-    assert manifest.module_keys == expected
+    assert manifest.module_keys == ()
+    owners = _catalog()["legacy_mka_aggregate"]["application_pack_owners"]
+    assert {
+        module_key: registry.pack_key_for_module(module_key)
+        for module_key in expected
+    } == owners
 
 
 def test_core_query_modes_are_not_application_modules() -> None:

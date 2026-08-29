@@ -50,3 +50,17 @@ def resolve_pack_permissions(registry: PackRegistry, user: Any) -> tuple[str, ..
             )
         permissions.update(str(item) for item in resolver(user) or ())
     return tuple(sorted(permissions))
+
+
+def resolve_workflow_handler(
+    registry: PackRegistry, *, handler_key: str, module_key: str
+) -> Any | None:
+    descriptor = registry.workflow_handler(handler_key, module_key)
+    if descriptor is None:
+        return None
+    handler = load_contribution_object(descriptor.handler_path)
+    if not callable(handler):
+        raise TypeError(
+            f"workflow handler is not callable: {descriptor.handler_key}"
+        )
+    return handler

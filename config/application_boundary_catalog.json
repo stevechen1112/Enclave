@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "decision_date": "2026-08-29",
   "core_capabilities": [
     "tenant_control_plane",
@@ -27,7 +27,8 @@
     "app.services.mka_"
   ],
   "pack_composition_import_allowlist": [
-    "app/composition/packs.py"
+    "app/composition/packs.py",
+    "app/composition/approval_objects.py"
   ],
   "frontend_bundle_composition_root": "frontend/src/modules/installed.ts",
   "deprecated_core_compatibility_aliases": {
@@ -38,17 +39,21 @@
       "ask"
     ]
   },
-  "workflow_compatibility_bridges": [
-    "app/services/workflow_repository.py"
-  ],
+  "workflow_compatibility_bridges": [],
   "legacy_mka_aggregate": {
-    "status": "frozen_pending_split",
+    "status": "backend_split_frontend_pending",
     "new_application_registration": "dedicated_pack_required",
     "module_keys": [
       "sales_quote",
       "incident_handover",
       "quality_8d",
       "training_knowhow"
-    ]
+    ],
+    "application_pack_owners": {
+      "sales_quote": "sales_quote",
+      "incident_handover": "incident_handover",
+      "quality_8d": "quality_8d",
+      "training_knowhow": "training_knowhow"
+    }
   }
 }

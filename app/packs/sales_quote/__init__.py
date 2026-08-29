@@ -1,0 +1,1 @@
+"""Sales quote application pack."""

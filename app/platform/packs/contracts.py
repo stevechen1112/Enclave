@@ -76,6 +76,31 @@ class TaskHandlerContribution:
 
 
 @dataclass(frozen=True)
+class WorkflowHandlerContribution:
+    """In-process Workflow task handler owned by one application module."""
+
+    handler_key: str
+    handler_version: str
+    module_key: str
+    handler_path: str
+
+    def __post_init__(self) -> None:
+        for field_name in ("handler_key", "module_key"):
+            object.__setattr__(
+                self,
+                field_name,
+                _validate_key(getattr(self, field_name), field_name=field_name),
+            )
+        object.__setattr__(
+            self,
+            "handler_version",
+            _validate_version(self.handler_version, field_name="handler_version"),
+        )
+        if ":" not in str(self.handler_path or ""):
+            raise ValueError("handler_path must use module:attribute format")
+
+
+@dataclass(frozen=True)
 class ProjectorContribution:
     projector_key: str
     projector_version: str
@@ -416,6 +441,7 @@ class PackContribution:
     applications: tuple[ApplicationManifest, ...] = ()
     knowledge_providers: tuple[Any, ...] = ()
     task_handlers: tuple[TaskHandlerContribution, ...] = ()
+    workflow_handlers: tuple[WorkflowHandlerContribution, ...] = ()
     projectors: tuple[ProjectorContribution, ...] = ()
     ui_modules: tuple[UIModuleContribution, ...] = ()
     api_routers: tuple[APIRouterContribution, ...] = ()
@@ -429,6 +455,7 @@ class PackContribution:
             "applications",
             "knowledge_providers",
             "task_handlers",
+            "workflow_handlers",
             "projectors",
             "ui_modules",
             "api_routers",
@@ -549,6 +576,20 @@ class PackRegistry:
             if self.is_deployed(key)
             for handler in contribution.task_handlers
         )
+
+    def workflow_handler(
+        self, handler_key: str, module_key: str
+    ) -> WorkflowHandlerContribution | None:
+        for key, contribution in self._packs.items():
+            if not self.is_deployed(key):
+                continue
+            for handler in contribution.workflow_handlers:
+                if (
+                    handler.handler_key == handler_key
+                    and handler.module_key == module_key
+                ):
+                    return handler
+        return None
 
     def projectors(self) -> tuple[ProjectorContribution, ...]:
         return tuple(
@@ -761,23 +802,45 @@ class PackRegistry:
         if existing_permissions.intersection(contribution.manifest.permission_keys):
             raise ValueError("duplicate permission key across packs")
 
-        for field_name, values, attr in (
-            ("task handler", contribution.task_handlers, "handler_key"),
-            ("projector", contribution.projectors, "projector_key"),
-            ("ui module", contribution.ui_modules, "ui_key"),
-            ("API router", contribution.api_routers, "router_key"),
+        for field_name, collection_name, values, attr in (
+            (
+                "task handler",
+                "task_handlers",
+                contribution.task_handlers,
+                "handler_key",
+            ),
+            (
+                "workflow handler",
+                "workflow_handlers",
+                contribution.workflow_handlers,
+                "handler_key",
+            ),
+            ("projector", "projectors", contribution.projectors, "projector_key"),
+            ("ui module", "ui_modules", contribution.ui_modules, "ui_key"),
+            ("API router", "api_routers", contribution.api_routers, "router_key"),
             (
                 "permission resolver",
+                "permission_resolvers",
                 contribution.permission_resolvers,
                 "resolver_key",
             ),
-            ("lifecycle hook", contribution.lifecycle_hooks, "hook_key"),
-            ("review provider", contribution.review_providers, "provider_key"),
+            (
+                "lifecycle hook",
+                "lifecycle_hooks",
+                contribution.lifecycle_hooks,
+                "hook_key",
+            ),
+            (
+                "review provider",
+                "review_providers",
+                contribution.review_providers,
+                "provider_key",
+            ),
         ):
             existing = {
                 str(getattr(item, attr))
                 for pack in self._packs.values()
-                for item in getattr(pack, self._contribution_field(attr))
+                for item in getattr(pack, collection_name)
             }
             incoming = [str(getattr(item, attr)) for item in values]
             if len(incoming) != len(set(incoming)) or existing.intersection(incoming):
@@ -810,18 +873,6 @@ class PackRegistry:
             set(incoming_routes)
         ) or existing_routes.intersection(incoming_routes):
             raise ValueError("duplicate ui route key across packs")
-
-    @staticmethod
-    def _contribution_field(attribute: str) -> str:
-        return {
-            "handler_key": "task_handlers",
-            "projector_key": "projectors",
-            "ui_key": "ui_modules",
-            "router_key": "api_routers",
-            "resolver_key": "permission_resolvers",
-            "hook_key": "lifecycle_hooks",
-            "provider_key": "review_providers",
-        }[attribute]
 
     @staticmethod
     def _version_tuple(version: str) -> tuple[int, int, int]:

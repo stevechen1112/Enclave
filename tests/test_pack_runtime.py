@@ -71,15 +71,16 @@ def test_mka_manifest_registers_all_backend_contribution_types():
     registry = build_pack_registry(deployment_capabilities={"mka": True})
     contribution = registry.get("mka")
 
-    assert registry.deployed_pack_keys == ("mka",)
-    assert contribution is not None
-    assert contribution.manifest.pack_version == "1.0.0"
-    assert contribution.manifest.module_keys == (
+    assert registry.deployed_pack_keys == (
+        "mka",
         "sales_quote",
         "incident_handover",
         "quality_8d",
         "training_knowhow",
     )
+    assert contribution is not None
+    assert contribution.manifest.pack_version == "1.0.0"
+    assert contribution.manifest.module_keys == ()
     assert [provider.provider_key for provider in registry.knowledge_providers()] == [
         "mka.approved_knowhow"
     ]
@@ -94,35 +95,40 @@ def test_mka_manifest_registers_all_backend_contribution_types():
     ]
     assert [item.ui_key for item in registry.ui_modules()] == [
         "mka.workspace",
-        "mka.sales_quote",
-        "mka.knowhow",
+        "sales_quote.entry",
+        "training_knowhow.workspace",
     ]
     assert "mka.module.admin" in registry.permission_keys()
 
 
 def test_mka_apps_have_independent_versioned_contracts_and_data_policies():
     registry = build_pack_registry(deployment_capabilities={"mka": True})
-    contribution = registry.get("mka")
-    assert contribution is not None
-    assert [app.application_key for app in contribution.applications] == [
+    applications = [
+        application
+        for pack_key in registry.pack_keys
+        for application in (registry.get(pack_key).applications if registry.get(pack_key) else ())
+    ]
+    assert [app.application_key for app in applications] == [
         "sales.quote",
         "operations.incident_handover",
         "quality.8d",
         "training.knowhow",
     ]
     assert {
-        app.module_key for app in contribution.applications
-    } == set(contribution.manifest.module_keys)
+        app.module_key for app in applications
+    } == {"sales_quote", "incident_handover", "quality_8d", "training_knowhow"}
     all_handlers = [
-        key for app in contribution.applications for key in app.handler_keys
+        key for app in applications for key in app.handler_keys
     ]
     assert len(all_handlers) == len(set(all_handlers))
-    for app in contribution.applications:
+    for app in applications:
         assert app.application_version == "1.0.0"
         assert app.data_policy is not None
         assert registry.application_for_module(app.module_key) is app
+        owner = registry.get(registry.pack_key_for_module(app.module_key))
+        assert owner is not None
         assert set(app.required_platform_capability_keys).issubset(
-            contribution.manifest.required_platform_capability_keys
+            owner.manifest.required_platform_capability_keys
         )
 
 
@@ -153,12 +159,30 @@ def test_task_handler_descriptors_resolve_to_existing_callables():
     for descriptor in registry.projectors():
         module_name, attribute = descriptor.projector_path.rsplit(".", 1)
         assert callable(getattr(importlib.import_module(module_name), attribute))
+    for descriptor in (
+        registry.workflow_handler(key, module)
+        for key, module in (
+            ("quote", "sales_quote"),
+            ("incident", "incident_handover"),
+            ("quality_8d", "quality_8d"),
+            ("interview", "training_knowhow"),
+        )
+    ):
+        assert descriptor is not None
+        module_name, attribute = descriptor.handler_path.split(":", 1)
+        assert callable(getattr(importlib.import_module(module_name), attribute))
 
 
 def test_deployment_flag_removes_every_mka_backend_contribution():
     registry = build_pack_registry(deployment_capabilities={"mka": False})
 
-    assert registry.pack_keys == ("mka",)
+    assert registry.pack_keys == (
+        "mka",
+        "sales_quote",
+        "incident_handover",
+        "quality_8d",
+        "training_knowhow",
+    )
     assert registry.deployed_pack_keys == ()
     assert registry.knowledge_providers() == ()
     assert registry.task_handlers() == ()
@@ -168,6 +192,21 @@ def test_deployment_flag_removes_every_mka_backend_contribution():
     assert registry.permission_resolvers() == ()
     assert registry.lifecycle_hooks() == ()
     assert registry.permission_keys() == ()
+
+
+def test_one_application_pack_can_be_physically_excluded() -> None:
+    registry = build_pack_registry(
+        deployment_capabilities={"mka": True, "sales_quote": False}
+    )
+    assert "sales_quote" not in registry.deployed_pack_keys
+    assert registry.workflow_handler("quote", "sales_quote") is None
+    assert registry.workflow_handler("quality_8d", "quality_8d") is not None
+    assert "sales_quote.entry" not in {
+        item.ui_key for item in registry.ui_modules()
+    }
+    assert "training_knowhow.workspace" in {
+        item.ui_key for item in registry.ui_modules()
+    }
 
 
 def test_disabled_pack_has_no_api_or_worker_surface():
@@ -246,7 +285,7 @@ def test_tenant_binding_is_separate_from_deployment_capability(pack_db):
         for _, ui in registry.enabled_ui_modules(
             context=PackTenantContext(tenant_id=tenant.id, db=pack_db)
         )
-    ] == ["mka.workspace", "mka.knowhow"]
+    ] == ["mka.workspace", "training_knowhow.workspace"]
 
 
 def test_registry_rejects_missing_incompatible_and_circular_dependencies():

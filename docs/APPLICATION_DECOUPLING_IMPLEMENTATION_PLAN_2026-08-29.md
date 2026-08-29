@@ -6,6 +6,8 @@
 
 **實作進度：** A0 PASS；A1 PASS；A2 PASS；A3 PASS；A4 PASS
 
+**物理脫鉤追加進度：** A5 PASS；A6 進行中；A7–A8 待進行
+
 ## 1. 目標結構
 
 ```text
@@ -88,3 +90,10 @@ Independent Applications
 - 不一次搬動資料權威；每次先建立 contract、dual path、驗證與回復點。
 - 每個完整 Phase 必須完成實作、測試、code review、修正與獨立 review 文件後才進下一階段。
 - 工作區既有未相關變更不納入本計畫提交。
+
+## 8. 物理脫鉤追加階段
+
+- A5：把場景 handler 與 application approval side effect 移出 Workflow Kernel，消除 Workflow 對 MKA persistence 的依賴。
+- A6：四個既有應用各自成為後端 deployable Pack；MKA 只保留待拆的相容 shell。
+- A7：前端共享 Workflow routes 與四個 application bundles 分離。
+- A8：逐一從 composition 排除每個 Pack，執行完整測試、Code Review 與瀏覽器驗收。
