@@ -57,4 +57,3 @@ tests/test_p4_module_platform.py            10 passed
 ## 5. Gate 決定
 
 Phase A0 通過，可以進入 A1。A1 必須以核心能力歸位為目標，不得順帶擴充任何場景功能。
-

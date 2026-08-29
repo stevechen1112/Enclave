@@ -91,4 +91,3 @@ def test_legacy_mka_aggregate_is_frozen_until_split() -> None:
     assert seeded == expected
     assert tuple(MKA_MODULE_KEYS) == expected
     assert manifest.module_keys == expected
-
