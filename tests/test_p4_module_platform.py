@@ -58,6 +58,12 @@ class TestCompatibilityMatrix:
 
 
 class TestModuleAdminService:
+    def test_register_rejects_database_only_application(self):
+        svc = ModuleAdminService(MagicMock())
+
+        with pytest.raises(ValueError, match="dedicated Pack manifest"):
+            svc.register_module(module_key="new_scenario", name="New scenario")
+
     def test_enable_with_compatibility_check(self):
         mock_db = MagicMock()
         svc = ModuleAdminService(mock_db)

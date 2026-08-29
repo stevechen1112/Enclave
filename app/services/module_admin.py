@@ -121,7 +121,20 @@ class ModuleAdminService:
         supported_intents: Optional[List[str]] = None,
         form_definition_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """註冊新模組（admin）。"""
+        """Update one of the frozen legacy MKA modules.
+
+        New applications must be delivered as a dedicated Pack with a manifest;
+        a database-only JobModule is not an installable application boundary.
+        """
+        from app.services.mka_module_seed import CANONICAL_MODULES
+
+        legacy_keys = {str(spec["module_key"]) for spec in CANONICAL_MODULES}
+        if module_key not in legacy_keys:
+            raise ValueError(
+                "new applications require a dedicated Pack manifest: "
+                f"{module_key}"
+            )
+
         from app.models.mka import JobModule
 
         existing = (

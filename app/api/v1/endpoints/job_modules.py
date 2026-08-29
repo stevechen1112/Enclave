@@ -144,15 +144,18 @@ def register_module(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(require_admin),
 ):
-    """Register a new job module (admin only, global)."""
+    """Update a frozen legacy MKA module (admin only, global)."""
     admin = ModuleAdminService(db)
-    result = admin.register_module(
-        module_key=module_key,
-        name=name,
-        description=description,
-        allowed_roles=allowed_roles.split(",") if allowed_roles else None,
-        allowed_departments=allowed_departments.split(",") if allowed_departments else None,
-    )
+    try:
+        result = admin.register_module(
+            module_key=module_key,
+            name=name,
+            description=description,
+            allowed_roles=allowed_roles.split(",") if allowed_roles else None,
+            allowed_departments=allowed_departments.split(",") if allowed_departments else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return result
 
 

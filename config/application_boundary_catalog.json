@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "decision_date": "2026-08-29",
+  "core_capabilities": [
+    "tenant_control_plane",
+    "multimodal_input",
+    "enterprise_knowledge",
+    "evidence_and_release",
+    "ask",
+    "spec_sop_mode"
+  ],
+  "workflow_capabilities": [
+    "task",
+    "form",
+    "approval",
+    "todo",
+    "notification",
+    "export"
+  ],
+  "core_roots": [
+    "app/platform",
+    "app/ingestion"
+  ],
+  "forbidden_core_import_prefixes": [
+    "app.packs",
+    "app.models.mka",
+    "app.services.mka_"
+  ],
+  "pack_composition_import_allowlist": [
+    "app/composition/packs.py"
+  ],
+  "frontend_bundle_composition_root": "frontend/src/modules/installed.ts",
+  "legacy_mka_aggregate": {
+    "status": "frozen_pending_split",
+    "new_application_registration": "dedicated_pack_required",
+    "module_keys": [
+      "spec_sop",
+      "sales_quote",
+      "incident_handover",
+      "quality_8d",
+      "training_knowhow"
+    ]
+  }
+}
