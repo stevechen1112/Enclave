@@ -68,10 +68,10 @@ draft
 
 ### 3. 規則與簽核
 
-目前可設定並保留版本的內容包括：
+目前已有的規則與簽核資料能力包括：
 
-- `RuleSet`：例如價格、稅、MOQ、交期等規則的輸入／輸出 Schema、實作參照與測試案例。
-- `ApprovalPolicy`：適用物件、風險等級、多級簽核步驟、逾時與代理政策。
+- `RuleSet`：資料模型與 Schema 可保存價格、稅、MOQ、交期等規則的輸入／輸出、實作參照與測試案例；目前沒有完整的通用規則管理 API／UI，不能視為已完成的低碼規則引擎。
+- `ApprovalPolicy`：可管理適用物件、風險等級與多級簽核步驟；逾時與代理政策目前可保存及編輯，但尚未證明所有政策都有完整的自動排程／代理執行。
 - `MKAApprovalRequest`：送審人、當前關卡、決策紀錄、idempotency key、到期日與核准後 immutable snapshot。
 - 簽核狀態機：避免未經核准的表單、知識卡或高風險操作直接視為正式結果。
 
@@ -98,7 +98,7 @@ draft
 
 ### 第四層目前的界線
 
-第四層**不是**完整的通用 BPMN／低碼流程引擎，也不是每個新流程都能零開發拖拉完成。目前最成熟的任務、表單、簽核資料模型仍在 `mka_*` 表與 MKA API 中。
+第四層**不是**完整的通用 BPMN／低碼流程引擎，也不是每個新流程都能零開發拖拉完成。目前最成熟的任務、表單、簽核資料模型仍在 `mka_*` 表與 MKA API 中；規則、逾時、代理與通知也不能僅因已有欄位或局部服務，就推定為完整的通用 workflow automation。
 
 因此現況應表述為：
 
@@ -154,6 +154,21 @@ MKA 目前定義五個職能模組：
 | `quality_8d` | 品質改善 | 客訴、圍堵、根因、矯正、驗證、簽核與 8D 類型流程。 |
 | `training_knowhow` | 師傅傳承與訓練 | 訪談／長音檔、知識卡、覆核、適用設備與新人學習。 |
 
+目前另有八個已啟用的全域任務定義，由租戶模組綁定、職能與能力共同決定使用者是否看得到、能否啟動：
+
+| 任務 key | 任務名稱 | 所屬模組 |
+|---|---|---|
+| `ask` | 問知識庫 | `spec_sop` |
+| `quote` | 開報價單 | `sales_quote` |
+| `incident` | 異常回報 | `incident_handover` |
+| `handover` | 交接班紀錄 | `incident_handover` |
+| `daily_report` | 工作日報 | `incident_handover` |
+| `quality_8d` | 品質 8D 報告 | `quality_8d` |
+| `interview` | 師傅訪談 | `training_knowhow` |
+| `training` | 新人訓練 | `training_knowhow` |
+
+這些是正式任務定義與執行骨架，不代表每一個模組都已完成相同深度的客戶現場驗收、產業模板與商用成熟度。
+
 MKA 也實際掛載了：
 
 - `/job` 現場作業工作台與動態職能入口。
@@ -184,6 +199,8 @@ MKA 也實際掛載了：
 - `config_json` 租戶覆寫設定與 `config_version`。
 - 同一租戶不同模組可個別控制。
 
+一般新租戶採 opt-in：如果沒有任何已啟用 binding，就不會看到全域 MKA 模組。只有受控 seeder 或明確帶入 `enable_default_modules` 的 provisioning 流程才會一次建立預設啟用綁定；這不應描述成所有新租戶自動開啟全部 MKA 功能。
+
 管理端已有 module list、enable、disable、config update 與 compatibility API。前端的能力目錄也把「已部署、租戶啟用、執行健康、我的權限」分成四個狀態顯示，避免把「已安裝」誤當成「使用者可以操作」。
 
 ### 2. 租戶自己的職能與組織語言
@@ -201,10 +218,10 @@ MKA 也實際掛載了：
 
 目前可做的設定式調整包括：
 
-- 公司專屬表單欄位、UI Schema、版本與有效日期。
+- 租戶 scoped 的表單定義、UI Schema、版本與有效日期；目前主要由內建 fixed-form Schema／後端 provisioning 建立，尚無完整的租戶自助式表單設計器。
 - DOCX／XLSX 公司版型與欄位 mapping。
-- 租戶版規則集、測試案例、模組適用範圍。
-- 多級簽核政策、代理與逾時規則。
+- 租戶版規則集的資料模型與測試案例欄位；目前仍需工程／後端交付，尚無完整自助式規則設計 UI。
+- 多級簽核步驟，以及可保存的代理與逾時 policy；代理／逾時的全面自動執行仍未完成驗證。
 - QR 場景對應的廠區、產線、設備、產品、工單與文件版本。
 - 模組的允許角色、部門、職能、知識範圍、工具與 UX 入口。
 
@@ -265,3 +282,17 @@ MKA 也實際掛載了：
 5. **高風險寫入維持人工決策。** 對 ERP、MES、設備或正式文件的寫入，必須經權限、簽核、可追溯紀錄與必要 rollback。
 
 這樣第四層會越來越通用、第五層會越來越多可選模組、第六層可以愈來愈貼近不同製造企業，但前三層仍保持穩定且容易維護。
+
+---
+
+## 2026-08-29 第二輪程式對照結果
+
+本文件已再次對照 Pack composition root、MKA manifest、前端 route bundle、任務種子、Task Engine、Module Registry、tenant lifecycle、表單模板與 Experience Bootstrap。
+
+- 確認 `app/packs/` 目前只有 MKA 一個實際 Pack。
+- 確認 MKA manifest 為 `1.0.0`、`beta`，並宣告五個 module key。
+- 確認前端只有 MKA bundle，實際擁有 `/job`、task、forms、approvals、knowhow 等 route keys。
+- 確認八個全域 TaskDefinition 種子與租戶／職能／能力三層 runtime gate。
+- 確認一般租戶沒有啟用 binding 時看不到 MKA；預設全開只發生在明確指定的受控 provisioning／seeder。
+- 確認 RuleSet 尚無完整通用管理 API／UI；逾時與代理 policy 可保存但不可宣稱全面自動化。
+- 相關回歸：`test_pack_runtime`、`test_p4_module_platform`、`test_p2_task_engine`、`test_experience_bootstrap` 共 62 項通過。
