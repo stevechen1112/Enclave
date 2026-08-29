@@ -2,6 +2,8 @@
 
 from app.platform.packs.contracts import (
     APIRouterContribution,
+    ApplicationDataPolicy,
+    ApplicationManifest,
     LifecycleHookContribution,
     PackContribution,
     PackDependency,
@@ -18,6 +20,8 @@ from app.platform.packs.contracts import (
 
 __all__ = [
     "APIRouterContribution",
+    "ApplicationDataPolicy",
+    "ApplicationManifest",
     "LifecycleHookContribution",
     "PackContribution",
     "PackDependency",

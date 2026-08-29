@@ -20,6 +20,8 @@ from app.composition.packs import build_pack_registry
 from app.models.mka import TenantModuleBinding
 from app.models.tenant import Tenant
 from app.platform.packs import (
+    ApplicationDataPolicy,
+    ApplicationManifest,
     PackContribution,
     PackDependency,
     PackManifest,
@@ -96,6 +98,51 @@ def test_mka_manifest_registers_all_backend_contribution_types():
         "mka.knowhow",
     ]
     assert "mka.module.admin" in registry.permission_keys()
+
+
+def test_mka_apps_have_independent_versioned_contracts_and_data_policies():
+    registry = build_pack_registry(deployment_capabilities={"mka": True})
+    contribution = registry.get("mka")
+    assert contribution is not None
+    assert [app.application_key for app in contribution.applications] == [
+        "sales.quote",
+        "operations.incident_handover",
+        "quality.8d",
+        "training.knowhow",
+    ]
+    assert {
+        app.module_key for app in contribution.applications
+    } == set(contribution.manifest.module_keys)
+    all_handlers = [
+        key for app in contribution.applications for key in app.handler_keys
+    ]
+    assert len(all_handlers) == len(set(all_handlers))
+    for app in contribution.applications:
+        assert app.application_version == "1.0.0"
+        assert app.data_policy is not None
+        assert registry.application_for_module(app.module_key) is app
+        assert set(app.required_platform_capability_keys).issubset(
+            contribution.manifest.required_platform_capability_keys
+        )
+
+
+def test_application_contract_requires_full_lifecycle_and_data_policy():
+    common = dict(
+        application_key="test.app",
+        application_version="1.0.0",
+        display_name="Test",
+        module_key="test_app",
+        owned_capability_keys=("test.app.use",),
+        required_platform_capability_keys=("workflow.task",),
+    )
+    with pytest.raises(ValueError, match="data_policy"):
+        ApplicationManifest(**common)
+    with pytest.raises(ValueError, match="lifecycle"):
+        ApplicationManifest(
+            **common,
+            data_policy=ApplicationDataPolicy(ownership_key="test.records"),
+            lifecycle_events=("application.enable",),
+        )
 
 
 def test_task_handler_descriptors_resolve_to_existing_callables():
@@ -249,6 +296,21 @@ def test_registry_is_immutable_after_composition():
     registry = PackRegistry([_pack("core")])
     with pytest.raises(RuntimeError, match="immutable"):
         registry.register(_pack("late"))
+
+
+def test_registry_rejects_unknown_required_platform_capability():
+    contribution = PackContribution(
+        manifest=PackManifest(
+            pack_key="broken",
+            pack_version="1.0.0",
+            display_name="Broken",
+            capability_keys=("broken.use",),
+            required_platform_capability_keys=("workflow.does_not_exist",),
+            tenant_binding_required=False,
+        )
+    )
+    with pytest.raises(ValueError, match="unknown required platform"):
+        PackRegistry([contribution])
 
 
 def test_registry_rejects_duplicate_ui_route_keys():

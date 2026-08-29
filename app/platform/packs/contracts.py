@@ -14,6 +14,8 @@ from types import MappingProxyType
 from typing import Any, Protocol, runtime_checkable
 from uuid import UUID
 
+from app.platform.workflow import WORKFLOW_CAPABILITY_KEYS
+
 _KEY_PATTERN = re.compile(r"^[a-z][a-z0-9_.-]*$")
 _VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+(?:[-+][a-zA-Z0-9.-]+)?$")
 logger = logging.getLogger(__name__)
@@ -252,11 +254,109 @@ class ReviewProviderContribution:
 
 
 @dataclass(frozen=True)
+class ApplicationDataPolicy:
+    """Required data-lifecycle declaration for a tenant-selectable application."""
+
+    ownership_key: str
+    disable_behavior: str = "retain_read_only"
+    archive_behavior: str = "retain_audit_read"
+    removal_behavior: str = "export_then_delete"
+    export_required_before_remove: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "ownership_key",
+            _validate_key(self.ownership_key, field_name="ownership_key"),
+        )
+        allowed = {
+            "disable_behavior": {"retain_read_only"},
+            "archive_behavior": {"retain_audit_read"},
+            "removal_behavior": {"export_then_delete", "retain_by_policy"},
+        }
+        for field_name, values in allowed.items():
+            value = str(getattr(self, field_name) or "").strip()
+            if value not in values:
+                raise ValueError(f"invalid {field_name}: {value!r}")
+            object.__setattr__(self, field_name, value)
+
+
+@dataclass(frozen=True)
+class ApplicationManifest:
+    """Logical application contract, independently entitled per tenant."""
+
+    application_key: str
+    application_version: str
+    display_name: str
+    module_key: str
+    owned_capability_keys: tuple[str, ...]
+    required_platform_capability_keys: tuple[str, ...]
+    task_keys: tuple[str, ...] = ()
+    handler_keys: tuple[str, ...] = ()
+    form_keys: tuple[str, ...] = ()
+    permission_keys: tuple[str, ...] = ()
+    data_policy: ApplicationDataPolicy | None = None
+    lifecycle_events: tuple[str, ...] = (
+        "application.install",
+        "application.enable",
+        "application.disable",
+        "application.archive",
+        "application.remove",
+    )
+
+    def __post_init__(self) -> None:
+        for field_name in ("application_key", "module_key"):
+            object.__setattr__(
+                self,
+                field_name,
+                _validate_key(getattr(self, field_name), field_name=field_name),
+            )
+        object.__setattr__(
+            self,
+            "application_version",
+            _validate_version(
+                self.application_version, field_name="application_version"
+            ),
+        )
+        if not str(self.display_name or "").strip():
+            raise ValueError("application display_name is required")
+        for field_name in (
+            "owned_capability_keys",
+            "required_platform_capability_keys",
+            "task_keys",
+            "handler_keys",
+            "form_keys",
+            "permission_keys",
+            "lifecycle_events",
+        ):
+            values = tuple(getattr(self, field_name) or ())
+            if len(values) != len(set(values)):
+                raise ValueError(f"duplicate {field_name} in {self.application_key}")
+            for value in values:
+                _validate_key(value, field_name=field_name)
+            object.__setattr__(self, field_name, values)
+        if not self.owned_capability_keys:
+            raise ValueError("application owned_capability_keys is required")
+        required_events = {
+            "application.install",
+            "application.enable",
+            "application.disable",
+            "application.archive",
+            "application.remove",
+        }
+        if not required_events.issubset(self.lifecycle_events):
+            raise ValueError("application lifecycle must declare all required events")
+        if self.data_policy is None:
+            raise ValueError("application data_policy is required")
+
+
+@dataclass(frozen=True)
 class PackManifest:
     pack_key: str
     pack_version: str
     display_name: str
     capability_keys: tuple[str, ...]
+    required_platform_capability_keys: tuple[str, ...] = ()
     module_keys: tuple[str, ...] = ()
     permission_keys: tuple[str, ...] = ()
     dependencies: tuple[PackDependency, ...] = ()
@@ -274,7 +374,12 @@ class PackManifest:
         )
         if not str(self.display_name or "").strip():
             raise ValueError("display_name is required")
-        for field_name in ("capability_keys", "module_keys", "permission_keys"):
+        for field_name in (
+            "capability_keys",
+            "required_platform_capability_keys",
+            "module_keys",
+            "permission_keys",
+        ):
             values = tuple(getattr(self, field_name) or ())
             if len(values) != len(set(values)):
                 raise ValueError(f"duplicate {field_name} in pack {self.pack_key}")
@@ -308,6 +413,7 @@ class PackTenantEligibility(Protocol):
 @dataclass(frozen=True)
 class PackContribution:
     manifest: PackManifest
+    applications: tuple[ApplicationManifest, ...] = ()
     knowledge_providers: tuple[Any, ...] = ()
     task_handlers: tuple[TaskHandlerContribution, ...] = ()
     projectors: tuple[ProjectorContribution, ...] = ()
@@ -320,6 +426,7 @@ class PackContribution:
 
     def __post_init__(self) -> None:
         for field_name in (
+            "applications",
             "knowledge_providers",
             "task_handlers",
             "projectors",
@@ -334,6 +441,13 @@ class PackContribution:
             raise ValueError(
                 f"tenant eligibility is required for pack {self.manifest.pack_key}"
             )
+        application_modules = tuple(app.module_key for app in self.applications)
+        if self.applications and set(application_modules) != set(
+            self.manifest.module_keys
+        ):
+            raise ValueError(
+                "pack application module_keys must exactly match manifest module_keys"
+            )
 
 
 class PackRegistry:
@@ -344,10 +458,12 @@ class PackRegistry:
         contributions: Iterable[PackContribution] = (),
         *,
         deployment_capabilities: Mapping[str, bool] | None = None,
+        platform_capability_keys: Iterable[str] = WORKFLOW_CAPABILITY_KEYS,
     ) -> None:
         self._packs: dict[str, PackContribution] = {}
         self._sealed = False
         self._deployment_capabilities = dict(deployment_capabilities or {})
+        self._platform_capability_keys = frozenset(platform_capability_keys)
         for contribution in contributions:
             self.register(contribution)
         self.validate_dependencies()
@@ -359,6 +475,14 @@ class PackRegistry:
         key = contribution.manifest.pack_key
         if key in self._packs:
             raise ValueError(f"duplicate pack_key: {key}")
+        missing_platform = set(
+            contribution.manifest.required_platform_capability_keys
+        ) - self._platform_capability_keys
+        if missing_platform:
+            raise ValueError(
+                f"unknown required platform capabilities for {key}: "
+                f"{sorted(missing_platform)}"
+            )
         self._assert_unique_contribution_keys(contribution)
         self._packs[key] = contribution
 
@@ -378,6 +502,13 @@ class PackRegistry:
         for pack_key, contribution in self._packs.items():
             if module_key in contribution.manifest.module_keys:
                 return pack_key
+        return None
+
+    def application_for_module(self, module_key: str) -> ApplicationManifest | None:
+        for contribution in self._packs.values():
+            for application in contribution.applications:
+                if application.module_key == module_key:
+                    return application
         return None
 
     def is_deployed(self, pack_key: str) -> bool:
@@ -548,6 +679,50 @@ class PackRegistry:
         if existing_module_keys.intersection(contribution.manifest.module_keys):
             raise ValueError("duplicate module key across packs")
 
+        existing_application_keys = {
+            app.application_key
+            for pack in self._packs.values()
+            for app in pack.applications
+        }
+        incoming_application_keys = [
+            app.application_key for app in contribution.applications
+        ]
+        if len(incoming_application_keys) != len(set(incoming_application_keys)):
+            raise ValueError("duplicate application key in pack")
+        if existing_application_keys.intersection(incoming_application_keys):
+            raise ValueError("duplicate application key across packs")
+        declared_capabilities = set(contribution.manifest.capability_keys)
+        required_platform = set(
+            contribution.manifest.required_platform_capability_keys
+        )
+        for application in contribution.applications:
+            if not set(application.owned_capability_keys).issubset(
+                declared_capabilities
+            ):
+                raise ValueError(
+                    "application capabilities must be owned by pack manifest"
+                )
+            if not set(application.required_platform_capability_keys).issubset(
+                required_platform
+            ):
+                raise ValueError(
+                    "application platform requirements must be declared by pack"
+                )
+            if not set(application.permission_keys).issubset(
+                contribution.manifest.permission_keys
+            ):
+                raise ValueError(
+                    "application permissions must be declared by pack manifest"
+                )
+        for field_name in ("task_keys", "handler_keys"):
+            values = [
+                value
+                for app in contribution.applications
+                for value in getattr(app, field_name)
+            ]
+            if len(values) != len(set(values)):
+                raise ValueError(f"application {field_name} must be uniquely owned")
+
         existing_providers = {
             str(getattr(provider, "provider_key", ""))
             for pack in self._packs.values()
@@ -615,7 +790,8 @@ class PackRegistry:
             ):
                 raise ValueError("ui module_key must be declared by pack manifest")
             if not set(ui_module.required_capability_keys).issubset(
-                contribution.manifest.capability_keys
+                set(contribution.manifest.capability_keys)
+                | set(contribution.manifest.required_platform_capability_keys)
             ):
                 raise ValueError("ui capabilities must be declared by pack manifest")
 
