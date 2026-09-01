@@ -101,12 +101,20 @@ export default function LandingPage() {
             <a href="#trust" className="hover:text-stone-950">如何放心用</a>
           </nav>
 
-          <a
-            href="#demo"
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-[#1f5f59]"
-          >
-            選一位同事試用 <ArrowRight className="h-4 w-4" aria-hidden />
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="/login"
+              className="inline-flex min-h-11 items-center rounded-lg border border-stone-400 bg-[#faf7f0] px-4 text-sm font-semibold text-stone-900 transition hover:border-[#1f5f59] hover:text-[#1f5f59]"
+            >
+              企業登入
+            </a>
+            <a
+              href="#demo"
+              className="hidden min-h-11 items-center gap-2 rounded-lg bg-stone-900 px-4 text-sm font-semibold text-white transition hover:bg-[#1f5f59] sm:inline-flex"
+            >
+              試用 Demo <ArrowRight className="h-4 w-4" aria-hidden />
+            </a>
+          </div>
         </div>
       </header>
 
@@ -134,16 +142,16 @@ export default function LandingPage() {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a
-                href="#demo"
+                href="/login"
                 className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#1f5f59] px-7 font-semibold text-white shadow-[0_3px_0_#153f3b] transition hover:-translate-y-0.5 hover:bg-[#184e49]"
               >
-                直接選角色試用 <ArrowRight className="h-5 w-5" aria-hidden />
+                企業帳號登入 <ArrowRight className="h-5 w-5" aria-hidden />
               </a>
               <a
-                href="#pain"
+                href="#demo"
                 className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border border-stone-400 bg-[#faf7f0] px-7 font-semibold text-stone-800 transition hover:bg-white"
               >
-                先看解決哪些問題 <ArrowDown className="h-5 w-5" aria-hidden />
+                先選角色試用 <ArrowDown className="h-5 w-5" aria-hidden />
               </a>
             </div>
           </div>
