@@ -30,8 +30,8 @@
 
 - Provider gate、空白回應、錯誤去敏、POST／superuser contract：5 passed。
 - Deployment fallback 與 sidecar runtime regression：15 passed。
-- 合計相關後端：20 passed、0 failed。
-- 前端 Provider gate：1 passed，且證明 page load 不會呼叫 probe。
+- 合計相關後端：21 passed、0 failed。
+- 前端 Provider gate：2 passed，且證明 page load 不會呼叫 probe、公開 Demo 不會呼叫付費服務。
 - TypeScript／Vite production build：PASS。
 - ESLint：PASS。
 - Ruff 與 `git diff --check`：PASS。
