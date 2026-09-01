@@ -47,10 +47,14 @@
 - 桌面版資訊層級與狀態清楚，console error／warning 為 0。
 - 390×844 窄螢幕 `scrollWidth=clientWidth=390`，無頁面水平溢位。
 
-## 尚未完成的首租戶工作
+## 首租戶更新（2026-09-01）
 
-本驗收證明 production 平台與必要 Provider 可用，不等於八策股份有限公司的真實資料已完成驗收。仍需要：
+八策股份有限公司已在後續 release `production-first-tenant-59081bb` 完成：
 
-1. 兩位具名使用者的姓名與公司 Email，並指定其中一位為 owner。
-2. 決定八策採專屬 deployment／database，或接受受控 Pilot 暫行資料邊界；目前 production 尚有合成 Demo tenant，FORCE RLS rollout 仍未完成。
-3. 提供代表性文件、圖片、音檔與影片，執行 Input → review → publish → retrieval → citation 的真實端到端驗收。
+1. 建立正式租戶、管理部、owner 與 employee 各一位；部署後登入、tenant scope、Ask 與文件清單均 PASS。
+2. 採既有 production 的受控 Pilot 資料邊界；場景應用 binding 為 0，只開放 Input＋Knowledge／Ask 核心。production 仍有合成 Demo tenant 且 FORCE RLS rollout 尚未完成，因此這不是共享式多客戶 GA。
+3. 公開首頁已補上企業登入入口，桌面與 390×844 窄螢幕皆可見且無水平溢位。
+4. 新 release 再次執行 production verification 15／15 與 Provider live gate 7／7，均 PASS。
+
+尚未完成的是八策代表性真實文件、圖片、音檔與影片的
+Input → review → publish → retrieval → citation 端到端驗收；未完成前不得宣稱八策真實語料 Pilot 已驗收。
