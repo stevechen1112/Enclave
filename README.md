@@ -15,12 +15,12 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 |---|---|
 | 工作區程式基線 | Phase B–M、影片 F1–F3、UI/UX UX-A–UX-D 已完成並通過各階段 Code Review |
 | 核心架構 | 多租戶平台、Enterprise Knowledge Kernel、多模態 Ingestion Fabric、Workflow Kernel、Domain Pack Runtime 已建立 |
-| 最新瀏覽器驗收 | Production release `production-first-tenant-59081bb` 已補上公開首頁「企業登入」入口；桌面與 390×844 窄螢幕均可見、無水平溢位。八策兩個真實帳號另以正式登入 API 驗證 tenant、role、Ask 與文件清單，均 PASS；公開 Demo 仍不執行付費 live probe |
+| 最新瀏覽器驗收 | Production release `production-enterprise-login-368989b` 的企業登入頁已於桌面 1280×720 與手機 390×844 驗收，無水平溢位、console error／warning 為 0；正式模式不顯示 Demo 入口。八策兩個具名帳號另以正式登入 API 驗證 tenant、部門、環境、Ask、文件清單與場景模組邊界，均 PASS |
 | 前端最新回歸 | 問答決策頁改版後為 37 個測試檔／123 項測試通過；ESLint、TypeScript、Vite 與乾淨 Docker production build 通過；登入後人工視覺巡檢 PASS，iPhone Safari／Android Chrome 實機仍待認證 |
 | 後端最新回歸 | Input I8 pre-pilot hardening：1,500 passed／12 skipped／0 failed；I6–I8 新增 8 表的 migration round-trip 與 FORCE RLS 8/8 驗證通過 |
 | Input 平台化 | Input I0–I8 內部工程與逐階段 Code Review 已完成。I8 已具 tenant-scoped Pilot ledger、14–28 天 fail-closed gate，以及可操作每日指標、Incident、Audit、retrospective、signed acceptance 的證據工作台；I6–I8 新增 8 表已補齊並驗證 FORCE RLS。I7 live capacity 與 I8 真實第一租戶 Pilot 均仍為 HOLD，不得宣稱 SLA／GA 或現場驗收完成 |
 | 後端架構基線 | P4 全量回歸 1,314 passed／12 skipped／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
-| 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `production-first-tenant-59081bb`（source `59081bb4357d89283a0146b601e5fab1726ad4a4`、schema `input_i8_pilot_evidence_001`）；release parity、production verification 15／15 與必要 Provider live gate 7／7 PASS |
+| 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `production-enterprise-login-368989b`（source `368989b95c3aa780518c15b4371472c2045295b4`、schema `input_i8_pilot_evidence_001`）；release parity、production verification 15／15 與必要 Provider live gate 7／7 PASS |
 | 必要 AI／Input Provider | 主問答 OpenAI、內部分類 Gemini、掃描理解 Gemini、bge-m3 embedding、短語音 TTS→STT、長音檔說話者辨識、Cloud OCR 已於 production 逐項真實呼叫 7／7 PASS；未讀取額外 `api key.txt` |
 | 產品化 Phase | P0–P4 PASS；P5 工程與內部 review 完成，商用規模 live evidence 為 WAIVED／NOT RUN；P6 internal software gate 與 Code Review PASS；實體裝置 campaign 保留為 Commercial GA gate |
 | 首租戶導入 | 八策股份有限公司／管理部已建立 2 位具名使用者（owner＋employee），正式登入、租戶歸屬、Ask 與文件清單均 PASS；租戶只啟用 Input＋Knowledge／Ask 核心，場景模組 binding 為 0。代表性真實文件、圖片、音檔與影片 E2E 尚待執行 |
@@ -437,9 +437,11 @@ bash scripts/verify_deployment.sh
 
 ### 正式站現況
 
-- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `production-first-tenant-59081bb`，source commit 為 `59081bb4357d89283a0146b601e5fab1726ad4a4`，schema head 為 `input_i8_pilot_evidence_001`。
-- Deployment manifest `dm-7f8b880852d206a2b958f059` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 release parity；`scripts/verify_deployment.sh` 為 15／15 PASS，必要 Provider live gate 為 7／7 PASS。
-- 八策股份有限公司已以受控 Pilot 方式建立正式租戶、管理部與兩位具名帳號；owner／employee 皆完成部署後登入、tenant scope 與 Ask 可用性驗證。場景應用未自動開通，`tenant_module_bindings=0`。
+- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `production-enterprise-login-368989b`，source commit 為 `368989b95c3aa780518c15b4371472c2045295b4`，schema head 為 `input_i8_pilot_evidence_001`。
+- Deployment manifest `dm-f5a07a6c6af9488ee563630a` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 release parity；`scripts/verify_deployment.sh` 為 15／15 PASS，必要 Provider live gate 為 7／7 PASS。
+- 八策股份有限公司已以受控 Pilot 方式建立正式租戶、管理部與兩位具名帳號；owner／employee 皆完成部署後登入、tenant scope、部門、正式環境、Ask 與文件清單驗證。場景應用未自動開通，`tenant_module_bindings=0`。
+- 企業使用者由 [https://kachu.tw/login?mode=enterprise](https://kachu.tw/login?mode=enterprise) 以公司電子郵件與密碼登入。登入後頁首顯示租戶名稱；「我的帳號」會顯示公司、部門、正式／Demo 環境與帳號權限，並提供本人密碼變更。密碼更新後會清除本次登入並要求重新登入。
+- 正式工作區不再依 Owner、HR、Viewer 等職稱切換成不同產品介面；所有人使用同一套 Input＋Knowledge／Ask 核心，安全角色只決定可執行的能力，租戶啟用的場景模組才決定額外功能是否出現。
 - 過期或無效的 bearer token 現在以 HTTP 401 要求重新驗證；正式站已用原失敗 session 驗證能自動清除舊登入並回到 `/login`，重新進入公司管理 Demo 後 `/overview` 正常載入且 console error 為 0。
 - 應用內瀏覽器已以正式合成租戶驗證登入、Overview、多元 Input、現場擷取、Asset Library、來源整合及 Input Pilot；桌面與 390×844 窄螢幕無橫向溢位，console error／warning 為 0。驗收未新增 Pilot、未上傳檔案、未寫入正式資料。
 - Production burst 執行完整 29 項時，有 10 項因既定 `RATE_LIMIT_GLOBAL_PER_IP=200` 回傳 HTTP 429；rate-limit window 後以正常速率重跑 targeted suites 8／8 PASS。此結果證明限流正常生效，不被記錄為 production 全套 29／29 PASS。
