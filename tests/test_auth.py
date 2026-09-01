@@ -9,7 +9,7 @@ import pytest
 from httpx import AsyncClient
 
 from app.core import security
-from tests.conftest import create_tenant, create_user
+from tests.conftest import create_tenant, create_user, login_user
 
 # ── 登入成功 ──
 
@@ -58,6 +58,83 @@ async def test_tenant_user_login(client: AsyncClient, superuser_headers: dict):
     )
     assert resp.status_code == 200
     assert "access_token" in resp.json()
+
+
+@pytest.mark.asyncio
+async def test_user_can_change_own_password(
+    client: AsyncClient, superuser_headers: dict
+):
+    tenant = await create_tenant(client, superuser_headers, {"name": "Password Co"})
+    email = "password-owner@example.com"
+    old_password = "OriginalPass123!"
+    new_password = "ReplacementPass456!"
+    await create_user(
+        client,
+        superuser_headers,
+        {
+            "email": email,
+            "password": old_password,
+            "full_name": "Password Owner",
+            "role": "owner",
+            "tenant_id": tenant["id"],
+        },
+    )
+    headers = await login_user(client, email, old_password)
+
+    changed = await client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={"current_password": old_password, "new_password": new_password},
+    )
+
+    assert changed.status_code == 204
+    old_login = await client.post(
+        "/api/v1/auth/login/access-token",
+        data={"username": email, "password": old_password},
+    )
+    assert old_login.status_code == 401
+    new_login = await client.post(
+        "/api/v1/auth/login/access-token",
+        data={"username": email, "password": new_password},
+    )
+    assert new_login.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_change_password_rejects_wrong_current_and_weak_new_password(
+    client: AsyncClient, superuser_headers: dict
+):
+    tenant = await create_tenant(client, superuser_headers, {"name": "Password Guard Co"})
+    email = "password-guard@example.com"
+    password = "OriginalPass123!"
+    await create_user(
+        client,
+        superuser_headers,
+        {
+            "email": email,
+            "password": password,
+            "full_name": "Password Guard",
+            "role": "employee",
+            "tenant_id": tenant["id"],
+        },
+    )
+    headers = await login_user(client, email, password)
+
+    wrong_current = await client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={"current_password": "WrongPass123!", "new_password": "ReplacementPass456!"},
+    )
+    weak_new = await client.post(
+        "/api/v1/auth/change-password",
+        headers=headers,
+        json={"current_password": password, "new_password": "alllowercasepassword"},
+    )
+
+    assert wrong_current.status_code == 400
+    assert wrong_current.json()["detail"] == "目前密碼不正確"
+    assert weak_new.status_code == 400
+    assert "英文大小寫與數字" in weak_new.json()["detail"]
 
 
 # ── 登入失敗 ──

@@ -148,6 +148,11 @@ export const authApi = {
   },
   me: () => api.get<User>('/users/me').then(r => r.data),
   experience: () => api.get<ExperienceBootstrap>('/experience/bootstrap').then(r => r.data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post('/auth/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
 }
 
 // ─── Documents ───

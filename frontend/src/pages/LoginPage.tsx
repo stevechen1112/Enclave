@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Loader2, Shield } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import DemoDoors from '../components/DemoDoors'
 import { authApi } from '../api'
 import { useAuth } from '../auth'
@@ -7,6 +8,9 @@ import { parseApiError } from '../lib/apiError'
 
 export default function LoginPage() {
   const { login } = useAuth()
+  const [searchParams] = useSearchParams()
+  const enterpriseOnly = searchParams.get('mode') === 'enterprise'
+  const passwordChanged = searchParams.get('password') === 'changed'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -15,9 +19,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     void authApi.loginOptions()
-      .then(options => setDemoEnabled(options.demo_enabled))
+      .then(options => setDemoEnabled(!enterpriseOnly && options.demo_enabled))
       .catch(() => setDemoEnabled(false))
-  }, [])
+  }, [enterpriseOnly])
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -56,11 +60,18 @@ export default function LoginPage() {
             <Shield className="h-7 w-7 text-white" aria-hidden />
           </div>
           <p className="text-xs font-semibold tracking-[0.2em] text-[#d0a27f]">ENCLAVE</p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white">登入企業知識平台</h1>
-          <p className="mt-3 text-sm leading-6 text-sidebar-muted">使用公司核發的帳號，進入您獲授權的知識與應用。</p>
+          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-white">企業帳號登入</h1>
+          <p className="mt-3 text-sm leading-6 text-sidebar-muted">使用公司核發的帳號，進入所屬公司的正式知識工作區。</p>
         </header>
 
         <form onSubmit={event => void submit(event)} className="mx-auto max-w-md rounded-2xl border border-stone-300 bg-[#fffdf8] p-6 shadow-xl" noValidate>
+          {passwordChanged && (
+            <p role="status" className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-900">密碼已更新，請使用新密碼重新登入。</p>
+          )}
+          <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="text-sm font-semibold text-emerald-900">正式企業工作區</p>
+            <p className="mt-1 text-xs leading-5 text-emerald-800">登入後會載入所屬公司的資料與已授權功能；不會帶入 Demo 資料。</p>
+          </div>
           <label className="block text-sm font-semibold text-stone-800">
             電子郵件
             <input

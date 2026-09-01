@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_active_user, get_db
+from app.models.tenant import Tenant
 from app.models.user import User
 from app.platform.packs import PackRegistry, PackTenantContext
 from app.services.access_capabilities import ROLE_CAPABILITIES, capabilities_for_user
@@ -201,6 +202,25 @@ def experience_bootstrap(
     Single bootstrap for UI navigation / honesty surface.
     """
     caps = _capabilities_for(current_user)
+    tenant = (
+        db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
+        if current_user.tenant_id
+        else None
+    )
+    organization = {
+        "id": str(tenant.id) if tenant else None,
+        "name": tenant.name if tenant else "Enclave",
+        "department_id": str(current_user.department_id)
+        if current_user.department_id
+        else None,
+        "department_name": current_user.department.name
+        if current_user.department is not None
+        else None,
+        "environment": "demo" if tenant and tenant.is_demo else "production",
+        "environment_label": "合成展示環境"
+        if tenant and tenant.is_demo
+        else "正式企業工作區",
+    }
 
     # MKA: job modules + interaction capabilities（§5.4）
     job_modules: list[dict[str, Any]] = []
@@ -231,13 +251,10 @@ def experience_bootstrap(
             raise LookupError("MKA pack is not deployed")
         # Bootstrap is a pure read. Canonical MKA data and tenant bindings are
         # provisioned by the explicit pack lifecycle hook/demo setup service.
-        from app.models.tenant import Tenant
+        from app.demo.manifest import DEMO_TENANT_ID
         from app.services.job_context import build_effective_job_context
         from app.services.module_registry import get_module_registry
         from app.services.module_router import get_module_router
-
-        tenant = db.query(Tenant).filter(Tenant.id == current_user.tenant_id).first()
-        from app.demo.manifest import DEMO_TENANT_ID
 
         if tenant is not None and tenant.is_demo and tenant.id == DEMO_TENANT_ID:
             is_demo_tenant = True
@@ -366,6 +383,7 @@ def experience_bootstrap(
             else None,
             "is_superuser": bool(current_user.is_superuser),
         },
+        "organization": organization,
         "capabilities": caps,
         # The same server decision drives login redirect, shell and route guards.
         "default_home": default_home,

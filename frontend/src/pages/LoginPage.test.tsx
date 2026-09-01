@@ -28,7 +28,8 @@ describe('LoginPage authentication modes', () => {
 
   it('uses company credentials as the primary login path', async () => {
     const user = userEvent.setup()
-    render(<MemoryRouter><LoginPage /></MemoryRouter>)
+    mocks.loginOptions.mockResolvedValue({ password_enabled: true, demo_enabled: true })
+    render(<MemoryRouter initialEntries={['/login?mode=enterprise']}><LoginPage /></MemoryRouter>)
 
     await user.type(screen.getByLabelText('電子郵件'), 'admin@example.com')
     await user.type(screen.getByLabelText('密碼'), 'correct horse battery staple')
@@ -38,6 +39,7 @@ describe('LoginPage authentication modes', () => {
       'admin@example.com',
       'correct horse battery staple',
     )
+    expect(screen.getByText('正式企業工作區')).toBeInTheDocument()
     expect(screen.queryByText('查看合成 Demo 角色')).not.toBeInTheDocument()
   })
 
@@ -47,6 +49,18 @@ describe('LoginPage authentication modes', () => {
 
     await waitFor(() => expect(mocks.loginOptions).toHaveBeenCalledOnce())
     expect(screen.getByLabelText('電子郵件')).toBeInTheDocument()
+    expect(screen.queryByText('查看合成 Demo 角色')).not.toBeInTheDocument()
+  })
+
+  it('confirms a completed password rotation without exposing Demo', async () => {
+    mocks.loginOptions.mockResolvedValue({ password_enabled: true, demo_enabled: true })
+    render(
+      <MemoryRouter initialEntries={['/login?mode=enterprise&password=changed']}>
+        <LoginPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('status')).toHaveTextContent('密碼已更新')
     expect(screen.queryByText('查看合成 Demo 角色')).not.toBeInTheDocument()
   })
 

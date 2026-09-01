@@ -103,7 +103,7 @@ export default function LandingPage() {
 
           <div className="flex items-center gap-2">
             <a
-              href="/login"
+              href="/login?mode=enterprise"
               className="inline-flex min-h-11 items-center rounded-lg border border-stone-400 bg-[#faf7f0] px-4 text-sm font-semibold text-stone-900 transition hover:border-[#1f5f59] hover:text-[#1f5f59]"
             >
               企業登入
@@ -142,7 +142,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a
-                href="/login"
+                href="/login?mode=enterprise"
                 className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl bg-[#1f5f59] px-7 font-semibold text-white shadow-[0_3px_0_#153f3b] transition hover:-translate-y-0.5 hover:bg-[#184e49]"
               >
                 企業帳號登入 <ArrowRight className="h-5 w-5" aria-hidden />

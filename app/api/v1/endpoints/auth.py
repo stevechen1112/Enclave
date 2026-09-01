@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api import deps
@@ -16,6 +16,7 @@ from app.core.security import (
 )
 from app.crud import crud_user
 from app.demo.manifest import DEMO_PERSONAS
+from app.models.audit import AuditLog
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.services import totp
@@ -218,6 +219,58 @@ def login_access_token(
         )
 
     return build_login_response(user)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
+
+
+def _validate_new_password(password: str) -> None:
+    checks = (
+        any(char.islower() for char in password),
+        any(char.isupper() for char in password),
+        any(char.isdigit() for char in password),
+    )
+    if not all(checks):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="新密碼至少需要 12 字元，並包含英文大小寫與數字",
+        )
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    body: ChangePasswordRequest,
+    db: Session = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> None:
+    """Allow an authenticated user to rotate only their own password."""
+    if not security.verify_password(
+        body.current_password, current_user.hashed_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="目前密碼不正確",
+        )
+    if security.verify_password(body.new_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="新密碼不可與目前密碼相同",
+        )
+    _validate_new_password(body.new_password)
+    current_user.hashed_password = security.get_password_hash(body.new_password)
+    db.add(
+        AuditLog(
+            tenant_id=current_user.tenant_id,
+            actor_user_id=current_user.id,
+            action="password_changed",
+            target_type="user",
+            target_id=str(current_user.id),
+            detail_json={"self_service": True},
+        )
+    )
+    db.commit()
 
 
 # ── MFA（TOTP）───────────────────────────────────────────────

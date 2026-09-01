@@ -42,6 +42,7 @@ const DeployPage = lazy(() => import('./pages/system/DeployPage'))
 const InputPilotPage = lazy(() => import('./pages/system/InputPilotPage'))
 const CreateLayout = lazy(() => import('./pages/create/CreateLayout'))
 const TenantAdminPage = lazy(() => import('./pages/system/TenantAdminPage'))
+const AccountPage = lazy(() => import('./pages/AccountPage'))
 
 function PageLoader() {
   return (
@@ -201,6 +202,7 @@ function AppRoutes() {
           </Route>
 
           <Route path="me/usage" element={<UsagePage />} />
+          <Route path="me/account" element={<AccountPage />} />
 
           {moduleRoutes}
 

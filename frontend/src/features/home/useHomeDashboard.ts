@@ -19,15 +19,8 @@ export type HomeDashboardModel = {
   reload: () => Promise<void>
 }
 
-function copyForRole(role?: string): Pick<HomeDashboardModel, 'title' | 'subtitle'> {
-  if (role === 'owner' || role === 'admin') return { title: '公司知識營運總覽', subtitle: '掌握待辦、知識健康、處理狀態與已啟用應用。' }
-  if (role === 'hr') return { title: '內容與知識工作', subtitle: '快速新增、確認並使用公司知識。' }
-  if (role === 'viewer') return { title: '知識首頁', subtitle: '從已授權的企業知識開始查找與提問。' }
-  return { title: '我的工作首頁', subtitle: '從提問、知識查找與已啟用應用開始工作。' }
-}
-
 export function useHomeDashboard(): HomeDashboardModel {
-  const { user, experience } = useAuth()
+  const { experience } = useAuth()
   const capabilities = useCapabilities()
   const [assets, setAssets] = useState<KnowledgeAsset[]>([])
   const [reviewCount, setReviewCount] = useState(0)
@@ -74,5 +67,17 @@ export function useHomeDashboard(): HomeDashboardModel {
       seen.add(item.to); return true
     })
   }, [experience?.ui_modules])
-  return { ...copyForRole(user?.role), loading, error, assets, stats, canUpload, canReview, canManage, applications, reload }
+  return {
+    title: '公司知識工作區',
+    subtitle: '從資料匯入、知識查找、提問與已啟用應用開始工作。',
+    loading,
+    error,
+    assets,
+    stats,
+    canUpload,
+    canReview,
+    canManage,
+    applications,
+    reload,
+  }
 }

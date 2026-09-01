@@ -75,6 +75,14 @@ export interface ExperienceBootstrap {
     tenant_id: string | null
     is_superuser: boolean
   }
+  organization?: {
+    id: string | null
+    name: string
+    department_id: string | null
+    department_name: string | null
+    environment: 'production' | 'demo'
+    environment_label: string
+  }
   capabilities: string[]
   default_home: string
   primary_navigation?: Array<{

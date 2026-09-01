@@ -32,7 +32,7 @@ describe('LandingPage', () => {
     expect(screen.getByAltText('老師傅與年輕技術人員在工廠設備旁討論設定')).toBeInTheDocument()
     expect(screen.getAllByText(/第 \d{2} 道門/)).toHaveLength(6)
     expect(screen.getAllByRole('link', { name: /企業.*登入/ })).toHaveLength(2)
-    expect(screen.getAllByRole('link', { name: /企業.*登入/ }).every(link => link.getAttribute('href') === '/login')).toBe(true)
+    expect(screen.getAllByRole('link', { name: /企業.*登入/ }).every(link => link.getAttribute('href') === '/login?mode=enterprise')).toBe(true)
   })
 
   it('opens a selected demo persona without credentials', async () => {

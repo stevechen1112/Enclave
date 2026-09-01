@@ -16,7 +16,9 @@ vi.mock('../auth', () => ({
       role: 'employee',
       is_superuser: false,
     },
-    experience: null,
+    experience: {
+      organization: { name: '八策股份有限公司' },
+    },
     logout: auth.logout,
   }),
 }))
@@ -56,6 +58,25 @@ describe('Layout user menu', () => {
 
     expect(auth.logout).toHaveBeenCalledOnce()
     expect(screen.getByText('登入頁')).toBeInTheDocument()
+  })
+
+  it('shows the tenant workspace and exposes account security', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/overview']}>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route path="overview" element={<div>工作頁</div>} />
+            <Route path="me/account" element={<div>帳號安全頁</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: /八策股份有限公司/ })).toBeInTheDocument()
+    await user.click(screen.getAllByRole('button', { name: /現場測試 李阿明/ })[0])
+    await user.click(screen.getAllByRole('link', { name: '我的帳號' })[0])
+    expect(screen.getByText('帳號安全頁')).toBeInTheDocument()
   })
 
   it('uses the same server navigation in shell, mobile menu and command palette', async () => {

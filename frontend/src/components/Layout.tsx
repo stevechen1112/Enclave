@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import {
-  Shield, LogOut, Menu, X, BarChart3, ChevronDown, PenLine, Plus,
+  Shield, LogOut, Menu, X, BarChart3, ChevronDown, PenLine, Plus, KeyRound,
   LayoutGrid, Blocks, MessageCircle, BookOpen, Scale, Settings2, Search,
 } from 'lucide-react'
 import clsx from 'clsx'
@@ -42,6 +42,7 @@ export default function Layout() {
   const canAddKnowledge = useHasCapability('upload_documents')
   const roleLabel = ROLE_LABELS[user?.role ?? ''] || user?.role || '使用者'
   const orgLabel =
+    experience?.organization?.name ||
     experience?.product?.name ||
     (import.meta.env.VITE_ORG_NAME as string | undefined) ||
     'Enclave'
@@ -226,6 +227,14 @@ export default function Layout() {
                   創作
                 </Link>
               )}
+              <Link
+                to="/me/account"
+                onClick={() => { setUserMenuOpen(false); setSidebarOpen(false) }}
+                className="flex min-h-11 items-center gap-2.5 px-4 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-fg"
+              >
+                <KeyRound className="h-4 w-4" aria-hidden />
+                我的帳號
+              </Link>
               <Link
                 to="/me/usage"
                 onClick={() => { setUserMenuOpen(false); setSidebarOpen(false) }}

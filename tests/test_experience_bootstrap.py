@@ -93,6 +93,11 @@ def test_bootstrap_shape():
     # department 會無限生成 parent mock 導致祖先遍歷永遠不停
     user.department_id = None
     user.department = None
+    tenant = MagicMock()
+    tenant.id = user.tenant_id
+    tenant.name = "測試製造股份有限公司"
+    tenant.is_demo = False
+    db.query.return_value.filter.return_value.first.return_value = tenant
     with patch(
         "app.services.deployment_mode.resolve_runtime_profiles",
         return_value={"main": {"provider": "ollama"}},
@@ -103,6 +108,14 @@ def test_bootstrap_shape():
     assert data["features"]["sso"] is False
     assert data["features"]["wiki_editor"] is False
     assert "ask" in data["capabilities"]
+    assert data["organization"] == {
+        "id": user.tenant_id,
+        "name": "測試製造股份有限公司",
+        "department_id": None,
+        "department_name": None,
+        "environment": "production",
+        "environment_label": "正式企業工作區",
+    }
     db.commit.assert_not_called()
     db.add.assert_not_called()
 
@@ -120,6 +133,12 @@ def test_disabled_mka_pack_clears_routes_workspace_and_field_home(monkeypatch):
     user.tenant_id = "00000000-0000-0000-0000-000000000002"
     user.is_superuser = False
     user.department_id = None
+    user.department = None
+    tenant = MagicMock()
+    tenant.id = user.tenant_id
+    tenant.name = "No Pack Co"
+    tenant.is_demo = False
+    db.query.return_value.filter.return_value.first.return_value = tenant
 
     data = experience_bootstrap(db=db, current_user=user)
 
