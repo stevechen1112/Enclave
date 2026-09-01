@@ -8,6 +8,7 @@ import { companyApi, kbApi, parseApiError, formatErrorWithTrace } from '../../ap
 import AsyncState from '../../components/AsyncState'
 import PageHeader from '../../components/PageHeader'
 import type { ApiErrorInfo } from '../../api'
+import { useAuth } from '../../auth'
 
 interface IntegrityReport {
   id: string
@@ -37,6 +38,8 @@ interface ProviderProbeResult extends ProviderConfiguration {
 }
 
 export default function HealthPage() {
+  const { experience } = useAuth()
+  const demoMode = Boolean(experience?.demo_mode)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [reports, setReports] = useState<IntegrityReport[]>([])
@@ -131,11 +134,12 @@ export default function HealthPage() {
             <button
               type="button"
               onClick={handleProviderProbe}
-              disabled={probing || loading}
+              disabled={probing || loading || demoMode}
+              title={demoMode ? '公開 Demo 不會呼叫外部服務；正式租戶管理員可執行實測。' : undefined}
               className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-accent px-3 py-1.5 text-sm text-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw className={`h-4 w-4 ${probing ? 'animate-spin' : ''}`} aria-hidden />
-              {probing ? '檢查中…' : '實際檢查 Provider'}
+              {probing ? '檢查中…' : demoMode ? 'Demo 不執行外部實測' : '實際檢查 Provider'}
             </button>
           </div>
           <div className="mt-4 grid gap-2 md:grid-cols-2">

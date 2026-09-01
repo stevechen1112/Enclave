@@ -38,6 +38,7 @@
 - 正式環境先行合成 OCR probe：Gemini `gemini-3.6-flash` 回傳非空且正確命中 `8246` 錨點。
 - 正式 live gate 首輪發現 Gemini 3.6 在 16-token probe 額度下可能成功但無可見文字；以 128-token 重測 internal／scan 均回傳 11 字元。Probe 已修正並新增回歸測試，仍維持空白回應 fail closed。
 - 瀏覽器 review 發現「公司管理／擁有者」可進入資料健檢，但 API 原只接受 platform superuser；已改為與 `system_ops` 導覽一致的 owner／admin 權限並更新 route contract test，不以平台密碼繞過產品缺陷。
+- 公開 Demo 的 middleware 會正確阻擋外部整合 POST；UI 已同步停用實測按鈕並說明正式租戶才可執行，避免出現看似可按、實際必然 403 的假操作。
 
 ## 誠信邊界
 

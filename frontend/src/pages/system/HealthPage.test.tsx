@@ -3,6 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import HealthPage from './HealthPage'
 
+const auth = vi.hoisted(() => ({ experience: { demo_mode: false } }))
+
+vi.mock('../../auth', () => ({
+  useAuth: () => auth,
+}))
+
 const mocks = vi.hoisted(() => ({
   listIntegrityReports: vi.fn(),
   providerHealth: vi.fn(),
@@ -28,6 +34,8 @@ vi.mock('../../api', async importOriginal => {
 
 describe('HealthPage provider gate', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    auth.experience.demo_mode = false
     mocks.listIntegrityReports.mockResolvedValue([])
     mocks.providerHealth.mockResolvedValue({
       providers: [{
@@ -65,5 +73,15 @@ describe('HealthPage provider gate', () => {
 
     await waitFor(() => expect(mocks.probeProviderHealth).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('實測通過')).toBeInTheDocument()
+  })
+
+  it('keeps public demo sessions from calling paid external services', async () => {
+    auth.experience.demo_mode = true
+    render(<HealthPage />)
+
+    const button = await screen.findByRole('button', { name: 'Demo 不執行外部實測' })
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(mocks.probeProviderHealth).not.toHaveBeenCalled()
   })
 })
