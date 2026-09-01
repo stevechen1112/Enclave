@@ -23,7 +23,7 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 | 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `production-enterprise-login-368989b`（source `368989b95c3aa780518c15b4371472c2045295b4`、schema `input_i8_pilot_evidence_001`）；release parity、production verification 15／15 與必要 Provider live gate 7／7 PASS |
 | 必要 AI／Input Provider | 主問答 OpenAI、內部分類 Gemini、掃描理解 Gemini、bge-m3 embedding、短語音 TTS→STT、長音檔說話者辨識、Cloud OCR 已於 production 逐項真實呼叫 7／7 PASS；未讀取額外 `api key.txt` |
 | 產品化 Phase | P0–P4 PASS；P5 工程與內部 review 完成，商用規模 live evidence 為 WAIVED／NOT RUN；P6 internal software gate 與 Code Review PASS；實體裝置 campaign 保留為 Commercial GA gate |
-| 首租戶導入 | 八策股份有限公司／管理部已建立 2 位具名使用者（owner＋employee），正式登入、租戶歸屬、Ask 與文件清單均 PASS；租戶只啟用 Input＋Knowledge／Ask 核心，場景模組 binding 為 0。代表性真實文件、圖片、音檔與影片 E2E 尚待執行 |
+| 首租戶導入 | 八策股份有限公司／管理部已建立 2 位具名使用者，陳宥竹與李永仁目前皆為 owner；正式登入、租戶歸屬、Ask 與文件清單均 PASS。租戶只啟用 Input＋Knowledge／Ask 核心，場景模組 binding 為 0。代表性真實文件、圖片、音檔與影片 E2E 尚待執行 |
 | Production 租戶隔離 | 110 張保護表已啟用 RLS，但 production FORCE RLS 尚未啟用（0 FORCE）；在完成 application role 切換與 FORCE rollout 前，不應把互不相關的真實客戶放入同一共享資料庫 |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；外部滲透、法律／現場簽核、真機弱網噪音與跨產業多模態 holdout 尚待完成 |
@@ -439,7 +439,7 @@ bash scripts/verify_deployment.sh
 
 - [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `production-enterprise-login-368989b`，source commit 為 `368989b95c3aa780518c15b4371472c2045295b4`，schema head 為 `input_i8_pilot_evidence_001`。
 - Deployment manifest `dm-f5a07a6c6af9488ee563630a` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 release parity；`scripts/verify_deployment.sh` 為 15／15 PASS，必要 Provider live gate 為 7／7 PASS。
-- 八策股份有限公司已以受控 Pilot 方式建立正式租戶、管理部與兩位具名帳號；owner／employee 皆完成部署後登入、tenant scope、部門、正式環境、Ask 與文件清單驗證。場景應用未自動開通，`tenant_module_bindings=0`。
+- 八策股份有限公司已以受控 Pilot 方式建立正式租戶、管理部與兩位具名帳號；陳宥竹與李永仁目前皆為 owner。兩個帳號的 tenant scope、部門、正式環境、Ask 與文件清單已完成驗證；場景應用未自動開通，`tenant_module_bindings=0`。
 - 企業使用者由 [https://kachu.tw/login?mode=enterprise](https://kachu.tw/login?mode=enterprise) 以公司電子郵件與密碼登入。登入後頁首顯示租戶名稱；「我的帳號」會顯示公司、部門、正式／Demo 環境與帳號權限，並提供本人密碼變更。密碼更新後會清除本次登入並要求重新登入。
 - 正式工作區不再依 Owner、HR、Viewer 等職稱切換成不同產品介面；所有人使用同一套 Input＋Knowledge／Ask 核心，安全角色只決定可執行的能力，租戶啟用的場景模組才決定額外功能是否出現。
 - 過期或無效的 bearer token 現在以 HTTP 401 要求重新驗證；正式站已用原失敗 session 驗證能自動清除舊登入並回到 `/login`，重新進入公司管理 Demo 後 `/overview` 正常載入且 console error 為 0。
