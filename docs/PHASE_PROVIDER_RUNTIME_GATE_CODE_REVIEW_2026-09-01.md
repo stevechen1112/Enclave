@@ -19,7 +19,7 @@
 ### 已確認
 
 1. Provider 設定查詢不回傳 API KEY，只回傳角色、服務商、模型、啟用狀態與「憑證是否存在」。
-2. 真實 API 呼叫只允許 superuser 以 `POST` 明確觸發；開啟健康頁或重新整理不會產生付費呼叫。
+2. 真實 API 呼叫只允許具 `system_ops` 的租戶 owner／admin（含 platform superuser）以 `POST` 明確觸發；開啟健康頁或重新整理不會產生付費呼叫。
 3. 七個角色任一未啟用、未設定憑證、回傳空白或呼叫失敗，整體 gate 都會 fail closed。
 4. UI 錯誤內容經過收斂，不轉送 Provider response body、URL、header 或憑證。
 5. Gemini 預設模型已由失效／過期名稱統一更新為實際驗證可用的 `gemini-3.6-flash`。
@@ -37,6 +37,7 @@
 - Ruff 與 `git diff --check`：PASS。
 - 正式環境先行合成 OCR probe：Gemini `gemini-3.6-flash` 回傳非空且正確命中 `8246` 錨點。
 - 正式 live gate 首輪發現 Gemini 3.6 在 16-token probe 額度下可能成功但無可見文字；以 128-token 重測 internal／scan 均回傳 11 字元。Probe 已修正並新增回歸測試，仍維持空白回應 fail closed。
+- 瀏覽器 review 發現「公司管理／擁有者」可進入資料健檢，但 API 原只接受 platform superuser；已改為與 `system_ops` 導覽一致的 owner／admin 權限並更新 route contract test，不以平台密碼繞過產品缺陷。
 
 ## 誠信邊界
 

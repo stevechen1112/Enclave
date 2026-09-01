@@ -1,5 +1,5 @@
 from app.services import provider_runtime_health as health
-from app.api.deps_permissions import require_superuser
+from app.api.deps_permissions import require_admin
 from app.api.v1.endpoints.admin import router as admin_router
 from app.services.llm_client import LLMClient
 
@@ -98,13 +98,13 @@ def test_required_probe_fails_closed_and_sanitizes_provider_error(monkeypatch):
     assert "super-secret" not in str(report)
 
 
-def test_provider_probe_is_explicit_post_and_superuser_only():
+def test_provider_probe_is_explicit_post_and_tenant_admin_only():
     route = next(
         item for item in admin_router.routes
         if getattr(item, "path", "") == "/system/provider-health/probe"
     )
     assert route.methods == {"POST"}
-    assert require_superuser in {dependency.call for dependency in route.dependant.dependencies}
+    assert require_admin in {dependency.call for dependency in route.dependant.dependencies}
 
 
 def test_llm_health_check_rejects_empty_success(monkeypatch):

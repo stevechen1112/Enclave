@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 
 from app.api import deps
-from app.api.deps_permissions import require_superuser
+from app.api.deps_permissions import require_admin, require_superuser
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.document import Document
@@ -320,7 +320,7 @@ def system_health(
 
 @router.get("/system/provider-health")
 def provider_health_configuration(
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(require_admin),
 ) -> Any:
     """Show effective provider roles without revealing credentials or making paid calls."""
     return {"providers": provider_configuration()}
@@ -328,7 +328,7 @@ def provider_health_configuration(
 
 @router.post("/system/provider-health/probe")
 def probe_provider_health(
-    current_user: User = Depends(require_superuser),
+    current_user: User = Depends(require_admin),
 ) -> Any:
     """Explicitly perform real provider calls for the production capability gate."""
     return probe_required_providers()
