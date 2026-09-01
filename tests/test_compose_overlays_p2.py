@@ -88,6 +88,17 @@ def test_database_credentials_are_split_by_runtime_identity():
     assert (ROOT / ".env.maintenance.example").is_file()
 
 
+def test_web_trusts_forwarded_scheme_only_inside_private_compose_network():
+    """HTTPS redirects must not downgrade and strip browser authorization."""
+    compose = (ROOT / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    web = compose.split("  web:", 1)[1].split("  db:", 1)[0]
+
+    assert "--proxy-headers" in web
+    assert "--forwarded-allow-ips=*" in web
+    assert "ports:" not in web
+    assert 'expose:\n      - "8000"' in web
+
+
 def test_mobile_marked_experimental():
     assert (ROOT / "mobile" / "EXPERIMENTAL.md").is_file()
     text = (ROOT / "mobile" / "EXPERIMENTAL.md").read_text(encoding="utf-8")

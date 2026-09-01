@@ -85,7 +85,7 @@ export default function GeneratePage() {
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) return
-    fetch('/api/v1/documents', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/v1/documents/', { headers: { Authorization: `Bearer ${token}` } })
       .then(r => (r.ok ? r.json() : null))
       .then(data => {
         if (!data) return
