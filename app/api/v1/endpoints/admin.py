@@ -7,7 +7,7 @@ from typing import Any, List, Optional
 from uuid import UUID
 from datetime import datetime, timedelta, UTC
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 
@@ -16,9 +16,13 @@ from app.api.deps_permissions import require_superuser
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.document import Document
-from app.models.audit import AuditLog, UsageRecord
+from app.models.audit import UsageRecord
 from app.models.chat import Conversation
 from app.schemas.admin import AdminUserInfo, OrgDashboard, SystemHealth
+from app.services.provider_runtime_health import (
+    probe_required_providers,
+    provider_configuration,
+)
 from app.schemas.tenant import (
     QuotaStatus, QuotaUpdate, SecurityConfig, SecurityConfigUpdate,
 )
@@ -312,6 +316,22 @@ def system_health(
         redis_memory_ratio=round(redis_memory_ratio, 6),
         celery_queue_depth=celery_queue_depth,
     )
+
+
+@router.get("/system/provider-health")
+def provider_health_configuration(
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """Show effective provider roles without revealing credentials or making paid calls."""
+    return {"providers": provider_configuration()}
+
+
+@router.post("/system/provider-health/probe")
+def probe_provider_health(
+    current_user: User = Depends(require_superuser),
+) -> Any:
+    """Explicitly perform real provider calls for the production capability gate."""
+    return probe_required_providers()
 
 
 # ===============================================

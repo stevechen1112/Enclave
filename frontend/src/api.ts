@@ -492,6 +492,8 @@ export const companyApi = {
     api.put(`/admin/users/${id}`, data).then(r => r.data),
   deactivateUser: (id: string) => api.delete(`/admin/users/${id}`).then(r => r.data),
   systemHealth: () => api.get('/admin/system/health').then(r => r.data),
+  providerHealth: () => api.get('/admin/system/provider-health').then(r => r.data),
+  probeProviderHealth: () => api.post('/admin/system/provider-health/probe').then(r => r.data),
   usageSummary: () => api.get('/audit/usage/summary').then(r => r.data),
   usageByUser: () => api.get('/audit/usage/by-action').then(r => r.data),
   getDeploymentMode: () => api.get('/company/deployment-mode').then(r => r.data),

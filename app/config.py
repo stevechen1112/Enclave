@@ -346,16 +346,16 @@ class Settings(BaseSettings):
     OLLAMA_SCAN_MODEL: str = "gemma3:27b"
     # 資料夾掃描摘要 LLM 提供商（ollama | gemini | openai）
     SCAN_LLM_PROVIDER: str = "ollama"  # 無 GPU 時改為 gemini 走雲端
-    SCAN_GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"  # 掃描摘要用 Gemini 模型
+    SCAN_GEMINI_MODEL: str = "gemini-3.6-flash"  # 掃描摘要用 Gemini 模型
     SCAN_OPENAI_MODEL: str = "gpt-4o-mini"  # 掃描摘要用 OpenAI 模型
     # 內部任務 LLM（分類、改寫等非使用者面向任務，可用較輕量的本地模型省錢）
     INTERNAL_LLM_PROVIDER: str = "ollama"  # ollama | gemini | openai
     INTERNAL_OLLAMA_MODEL: str = "gemma3:27b"  # 內部任務使用的 Ollama 模型
-    INTERNAL_GEMINI_MODEL: str = "gemini-3.1-flash-lite-preview"  # 內部任務 Gemini 模型
+    INTERNAL_GEMINI_MODEL: str = "gemini-3.6-flash"  # 內部任務 Gemini 模型
     INTERNAL_OPENAI_MODEL: str = "gpt-4o-mini"  # 內部任務 OpenAI 模型
     # Gemini（透過 OpenAI 相容端點，無需額外 SDK）
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-3-flash-preview"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
 
     # Rate Limiting（三層：IP／user／tenant；production/staging 啟用 user+tenant）
     RATE_LIMIT_ENABLED: bool = True

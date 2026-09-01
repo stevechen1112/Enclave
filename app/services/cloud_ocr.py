@@ -3,7 +3,7 @@
 Disabled unless CLOUD_OCR_PROVIDER is set (openai|gemini|mistral) together with
 the matching API key. Grounded in the CV-RF-01b five-arm ablation
 (artifacts/cloud_vision_*_ablation_last_run.json): dedicated OCR models beat
-general-purpose ones; gemini-3-flash-preview and mistral-ocr-latest tied best
+general-purpose ones; the validated Gemini and Mistral OCR arms tied best
 at 30.3% strict field hit vs DeepDOC 24.2%, and neither hallucinates on
 handwriting the way gpt-5.6-luna did.
 """
@@ -29,7 +29,7 @@ PROMPT = (
 
 DEFAULT_MODELS = {
     "openai": "gpt-5.6-terra",
-    "gemini": "gemini-3-flash-preview",
+    "gemini": "gemini-3.6-flash",
     "mistral": "mistral-ocr-latest",
 }
 

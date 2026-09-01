@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import AsyncIterator, Iterator, Optional
+from typing import AsyncIterator, Optional
 
 import httpx
 
@@ -80,7 +80,7 @@ class LLMClient:
             _GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
             self._openai_sync  = openai_lib.OpenAI(api_key=api_key, base_url=_GEMINI_BASE_URL, timeout=provider_timeout)
             self._openai_async = openai_lib.AsyncOpenAI(api_key=api_key, base_url=_GEMINI_BASE_URL, timeout=provider_timeout)
-            self._model = model or getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
+            self._model = model or getattr(settings, "GEMINI_MODEL", "gemini-3.6-flash")
             logger.info("LLMClient 初始化：Gemini（model=%s）", self._model)
 
         elif self.provider == "ollama":
@@ -213,6 +213,8 @@ class LLMClient:
         """健康檢查，回傳 provider 狀態。"""
         try:
             result = self.complete("你是助理", "回答「OK」即可", temperature=0, max_tokens=5)
+            if not result.strip():
+                raise RuntimeError("Provider 回傳空白內容")
             return {"provider": self.provider, "model": self._model, "status": "ok", "response": result}
         except Exception as e:
             return {"provider": self.provider, "model": self._model, "status": "error", "error": str(e)}

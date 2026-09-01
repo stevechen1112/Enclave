@@ -21,21 +21,21 @@ def _model_for_provider(provider: str, role: str) -> str:
     provider = (provider or "").lower()
     if role == "main":
         if provider == "gemini":
-            return getattr(settings, "GEMINI_MODEL", "gemini-3-flash-preview")
+            return getattr(settings, "GEMINI_MODEL", "gemini-3.6-flash")
         if provider == "openai":
             return getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
         return getattr(settings, "OLLAMA_MODEL", "llama3.2")
 
     if role == "internal":
         if provider == "gemini":
-            return getattr(settings, "INTERNAL_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+            return getattr(settings, "INTERNAL_GEMINI_MODEL", "gemini-3.6-flash")
         if provider == "openai":
             return getattr(settings, "INTERNAL_OPENAI_MODEL", "gpt-4o-mini")
         return getattr(settings, "INTERNAL_OLLAMA_MODEL", "gemma3:27b")
 
     if role == "scan":
         if provider == "gemini":
-            return getattr(settings, "SCAN_GEMINI_MODEL", "gemini-3.1-flash-lite-preview")
+            return getattr(settings, "SCAN_GEMINI_MODEL", "gemini-3.6-flash")
         if provider == "openai":
             return getattr(settings, "SCAN_OPENAI_MODEL", "gpt-4o-mini")
         return getattr(settings, "OLLAMA_SCAN_MODEL", "gemma3:27b")
@@ -85,7 +85,7 @@ def _runtime_profiles_for_mode(mode: str) -> dict[str, Any]:
             "mode": mode,
             "main": {
                 "provider": "gemini",
-                "model": "gemini-3-flash-preview",
+                "model": getattr(settings, "GEMINI_MODEL", "gemini-3.6-flash"),
                 "base_url": getattr(settings, "OLLAMA_BASE_URL", "http://localhost:11434"),
             },
             "internal": {
