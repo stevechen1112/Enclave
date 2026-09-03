@@ -30,8 +30,8 @@ def _record(tenant_ref="tenant-ref", **changes):
         "execution_status": "ok",
         "decision_hash": "d" * 64,
         "transition": "answer->insufficient_context",
-        "false_accept_candidate": True,
-        "false_reject_candidate": False,
+        "false_accept_candidate": False,
+        "false_reject_candidate": True,
         "stage_trace": [{"stage": "parse", "status": "ok"}],
         "reason_codes": ["completeness.insufficient_context"],
         "source_refs": [{"document_id": "doc-a", "document_revision": "1"}],
@@ -171,6 +171,42 @@ def test_legacy_retrieval_result_without_new_authority_metadata_is_not_false_rej
     )
     assert result["evidence_state"] == "complete"
     assert result["false_accept_candidate"] is False
+    assert result["false_reject_candidate"] is False
+
+
+def test_transition_candidate_labels_follow_acceptance_semantics(monkeypatch, tmp_path):
+    tenant = "tenant-a"
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_MODE", "shadow")
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_TENANT_ALLOWLIST", tenant)
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_KILL_SWITCH", False)
+    store = EncryptedAppendOnlyShadowStore(tmp_path, key="test-key")
+    accepted = run_knowledge_decision_shadow(
+        tenant_id=tenant,
+        request_id="newly-accepted",
+        query_plan={"requested_slots": ["answer"]},
+        results=[{"id": "c1", "document_id": "d1", "content": "answer"}],
+        legacy_coverage={"decision": "abstain"},
+        store=store,
+    )
+    assert accepted["false_accept_candidate"] is True
+    assert accepted["false_reject_candidate"] is False
+    rejected = run_knowledge_decision_shadow(
+        tenant_id=tenant,
+        request_id="newly-rejected",
+        query_plan={"requested_slots": ["answer"]},
+        results=[
+            {
+                "id": "c2",
+                "document_id": "d2",
+                "content": "answer",
+                "metadata": {"active_revision": False},
+            }
+        ],
+        legacy_coverage={"decision": "answer"},
+        store=store,
+    )
+    assert rejected["false_accept_candidate"] is False
+    assert rejected["false_reject_candidate"] is True
 
 
 @pytest.mark.asyncio

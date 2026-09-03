@@ -344,8 +344,13 @@ def run_knowledge_decision_shadow(
             execution_status=decision.execution_status,
             decision_hash=decision.decision_hash,
             transition=transition,
-            false_accept_candidate=legacy == "answer" and decision.evidence_state != "complete",
-            false_reject_candidate=legacy != "answer" and decision.evidence_state == "complete",
+            # A newly accepted answer that legacy rejected is a possible false
+            # acceptance; a newly rejected answer that legacy accepted is a
+            # possible false rejection.  Formal rates still require frozen
+            # ground-truth adjudication rather than treating transitions as
+            # errors by themselves.
+            false_accept_candidate=legacy != "answer" and decision.evidence_state == "complete",
+            false_reject_candidate=legacy == "answer" and decision.evidence_state != "complete",
             stage_trace=decision.stage_trace,
             reason_codes=decision.reason_codes,
             source_refs=source_refs,
