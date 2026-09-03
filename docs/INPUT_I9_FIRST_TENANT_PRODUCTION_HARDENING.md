@@ -59,6 +59,8 @@
 | I9-017 | 首租戶尚無 active KB revision 時 shadow scope 關閉所有問答 | P0 | VERIFIED | shadow 模式可讀取既有 answer-ready 文件並附引用；enforce 與無權 revision 仍 fail-closed |
 | I9-018 | 首次圖片尚待人工確認卻提前列入已可問答 | P0 | VERIFIED | 首版待確認不列入可問答；已有正式舊版者在新版待確認期間仍可使用舊版 |
 | I9-019 | staging 與 production 共用小型主機造成記憶體競爭 | P0 | MITIGATED | 首租戶驗證期間停止 staging compute；後續將 staging 移機或建立明確啟停／資源政策 |
+| I9-020 | 正式 Gemini 專案遭 403，內部整理、掃描理解與雲端 OCR 不可用 | P0 | FIXING | 所有必要 Provider 必須以真實呼叫通過；失效路徑切換至已驗證 Provider 並保留本機後備 |
+| I9-021 | 高量保護只統計預設 `celery` queue，未統計獨立 Input queues | P0 | FIXED_IN_CODE | admission guard 同時統計 `celery`、`input.document`、`input.media`，任一來源造成的總積壓都受上限保護 |
 
 ### 實作進度（持續追加）
 
@@ -185,3 +187,39 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 8. 若高風險候選由建立者本人開啟，系統應明確說明不能自行核准；請由另一位 Owner 完成人工確認。
 
 李永仁回報上述結果後，將「租戶複測」補入本文件；全部通過才把相關問題由 `VERIFIED` 關閉為 `CLOSED`。
+
+## 10. 第二輪高量真實測試前檢查（2026-09-03）
+
+第二輪預期會比第一次上傳更多來源，因此本輪不只檢查既有個案，也檢查容量、外部服務、分段上傳、排程、復原與資源保護。
+
+### 10.1 已確認基線
+
+- 八策租戶方案為 `enterprise`；目前 2 位啟用使用者，上限 10 位。
+- 文件數、儲存量、月問答、月 Token 與月成本沒有租戶硬上限；目前計量儲存約 395.99 MiB。
+- 分段續傳已啟用：預設每段 8 MiB、允許 5–16 MiB、工作保留 24 小時；已提交的 8 個上傳 session 沒有殘留未完成 session。
+- 文件／圖片單檔上限 50 MiB；音檔單檔上限 50 MiB、最長 4 小時；影片單檔上限 500 MiB、最長 60 分鐘。
+- 新增知識介面支援多檔排隊、前置格式與容量檢查、逐檔進度、失敗單筆重試、暫停與缺塊續傳；未完成草稿保存在該瀏覽器。
+- 正式三個 queue 均為 0；core worker 與獨立 Input worker 沒有 active、reserved 或 scheduled 工作。
+- API、前端、Gateway、Worker、PostgreSQL、Redis 與向量服務均 healthy；部署後重啟次數為 0，沒有 OOMKilled 或新 Traceback。
+- 主機約 7.8 GiB RAM，檢查時 available 約 4.5 GiB；Input worker 維持 concurrency 1、prefetch 1 與 2 GiB 容器上限，以可靠排隊取代同時大量吃記憶體。
+- 清理 7 天前 Docker build cache 後釋放 14.76 GB；正式磁碟可用空間約 57 GB。
+- 第二輪前 PostgreSQL 備份：`/opt/enclave/backups/enclave_pre_second_tenant_test_20260903_075923.dump`。
+- 備份 SHA-256：`72ac1dad4b5dca2c21d545bf9d6fc23cdffd1733d7251f1b73331d744935cb03`；已用 `pg_restore --list` 驗證可讀。
+
+### 10.2 擴大檢查發現與處理
+
+- 真實 Provider probe 共 7 條能力：OpenAI 問答、Ollama 向量索引、OpenAI 一般語音、OpenAI 長音檔均通過。
+- Gemini 內部整理、Gemini 掃描理解與 Gemini Cloud OCR 因供應商專案 403 未通過，不能只以「API Key 有設定」視為可用；列為 I9-020。
+- 正式環境將把上述三條失效路徑切換到既有且已實測可用的 OpenAI 憑證；Cloud OCR 同時保留本機 OCR 作為文件處理基礎。切換後必須重新執行全部 7 條真實 Provider probe。
+- queue guard 原本只讀取 `celery`，未看獨立的 `input.document` 與 `input.media`；高量媒體可能避開全域保護。永久修復改為統計三條 queue 總深度，並在飽和回應中保留各 queue 深度，列為 I9-021。
+- 本機 focused tests 共 11 項通過；`ruff` 與 `git diff --check` 通過。正式部署後仍需再次檢查真實 queue、Provider、容器與網域。
+
+### 10.3 第二輪測試的正常預期
+
+- 多個檔案會依序上傳；處理工作會可靠排隊，不代表每一份音檔或影片同時完成。
+- 頁面可離開；已收到的來源在背景處理。回到「所有資產」可看來源層級進度。
+- 網路中斷時可重試；已確認的分塊不需重傳。若超過 24 小時才回來，該上傳工作可能過期，需重新選檔。
+- 影片與長音檔比文件慢屬正常；「系統處理中」才是系統責任，「等待人工確認」則是 Owner／授權審核者的下一步。
+- 若來源超過單檔大小或影片長度上限，介面應在送出前直接說明限制，不應讓工作無限處理後才失敗。
+
+本節在部署與正式 probe 完成後更新 release、驗證結果與李永仁第二輪複測結果；尚未取得真實複測前，不宣稱 I9 已關閉。

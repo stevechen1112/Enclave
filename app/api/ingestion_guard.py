@@ -17,6 +17,7 @@ def enforce_ingestion_queue_capacity() -> None:
             "message": "處理佇列目前已滿，資料尚未接收，請稍後重試",
             "depth": result["depth"],
             "limit": result["limit"],
+            "queue_depths": result.get("queue_depths", {}),
         },
         headers={"Retry-After": str(settings.QUEUE_GUARD_RETRY_AFTER_SECONDS)},
     )

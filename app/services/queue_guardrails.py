@@ -14,6 +14,7 @@ from app.config import settings
 from app.services.capacity_gate import load_capacity_spec
 
 _UNAVAILABLE_CACHE_UNTIL = 0.0
+_INGESTION_QUEUES = ("celery", "input.document", "input.media")
 
 
 @lru_cache(maxsize=3)
@@ -48,7 +49,10 @@ def check_queue_capacity() -> dict[str, Any]:
             socket_connect_timeout=0.25,
             socket_timeout=0.25,
         )
-        depth = int(client.llen("celery") or 0)
+        queue_depths = {
+            queue: int(client.llen(queue) or 0) for queue in _INGESTION_QUEUES
+        }
+        depth = sum(queue_depths.values())
     except (RedisError, OSError, ValueError):
         _UNAVAILABLE_CACHE_UNTIL = time.monotonic() + 5
         return {
@@ -65,4 +69,5 @@ def check_queue_capacity() -> dict[str, Any]:
         "state": "ready" if depth < limit else "saturated",
         "depth": depth,
         "limit": limit,
+        "queue_depths": queue_depths,
     }
