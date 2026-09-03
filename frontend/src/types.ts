@@ -344,6 +344,8 @@ export interface ReviewEvidenceLocator {
 
 export interface KnowledgeReviewItem {
   id: string
+  source_group_key?: string
+  source_asset_id?: string | null
   provider: string
   source_type: string
   asset_kind: string
@@ -372,8 +374,22 @@ export interface KnowledgeReviewItem {
   }
 }
 
+export interface KnowledgeReviewSourceGroup {
+  key: string
+  source_asset_id: string | null
+  title: string
+  asset_kind: string
+  item_count: number
+  high_risk_count: number
+  low_confidence_count: number
+  blocked_reasons: string[]
+  item_ids: string[]
+}
+
 export interface KnowledgeReviewInbox {
   items: KnowledgeReviewItem[]
+  groups?: KnowledgeReviewSourceGroup[]
+  source_total?: number
   total: number
   limit: number
   offset: number

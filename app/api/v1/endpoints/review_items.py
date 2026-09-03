@@ -14,6 +14,7 @@ from app.models.user import User
 from app.services.review_workspace import (
     decide_review_item,
     get_review_item,
+    group_review_items,
     list_review_items,
 )
 
@@ -62,7 +63,7 @@ def review_inbox(
     department_id: str | None = Query(default=None),
     policy_key: str | None = Query(default=None),
     assignee: str | None = Query(default=None),
-    limit: int = Query(default=100, ge=1, le=500),
+    limit: int = Query(default=500, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ) -> dict[str, Any]:
     _require_reviewer(current_user)
@@ -91,9 +92,12 @@ def review_inbox(
         key=lambda item: (priority.get(item["risk_level"], 9), item["due_at"] or "")
     )
     total = len(items)
+    groups = group_review_items(items)
     page = items[offset : offset + limit]
     return {
         "items": page,
+        "groups": groups,
+        "source_total": len(groups),
         "total": total,
         "limit": limit,
         "offset": offset,

@@ -202,6 +202,8 @@ def _artifact_item(
         )
     return {
         "id": f"artifact:{artifact.id}",
+        "source_group_key": f"asset:{asset.id}",
+        "source_asset_id": str(asset.id),
         "provider": "core.asset_artifact",
         "source_type": artifact.artifact_kind,
         "asset_kind": asset.asset_kind,
@@ -258,6 +260,8 @@ def _legacy_item(item: LegacyReviewItem) -> dict[str, Any]:
     )
     return {
         "id": f"legacy:{item.id}",
+        "source_group_key": f"legacy:{item.id}",
+        "source_asset_id": None,
         "provider": "core.legacy_file_classification",
         "source_type": "document_classification",
         "asset_kind": "document",
@@ -298,6 +302,44 @@ def _legacy_item(item: LegacyReviewItem) -> dict[str, Any]:
             "sop_precedence": False,
         },
     }
+
+
+def group_review_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Summarise candidate rows by the source a human recognises.
+
+    Optional application providers may not yet expose a source key, so their
+    item identity is a safe one-item fallback instead of accidentally merging
+    unrelated records with the same title.
+    """
+
+    groups: dict[str, dict[str, Any]] = {}
+    for item in items:
+        key = str(item.get("source_group_key") or f"item:{item['id']}")
+        group = groups.setdefault(
+            key,
+            {
+                "key": key,
+                "source_asset_id": item.get("source_asset_id"),
+                "title": item.get("title") or "未命名來源",
+                "asset_kind": item.get("asset_kind") or "unknown",
+                "item_count": 0,
+                "high_risk_count": 0,
+                "low_confidence_count": 0,
+                "blocked_reasons": [],
+                "item_ids": [],
+            },
+        )
+        group["item_count"] += 1
+        group["item_ids"].append(item["id"])
+        if item.get("risk_level") == "high":
+            group["high_risk_count"] += 1
+        confidence = item.get("confidence")
+        if confidence is not None and float(confidence) < _LOW_CONFIDENCE:
+            group["low_confidence_count"] += 1
+        group["blocked_reasons"] = sorted(
+            set(group["blocked_reasons"]).union(item.get("blocked_reasons") or [])
+        )
+    return list(groups.values())
 
 
 def _pack_providers(db: Session, tenant_id: UUID) -> list[Any]:

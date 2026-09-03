@@ -14,6 +14,7 @@ import ReviewQueuePage from './ReviewQueuePage'
 
 const item = {
   id: 'artifact:00000000-0000-0000-0000-000000000001', provider: 'core.asset_artifact',
+  source_group_key: 'asset:a1', source_asset_id: 'a1',
   source_type: 'transcript_segment', asset_kind: 'audio', title: '交接錄音', subtitle: '逐字稿',
   status: 'pending', risk_level: 'low' as const, confidence: 0.72, created_at: '2026-08-27T00:00:00Z',
   due_at: '2026-09-03T00:00:00Z', department_ids: [], policy_key: 'artifact-human-review-v1',
@@ -50,6 +51,19 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByLabelText('指派對象')).toBeInTheDocument()
     expect(screen.getByLabelText('部門 ID')).toBeInTheDocument()
     expect(screen.getByLabelText('已逾期')).toBeInTheDocument()
+  })
+
+  it('shows source count separately from candidate count', async () => {
+    const second = { ...item, id: 'artifact:00000000-0000-0000-0000-000000000002', source_type: 'ocr_region', subtitle: '畫面文字' }
+    vi.mocked(knowledgeReviewApi.list).mockResolvedValue({
+      items: [item, second], total: 2, source_total: 1,
+      groups: [{ key: 'asset:a1', source_asset_id: 'a1', title: '交接錄音', asset_kind: 'audio', item_count: 2, high_risk_count: 0, low_confidence_count: 2, blocked_reasons: [], item_ids: [item.id, second.id] }],
+      limit: 500, offset: 0, facets: { source_types: ['transcript_segment', 'ocr_region'], policy_keys: ['artifact-human-review-v1'], assignees: [] },
+    })
+    render(<MemoryRouter><ReviewQueuePage /></MemoryRouter>)
+    expect(await screen.findByText('1 個來源 · 2 筆候選內容')).toBeInTheDocument()
+    expect(screen.getByText(/^2 筆候選 ·/)).toBeInTheDocument()
+    expect(screen.getAllByText('OCR').length).toBeGreaterThan(1)
   })
 
   it('fails closed when evidence points outside the knowledge workspace', async () => {

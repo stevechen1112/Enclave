@@ -126,6 +126,7 @@ def test_review_inbox_preserves_typed_locator_and_separation_of_duty(monkeypatch
             db, current_user=_user(tenant_id, reviewer_id)
         )[0]
         assert reviewer_item["id"] == f"artifact:{artifact.id}"
+        assert reviewer_item["source_group_key"] == f"asset:{asset.id}"
         assert reviewer_item["evidence"][0]["start_ms"] == 642_000
         assert reviewer_item["evidence"][0]["deep_link"].endswith("t=642")
         assert reviewer_item["batch_eligible"] is False  # low confidence
