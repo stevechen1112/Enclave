@@ -1,15 +1,15 @@
 {
   "schema_version": "kq7-production-runtime/v1",
-  "captured_at": "2026-09-03T13:01:05Z",
-  "release_id": "kq7-complete-f08884d",
-  "source_commit": "f08884d5dbf121beb8fc53cd97024ff2fab538d3",
+  "captured_at": "2026-09-03T14:19:50Z",
+  "release_id": "pra-lite-c6c3875",
+  "source_commit": "c6c3875e55fbda1fc99a0f63958e97e265ad16ab",
   "source_dirty": "false",
-  "deployment_manifest_id": "dm-4bd91a771b927b44a6fa70e4",
-  "schema_head": "knowledge_typed_relation_kq4_001",
+  "deployment_manifest_id": "dm-13750efb4f8f409a0200e197",
+  "schema_head": "tenant_policy_reconcile_pra_001",
   "route_contract_hash": "5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f",
-  "backend_image_id": "sha256:a506b3f942215a93b829b977ed5a35bd4c2a4de4b0445a490640c805293c5782",
-  "frontend_image_id": "sha256:8b71c46a565927149ed661e9b7b38a0e49f4208ea65cadcb16db3f903315a97a",
-  "gateway_image_id": "sha256:03a2b7ffefade1f583ef7f2bc4c490e05a0240247d3c111d827a2dfaa28f3c56",
+  "backend_image_id": "sha256:0d6bf9ad187b63dfef249a74e61a37050bfbd0ba2524d2610ddab2fb57a7967a",
+  "frontend_image_id": "sha256:b83ec17c79ab89239785e1641a1a972b6f7c40ec7103c39f08bf1141dba9781d",
+  "gateway_image_id": "sha256:f5444642fa6711ffce9d9cd5e133c630f1273f4414d4cc3df80f718d97752d2f",
   "feature_flags": {
     "knowledge_decision_mode": "off",
     "knowledge_decision_authorization_required": false,
@@ -18,7 +18,7 @@
   "database": {
     "migration": "pass",
     "tenant_count_after_migration": 3,
-    "document_count_after_migration": 37,
+    "document_count_after_migration": 39,
     "knowledge_unit_relation_projection_rls": true,
     "evidence_span_rls": true
   },
@@ -31,10 +31,10 @@
     "web_error_scan": "pass"
   },
   "backup": {
-    "path": "/opt/enclave/backups/enclave_predeploy_kq7_20260903T123600Z.sql.gz",
-    "bytes": 1383639,
+    "path": "/opt/enclave/backups/pra-lite-c6c3875/enclave_20260903_141611.sql.gz",
+    "bytes": 1397158,
     "gzip_integrity": "pass"
   },
-  "rollback_release": "kq7-off-3d94e7c",
+  "rollback_release": "kq7-complete-f08884d",
   "formal_release_gate": "pass"
 }

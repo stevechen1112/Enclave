@@ -1,0 +1,28 @@
+{
+  "schema_version": "pra-bounded-probe/v1",
+  "status": "PASS",
+  "execution_class": "production_non_destructive_smoke",
+  "formal_capacity_evidence": false,
+  "release_id": "pra-lite-c6c3875",
+  "source_commit": "c6c3875e55fbda1fc99a0f63958e97e265ad16ab",
+  "tenant_ref_sha256": "45c4bdb347b2a2b3ea5f7561b9724e7376d1cc83cf24e912831e4f3faa04b485",
+  "concurrency": 8,
+  "request_count": 32,
+  "failure_count": 0,
+  "latency_ms": {
+    "p50": 92.8,
+    "p95": 7906.02,
+    "p99": 8270.67,
+    "max": 8270.67
+  },
+  "scenarios": {
+    "health": {"requests": 8, "failures": 0, "p95_ms": 133.5, "status_codes": [200]},
+    "identity": {"requests": 8, "failures": 0, "p95_ms": 131.95, "status_codes": [200]},
+    "asset_list": {"requests": 8, "failures": 0, "p95_ms": 164.12, "status_codes": [200]},
+    "empty_search": {"requests": 8, "failures": 0, "p95_ms": 8270.67, "status_codes": [200]}
+  },
+  "started_at": "2026-09-03T14:20:38.162008+00:00",
+  "completed_at": "2026-09-03T14:20:47.642004+00:00",
+  "duration_ms": 9480,
+  "errors": []
+}

@@ -72,7 +72,7 @@ python scripts/mka_progress_gate.py --all   # MKA 獨立閘門（不混入主計
 - 計畫 checkbox：**47/48**
 - 可驗證 code：**100% (32/32)**
 - false_green：**0**
-- 內部工程 Gate：**0 個阻擋項**
+- 內部工程 Gate：**1 個部署模式 Gate**（production least-privilege application DB role canary＋FORCE RLS；不阻擋目前專屬部署，只阻擋 shared multi-tenant 宣稱）
 - 外部商業化追蹤：滲透、法律與客戶 DR；不計入開發完成率
 - 本機階段 SKIP：SharePoint / Google Drive OAuth
 

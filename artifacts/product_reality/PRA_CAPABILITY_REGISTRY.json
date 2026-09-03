@@ -997,7 +997,7 @@
       "method": "DELETE",
       "path": "/api/v1/documents/batch",
       "module": "documents",
-      "source": "app/api/v1/endpoints/documents.py:466",
+      "source": "app/api/v1/endpoints/documents.py:471",
       "surface_state": "declared_in_source",
       "reality_level": "R1"
     },
@@ -1013,7 +1013,7 @@
       "method": "POST",
       "path": "/api/v1/documents/upload",
       "module": "documents",
-      "source": "app/api/v1/endpoints/documents.py:116",
+      "source": "app/api/v1/endpoints/documents.py:121",
       "surface_state": "declared_in_source",
       "reality_level": "R1"
     },
@@ -1021,7 +1021,7 @@
       "method": "DELETE",
       "path": "/api/v1/documents/{document_id}",
       "module": "documents",
-      "source": "app/api/v1/endpoints/documents.py:556",
+      "source": "app/api/v1/endpoints/documents.py:564",
       "surface_state": "declared_in_source",
       "reality_level": "R1"
     },
@@ -1029,7 +1029,7 @@
       "method": "GET",
       "path": "/api/v1/documents/{document_id}",
       "module": "documents",
-      "source": "app/api/v1/endpoints/documents.py:512",
+      "source": "app/api/v1/endpoints/documents.py:517",
       "surface_state": "declared_in_source",
       "reality_level": "R1"
     },

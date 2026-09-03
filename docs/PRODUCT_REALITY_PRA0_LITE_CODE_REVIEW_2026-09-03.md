@@ -30,13 +30,13 @@ Code Review 找到並修正兩個 P1：
 
 ## Current-release 核心旅程
 
-正式 release `kq7-complete-f08884d` 已以內部 synthetic tenant 完成：登入 → upload → terminal ready → search hit → grounded Ask（7.25 mm、2 sources）→ revoke → asset 404 → search identity 不殘留。資料 marker、asset 與 document 已清除。
-
-最終新 release 部署後必須再跑一次，舊 artifact 只保留為該精確 release 的歷史證據。
+正式 release `pra-lite-c6c3875` 已以內部 synthetic tenant 完成：登入 → upload → terminal ready → search hit → grounded Ask（7.25 mm、2 sources）→ revoke → asset 404 → search identity 不殘留。來源已撤權，marker、asset 與 document 不再對使用者可見或可檢索；資料庫保留 tombstone 供稽核。
 
 ## 容量與韌性邊界
 
 容量、遙測、queue、integrity、degradation 與 resilience 的 70 項自動化控制全部通過；另新增硬上限 50 concurrency／200 requests 的 production non-destructive probe runner。
+
+新 release 的 8 併發／32 requests 基線 0 failure，整體 P95 7.91 秒、search P95 8.27 秒。40 併發／80 requests 上限探測有 11 次 429；health 20/20 正常，表示服務未崩潰但單一帳號觸發既有 per-user guardrail。這份 FAIL 證據保留，不改寫成容量 PASS。
 
 這不等於 P5 正式容量認證。混合 upload／audio／video 負載、故障注入與 72 小時 soak 只能在專用隔離 staging 執行，禁止拿 production 補做。它們也不回寫成一般開發完成率，但在對外宣稱容量或 SLA 前仍必須有實測數據。
 

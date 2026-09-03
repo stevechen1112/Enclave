@@ -25,7 +25,22 @@
     "maximum_requests": 200,
     "default_concurrency": 40,
     "default_requests": 80,
-    "status": "PENDING_FINAL_RELEASE_DEPLOYMENT"
+    "status": "BOUNDED_BASELINE_ESTABLISHED",
+    "current_release": "pra-lite-c6c3875",
+    "passing_baseline": {
+      "concurrency": 8,
+      "requests": 32,
+      "failures": 0,
+      "overall_p95_ms": 7906.02,
+      "search_p95_ms": 8270.67
+    },
+    "upper_probe": {
+      "concurrency": 40,
+      "requests": 80,
+      "failures": 11,
+      "failure_status": 429,
+      "interpretation": "single-account 40-way concurrency exceeds the current per-user guardrail"
+    }
   },
   "formal_p5": {
     "status": "NOT_RUN",
