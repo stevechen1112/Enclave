@@ -34,6 +34,17 @@
 3. 第一輪已撤權內容的 Ask 引用維持 0。
 4. 正式 runtime 可載入新的刪除端點，且外部 Provider 及三條 Input queue guard 不受影響。
 
+## 部署結果
+
+- release：`b79d0ca`。
+- 正式 runtime 已確認載入 `revoked_documents` 與 `source_asset_user_request` 撤權路徑。
+- API、一般 Worker、Input Worker、Beat、前端及 Gateway 均正常；restart 0、OOMKilled false，部署後日誌無新 Traceback、Critical、WorkerLost、OOM 或 Error。
+- 7 條必要 Provider 真實呼叫再次全數通過。
+- `celery`、`input.document`、`input.media` queue 深度均為 0，總量保護上限 500。
+- 八策正式資料庫：可見 SourceAsset 0、可見 Document 0、啟用使用者 2、Owner 2。
+
+部署 Gate 全數通過；本修正狀態為 `DEPLOYED / VERIFIED`。租戶第二輪內容品質與操作旅程仍待李永仁真實複測，不以技術部署取代租戶驗收。
+
 ## 殘餘邊界
 
 本修正保證「刪除一個來源」時知識投影同步撤權；它不等於硬刪儲存物件。實體檔案是否到期刪除仍由資料保留政策決定。李永仁第二輪真實檔案的內容品質、轉錄正確率與處理時間仍須由本輪租戶複測驗證。

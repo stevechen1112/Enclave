@@ -61,7 +61,7 @@
 | I9-019 | staging 與 production 共用小型主機造成記憶體競爭 | P0 | MITIGATED | 首租戶驗證期間停止 staging compute；後續將 staging 移機或建立明確啟停／資源政策 |
 | I9-020 | 正式 Gemini 專案遭 403，內部整理、掃描理解與雲端 OCR 不可用 | P0 | VERIFIED | 所有必要 Provider 必須以真實呼叫通過；失效路徑切換至已驗證 Provider 並保留本機後備 |
 | I9-021 | 高量保護只統計預設 `celery` queue，未統計獨立 Input queues | P0 | VERIFIED | admission guard 同時統計 `celery`、`input.document`、`input.media`，任一來源造成的總積壓都受上限保護 |
-| I9-022 | 從「所有資產」刪除來源時，對應 Document 投影可能仍可被檢索 | P0 | FIXED_IN_CODE | 刪除來源必須先走共用 deny-first 文件撤權，清除檢索、快取、Wiki 與圖譜投影；撤權失敗時不可只隱藏來源 |
+| I9-022 | 從「所有資產」刪除來源時，對應 Document 投影可能仍可被檢索 | P0 | VERIFIED | 刪除來源必須先走共用 deny-first 文件撤權，清除檢索、快取、Wiki 與圖譜投影；撤權失敗時不可只隱藏來源 |
 
 ### 實作進度（持續追加）
 
@@ -74,6 +74,7 @@
 - 2026-09-03 I9-7 `DEPLOYED / VERIFYING`：正式環境備份、migration、獨立 Input Worker 與 release `243d784` 已上線；兩支 24-bit PCM WAV 均成功轉寫並進入人工確認，孤兒圖片成功復原且可問答，5 支影片維持人工確認，原始來源未被覆寫。
 - 2026-09-03 I9-7 擴大檢查：真實 Ask 測試發現第一方網頁 `source_system=web` 被 Connector ACL 誤擋，且既有完成文件缺 lexical projection；八策 4 個既有 chunks 已安全回填。永久修復、Redis 認證修復與回歸測試完成，待第二版部署後再驗證引用鏈。
 - 2026-09-03 I9-8 `DEPLOYED / VERIFYING`：release `1a371e4` 上線；7 條正式 Provider 真實呼叫全數通過，三條 queue 的總量保護已由正式 runtime 驗證。第一輪來源已清空，等待李永仁第二輪高量真實複測。
+- 2026-09-03 I9-9 `DEPLOYED / VERIFIED`：release `b79d0ca` 上線；統一資產刪除已固定先撤銷相容 Document 與所有問答投影，失敗時 fail-closed。正式 runtime 載入新邏輯，八策可見來源與文件均維持 0。
 
 ## 4. 實作階段與 Code Review Gate
 
@@ -235,3 +236,4 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 - 重新詢問第一輪曠職問題後，回答引用來源為 0；驗證用對話已移除，證明舊知識不再由 Ask 檢索。
 - 八策租戶、陳宥竹與李永仁帳號及兩人的 Owner 權限均保留；此次依約只清空來源，沒有刪除使用者原有對話紀錄。
 - 清理過程發現 I9-022：統一資產庫的來源刪除原先未保證同步撤銷相容 Document 投影。永久修正改為刪除前呼叫共用撤權服務；若撤權失敗回傳 409，避免出現「介面看不到但 AI 仍可能查到」的半完成狀態。
+- 永久修正已部署為 release `b79d0ca`。部署後 6 個應用容器均正常、restart 0、OOMKilled false；7/7 Provider probe 再次通過，三條 queue 深度均為 0，正式資料庫再次確認可見來源 0、可見文件 0、啟用使用者 2、Owner 2。
