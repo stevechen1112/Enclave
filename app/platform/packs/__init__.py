@@ -23,6 +23,14 @@ from app.platform.packs.lifecycle import (
     APPLICATION_LIFECYCLE_TRANSITIONS,
     can_transition_application,
 )
+from app.platform.packs.knowledge import (
+    KnowledgeComponentContribution,
+    KnowledgePackContribution,
+    KnowledgePackRuntime,
+    PackAdmissionResult,
+    PackCandidate,
+    admit_pack_candidates,
+)
 
 __all__ = [
     "APIRouterContribution",
@@ -44,4 +52,10 @@ __all__ = [
     "APPLICATION_LIFECYCLE_STATES",
     "APPLICATION_LIFECYCLE_TRANSITIONS",
     "can_transition_application",
+    "KnowledgeComponentContribution",
+    "KnowledgePackContribution",
+    "KnowledgePackRuntime",
+    "PackAdmissionResult",
+    "PackCandidate",
+    "admit_pack_candidates",
 ]

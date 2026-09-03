@@ -1,0 +1,26 @@
+{
+  "artifact_schema": "knowledge-answer-gate-report/v1",
+  "phase": "KQ6",
+  "gate": "KQ-PACK-01",
+  "status": "pass",
+  "date": "2026-09-03",
+  "results": {
+    "backend_tests": { "passed": 114, "failed": 0 },
+    "ruff": "pass",
+    "knowledge_contribution_surfaces": 7,
+    "reference_domains": ["hr", "manufacturing"],
+    "core_contamination_findings": 0,
+    "pack_direct_db_or_index_bypasses": 0,
+    "disable_uninstall_removes_all_contributions": true,
+    "cross_tenant_alias_leak": false,
+    "pack_failure_distinct_from_absent": true,
+    "high_risk_requires_formal_authority": true,
+    "shared_evidence_decision_schema": true,
+    "production_decision_mode": "off"
+  },
+  "evidence": [
+    "tests/test_knowledge_answer_kq6.py",
+    "app/platform/packs/knowledge.py",
+    "docs/knowledge/PHASE_KQ6_CODE_REVIEW_2026-09-03.md"
+  ]
+}
