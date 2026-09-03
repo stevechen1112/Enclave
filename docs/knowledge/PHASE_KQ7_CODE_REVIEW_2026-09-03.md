@@ -13,7 +13,7 @@ KQ7 已將 parse、retrieve、select、applicability、completeness、conversati
 
 Runtime 現在要求 tenant Owner 的 append-only HMAC 簽章紀錄。Shadow 與 Enforce 是兩份不同紀錄；allowlist、平台 gate、合作關係或「八策」名稱都不會推定授權。每份紀錄綁 tenant、Ask scope、期限、資料使用範圍、backend/frontend digest、deployment manifest、KB revision、Knowledge release、Pack versions、prompt/model、rollback point、流量與停止條件。Enforce 另要求 Shadow、tenant acceptance、ACL negative、rollback drill、browser acceptance 五份 64-hex evidence digest。簽章錯誤、路徑穿越 ID、過期、release mismatch、scope 不符、未命中穩定流量分桶或 kill switch 都回 `off`。
 
-Production compose 已提供獨立 authorization volume；web 僅 read-only mount。Operator 發證工具不接受 command-line secret，必須從 secret manager 注入 key；authorization audit 使用前一事件 hash 與 HMAC event hash。
+Production compose 已提供獨立 authorization volume；web 僅 read-only mount，並把建置完成後的 backend/frontend sha256 image ID 注入 runtime identity。Operator 發證工具不接受 command-line secret，必須從 secret manager 注入 key；authorization audit 使用前一事件 hash 與 HMAC event hash。
 
 ## 驗證證據
 

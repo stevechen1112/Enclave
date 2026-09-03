@@ -72,6 +72,8 @@ services:
       - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
       - KNOWLEDGE_DECISION_SHADOW_STORE_PATH=/var/lib/enclave/knowledge-shadow
       - KNOWLEDGE_DECISION_AUTHORIZATION_STORE_PATH=/var/lib/enclave/knowledge-authorizations
+      - ENCLAVE_BACKEND_IMAGE_DIGEST=${ENCLAVE_BACKEND_IMAGE_DIGEST:-unknown}
+      - ENCLAVE_FRONTEND_IMAGE_DIGEST=${ENCLAVE_FRONTEND_IMAGE_DIGEST:-unknown}
     volumes:
       - uploads_data:/code/uploads    # Persist uploaded files only
       - knowledge_shadow_data:/var/lib/enclave/knowledge-shadow
