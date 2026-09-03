@@ -60,6 +60,7 @@
 - 2026-09-03 I9-3 `FIXED_IN_CODE`：serving-mode-aware answer-ready、互斥狀態、來源層級首頁統計與殘留覆核項目排除完成；Code Review PASS。
 - 2026-09-03 I9-4 `FIXED_IN_CODE`：核心狀態用詞、可操作狀態卡、deep link、白話錯誤、自動重試說明與追蹤碼完成；Code Review PASS。
 - 2026-09-03 I9-5 `FIXED_IN_CODE`：人工確認依來源分組、來源／候選雙重計數、風險摘要及 rolling compatibility 完成；Code Review PASS。
+- 2026-09-03 I9-6 `FIXED_IN_CODE`：真實 `pcm_s24le` WAV 正規化回歸、76 項後端 focused tests、135 項前端 tests 與 production build 完成；Code Review CONDITIONAL PASS，正式 PostgreSQL／容器驗證移入 I9-7。
 
 ## 4. 實作階段與 Code Review Gate
 

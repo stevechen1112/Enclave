@@ -6,13 +6,13 @@ describe('LifecycleBadge canonical answer readiness', () => {
   it('does not call a merely completed document searchable', () => {
     expect(toLifecycle('completed', null, false)).toBe('not_searchable')
     render(<LifecycleBadge status="completed" answerReady={false} />)
-    expect(screen.getByText('尚不可查')).toBeInTheDocument()
+    expect(screen.getByText('尚不可問答')).toBeInTheDocument()
   })
 
   it('uses the backend answer_ready truth for searchable state', () => {
     expect(toLifecycle('completed', null, true)).toBe('searchable')
     render(<LifecycleBadge status="completed" answerReady />)
-    expect(screen.getByText('可搜尋')).toBeInTheDocument()
+    expect(screen.getByText('已可問答')).toBeInTheDocument()
   })
 
   it('keeps revocation deny-first even if stale readiness is true', () => {

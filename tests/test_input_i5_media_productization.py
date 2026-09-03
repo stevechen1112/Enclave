@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import shutil
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from app.services.media_productization import (
     extract_audio_chunks,
     parse_audio_probe_payload,
     validate_audio_probe,
+    probe_audio,
 )
 from app.services.media_quality import (
     TimelineObservation,
@@ -50,6 +52,38 @@ def test_audio_probe_accepts_product_codec_matrix(codec, format_name):
     )
     validate_audio_probe(probe)
     assert probe.duration_ms == 12_500
+
+
+@pytest.mark.skipif(
+    not shutil.which("ffmpeg") or not shutil.which("ffprobe"),
+    reason="local FFmpeg runtime is unavailable",
+)
+def test_real_24_bit_pcm_wav_can_be_probed_normalized_and_chunked(tmp_path):
+    """Regression corpus for the DJI/recorder format seen by the first tenant."""
+
+    source = tmp_path / "recorder-pcm-s24le.wav"
+    subprocess.run(
+        [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=1",
+            "-c:a", "pcm_s24le", str(source),
+        ],
+        check=True,
+        timeout=30,
+    )
+
+    probe = probe_audio(str(source))
+    assert probe.codec == "pcm_s24le"
+    proxy = tmp_path / "preview.mp3"
+    create_browser_audio_proxy(str(source), str(proxy))
+    (tmp_path / "chunks").mkdir()
+    chunks = extract_audio_chunks(
+        str(source), str(tmp_path / "chunks"), chunk_seconds=10
+    )
+
+    assert proxy.stat().st_size > 0
+    assert len(chunks) == 1
+    assert Path(chunks[0]).stat().st_size > 0
 
 
 def test_audio_probe_fails_closed_for_unknown_codec(monkeypatch):
