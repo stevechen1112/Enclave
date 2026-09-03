@@ -38,3 +38,11 @@
 2. Redis 不再記錄 retrieval-cache authentication warning。
 3. 使用第一方網頁內容提問，回答必須至少帶 1 筆可追溯來源。
 4. 李永仁可看到 9 個來源皆不再處於失敗／無限處理中；人工確認需清楚顯示來源數與候選數。
+
+## Gate 結果
+
+- PASS：release `8ea5bb1` 的 API、前端、Gateway、core worker 與 Input worker 全數 healthy。
+- PASS：retrieval cache 已驗證完成 Redis 認證，正式 web log 無舊認證警告。
+- PASS：正式 Ask 回傳 557 字回答、3 筆來源引用，均指向八策已匯入的曠職網頁文件。
+- PASS：9 個來源為已可問答 1、等待人工確認 8、處理中 0、需要處理 0；工作區為 8 個來源群組、179 筆候選。
+- PENDING TENANT RETEST：iPhone Safari 實際點擊與新上傳旅程由李永仁依持續紀錄文件第 9 節複測。

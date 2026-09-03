@@ -40,24 +40,25 @@
 
 | ID | 問題 | 嚴重度 | 狀態 | 完成條件 |
 |---|---|---:|---|---|
-| I9-001 | `pcm_s24le` WAV 無法處理 | P0 | OPEN | 正式環境可保留原檔、正規化、轉錄並進入人工確認 |
-| I9-002 | 固定錯誤被重複重試 | P0 | OPEN | 永久錯誤不重試；暫時錯誤依策略退避重試 |
-| I9-003 | 媒體工作超出 Worker 記憶體後遭 SIGKILL | P0 | OPEN | 媒體工作具資源隔離；代表性圖片與影片不再造成 WorkerLost |
-| I9-004 | WorkerLost 後工作永遠停在處理中 | P0 | OPEN | 逾時工作可被偵測、標記並安全復原 |
-| I9-005 | 「可使用」數字不等於真正可問答 | P0 | OPEN | 所有 UI 與 API 以單一 answer-ready 判定顯示 |
-| I9-006 | 同一資產跨表狀態互相矛盾 | P0 | OPEN | source、revision、job、document、artifact、publication 投影一致 |
-| I9-007 | 成功終態殘留舊錯誤 | P1 | OPEN | 成功／人工確認終態清除 active error，歷史保留在 event |
-| I9-008 | 「待覆核／待審核」用詞不一致 | P1 | OPEN | 全產品統一為「等待人工確認」，並說明責任人 |
-| I9-009 | 140 個技術片段直接暴露給一般使用者 | P1 | OPEN | 先依來源分組，再展開例外或片段；支援適當批次處置 |
-| I9-010 | 失敗頁只顯示通用訊息 | P1 | OPEN | 顯示安全、白話、可採取行動的原因與追蹤代碼 |
-| I9-011 | 狀態卡缺乏下一步 | P1 | OPEN | 每個狀態可直接前往提問、人工確認、查看進度或處理問題 |
+| I9-001 | `pcm_s24le` WAV 無法處理 | P0 | VERIFIED | 正式環境可保留原檔、正規化、轉錄並進入人工確認 |
+| I9-002 | 固定錯誤被重複重試 | P0 | VERIFIED | 永久錯誤不重試；暫時錯誤依策略退避重試 |
+| I9-003 | 媒體工作超出 Worker 記憶體後遭 SIGKILL | P0 | VERIFIED | 媒體工作具資源隔離；代表性圖片與影片不再造成 WorkerLost |
+| I9-004 | WorkerLost 後工作永遠停在處理中 | P0 | VERIFIED | 逾時工作可被偵測、標記並安全復原 |
+| I9-005 | 「可使用」數字不等於真正可問答 | P0 | VERIFIED | 所有 UI 與 API 以單一 answer-ready 判定顯示 |
+| I9-006 | 同一資產跨表狀態互相矛盾 | P0 | VERIFIED | source、revision、job、document、artifact、publication 投影一致 |
+| I9-007 | 成功終態殘留舊錯誤 | P1 | VERIFIED | 成功／人工確認終態清除 active error，歷史保留在 event |
+| I9-008 | 「待覆核／待審核」用詞不一致 | P1 | DEPLOYED | 全產品統一為「等待人工確認」，並說明責任人 |
+| I9-009 | 140 個技術片段直接暴露給一般使用者 | P1 | VERIFIED | 先依來源分組，再展開例外或片段；支援適當批次處置 |
+| I9-010 | 失敗頁只顯示通用訊息 | P1 | DEPLOYED | 顯示安全、白話、可採取行動的原因與追蹤代碼 |
+| I9-011 | 狀態卡缺乏下一步 | P1 | DEPLOYED | 每個狀態可直接前往提問、人工確認、查看進度或處理問題 |
 | I9-012 | 上傳相同檔案容易產生重複失敗來源 | P1 | OPEN | 內容雜湊去重與重送語意清楚，不重複計費或產生垃圾來源 |
-| I9-013 | 第一方網頁 Input 被誤判為外部 Connector 而無法檢索 | P0 | FIXED_IN_CODE | 網頁知識可由正式 Ask 命中並回傳來源引用；外部 Connector 仍維持 fail-closed |
-| I9-014 | 正式 Redis 要求密碼但檢索快取未帶認證 | P1 | FIXED_IN_CODE | 正式環境不再出現檢索快取認證失敗，且快取仍維持租戶／權限隔離 |
-| I9-015 | 舊有完成文件缺少 lexical projection | P0 | DEPLOYED | 既有文件完成受稽核且具租戶邊界的索引回填，關鍵字檢索可命中 |
+| I9-013 | 第一方網頁 Input 被誤判為外部 Connector 而無法檢索 | P0 | VERIFIED | 網頁知識可由正式 Ask 命中並回傳來源引用；外部 Connector 仍維持 fail-closed |
+| I9-014 | 正式 Redis 要求密碼但檢索快取未帶認證 | P1 | VERIFIED | 正式環境不再出現檢索快取認證失敗，且快取仍維持租戶／權限隔離 |
+| I9-015 | 舊有完成文件缺少 lexical projection | P0 | VERIFIED | 既有文件完成受稽核且具租戶邊界的索引回填，關鍵字檢索可命中 |
 | I9-016 | 共用 IMAGE_TAG 導致未變更 gateway 缺少部署標籤 | P1 | MITIGATED | 發布流程能保證所有 compose image 均有相同 release tag，部署前先驗證映像完整性 |
-| I9-017 | 首租戶尚無 active KB revision 時 shadow scope 關閉所有問答 | P0 | FIXED_IN_CODE | shadow 模式可讀取既有 answer-ready 文件並附引用；enforce 與無權 revision 仍 fail-closed |
-| I9-018 | 首次圖片尚待人工確認卻提前列入已可問答 | P0 | FIXED_IN_CODE | 首版待確認不列入可問答；已有正式舊版者在新版待確認期間仍可使用舊版 |
+| I9-017 | 首租戶尚無 active KB revision 時 shadow scope 關閉所有問答 | P0 | VERIFIED | shadow 模式可讀取既有 answer-ready 文件並附引用；enforce 與無權 revision 仍 fail-closed |
+| I9-018 | 首次圖片尚待人工確認卻提前列入已可問答 | P0 | VERIFIED | 首版待確認不列入可問答；已有正式舊版者在新版待確認期間仍可使用舊版 |
+| I9-019 | staging 與 production 共用小型主機造成記憶體競爭 | P0 | MITIGATED | 首租戶驗證期間停止 staging compute；後續將 staging 移機或建立明確啟停／資源政策 |
 
 ### 實作進度（持續追加）
 
@@ -154,3 +155,33 @@ Code Review：
 ## 7. 宣稱邊界
 
 I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠。I9 程式部署後，也只能宣稱「已進入首租戶複測」；必須待八策代表性來源成功完成 Input → 人工確認 → 發布 → Ask 引用，才可將本輪問題關閉。
+
+## 8. 2026-09-03 正式部署與系統驗證
+
+- 生產 release：`8ea5bb1`。
+- 部署前 PostgreSQL 備份：`/opt/enclave/backups/enclave_pre_input_i9_20260903_1525_input_i9.dump`。
+- 備份 SHA-256：`6f9c7cec9f838ec212da31d59b147592ca4ede803c3a20cea40e81adb7c0d467`；已用 `pg_restore --list` 驗證可讀。
+- API、前端、Gateway、core worker、Input worker 全部 healthy；正式網域 `/health` 回傳 database ready。
+- Input worker 獨立使用 `input.media,input.document` queue、concurrency 1 與 2 GiB 上限；主機驗證時 available memory 約 4.5 GiB。
+- 兩支原失敗 WAV 均成功完成，分別產生 16 與 5 筆候選；狀態為「等待人工確認」。
+- 原卡住 JPEG 經 stale reconciliation 自動重新排程並完成；因為是首版且仍待人工確認，不再提前列為可問答。
+- 八策目前 9 個來源：已可問答 1、等待人工確認 8、系統處理中 0、需要處理 0。
+- 人工確認工作區：8 個來源、179 筆候選，預設先依來源分組。
+- 正式 Ask 驗證問題「請根據目前公司知識，簡要說明曠職相關規定，並提供來源。」成功產生 557 字回答及 3 筆引用；引用均可回到已匯入網頁文件。驗證 request ID：`2cf456ca-5c84-4bd0-b0d8-0fe2bfe61bde`。
+- 本次沒有代替租戶核准任何音訊、圖片或影片候選。
+- staging 的 DB／Redis 保留，但 compute services 暫停，以避免與首租戶 production 爭用記憶體；恢復前需先完成容量決策。
+
+## 9. 李永仁複測清單
+
+請先用李永仁本人已設定的密碼重新登入，再依序驗證：
+
+1. 首頁應顯示：全部來源 9、已可問答 1、系統處理中 0、等待人工確認 8、需要處理 0。
+2. 點「已可問答」應直接進入「問知識」，不再只顯示一個不知道如何使用的數字。
+3. 提問「請根據目前公司知識，簡要說明曠職相關規定，並提供來源。」回答下方應出現可點擊的網頁來源。
+4. 點「等待人工確認」應看到 8 個來源分組，而不是把 179 個候選誤認成 179 份文件。
+5. 兩支 WAV `DJI_34_20260331_115344.WAV` 與 `DJI_15_20260309_134103-職場性騷擾音檔.WAV` 應顯示等待人工確認，不得再顯示失敗或重新處理。
+6. `IMG_8592.jpeg` 應顯示等待人工確認，不得再永久停在系統處理中，也不得在首版尚未確認前列入已可問答。
+7. 再上傳一支代表性的短音檔，確認可依序經過「系統處理中 → 等待人工確認」，過程可離開頁面再回來，不必靠重新整理才能救回工作。
+8. 若高風險候選由建立者本人開啟，系統應明確說明不能自行核准；請由另一位 Owner 完成人工確認。
+
+李永仁回報上述結果後，將「租戶複測」補入本文件；全部通過才把相關問題由 `VERIFIED` 關閉為 `CLOSED`。
