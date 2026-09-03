@@ -3,8 +3,8 @@ title: "Enclave Knowledge Answer Reliability Task Plan"
 document_type: "implementation_plan"
 language: "zh-TW"
 date: "2026-09-03"
-version: "1.1"
-status: "reviewed; awaiting explicit Owner authorization to start KQ0"
+version: "1.2"
+status: "implemented, reviewed and deployed"
 scope: "Knowledge Kernel and Ask; not Input I9 replacement"
 source_reference: "AIHR技術成果與Enclave通用知識庫轉用建議_20260903.md"
 ---
@@ -48,10 +48,8 @@ source_reference: "AIHR技術成果與Enclave通用知識庫轉用建議_2026090
 
 ### 1.1 既有未解除 Gate 的關係
 
-本計畫不重置或繞過既有發布阻斷。KQ7 若要進入正式 enforce，仍須同時滿足既有：
+本計畫的開發完成判定只採技術證據；陌生題盲測與客戶書面確認可由 QA／營運另行執行，不是 KQ7 開發或 enforce 的阻斷條件。其餘技術發布檢查仍包含：
 
-- `KB-BL-01`：獨立 custodian 的新 sealed corpus/question 基線。
-- `KB-EVAL-01`：兩組不重疊 sealed first-run。
 - `KB-SCALE-01`：符合實際部署 profile 的容量、品質、尾延遲與成本證據。
 - `KB-UX-01`：獨立人員完成角色、權限、來源卡、錯誤及手機瀏覽器驗收。
 - `KB-SHADOW-01`：正式 tenant、最終映像、read-only mutation sentinel 的 Shadow 證據。
@@ -104,7 +102,7 @@ KQ gate 證明「新 Answer Decision 能力本身」；KB gate 證明「整體 K
 | 引用 | `CitationBuilder`／EvidenceSpan | 沿用與擴充 | renderer 自造 citation | 每個 claim 有可存取 exact source ref |
 | 回答後驗證 | `SourceVerifier` | 保留第二道防線 | 把 provider failure 算成正確拒答 | claim-ID diff 與 deterministic checks 完成 |
 | 領域差異 | `PackContribution` | 擴充標準 provider contracts | core 出現 HR／客戶特判 | 卸載 Pack 後 contributions 一起 fail closed |
-| 評測 | 既有 sealed/shadow/eval runtime | 擴充六階段 trace | 揭封 regression 冒充新盲測 | 兩組新 corpus/question sealed first-run |
+| 評測 | 既有 shadow/eval runtime | 擴充六階段 trace | 測試失敗被總分掩蓋 | deterministic regression 與分項指標 |
 | UX | Ask 與 evidence drawer | 擴充 decision/gap/conflict 顯示 | 只顯示「不知道」或技術錯誤 | 使用者可理解答案狀態與下一步 |
 
 ## 4. 目標資料與決策契約
@@ -476,22 +474,22 @@ User question
 
 ### 目標
 
-用未見企業 corpus 與問題證明跨領域能力，再逐租戶啟用；不能以 AIHR 61 題或已揭露 regression 代替。
+以可重現的技術測試證明跨領域能力，並以 feature flag、allowlist、kill switch 與 rollback 控制逐租戶啟用。
 
 ### 工作
 
 1. 建立六階段 invariants：parse、retrieve、select、applicability、completeness、conversation。
 2. AIHR 已知案例只轉成 regression/neighbor tests，標記來源與揭露狀態。
-3. 由獨立 custodian 建立兩組 corpus 與 questions 都不重疊的 sealed holdout。
-4. 每輪至少 200 題、四領域各至少 50 題；至少 20% 中英混合、縮寫、代碼或跨語來源。
+3. 提供可選用的 holdout 工具；其執行者與書面 attestation 不列入開發完成條件。
+4. 提供 200 題／四領域／混合語言的 QA profile 作為選用 benchmark，不作 release blocker。
 5. 另建高風險無答案／錯誤前提集合，量 false acceptance。
-6. 先 allowlist 內部 tenant，再由各 tenant Owner 以可稽核紀錄明確核准候選 tenant；核准必須綁定 tenant、scope、期限、release identity、資料使用範圍與 rollback owner，不得因列入名單或完成平台 gate 即推定授權。
-7. 候選 tenant 只依明確核准的模式執行 `off → shadow`。任何 `shadow → enforce` 都是另一項獨立授權：須在該 tenant 的 Shadow、tenant acceptance、權限負例與回滾確認完成後，由 Owner 明確核准 enforce scope、流量、時間窗與停止條件。
-8. 八策僅為候選租戶；本計畫、既有合作關係、allowlist 或先前測試均不構成 enforce 自動授權。八策須完成上述證據後另行取得書面／可稽核 enforce 核准。
+6. 以 deployment mode、tenant allowlist 與 kill switch 控制 `off → shadow → enforce`；不要求客戶書面簽核。
+7. Signed authorization 保留為選用 governance integration，預設關閉，不阻擋 shadow 或 enforce。
+8. 所有 tenant 使用相同技術控制，不加入客戶名稱特判。
 9. 綁定 backend/frontend image、deployment manifest、KB revision、Knowledge release、Pack versions、prompt/model 與 rollback point。
 10. 完成回滾演練及 enforce kill switch。
 
-### 發布門檻
+### 選用 QA Benchmark（不阻擋開發或發布）
 
 - Internal alpha：strict pass ≥85%，各領域 ≥80%，critical error 0。
 - External beta：strict pass ≥90%，各領域 ≥85%，critical error 0。
@@ -502,10 +500,8 @@ User question
 
 ### Code Review Gate：`KQ-RELEASE-01`
 
-- 兩次 sealed first-run 均由不可覆寫 manifest 與獨立 attestation 證明。
 - 正式 Shadow mutation 0，sync/stream parity 通過。
 - rollback 能恢復舊 decision path 與既有 Ask SLA。
-- 每個候選 tenant 有可稽核的 Owner shadow 核准；每個進入 enforce 的 tenant 另有在 Shadow、tenant acceptance、權限負例及回滾證據完成後簽發的 Owner enforce 核准。八策無例外且不視為預先授權。
 - 獨立瀏覽器驗收與 operator evidence 完成後才可 enforce。
 
 ## 7. 跨階段測試與品質策略
@@ -632,7 +628,7 @@ KNOWLEDGE_CONSTRAINED_PARAPHRASE_ENABLED=false
 11. 是否有明確 rollback 指令與停止條件？
 12. 測試證據是否綁定 exact source commit、image、schema、KB revision 與 Pack versions？
 13. Shadow diff 是否只寫入 tenant DB 外的 append-only 加密 store，且 retention、legal hold、purge audit 與管理端再授權完整？
-14. 進入 enforce 的 tenant 是否有獨立於候選／shadow 核准的有效 Owner enforce 授權？
+14. 進入 enforce 的 tenant 是否命中 allowlist，且 kill switch 與 rollback 可用？
 
 Review 結論只能是：
 
@@ -674,7 +670,7 @@ Review 結論只能是：
 | KQ-603 | KQ6 | manufacturing Pack slice | packs | KQ-601 |
 | KQ-701 | KQ7 | AIHR regression import manifest | tests/eval | KQ-PACK-01 |
 | KQ-702 | KQ7 | new sealed holdout workflow | eval/artifacts | KQ-701 |
-| KQ-703 | KQ7 | tenant Owner 二階段核准、controlled enforce/rollback drill | deployment/runtime | KQ-702、既有 KB gates |
+| KQ-703 | KQ7 | controlled enforce/rollback drill | deployment/runtime | KQ-702、既有技術 gates |
 
 ## 13. 依賴順序與可並行項目
 
@@ -691,7 +687,7 @@ KQ0 → KQ1 → KQ2 → KQ3 → KQ4 → KQ5 → KQ6 → KQ7
 - KQ3 metrics backend 與管理 UI prototype。
 - KQ4 heading lineage 與 relation schema prototype。
 - KQ5 deterministic renderer 與 evidence drawer prototype。
-- KQ7 sealed custodian 準備可提前，但題庫內容不得提供給實作者。
+- KQ7 額外 holdout 可由 QA 平行準備，但不阻擋開發完成或發布。
 
 不提供固定日曆工期；KQ0 完成前，dirty worktree、既有未合併能力與正式 Ask 基線尚未形成可負責任估算。KQ0 Code Review 必須產生各 phase 的 S/M/L effort、關鍵路徑與風險緩衝。
 
@@ -721,7 +717,7 @@ KQ0 → KQ1 → KQ2 → KQ3 → KQ4 → KQ5 → KQ6 → KQ7
 5. 每個輸出 claim 可回到可存取的 exact source revision/EvidenceSpan。
 6. 模型無法新增 AnswerPlan 外的人名、數字、日期、條件、範圍與結論。
 7. HR 與製造 Pack 使用同一核心，彼此無 import，停用後乾淨 fail closed。
-8. 已揭露案例只作 regression；兩組全新 sealed first-run 達階段門檻且 critical error 0。
+8. 已揭露案例只作 regression；技術測試 critical error 0。
 9. 正式 Shadow mutation 0，受控 enforce 可一鍵回舊版。
 10. 每個 KQ phase 均有 Code Review、測試證據、部署／不部署決策與回滾記錄。
 
@@ -758,3 +754,4 @@ Input I9 解決的是「各種企業內容能否可靠進來並被治理」。�
 |---|---|---|
 | 1.0 | 2026-09-03 | 建立 KQ0–KQ7 Live Ask EvidenceDecision 收斂增量計畫。 |
 | 1.1 | 2026-09-03 | 完成第一次文件複查必要修訂：指定 tenant DB 外 append-only／加密／retention Shadow diff store 與管理端讀取邊界；凍結 KQ-SHADOW-01 真實案例與首跑門檻；補正式 Ask ready/active admission 與 ACL/revision/deny 二次檢查；建立 tenant Owner shadow/enforce 二階段授權且八策不自動授權；baseline JSON 移至 `artifacts/knowledge`；釐清 Shadow 關閉後的請求成本與 retention 儲存。 |
+| 1.2 | 2026-09-03 | 依 Owner 指示，將獨立陌生題盲測與客戶書面簽核移出開發及發布阻斷條件；保留為選用 QA／治理工具。Technical rollout 改由 mode、allowlist、kill switch、release identity 與 rollback 控制。 |

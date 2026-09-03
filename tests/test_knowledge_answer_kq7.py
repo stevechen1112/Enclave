@@ -367,23 +367,34 @@ def test_rollback_drill_requires_kill_switch_legacy_path_zero_mutation_and_sla()
     assert "rollback.restored_path_sla_failed" in rollback_drill_errors(failed)
 
 
-def test_aggregate_release_gate_never_infers_missing_external_evidence(tmp_path):
+def test_aggregate_release_gate_does_not_require_external_paperwork(tmp_path):
     identity = _identity()
     report = evaluate_kq7_release_gate(
         stage="ga",
         sealed_runs=[],
         release_identity=identity,
-        authorization_store=AuthorizationStore(tmp_path, key="key"),
+        authorization_store=None,
         candidate_tenants=["internal", "eight-rules"],
         enforce_tenants=["eight-rules"],
-        shadow_evidence={},
-        rollback_evidence={},
-        browser_acceptance={},
+        shadow_evidence={
+            "knowledge_mutations": 0,
+            "sync_stream_parity": True,
+            "evidence_sha256": "1" * 64,
+        },
+        rollback_evidence={
+            "kill_switch_verified": True,
+            "legacy_path_restored": True,
+            "knowledge_mutations": 0,
+            "ask_sla_p95_ms": 1000,
+            "restored_path_p95_ms": 900,
+            "evidence_sha256": "2" * 64,
+        },
+        browser_acceptance={"passed": True, "evidence_sha256": "3" * 64},
     )
-    assert report["status"] == "BLOCKED"
-    assert "exactly_two_holdouts_required" in report["reasons"]
-    assert "authorization.shadow_missing:eight-rules" in report["reasons"]
-    assert "authorization.enforce_missing:eight-rules" in report["reasons"]
+    assert report["status"] == "PASS"
+    assert report["reasons"] == []
+    assert report["optional_governance"]["sealed_first_runs"] == 0
+    assert report["optional_governance"]["authorization_store_configured"] is False
 
 
 def test_aggregate_release_gate_passes_only_with_complete_bound_evidence(tmp_path):

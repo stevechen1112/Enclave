@@ -52,12 +52,13 @@ def test_kq3_flags_default_off_normalize_and_reject_invalid():
     assert configured.KNOWLEDGE_DECISION_MODE == "off"
     assert configured.KNOWLEDGE_DECISION_TENANT_ALLOWLIST == ""
     assert configured.KNOWLEDGE_DECISION_KILL_SWITCH is False
+    assert configured.KNOWLEDGE_DECISION_AUTHORIZATION_REQUIRED is False
     assert Settings(_env_file=None, KNOWLEDGE_DECISION_MODE=" ShAdOw ").KNOWLEDGE_DECISION_MODE == "shadow"
     with pytest.raises(ValueError, match="KNOWLEDGE_DECISION_MODE"):
         Settings(_env_file=None, KNOWLEDGE_DECISION_MODE="audit")
 
 
-def test_allowlist_kill_switch_and_unapproved_enforce_fail_closed(monkeypatch):
+def test_allowlist_kill_switch_and_enforce_mode(monkeypatch):
     tenant = str(uuid4())
     monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_TENANT_ALLOWLIST", tenant)
     monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_KILL_SWITCH", False)
@@ -65,7 +66,7 @@ def test_allowlist_kill_switch_and_unapproved_enforce_fail_closed(monkeypatch):
     assert resolve_knowledge_decision_mode(tenant) == "shadow"
     assert resolve_knowledge_decision_mode(uuid4()) == "off"
     monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_MODE", "enforce")
-    assert resolve_knowledge_decision_mode(tenant) == "off"
+    assert resolve_knowledge_decision_mode(tenant) == "enforce"
     monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_MODE", "shadow")
     monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_KILL_SWITCH", True)
     assert resolve_knowledge_decision_mode(tenant) == "off"

@@ -10,6 +10,8 @@ conclusion: "PASS — REQUIRED REVISIONS RESOLVED; AWAITING EXPLICIT OWNER AUTHO
 
 # Knowledge Answer Reliability Task Plan v1.1 文件複查
 
+> 歷史文件：本複查已由 Task Plan v1.2 取代。v1.2 依 Owner 指示移除「獨立陌生題盲測」與「客戶 Owner 書面簽核」兩項非開發阻斷條件；目前發布判定以技術測試、mode、allowlist、kill switch、release identity 與 rollback 為準。
+
 ## 1. 複查結論
 
 **PASS — REQUIRED REVISIONS RESOLVED；等待 Owner 明確指示「開工」後才可開始 KQ0。**

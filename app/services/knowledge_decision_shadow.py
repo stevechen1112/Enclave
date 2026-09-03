@@ -94,9 +94,9 @@ def resolve_knowledge_decision_mode(
             )
             else "off"
         )
-    # Compatibility is test/development-only; production configuration keeps
-    # authorization required. Enforce has no legacy compatibility path.
-    return "shadow" if mode == "shadow" else "off"
+    # Technical rollout is controlled by mode + tenant allowlist + kill switch.
+    # Signed authorization remains an optional governance integration only.
+    return mode
 
 
 @dataclass(frozen=True)
