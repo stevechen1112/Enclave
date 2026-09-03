@@ -17,6 +17,8 @@
     "stable_traffic_allocation": true,
     "kill_switch_fail_closed": true,
     "production_compose_validation": "pass",
+    "production_off_mode_deployment": "pass",
+    "production_schema_head": "knowledge_typed_relation_kq4_001",
     "production_decision_mode": "off",
     "enforce_authorizations_issued": 0
   },
@@ -32,6 +34,7 @@
     "app/services/knowledge_release_control.py",
     "app/services/knowledge_release_gate.py",
     "artifacts/knowledge/KQ7_AIHR_REGRESSION_MANIFEST.json",
-    "docs/knowledge/PHASE_KQ7_CODE_REVIEW_2026-09-03.md"
+    "docs/knowledge/PHASE_KQ7_CODE_REVIEW_2026-09-03.md",
+    "artifacts/knowledge/KQ7_PRODUCTION_RUNTIME_MANIFEST.json"
   ]
 }
