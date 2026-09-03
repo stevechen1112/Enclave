@@ -1,28 +1,35 @@
 {
-  "schema_version": 1,
-  "gate": "TENANT-HARD-ISOLATION",
-  "generated_at": "2026-09-03T14:18:04.629197+00:00",
-  "status": "FAIL",
-  "require_force_rls": false,
-  "protected_table_count": 111,
-  "direct_tenant_table_count": 103,
-  "inherited_tenant_table_count": 7,
-  "identity_table_count": 1,
-  "policy_errors": [],
   "application_role": {
-    "rolname": "postgres",
-    "rolcanlogin": true,
-    "rolsuper": true,
-    "rolbypassrls": true,
     "application_member": true,
-    "bypass_member": true,
+    "bypass_member": false,
+    "can_insert_maintenance_audit": false,
     "can_resolve_login_tenant": true,
-    "can_insert_maintenance_audit": true
+    "rolbypassrls": false,
+    "rolcanlogin": true,
+    "rolname": "enclave_app",
+    "rolsuper": false
   },
-  "errors": [
-    "application role is superuser: postgres",
-    "application role has BYPASSRLS: postgres",
-    "application role is a tenant bypass member: postgres",
-    "application role can forge maintenance audit: postgres"
-  ]
+  "direct_tenant_table_count": 103,
+  "errors": [],
+  "gate": "TENANT-HARD-ISOLATION",
+  "generated_at": "2026-09-03T15:26:18.399059+00:00",
+  "identity_table_count": 1,
+  "inherited_tenant_table_count": 7,
+  "maintenance_role": {
+    "bypass_member": true,
+    "can_delete_maintenance_audit": false,
+    "can_insert_maintenance_audit": true,
+    "can_update_maintenance_audit": false,
+    "rolbypassrls": false,
+    "rolcanlogin": true,
+    "rolinherit": true,
+    "rolname": "enclave_maintenance",
+    "rolsuper": false
+  },
+  "nullable_global_read_table_count": 8,
+  "platform_global_table_count": 1,
+  "protected_table_count": 111,
+  "require_force_rls": true,
+  "schema_version": 1,
+  "status": "PASS"
 }

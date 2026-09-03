@@ -1,7 +1,7 @@
 {
   "schema_version": "pra-security-regression/v1",
-  "generated_at": "2026-09-03T14:10:11Z",
-  "status": "PASS_WITH_DEPLOYMENT_FINDING",
+  "generated_at": "2026-09-03T15:26:18Z",
+  "status": "PASS",
   "application_regression": {
     "tests_collected": 83,
     "passed": 72,
@@ -10,7 +10,7 @@
   },
   "isolated_postgresql": {
     "database_lifecycle": "created_migrated_tested_and_removed",
-    "schema_head": "tenant_policy_reconcile_pra_001",
+    "schema_head": "tenant_force_rls_pra_002",
     "force_rls": true,
     "tenant_security_gate": "PASS",
     "protected_table_count": 111,
@@ -35,11 +35,21 @@
     }
   ],
   "production_observation": {
-    "status": "OPEN",
-    "application_db_role": "postgres",
-    "application_role_is_superuser": true,
-    "rls_enforcement_enabled": false,
-    "impact": "current dedicated deployment must not be represented as shared multi-tenant ready",
-    "next_safe_step": "deploy policy reconciliation, then validate a least-privilege application role in an isolated production-like canary before switching production credentials"
+    "status": "PASS",
+    "release_id": "force-rls-7f9416f",
+    "source_commit": "7f9416f2de59e2bb7d153591b1542e4bdd8e3c1d",
+    "schema_head": "tenant_force_rls_pra_002",
+    "application_db_role": "enclave_app",
+    "application_role_is_superuser": false,
+    "application_role_has_bypassrls": false,
+    "rls_enforcement_enabled": true,
+    "protected_table_count": 111,
+    "forced_table_count": 111,
+    "canary_rollback": "PASS",
+    "production_attack_matrix": {
+      "passed": 11,
+      "failed": 0
+    },
+    "shadow_differences": 0
   }
 }

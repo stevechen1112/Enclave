@@ -20,11 +20,11 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 | 後端最新回歸 | Input I8 pre-pilot hardening：1,500 passed／12 skipped／0 failed；I6–I8 新增 8 表的 migration round-trip 與 FORCE RLS 8/8 驗證通過 |
 | Input 平台化 | Input I0–I8 內部工程與逐階段 Code Review 已完成。I8 已具 tenant-scoped Pilot ledger、14–28 天 fail-closed gate，以及可操作每日指標、Incident、Audit、retrospective、signed acceptance 的證據工作台；I6–I8 新增 8 表已補齊並驗證 FORCE RLS。I7 live capacity 與 I8 真實第一租戶 Pilot 均仍為 HOLD，不得宣稱 SLA／GA 或現場驗收完成 |
 | 後端架構基線 | P4 全量回歸 1,314 passed／12 skipped／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
-| 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `pra-lite-c6c3875`（source `c6c3875e55fbda1fc99a0f63958e97e265ad16ab`、schema `tenant_policy_reconcile_pra_001`）；backend／frontend release parity、service health、TLS、登入與 current-release synthetic core journey PASS |
+| 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `force-rls-7f9416f`（source `7f9416f2de59e2bb7d153591b1542e4bdd8e3c1d`、schema `tenant_force_rls_pra_002`）；backend／frontend release parity、service health、TLS、登入與 current-release synthetic core journey PASS |
 | 必要 AI／Input Provider | 主問答 OpenAI、內部分類 Gemini、掃描理解 Gemini、bge-m3 embedding、短語音 TTS→STT、長音檔說話者辨識、Cloud OCR 已於 production 逐項真實呼叫 7／7 PASS；未讀取額外 `api key.txt` |
 | 產品化 Phase | P0–P4 PASS；P5 工程與內部 review 完成，商用規模 live evidence 為 WAIVED／NOT RUN；P6 internal software gate 與 Code Review PASS；實體裝置 campaign 保留為 Commercial GA gate |
 | 首租戶導入 | 八策股份有限公司／管理部已建立 2 位具名使用者，陳宥竹與李永仁目前皆為 owner；正式登入、租戶歸屬、Ask 與文件清單均 PASS。租戶只啟用 Input＋Knowledge／Ask 核心，場景模組 binding 為 0。舊 release 的四格式合成 E2E 已通過；李永仁第二輪真人高量旅程仍獨立進行 |
-| Production 租戶隔離 | 111 張保護表已啟用 RLS 且 policy drift 為 0，但 application login 仍是 `postgres`、production FORCE RLS 尚未啟用；在完成 least-privilege role canary 與 FORCE rollout 前，不應把互不相關的真實客戶放入同一共享資料庫 |
+| Production 租戶隔離 | application login 已切為 `enclave_app`（`NOSUPERUSER`、`NOBYPASSRLS`），111/111 張保護表已啟用 FORCE RLS，policy drift 為 0；隔離 canary、production 攻擊矩陣 11/11、shadow parity、Worker／Beat 與回滾演練均 PASS |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；工程完成狀態與外部商業、法律、滲透、真機及真人活動分開管理，後者不作為開發完成條件 |
 
@@ -76,8 +76,8 @@ Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期�
 ### 第一個租戶導入定位
 
 目前版本已可承接第一個付費設計夥伴／受控試營運租戶，但這不等於共享式、自助式
-SaaS 已達 Commercial GA。第一個租戶應使用專屬 deployment 或 database，避免在
-production FORCE RLS rollout 完成前，讓互不相關的真實企業共用相同資料庫。
+SaaS 已達 Commercial GA。Production least-privilege role 與 FORCE RLS 技術切換已完成；
+擴大共享式多租戶流量前仍須完成既定觀察期、外部滲透與營運容量證據。
 
 建議首案範圍：
 
@@ -437,18 +437,18 @@ bash scripts/verify_deployment.sh
 
 ### 正式站現況
 
-- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `pra-lite-c6c3875`，source commit 為 `c6c3875e55fbda1fc99a0f63958e97e265ad16ab`，schema head 為 `tenant_policy_reconcile_pra_001`。
-- Deployment manifest `dm-13750efb4f8f409a0200e197` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 backend／frontend release parity；目前 release 的 service health、TLS、登入、synthetic upload／search／grounded Ask／revoke smoke PASS。Provider 7／7 是先前 release 的歷史 R3 證據，需由 current-release probe 才能重新核發。
+- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `force-rls-7f9416f`，source commit 為 `7f9416f2de59e2bb7d153591b1542e4bdd8e3c1d`，schema head 為 `tenant_force_rls_pra_002`。
+- Deployment manifest `dm-cedec2c3fec871d62592ff6b` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 backend／frontend release parity；目前 release 的 service health、TLS、登入、synthetic upload／search／grounded Ask／revoke smoke PASS。Provider 7／7 是先前 release 的歷史 R3 證據，需由 current-release probe 才能重新核發。
 - 八策股份有限公司已以受控 Pilot 方式建立正式租戶、管理部與兩位具名帳號；陳宥竹與李永仁目前皆為 owner。兩個帳號的 tenant scope、部門、正式環境、Ask 與文件清單已完成驗證；場景應用未自動開通，`tenant_module_bindings=0`。
 - 企業使用者由 [https://kachu.tw/login?mode=enterprise](https://kachu.tw/login?mode=enterprise) 以公司電子郵件與密碼登入。登入後頁首顯示租戶名稱；「我的帳號」會顯示公司、部門、正式／Demo 環境與帳號權限，並提供本人密碼變更。密碼更新後會清除本次登入並要求重新登入。
 - 正式工作區不再依 Owner、HR、Viewer 等職稱切換成不同產品介面；所有人使用同一套 Input＋Knowledge／Ask 核心，安全角色只決定可執行的能力，租戶啟用的場景模組才決定額外功能是否出現。
 - 過期或無效的 bearer token 現在以 HTTP 401 要求重新驗證；正式站已用原失敗 session 驗證能自動清除舊登入並回到 `/login`，重新進入公司管理 Demo 後 `/overview` 正常載入且 console error 為 0。
 - 應用內瀏覽器已以正式合成租戶驗證登入、Overview、多元 Input、現場擷取、Asset Library、來源整合及 Input Pilot；桌面與 390×844 窄螢幕無橫向溢位，console error／warning 為 0。驗收未新增 Pilot、未上傳檔案、未寫入正式資料。
 - Production burst 執行完整 29 項時，有 10 項因既定 `RATE_LIMIT_GLOBAL_PER_IP=200` 回傳 HTTP 429；rate-limit window 後以正常速率重跑 targeted suites 8／8 PASS。此結果證明限流正常生效，不被記錄為 production 全套 29／29 PASS。
-- P1 CI／supply-chain provenance、P2 staging FORCE-RLS full regression 均 PASS；production 目前有 110 張 RLS-enabled table、0 張 FORCE-RLS table。第一個真實租戶應採專屬環境；共享式多租戶 production 仍以 application role 切換、FORCE RLS rollout 與觀察期為 gate。
+- P1 CI／supply-chain provenance、P2 staging FORCE-RLS full regression 均 PASS；production application role 已切為 `enclave_app`，111 張 tenant table 全數 FORCE RLS，post-cutover 攻擊矩陣 11／11 與 shadow parity PASS。共享式多租戶擴流仍以觀察期、外部滲透與容量證據為 gate。
 - P5 live capacity、degradation 與 soak evidence 已正式記錄為 WAIVED／NOT RUN；實體 iPhone／Android、長時間真實媒體、工廠噪音 ASR 與 Mobile Safari media stack 仍是 Commercial GA gate。
 
-Production DB secrets 已分為三檔：`.env.production`（application）、`.env.db-admin`（schema owner／backup）、`.env.maintenance`（audited cross-tenant worker），權限均為 `0600`；worker 已使用 maintenance credential。因 production FORCE RLS rollout 尚未啟動，`web` 暫時保留既有 owner credential，這是受控遷移邊界，不是共享式多租戶 GA 狀態。共享客戶資料前，必須依 `docs/runbooks/RLS_AUTHORITY_ROLLOUT.md` 切換 `web` 至 `enclave_app`、驗證 110 張 FORCE-RLS table、完成 shadow／canary 與 rollback gate；目標穩態下 `web` 不得取得 admin 或 maintenance credential。
+Production DB secrets 已分為三檔：`.env.production`（application）、`.env.db-admin`（schema owner／backup）、`.env.maintenance`（audited cross-tenant worker），權限均為 `0600`。`web`／一般 worker 現使用 `enclave_app`，不得取得 admin 或 maintenance credential；跨租戶工作僅由 `enclave_maintenance` 透過 audited bypass 執行。111 張保護表已 FORCE RLS，shadow／canary／rollback 與 production 攻擊 gate 均已通過。
 
 ### 最新基線發布順序
 
@@ -480,7 +480,7 @@ Production DB secrets 已分為三檔：`.env.production`（application）、`.e
 - 掃描 OCR、ASR、embedding、外部模型與 Connector 可因部署資源而降級；系統必須明示，
   不得回報假完成。
 - 高風險操作不能只依賴 AI narrative；必須引用正式 SOP，並依政策要求主管核准。
-- Production 目前為 110 張 RLS-enabled table、0 張 FORCE-RLS table；在 application role 與 FORCE rollout 完成前，不承載互不相關企業的共享真實資料。
+- Production 目前為 111 張 RLS-enabled／FORCE-RLS table，application login 為 `enclave_app` 且無 superuser／BYPASSRLS；共享式多租戶擴流仍受觀察期、外部滲透與容量證據約束。
 - P5 live capacity／degradation／soak campaign 已標記為 WAIVED／NOT RUN，尚無商用規模與長時間穩定性的 production evidence；首租戶須以配額、併發上限與監控控管風險。
 - Legacy routes、schemas 與 durable objects 尚未獲准移除。
 - 外部滲透、法律／模型商用授權、客戶現場 DR 與正式資料處理政策仍需人工簽核。
@@ -525,9 +525,9 @@ Production DB secrets 已分為三檔：`.env.production`（application）、`.e
 |---|---|
 | Enclave 1.x（歷史） | 文件庫、聊天、生成與 Agent 監控 |
 | Enclave 2.0（歷史部署基線） | Control Plane、Triple Injection、UI 2.0 與 MKA 垂直功能；已由模組化多模態平台 production release 取代 |
-| **模組化多模態平台（目前 production）** | 多租戶＋Knowledge Kernel＋Ingestion Fabric＋Workflow Kernel＋可選 Domain Packs；`kachu.tw` 已部署 `pra-lite-c6c3875` 並完成 release parity、service health、TLS 與 synthetic current-release 核心旅程；Provider probe 分開留存證據 |
-| Controlled Paid Pilot（目前可進行） | 第一個租戶使用專屬環境／資料庫，以單一場景、保守配額、客戶自有驗收集與人工治理開始導入 |
-| Staging／Canary（持續 gate） | production FORCE RLS、真實裝置、live capacity／soak、provider、rollback 與跨租戶攻擊驗證 |
+| **模組化多模態平台（目前 production）** | 多租戶＋Knowledge Kernel＋Ingestion Fabric＋Workflow Kernel＋可選 Domain Packs；`kachu.tw` 已部署 `force-rls-7f9416f` 並完成 release parity、service health、TLS、least-privilege DB role、111/111 FORCE RLS 與 synthetic current-release 核心旅程；Provider probe 分開留存證據 |
+| Controlled Paid Pilot（目前可進行） | 以限定租戶、單一場景、保守配額、客戶自有驗收集與人工治理開始導入；是否共用資料庫依觀察期與風險分級決定 |
+| Staging／Canary（持續 gate） | FORCE RLS 觀察、真實裝置、live capacity／soak、provider、rollback 與跨租戶攻擊持續驗證 |
 | Enclave GA（未來） | 依實際商業範圍另行決定；外部滲透、法律、真機與真人活動不回寫為開發完成 Gate |
 
 ---
