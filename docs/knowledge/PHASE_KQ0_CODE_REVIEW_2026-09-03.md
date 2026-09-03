@@ -1,15 +1,15 @@
 # Phase KQ0 Code Review — 2026-09-03
 
-結論：`BLOCKED`
+結論：`PASS TO NEXT PHASE`
 Phase：KQ0 基線凍結與 AIHR→Enclave Mapping
 Review scope：本機 source/worktree、離線 Ask baseline、文件與 artifacts；不含正式環境操作
-下一階段：KQ1 不得開始
+下一階段：允許開始 KQ1
 
 ## 1. Review 摘要
 
 KQ0 的 repository 內工作已完成：建立 mapping ADR、KQ capability disposition、13 類離線 baseline、sync/stream API schema、15 條 source-anchored call graph、11 項 known failures、271 檔核心污染掃描與重建／驗證工具。Live Ask runtime、DB schema、正式資料、部署與 Input I9 均未修改。
 
-`KQ-BL-01` 仍為 `BLOCKED`，不是因 repository assertion failure，而是缺少 authorized operator 於 2026-09-03 對正式環境產生的新鮮 read-only snapshot。現有正式 evidence 來自 2026-08-24，且 repository 內另有不同 image／deployment identity 的 acceptance/predeploy artifacts，不能推定哪一組是目前正式 release。
+`KQ-BL-01` 已由 2026-09-03 新鮮正式 read-only operator snapshot 解除。公開 release identity、容器 image digest、runtime、active KB revision、Knowledge Unit release/membership 與 Pack versions 已綁定；兩次資料摘要一致，production mutation=0。本機隔離 PostgreSQL的兩項先前 environment-blocked 測試亦已 2/2 通過。
 
 ## 2. 交付物
 
@@ -23,6 +23,8 @@ KQ0 的 repository 內工作已完成：建立 mapping ADR、KQ capability dispo
 - Known failures：`../../artifacts/knowledge/KQ_KNOWN_FAILURES.json`
 - Contamination scan：`../../artifacts/knowledge/KQ_CORE_CONTAMINATION_SCAN.json`
 - 重建工具：`../../scripts/freeze_knowledge_answer_baseline.py`
+- 正式唯讀取證：`../../scripts/inspect_kq0_release_readonly.py`
+- Operator snapshot：`../../artifacts/knowledge/KQ_PRODUCTION_OPERATOR_SNAPSHOT.json`
 - 測試：`../../tests/test_knowledge_answer_kq0.py`
 
 ## 3. 標準 Review 問題
@@ -37,7 +39,7 @@ KQ0 的 repository 內工作已完成：建立 mapping ADR、KQ capability dispo
 
 ### 3. tenant/department/source ACL、RLS、KB revision 與 deny-set 是否完整？
 
-本 phase 未改這些路徑。現有 `KnowledgeUnitRecord active + KnowledgeUnitRevision ready + KnowledgeUnitRelease active + membership active` admission 已在 `knowledge_authority_read.py`，並由 asset visibility 檢查；KQ4 仍須補 exact revision/deny 的雙重驗證證據。因正式 release snapshot 尚缺，本題不能簽發 runtime PASS。
+本 phase 未改這些路徑。現有 `KnowledgeUnitRecord active + KnowledgeUnitRevision ready + KnowledgeUnitRelease active + membership active` admission 已在 `knowledge_authority_read.py`，並由 asset visibility 檢查；KQ4 仍須補 exact revision/deny 的雙重驗證證據。正式 snapshot 已凍結目前 KB revision 與空的 Knowledge Unit release 狀態。
 
 ### 4. sync、stream、background、shadow 是否使用同一契約？
 
@@ -65,15 +67,15 @@ KQ0 只凍結可重放案例，不宣稱正式量測。wrong scope/revision/conf
 
 ### 10. 既有 Input、Ask、citation、delete/revoke 與 release rollback 是否回歸？
 
-未修改 runtime，因此沒有行為變更；targeted tests 48 passed。兩個需要 PostgreSQL `localhost:5435` 的既有測試因服務未啟動而 environment blocked，沒有被算成 PASS，也沒有修改 Input I9。
+未修改 runtime，因此沒有行為變更；targeted tests 48 passed。兩個需要 PostgreSQL `localhost:5435` 的既有測試已於隔離 `enclave_test` profile 重跑並 2/2 passed，也沒有修改 Input I9。
 
 ### 11. 是否有明確 rollback 指令與停止條件？
 
-本 phase 只新增 docs/scripts/tests/artifacts，未部署。停止條件已觸發：fresh production baseline 不存在，因此 Gate 保持 BLOCKED 並禁止 KQ1。若撤回本 phase，只需 revert 本 phase commit；不得刪除使用者既有工作樹變更。
+本 phase 只新增 docs/scripts/tests/artifacts，未部署。fresh production baseline 與 mutation=0 已成立，因此允許 KQ1；若撤回本 phase，只需 revert 本 phase commit，不得刪除使用者既有工作樹變更。
 
 ### 12. 測試證據是否綁定 exact source commit、image、schema、KB revision 與 Pack versions？
 
-Source commit、dirty manifest、runtime file hashes、tooling hashes 與 API schema 已綁定 `KQ_BASELINE_MANIFEST.json`。正式 image 只有 2026-08-24 historical evidence；current exact KB revision、Knowledge release 與 Pack versions 未綁定，因此本題 BLOCKED。
+Source commit、dirty manifest、runtime file hashes、tooling hashes、API schema、正式 images、current exact KB revision、Knowledge Unit release/membership 空集合與 Pack versions 均已綁定 `KQ_BASELINE_MANIFEST.json`。
 
 ### 13. Shadow diff 是否只寫入 tenant DB 外的 append-only 加密 store，且 retention、legal hold、purge audit 與管理端再授權完整？
 
@@ -87,29 +89,29 @@ Source commit、dirty manifest、runtime file hashes、tooling hashes 與 API sc
 
 | 驗證 | 結果 |
 |---|---|
-| `freeze_knowledge_answer_baseline.py --check` | 產物 hash PASS；Gate 正確回報 BLOCKED |
+| `freeze_knowledge_answer_baseline.py --check` | 產物 hash PASS；Gate 回報 PASS TO NEXT PHASE |
 | KQ0 專用測試 | 6/6 PASS |
-| QueryPlan、production-shadow contract、Knowledge engine 非 DB 測試 | 48/48 PASS，另 2 個 DB tests deselected |
-| 首次含 DB targeted run | 48 PASS、2 environment blocked；原因為 PostgreSQL `localhost:5435` connection refused |
+| QueryPlan、production-shadow contract、Knowledge engine 非 DB 測試 | 48/48 PASS |
+| 先前阻塞的 PostgreSQL tests | 隔離 `enclave_test` profile 重跑 2/2 PASS |
 | Python compileall（新增 script/test） | PASS |
 | Core contamination scan | 271 files；0 unwaived findings；10 named waivers |
 | Live runtime／migration diff | 0 |
 | Production DB/provider calls | 0 |
 
-測試結果明確區分 passed assertions 與 environment blocked；沒有把 unavailable PostgreSQL 算成成功。
+先前 environment-blocked 的 PostgreSQL 測試已以隔離 profile 補齊，沒有以正式 DB 代替。
 
 ## 5. 未解除阻斷與解除方式
 
-### Blocker A：fresh production identity
+### Fresh production identity
 
-由 authorized operator 在 process-wide/read-only barrier 下取得：backend/frontend image digest、deployment manifest、model/prompt/flags、active KB revision、Knowledge Unit release/membership、Pack versions、ACL/revision/deny identity，以及執行前後 row/digest mutation sentinel。
+已由既有 `kachu` operator profile 在 process-wide/read-only barrier 下取得 backend/frontend/gateway image digest、deployment manifest、model/prompt/flags、active KB revision、Knowledge Unit release/membership、Pack versions、ACL/revision/deny 摘要，以及執行前後 row/digest mutation sentinel。
 
-### Blocker B：PostgreSQL integration evidence
+### PostgreSQL integration evidence
 
-在隔離 PostgreSQL test profile 啟動後重跑兩個 environment-blocked 測試；不得連正式 DB 代替 test profile，也不得為取得 PASS 而略過 read-only barrier assertion。
+已啟動本機隔離 PostgreSQL `enclave_test` profile，兩個 environment-blocked 測試均通過；沒有連正式 DB 代替 test profile。
 
 ## 6. 結論
 
-`BLOCKED`
+`PASS TO NEXT PHASE`
 
-Repository 內 KQ0 施工品質可接受，但 `KQ-BL-01` 的正式 freshness 與 exact release binding 尚未成立。依 Task Plan 停止條件，KQ1 不得開始；下一步只能取得 fresh read-only operator snapshot 並補跑隔離 PostgreSQL integration evidence。
+Repository KQ0 交付、fresh production identity、exact release binding、mutation=0 與 PostgreSQL integration evidence 均成立。允許開始 KQ1；此結論不授權部署 KQ3 Shadow 或 KQ7 controlled enforce。

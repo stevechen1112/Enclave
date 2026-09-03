@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "gate": "KQ-BL-01",
-  "generated_at": "2026-09-03T10:34:14.794463+00:00",
-  "status": "BLOCKED",
-  "reason": "fresh read-only production release identity requires an authorized operator snapshot",
+  "generated_at": "2026-09-03T10:44:21.634466+00:00",
+  "status": "PASS TO NEXT PHASE",
+  "reason": "fresh read-only production identity, knowledge release state, Pack versions, and mutation=0 are frozen",
   "privacy": "synthetic questions plus source paths, schemas, hashes, IDs, and non-secret runtime metadata; no tenant content",
   "source_snapshot": {
-    "git_head": "2ba02dd1c62310db313724793ac8d985dd1d3c21",
+    "git_head": "73eb09e4b2ffec1931a43101335afc2b32938df4",
     "branch": "codex/production-baseline-20260812",
-    "dirty_entry_count": 79,
-    "dirty_manifest_sha256": "c4d4ec802dd6d008d832f5ba1d212c76eab024f9075d8b8930101cc24c962b04",
+    "dirty_entry_count": 73,
+    "dirty_manifest_sha256": "b06d5038878121452096fecdc331450834844e32dfcc9c8ad79d4855f98aecb6",
     "runtime_inputs": [
       {
         "path": "app/api/v1/endpoints/chat.py",
@@ -91,8 +91,8 @@
       },
       {
         "path": "docs/knowledge/KQ_BASELINE.md",
-        "bytes": 4349,
-        "sha256": "08a31217422178fff94424d604c45a8fa33555216a87f27138e2034436c71a2f"
+        "bytes": 4489,
+        "sha256": "cf262907116e3d66d85c43df9b26ced8a1653dfc4b361facd53751e48f8ccbff"
       },
       {
         "path": "docs/knowledge/KQ_CAPABILITY_DISPOSITION.md",
@@ -101,115 +101,148 @@
       },
       {
         "path": "docs/knowledge/PHASE_KQ0_CODE_REVIEW_2026-09-03.md",
-        "bytes": 7557,
-        "sha256": "6b8183f9d2db817d56d55ec2c58f585702a081e6f693635e5fc46bbfa5abb55a"
+        "bytes": 7488,
+        "sha256": "5b59f56b14809e3952c241b39df9c00a456ccf1074335573c6361e467054b72d"
       },
       {
         "path": "scripts/freeze_knowledge_answer_baseline.py",
-        "bytes": 31721,
-        "sha256": "3e11b409a92124677297aca63d6720b9096f988bebfb7a267e0f278ddec331c2"
+        "bytes": 33424,
+        "sha256": "09de5e67401d00343661f28d31fa50c0ecc35ede2539fee364588b7e7796b723"
       },
       {
         "path": "tests/test_knowledge_answer_kq0.py",
-        "bytes": 4200,
-        "sha256": "a63bbb481789d60792deb6446d4a770a9bec3b117687948e9860d73e1a2979a7"
+        "bytes": 5003,
+        "sha256": "5111c8fdc6904ed437d7a7ae63213499e50af620eda46c01f8ba52ebcd4a6ffd"
       }
     ],
-    "kq0_tooling_manifest_sha256": "8ddfc69b81b4313fb7b87ff0f3542fb6e481853e4fcd683274b2f723728c4ebe"
+    "kq0_tooling_manifest_sha256": "c04f5c5d97afb454b804d180f3e78a405dd01eb098dd87a1baa09ddc82e7ac5b"
   },
   "production_identity": {
-    "status": "HISTORICAL_READ_ONLY_EVIDENCE_REQUIRES_FRESH_OPERATOR_SNAPSHOT",
-    "production_baseline": {
-      "evidence_path": "artifacts/knowledge/k0_baseline.json",
-      "evidence_sha256": "47351b38b0bc221162526997a9fa01fd01d41e7df69353d9622ef1e3afce1f6f",
-      "generated_at": "2026-08-24T18:14:12.740095+00:00",
-      "production_corpus_manifest_id": "pcm-c44a76b497a92b050402da89",
-      "source": {
-        "deployment": "production",
-        "image_digest": "sha256:5f0b0ad1e6aa5707146080c4288472589444ea92c3b12a77cd5786fc30632fb0",
-        "runtime_manifest_hash": "503bc3f3941a99d03655851815975ca7b37013864ea0059af85aacb4bb8e540b"
-      },
-      "production_runtime": {
-        "backend_image_digest": "sha256:5f0b0ad1e6aa5707146080c4288472589444ea92c3b12a77cd5786fc30632fb0",
-        "frontend_image_digest": "sha256:840c751fa0bdc2890fd4a481858ea25a0cad4764dfefec5e0a9e9d6864ed0136",
-        "prompt_hash": "e787145bb3e9f304e96c42367b1365662b73a707ba0cff17e09857372dbf03a9",
-        "runtime": {
-          "DEMO_LOGIN_ENABLED": true,
-          "EMBEDDING_DIMENSION": 1024,
-          "EMBEDDING_PROVIDER": "ollama",
-          "HR_COMPATIBILITY_PACK_ENABLED": null,
-          "OLLAMA_EMBED_MODEL": "bge-m3",
-          "OPENAI_MODEL": "gpt-5.6-luna",
-          "PAGEINDEX_ENABLED": false,
-          "RETRIEVAL_MODE": "hybrid",
-          "RETRIEVAL_RERANK": true,
-          "RLS_ENFORCEMENT_ENABLED": false,
-          "SOURCE_VERIFY_MODE": "off",
-          "VOYAGE_MODEL": "voyage-4-lite"
-        }
-      }
+    "status": "FRESH_READ_ONLY_OPERATOR_SNAPSHOT",
+    "evidence_path": "artifacts/knowledge/KQ_PRODUCTION_OPERATOR_SNAPSHOT.json",
+    "evidence_sha256": "e80191249b26b72c5d399985851cb02acb8c865b4d21e3e2653858ccb2c179e2",
+    "captured_at": "2026-09-03T10:39:54.3137751Z",
+    "release": {
+      "release_id": "input-i9-dd5a6bd",
+      "source_commit": "dd5a6bddd6d65bafa4a9dd6dc8888d3590d47460",
+      "source_dirty": "false",
+      "build_time": "2026-09-03T09:05:00Z",
+      "deployment_manifest_id": "dm-4cde26f7aef65b9911fbbdf3",
+      "schema_head": "input_i8_pilot_evidence_001",
+      "route_contract_hash": "5af2bf671476e71a40f148d374217000cf5271c648b6a96e7632e5ddb525b69f",
+      "identifiable": true
     },
-    "acceptance_candidate": {
-      "evidence_path": "artifacts/knowledge/deployment_manifest.json",
-      "evidence_sha256": "63f74a59fd5d872a7c41308b5617999fdbfad50147ad9e404cbf5b2240cc8750",
-      "generated_at": "2026-08-25T03:19:09.280055+00:00",
-      "deployment_manifest_id": "dm-14bd422353a946c64dfc1173",
-      "candidate_images": {
-        "backend": {
-          "reference": "enclave-backend:demo-hotfix-92a3ae1",
-          "image_id": "sha256:d5af9e57ebbe94d2cea1ca163cd235408e5f7872f369ad00892da9b486f14d00",
-          "repo_digests": [
-            "enclave-backend@sha256:d5af9e57ebbe94d2cea1ca163cd235408e5f7872f369ad00892da9b486f14d00"
-          ],
-          "size_bytes": 476551123
+    "runtime": {
+      "prompt_hash": "e787145bb3e9f304e96c42367b1365662b73a707ba0cff17e09857372dbf03a9",
+      "OPENAI_MODEL": "gpt-5.6-luna",
+      "EMBEDDING_PROVIDER": "ollama",
+      "OLLAMA_EMBED_MODEL": "bge-m3",
+      "EMBEDDING_DIMENSION": 1024,
+      "RETRIEVAL_MODE": "hybrid",
+      "RETRIEVAL_RERANK": true,
+      "SOURCE_VERIFY_MODE": "off",
+      "PAGEINDEX_ENABLED": false,
+      "HR_COMPATIBILITY_PACK_ENABLED": false,
+      "RLS_ENFORCEMENT_ENABLED": false
+    },
+    "images": {
+      "backend": "sha256:bed733a8fd664b412ea7aeecb03a1eeabf269d08212749516e575941ef7833f3",
+      "frontend": "sha256:3224d6c941cb3a026d6fd935b77ca77c500d9ff34468f29faf78d8353de12bfb",
+      "gateway": "sha256:80130f4a0f10b2c4e1cabc7fa50132ca4ba22a30f58deaf2157db91a7babbf02"
+    },
+    "knowledge_identity": {
+      "active_kb_revisions": [
+        {
+          "tenant_ref": "daa8304e6de45187",
+          "kb_id": "90705792-d876-519f-8f52-930bd98efbdf",
+          "active_revision_number": 1,
+          "revision_id": "b48c615a-3826-5ee0-9483-938507fff858",
+          "revision": 1,
+          "status": "active",
+          "manifest_hash": "8a349436eac39e71d35be5264ec203ec701f55d392267f5e49071c32553a15e0",
+          "policy_revision": 1
         },
-        "frontend": {
-          "reference": "enclave-frontend:rc-20260825-gate6",
-          "image_id": "sha256:78129a51bca15fff697d60ce75545f84c32fe83af82ffec8fe9094fdf3927cab",
-          "repo_digests": [
-            "enclave-frontend@sha256:78129a51bca15fff697d60ce75545f84c32fe83af82ffec8fe9094fdf3927cab"
-          ],
-          "size_bytes": 42031311
+        {
+          "tenant_ref": "fa9a624fb70d5a57",
+          "kb_id": "32c8db9c-3571-49ea-93b3-d5ebf8d09c09",
+          "active_revision_number": 0,
+          "revision_id": null,
+          "revision": null,
+          "status": null,
+          "manifest_hash": "",
+          "policy_revision": null
         }
-      }
+      ],
+      "active_knowledge_unit_releases": [],
+      "pack_versions": [
+        {
+          "pack_key": "mka",
+          "pack_version": "1.0.0",
+          "deployed": true
+        },
+        {
+          "pack_key": "sales_quote",
+          "pack_version": "1.0.0",
+          "deployed": true
+        },
+        {
+          "pack_key": "incident_handover",
+          "pack_version": "1.0.0",
+          "deployed": true
+        },
+        {
+          "pack_key": "quality_8d",
+          "pack_version": "1.0.0",
+          "deployed": true
+        },
+        {
+          "pack_key": "training_knowhow",
+          "pack_version": "1.0.0",
+          "deployed": true
+        }
+      ],
+      "snapshot_digest": "91f3a527e1d2a798740219c9ee0c571221f5715ef7e657035774202e90f4c43e"
     },
-    "newer_unattested_predeploy_input": {
-      "evidence_path": "artifacts/knowledge/predeploy_manifest.json",
-      "evidence_sha256": "04cb11e3cd960952e57145a47c0aa7e041372c8865d154dfcb41a1d3d7ff3e7e",
-      "generated_at": "2026-08-27T09:42:38.321180+00:00",
-      "deployment_manifest_id": "dm-71c4890ac1b41f7f310a2f73",
-      "candidate_images": {}
+    "mutation_sentinel": {
+      "transaction_read_only": true,
+      "equal": true,
+      "before_digest": "91f3a527e1d2a798740219c9ee0c571221f5715ef7e657035774202e90f4c43e",
+      "after_digest": "91f3a527e1d2a798740219c9ee0c571221f5715ef7e657035774202e90f4c43e",
+      "document_probe_equal": true,
+      "active_document_digest": "8bee14133e6d82268f038c8cb7920d3f6a7d838dc82173f8d24c9ff701882df3",
+      "acl_policy_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
-    "limitations": [
-      "No production connection was opened by this KQ0 tool.",
-      "The latest production image, KB revision, Knowledge Unit release, and Pack versions remain unverified for 2026-09-03.",
-      "Historical evidence cannot satisfy KQ-BL-01 freshness by itself."
-    ]
+    "operator_attestation": {
+      "method": "existing SSH host kachu; docker exec with SET TRANSACTION READ ONLY",
+      "privacy": "counts, digests, release metadata, pseudonymous tenant refs; no source content or credentials",
+      "production_writes": 0,
+      "deployed_changes": 0
+    }
   },
   "artifacts": [
     {
       "path": "artifacts/knowledge/KQ_API_SCHEMA_SNAPSHOT.json",
-      "sha256": "a53d9ed98899fea6c93f240aa729b62cdb378ccb8c016ab828ee8a0cb4f31d8b",
+      "sha256": "70c9f737ffeb0e86c443ed3c32ee5258545a7522a33ec7373bf882be12484626",
       "bytes": 6392
     },
     {
       "path": "artifacts/knowledge/KQ_CALL_GRAPH.json",
-      "sha256": "e72df7025e0d8cf0695aab78c3150566d274c7587a4e3729cb25bcd798d964d1",
+      "sha256": "819efee1369a8658f4ca23ac1aebd2d05f0b64edbe8f304c46438bf6f181afcc",
       "bytes": 3718
     },
     {
       "path": "artifacts/knowledge/KQ_BASELINE_OUTPUTS.json",
-      "sha256": "4c05e82ca5dfcf75292514dc31d7f01d74f00b644f21fadf0461c04716bda6f5",
+      "sha256": "a753d0456076cd5f11532db9fa18425e34d66c9b50a5245633f7e75f9c3da57e",
       "bytes": 27934
     },
     {
       "path": "artifacts/knowledge/KQ_KNOWN_FAILURES.json",
-      "sha256": "7fc0b1457c4b84703ced7f9470ac3d2197097a72f38283e016a8fe3f67906269",
+      "sha256": "70b5c1ebd4e678ec4b4b891660a1ae82b22ab04c065e46108d89831c771a9c74",
       "bytes": 3804
     },
     {
       "path": "artifacts/knowledge/KQ_CORE_CONTAMINATION_SCAN.json",
-      "sha256": "844f07fe667e90dd0cd7eed410cb52a6bb96eb308783ca93cd7f15fedadd98bb",
+      "sha256": "772c461be4fec42622d95101c946f940cc96679f7435e212e49860873efce27e",
       "bytes": 4930
     }
   ],
@@ -236,12 +269,12 @@
     },
     {
       "name": "production_snapshot_fresh",
-      "status": "BLOCKED"
+      "status": "PASS"
     },
     {
       "name": "exact_kb_knowledge_release_pack_versions_frozen",
-      "status": "BLOCKED"
+      "status": "PASS"
     }
   ],
-  "next_allowed_action": "obtain a fresh read-only operator snapshot; do not start KQ1"
+  "next_allowed_action": "start KQ1 contract work"
 }

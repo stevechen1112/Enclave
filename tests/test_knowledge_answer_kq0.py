@@ -86,17 +86,33 @@ def test_kq0_contamination_scan_has_no_unwaived_runtime_findings():
 def test_kq0_artifact_manifest_hashes_and_gate_status_are_honest():
     manifest = _read("KQ_BASELINE_MANIFEST.json")
     assert manifest["gate"] == "KQ-BL-01"
-    assert manifest["status"] == "BLOCKED"
-    assert manifest["next_allowed_action"].endswith("do not start KQ1")
+    assert manifest["status"] == "PASS TO NEXT PHASE"
+    assert manifest["next_allowed_action"] == "start KQ1 contract work"
     checks = {item["name"]: item["status"] for item in manifest["gate_checks"]}
     assert checks["offline_case_matrix_complete"] == "PASS"
     assert checks["core_contamination_zero_unwaived"] == "PASS"
-    assert checks["production_snapshot_fresh"] == "BLOCKED"
-    assert checks["exact_kb_knowledge_release_pack_versions_frozen"] == "BLOCKED"
+    assert checks["production_snapshot_fresh"] == "PASS"
+    assert checks["exact_kb_knowledge_release_pack_versions_frozen"] == "PASS"
+    identity = manifest["production_identity"]
+    assert identity["mutation_sentinel"]["equal"] is True
+    assert identity["mutation_sentinel"]["transaction_read_only"] is True
+    assert identity["release"]["identifiable"] is True
+    assert identity["knowledge_identity"]["pack_versions"]
     for record in manifest["artifacts"]:
         path = ROOT / record["path"]
         assert path.is_file()
         assert hashlib.sha256(path.read_bytes()).hexdigest() == record["sha256"]
+
+
+def test_kq0_readonly_release_probe_is_privacy_preserving():
+    from scripts import inspect_kq0_release_readonly as probe
+
+    assert probe._digest(("b", "a")) == probe._digest(("a", "b"))
+    assert len(probe._pseudonym("tenant-id")) == 16
+    snapshot = _read("KQ_PRODUCTION_OPERATOR_SNAPSHOT.json")
+    assert snapshot["operator_attestation"]["production_writes"] == 0
+    assert snapshot["operator_attestation"]["deployed_changes"] == 0
+    assert "source_text" not in json.dumps(snapshot).lower()
 
 
 def test_kq0_known_failures_have_unique_ids_and_phase_owners():

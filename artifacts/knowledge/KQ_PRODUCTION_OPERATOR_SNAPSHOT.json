@@ -1,0 +1,82 @@
+{
+  "schema_version": "kq0-operator-snapshot.v1",
+  "captured_at": "2026-09-03T10:39:54.3137751Z",
+  "environment": "production",
+  "source": "https://kachu.tw plus read-only SSH operator probes in enclave-web-1",
+  "release": {
+    "release_id": "input-i9-dd5a6bd",
+    "source_commit": "dd5a6bddd6d65bafa4a9dd6dc8888d3590d47460",
+    "source_dirty": "false",
+    "build_time": "2026-09-03T09:05:00Z",
+    "deployment_manifest_id": "dm-4cde26f7aef65b9911fbbdf3",
+    "schema_head": "input_i8_pilot_evidence_001",
+    "route_contract_hash": "5af2bf671476e71a40f148d374217000cf5271c648b6a96e7632e5ddb525b69f",
+    "identifiable": true
+  },
+  "runtime": {
+    "prompt_hash": "e787145bb3e9f304e96c42367b1365662b73a707ba0cff17e09857372dbf03a9",
+    "OPENAI_MODEL": "gpt-5.6-luna",
+    "EMBEDDING_PROVIDER": "ollama",
+    "OLLAMA_EMBED_MODEL": "bge-m3",
+    "EMBEDDING_DIMENSION": 1024,
+    "RETRIEVAL_MODE": "hybrid",
+    "RETRIEVAL_RERANK": true,
+    "SOURCE_VERIFY_MODE": "off",
+    "PAGEINDEX_ENABLED": false,
+    "HR_COMPATIBILITY_PACK_ENABLED": false,
+    "RLS_ENFORCEMENT_ENABLED": false
+  },
+  "images": {
+    "backend": "sha256:bed733a8fd664b412ea7aeecb03a1eeabf269d08212749516e575941ef7833f3",
+    "frontend": "sha256:3224d6c941cb3a026d6fd935b77ca77c500d9ff34468f29faf78d8353de12bfb",
+    "gateway": "sha256:80130f4a0f10b2c4e1cabc7fa50132ca4ba22a30f58deaf2157db91a7babbf02"
+  },
+  "knowledge_identity": {
+    "active_kb_revisions": [
+      {
+        "tenant_ref": "daa8304e6de45187",
+        "kb_id": "90705792-d876-519f-8f52-930bd98efbdf",
+        "active_revision_number": 1,
+        "revision_id": "b48c615a-3826-5ee0-9483-938507fff858",
+        "revision": 1,
+        "status": "active",
+        "manifest_hash": "8a349436eac39e71d35be5264ec203ec701f55d392267f5e49071c32553a15e0",
+        "policy_revision": 1
+      },
+      {
+        "tenant_ref": "fa9a624fb70d5a57",
+        "kb_id": "32c8db9c-3571-49ea-93b3-d5ebf8d09c09",
+        "active_revision_number": 0,
+        "revision_id": null,
+        "revision": null,
+        "status": null,
+        "manifest_hash": "",
+        "policy_revision": null
+      }
+    ],
+    "active_knowledge_unit_releases": [],
+    "pack_versions": [
+      {"pack_key": "mka", "pack_version": "1.0.0", "deployed": true},
+      {"pack_key": "sales_quote", "pack_version": "1.0.0", "deployed": true},
+      {"pack_key": "incident_handover", "pack_version": "1.0.0", "deployed": true},
+      {"pack_key": "quality_8d", "pack_version": "1.0.0", "deployed": true},
+      {"pack_key": "training_knowhow", "pack_version": "1.0.0", "deployed": true}
+    ],
+    "snapshot_digest": "91f3a527e1d2a798740219c9ee0c571221f5715ef7e657035774202e90f4c43e"
+  },
+  "mutation_sentinel": {
+    "transaction_read_only": true,
+    "equal": true,
+    "before_digest": "91f3a527e1d2a798740219c9ee0c571221f5715ef7e657035774202e90f4c43e",
+    "after_digest": "91f3a527e1d2a798740219c9ee0c571221f5715ef7e657035774202e90f4c43e",
+    "document_probe_equal": true,
+    "active_document_digest": "8bee14133e6d82268f038c8cb7920d3f6a7d838dc82173f8d24c9ff701882df3",
+    "acl_policy_digest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "operator_attestation": {
+    "method": "existing SSH host kachu; docker exec with SET TRANSACTION READ ONLY",
+    "privacy": "counts, digests, release metadata, pseudonymous tenant refs; no source content or credentials",
+    "production_writes": 0,
+    "deployed_changes": 0
+  }
+}

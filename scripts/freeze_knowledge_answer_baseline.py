@@ -591,6 +591,21 @@ def contamination_snapshot() -> dict[str, Any]:
 
 
 def production_identity_snapshot() -> dict[str, Any]:
+    operator_path = ARTIFACT_DIR / "KQ_PRODUCTION_OPERATOR_SNAPSHOT.json"
+    if operator_path.is_file():
+        operator = _read_json(operator_path)
+        return {
+            "status": "FRESH_READ_ONLY_OPERATOR_SNAPSHOT",
+            "evidence_path": operator_path.relative_to(ROOT).as_posix(),
+            "evidence_sha256": _sha256_bytes(operator_path.read_bytes()),
+            "captured_at": operator.get("captured_at"),
+            "release": operator.get("release"),
+            "runtime": operator.get("runtime"),
+            "images": operator.get("images"),
+            "knowledge_identity": operator.get("knowledge_identity"),
+            "mutation_sentinel": operator.get("mutation_sentinel"),
+            "operator_attestation": operator.get("operator_attestation"),
+        }
     baseline_path = ARTIFACT_DIR / "k0_baseline.json"
     deployment_path = ARTIFACT_DIR / "deployment_manifest.json"
     predeploy_path = ARTIFACT_DIR / "predeploy_manifest.json"
@@ -661,27 +676,45 @@ def freeze() -> tuple[dict[str, Any], list[dict[str, Any]]]:
         "table_same_row", "wrong_scope", "wrong_revision", "provider_failure", "multi_turn",
     }
     actual_categories = set(artifacts["KQ_BASELINE_OUTPUTS.json"]["categories"])
+    production_identity = production_identity_snapshot()
+    fresh_production = production_identity["status"] == "FRESH_READ_ONLY_OPERATOR_SNAPSHOT"
+    exact_identity = bool(
+        fresh_production
+        and production_identity.get("knowledge_identity", {}).get("pack_versions")
+        and production_identity.get("mutation_sentinel", {}).get("equal") is True
+        and production_identity.get("mutation_sentinel", {}).get("transaction_read_only")
+        is True
+    )
     gate_checks = [
         {"name": "offline_case_matrix_complete", "status": "PASS" if required_categories <= actual_categories else "FAIL"},
         {"name": "sync_stream_schema_frozen", "status": "PASS"},
         {"name": "call_graph_anchors_resolved", "status": "PASS"},
         {"name": "known_failures_registered", "status": "PASS" if len(KNOWN_FAILURES) >= 1 else "FAIL"},
         {"name": "core_contamination_zero_unwaived", "status": artifacts["KQ_CORE_CONTAMINATION_SCAN.json"]["status"]},
-        {"name": "production_snapshot_fresh", "status": "BLOCKED"},
-        {"name": "exact_kb_knowledge_release_pack_versions_frozen", "status": "BLOCKED"},
+        {"name": "production_snapshot_fresh", "status": "PASS" if fresh_production else "BLOCKED"},
+        {"name": "exact_kb_knowledge_release_pack_versions_frozen", "status": "PASS" if exact_identity else "BLOCKED"},
     ]
+    gate_passed = all(item["status"] == "PASS" for item in gate_checks)
     manifest = {
         "schema_version": 1,
         "gate": "KQ-BL-01",
         "generated_at": generated_at,
-        "status": "BLOCKED",
-        "reason": "fresh read-only production release identity requires an authorized operator snapshot",
+        "status": "PASS TO NEXT PHASE" if gate_passed else "BLOCKED",
+        "reason": (
+            "fresh read-only production identity, knowledge release state, Pack versions, and mutation=0 are frozen"
+            if gate_passed
+            else "fresh read-only production release identity requires an authorized operator snapshot"
+        ),
         "privacy": "synthetic questions plus source paths, schemas, hashes, IDs, and non-secret runtime metadata; no tenant content",
         "source_snapshot": source,
-        "production_identity": production_identity_snapshot(),
+        "production_identity": production_identity,
         "artifacts": records,
         "gate_checks": gate_checks,
-        "next_allowed_action": "obtain a fresh read-only operator snapshot; do not start KQ1",
+        "next_allowed_action": (
+            "start KQ1 contract work"
+            if gate_passed
+            else "obtain a fresh read-only operator snapshot; do not start KQ1"
+        ),
     }
     manifest_record = _write_json(ARTIFACT_DIR / "KQ_BASELINE_MANIFEST.json", manifest)
     return manifest, [*records, manifest_record]

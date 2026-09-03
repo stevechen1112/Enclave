@@ -2,7 +2,7 @@
 
 日期：2026-09-03
 Gate：`KQ-BL-01`
-目前狀態：`BLOCKED`
+目前狀態：`PASS TO NEXT PHASE`
 限制：KQ0 only；Live Ask runtime behavior unchanged
 
 ## 目的
@@ -20,6 +20,7 @@ Manifest 以 SHA-256 指向：
 - `KQ_BASELINE_OUTPUTS.json`：13 類 synthetic、deterministic、offline 案例的 QueryPlan、legacy decision、sync fallback 與 stream fallback。
 - `KQ_KNOWN_FAILURES.json`：11 項已確認差距及目標 KQ phase。
 - `KQ_CORE_CONTAMINATION_SCAN.json`：generic core 掃描結果、禁止清單與具名 waiver。
+- `KQ_PRODUCTION_OPERATOR_SNAPSHOT.json`：正式 release、runtime、KB／Knowledge Unit release、Pack 版本及 mutation=0 唯讀證據。
 
 ## 代表案例
 
@@ -61,15 +62,16 @@ Manifest 以 SHA-256 指向：
 
 工具不連 DB、不呼叫 provider、不建立 conversation/message、不寫 cache/usage/feedback，也不部署。它只在 `artifacts/knowledge/` 重建 KQ0 artifact。
 
-## 為何 Gate 仍是 BLOCKED
+## Gate 解除證據
 
-Repository 內最新可用的正式 baseline 是 2026-08-24 的 read-only evidence；另有不同時間與不同 image identity 的 acceptance/predeploy artifacts。它們可供 lineage 參考，但無法證明 2026-09-03 當下正式環境仍使用同一 image、KB revision、Knowledge Unit release 與 Pack versions。
+2026-09-03 由既有 `kachu` operator SSH profile 對正式容器執行兩組唯讀 probe，並核對公開 `/health` 與 `/release.json`。正式 release 為 `input-i9-dd5a6bd`，source commit、backend/frontend/gateway image digest、deployment manifest、prompt/model/flags、active KB revision、Knowledge Unit release/membership 空集合及五個 Pack 版本均已凍結。
 
-`KQ-BL-01` 仍缺：
+取證具備：
 
-1. authorized operator 產生的 2026-09-03 新鮮正式唯讀 snapshot；
-2. exact backend/frontend image、deployment manifest、prompt/model/flags；
-3. exact active KB revision、Knowledge Unit release/membership 與 Pack versions；
-4. snapshot 前後 mutation sentinel，證明正式 tenant row/digest delta = 0。
+1. `SET TRANSACTION READ ONLY` 為 true；
+2. 前後 `snapshot_digest` 完全相同；
+3. 舊版文件／ACL probe 前後 digest 亦相同；
+4. production writes 與 deployed changes 均為 0；
+5. 本機隔離 PostgreSQL 的兩個先前阻塞測試已重跑並 2/2 通過。
 
-取得上述證據前，KQ1 不得開始；不得以歷史 artifact、local test DB 或開發者自行宣告取代。
+因此 `KQ-BL-01` 已解除，允許開始 KQ1；本證據不構成 KQ3 Shadow 或 KQ7 enforce 授權。
