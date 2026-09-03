@@ -14,7 +14,7 @@
 
 ## 永久修正
 
-- Connector ACL 現在只套用於 `Document.source_type == connector`。一般檔案、圖片與 URL Input 不會因 `source_system` 有值而被誤擋。
+- Connector ACL 現在只套用於 `Document.source_type == connector`。一般檔案、圖片與 URL Input 不會因 `source_system` 有值而被誤擋；canonical retriever 與 Gateway 的共同 visibility PEP 均使用同一分類規則。
 - 外部 Connector 若無 principal／allow projection，仍維持 fail-closed；沒有放寬租戶或來源權限。
 - Redis retrieval cache 使用執行環境的 `REDIS_PASSWORD`，不寫入程式碼、日誌或文件。
 - lexical backfill 改用獨立 maintenance identity，跨租戶探索必須寫入 bypass audit，實際回填逐租戶套用 RLS context；另支援明確 `--tenant-id`。
@@ -26,7 +26,7 @@
 - 多租戶：回填不以普通應用身分跨租戶讀取；探索與逐租戶操作分離。
 - 可恢復：回填為 upsert，可重跑；原始來源、chunks 與 embeddings 不變。
 - 資料語意：沒有替使用者核准任何音訊／影片候選。
-- 測試：新增第一方 URL ACL 與 Redis 密碼回歸；I9 readiness／review focused suite 共 8 passed，Python compileall 與 diff check 通過。
+- 測試：新增 canonical／Gateway 第一方 URL ACL 與 Redis 密碼回歸；I9 readiness／review focused suite 共 9 passed，Python compileall 與 diff check 通過。
 - 限制：本機 PostgreSQL `localhost:5435` 未啟動，因此 DB 整合由正式環境的實際 RLS、lexical 與 Ask 測試補足。
 
 ## 部署後 Gate

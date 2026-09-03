@@ -43,7 +43,14 @@ def apply_document_visibility(query_obj, *, authz, db, require_completed: bool =
         )
     ]
     if not principal_ids:
-        return query_obj.filter(Document.source_system.is_(None))
+        # First-party URL Input sets ``source_system=web`` for lineage.  Only
+        # explicit connector documents require an external principal mapping.
+        return query_obj.filter(
+            or_(
+                Document.source_type.is_(None),
+                Document.source_type != "connector",
+            )
+        )
 
     allow_exists = (
         db.query(SourceAclEntry.id)
@@ -69,7 +76,8 @@ def apply_document_visibility(query_obj, *, authz, db, require_completed: bool =
     )
     return query_obj.filter(
         or_(
-            Document.source_system.is_(None),
+            Document.source_type.is_(None),
+            Document.source_type != "connector",
             and_(Document.source_record_id.isnot(None), allow_exists, ~deny_exists),
         )
     )

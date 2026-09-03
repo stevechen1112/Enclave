@@ -6,6 +6,7 @@ from sqlalchemy.dialects import postgresql
 
 from app.models.document import Document
 from app.services import kb_retrieval
+from app.services.document_visibility import apply_document_visibility
 
 
 def test_first_party_web_input_is_not_treated_as_an_external_connector() -> None:
@@ -54,3 +55,26 @@ def test_retrieval_cache_authenticates_to_production_redis(monkeypatch) -> None:
     assert captured["host"] == "redis"
     assert captured["password"] == "runtime-secret"
     assert captured["db"] == 1
+
+
+def test_gateway_visibility_keeps_first_party_web_input_visible() -> None:
+    authz = Mock()
+    authz.has_kb_admin = False
+    authz.tenant_id = Mock()
+    authz.subject_id = "user-1"
+    authz.department_filter_ids.return_value = []
+    db = Mock()
+    db.query.return_value.filter.return_value = []
+    source_query = Mock()
+    source_query.filter.return_value = source_query
+
+    apply_document_visibility(source_query, authz=authz, db=db)
+
+    criterion = source_query.filter.call_args.args[0]
+    sql = str(
+        criterion.compile(
+            dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+        )
+    )
+    assert "documents.source_type != 'connector'" in sql
+    assert "documents.source_system IS NULL" not in sql
