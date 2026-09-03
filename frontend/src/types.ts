@@ -222,6 +222,7 @@ export interface KnowledgeAssetJob {
   requested_capabilities: string[]
   readiness: Record<string, unknown>
   error: Record<string, unknown>
+  correlation_id?: string
   attempt: number
   created_at: string
   completed_at: string | null

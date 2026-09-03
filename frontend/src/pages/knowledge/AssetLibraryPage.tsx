@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FileAudio, FileImage, FileSpreadsheet, FileText, Film, Globe2, Plus, RefreshCw } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import api, { knowledgeAssetApi, parseApiError, type ApiErrorInfo } from '../../api'
 import type { KnowledgeAsset } from '../../types'
@@ -18,11 +18,12 @@ const ICONS: Record<string, typeof FileText> = {
 }
 
 export default function AssetLibraryPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [assets, setAssets] = useState<KnowledgeAsset[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ApiErrorInfo | null>(null)
   const [kind, setKind] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(searchParams.get('status') || '')
   const [source, setSource] = useState('')
   const [classification, setClassification] = useState('')
   const [department, setDepartment] = useState('')
@@ -64,14 +65,20 @@ export default function AssetLibraryPage() {
   const visible = useMemo(() => assets.filter(asset => asset.title.toLowerCase().includes(query.toLowerCase())), [assets, query])
 
   const filtersActive = [kind, status, source, classification, department, updatedDays, publication, query].some(Boolean)
-  const resetFilters = () => { setKind(''); setStatus(''); setSource(''); setClassification(''); setDepartment(''); setUpdatedDays(''); setPublication(''); setQuery('') }
+  const updateStatus = (value: string) => {
+    setStatus(value)
+    const next = new URLSearchParams(searchParams)
+    if (value) next.set('status', value); else next.delete('status')
+    setSearchParams(next, { replace: true })
+  }
+  const resetFilters = () => { setKind(''); setStatus(''); setSource(''); setClassification(''); setDepartment(''); setUpdatedDays(''); setPublication(''); setQuery(''); setSearchParams({}, { replace: true }) }
 
   return (
     <WorkspacePage title="所有資產" subtitle="文件、表格、圖片、錄音、影片與外部來源，都使用同一套生命週期。" actions={canAdd && <Link className="btn-primary" to="/knowledge/new"><Plus className="h-4 w-4" />新增知識</Link>}>
       <SectionPanel className="mt-5" title="搜尋與篩選" description={`${visible.length} 筆符合目前條件`} actions={filtersActive && <button type="button" className="btn-ghost" onClick={resetFilters}>清除篩選</button>} bodyClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="md:col-span-2"><span className="sr-only">搜尋資產</span><input className="input w-full" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜尋名稱" /></label>
         <select className="input" aria-label="資產類型" value={kind} onChange={event => setKind(event.target.value)}><option value="">所有類型</option>{Object.entries(KIND_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-        <select className="input" aria-label="處理狀態" value={status} onChange={event => setStatus(event.target.value)}><option value="">所有狀態</option><option value="answer_ready">已可問答</option><option value="processing">系統處理中</option><option value="awaiting_review">等待人工確認</option><option value="needs_attention">需要處理</option></select>
+        <select className="input" aria-label="處理狀態" value={status} onChange={event => updateStatus(event.target.value)}><option value="">所有狀態</option><option value="answer_ready">已可問答</option><option value="processing">系統處理中</option><option value="awaiting_review">等待人工確認</option><option value="needs_attention">需要處理</option></select>
         <select className="input" aria-label="來源" value={source} onChange={event => setSource(event.target.value)}><option value="">所有來源</option><option value="upload">直接上傳</option><option value="capture">行動擷取</option><option value="web">網頁</option><option value="nas_smb">NAS</option><option value="sharepoint">SharePoint</option><option value="google_drive">Google Drive</option></select>
         <select className="input" aria-label="資料分類" value={classification} onChange={event => setClassification(event.target.value)}><option value="">所有分類</option><option value="public">公開</option><option value="internal">內部</option><option value="confidential">機密</option><option value="restricted">高度機密</option></select>
         <select className="input" aria-label="部門" value={department} onChange={event => setDepartment(event.target.value)}><option value="">所有部門</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>

@@ -40,4 +40,10 @@ describe('AssetLibraryPage', () => {
     await waitFor(() => expect(list).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'video' })))
     expect(screen.getAllByRole('button', { name: '清除篩選' })).toHaveLength(1)
   })
+
+  it('honours a lifecycle deep link from the dashboard', async () => {
+    render(<MemoryRouter initialEntries={['/knowledge/assets?status=needs_attention']}><AssetLibraryPage /></MemoryRouter>)
+    await waitFor(() => expect(list).toHaveBeenCalledWith(expect.objectContaining({ processing_status: 'needs_attention' })))
+    expect(screen.getByLabelText('處理狀態')).toHaveValue('needs_attention')
+  })
 })

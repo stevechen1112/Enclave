@@ -120,6 +120,7 @@ def _job_dict(job: IngestionJob | None) -> dict[str, Any] | None:
         "requested_capabilities": list(job.requested_capabilities or []),
         "readiness": dict(job.readiness or {}),
         "error": dict(job.error or {}),
+        "correlation_id": str(job.correlation_id or job.id),
         "attempt": int(job.attempt or 0),
         "created_at": job.created_at,
         "completed_at": job.completed_at,

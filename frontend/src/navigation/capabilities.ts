@@ -55,7 +55,7 @@ export const KNOWLEDGE_SUBNAV: { to: string; label: string; capability: Capabili
   { to: '/knowledge/assets', label: '所有資產', capability: 'browse_knowledge' },
   { to: '/knowledge/wiki', label: '已發布知識', capability: 'browse_knowledge' },
   { to: '/knowledge/sources', label: '來源與整合', capability: 'manage_sources' },
-  { to: '/knowledge/review', label: '待審核', capability: 'review_queue' },
+  { to: '/knowledge/review', label: '人工確認', capability: 'review_queue' },
   { to: '/knowledge/quality', label: '品質與版本', capability: 'governance' },
 ]
 

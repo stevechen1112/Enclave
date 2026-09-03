@@ -95,7 +95,7 @@ export default function ReviewQueuePage() {
       setSelectedIds(new Set())
       setSelectedId(current => current && data.items.some(item => item.id === current) ? current : data.items[0]?.id || null)
     } catch (reason) {
-      setError(parseApiError(reason, '無法載入審核工作台'))
+      setError(parseApiError(reason, '無法載入人工確認工作台'))
     } finally {
       setLoading(false)
     }
@@ -160,7 +160,7 @@ export default function ReviewQueuePage() {
     <div className="flex h-full flex-col md:flex-row">
       <aside className={clsx('w-full flex-col border-b border-line bg-surface md:flex md:w-[22rem] md:border-b-0 md:border-r', mobileStep === 'list' ? 'flex flex-1' : 'hidden')} aria-label="審核佇列">
         <div className="border-b border-line p-4">
-          <div className="flex items-center justify-between"><div><h1 className="font-display text-lg font-semibold text-ink">證據審核</h1><p className="text-sm text-muted">{inbox?.total || 0} 筆待處置</p></div><button type="button" className="icon-btn" onClick={() => void load()} aria-label="重新整理"><RefreshCw className="h-5 w-5" /></button></div>
+          <div className="flex items-center justify-between"><div><h1 className="font-display text-lg font-semibold text-ink">人工確認</h1><p className="text-sm text-muted">{inbox?.total || 0} 筆候選內容待處置</p></div><button type="button" className="icon-btn" onClick={() => void load()} aria-label="重新整理"><RefreshCw className="h-5 w-5" /></button></div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <select aria-label="風險" className="input min-h-10 py-1" value={risk} onChange={event => setRisk(event.target.value)}><option value="">所有風險</option><option value="high">高風險</option><option value="medium">中風險</option><option value="low">低風險</option></select>
             <select aria-label="來源類型" className="input min-h-10 py-1" value={source} onChange={event => setSource(event.target.value)}><option value="">所有來源</option>{inbox?.facets.source_types.map(value => <option key={value} value={value}>{sourceLabels[value] || value}</option>)}</select>

@@ -26,7 +26,7 @@ describe('HomeDashboardView', () => {
     expect(screen.getByRole('heading', { name: '我的待辦' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '知識健康與處理狀態' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /開始確認/ })).toHaveAttribute('href', '/knowledge/review')
-    expect(screen.getByRole('link', { name: /已可問答/ })).toHaveAttribute('href', '/knowledge/assets?status=answer_ready')
+    expect(screen.getByRole('link', { name: /已可問答/ })).toHaveAttribute('href', '/ask')
     expect(screen.getByRole('link', { name: /現場作業/ })).toHaveAttribute('href', '/job')
   })
 

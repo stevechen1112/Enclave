@@ -26,7 +26,7 @@ function buildTimeline(doc: Document): TimelineStep[] {
   const order = ['uploading', 'pending_review', 'processing', 'searchable', 'revoked'] as const
   const labels: Record<string, string> = {
     uploading: '上傳／發現',
-    pending_review: '待審核',
+    pending_review: '等待人工確認',
     processing: '處理中',
     searchable: '可搜尋',
     revoked: '已撤銷',

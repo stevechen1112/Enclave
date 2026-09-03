@@ -58,6 +58,7 @@
 - 2026-09-03 I9-1 `FIXED_IN_CODE`：常見 PCM／錄音格式、錯誤分類與有界重試完成；Code Review PASS。
 - 2026-09-03 I9-2 `FIXED_IN_CODE`：媒體 Worker 隔離、資源限制、stale job reconciliation 與安全重送完成；Code Review PASS。
 - 2026-09-03 I9-3 `FIXED_IN_CODE`：serving-mode-aware answer-ready、互斥狀態、來源層級首頁統計與殘留覆核項目排除完成；Code Review PASS。
+- 2026-09-03 I9-4 `FIXED_IN_CODE`：核心狀態用詞、可操作狀態卡、deep link、白話錯誤、自動重試說明與追蹤碼完成；Code Review PASS。
 
 ## 4. 實作階段與 Code Review Gate
 

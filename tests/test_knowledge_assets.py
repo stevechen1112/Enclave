@@ -129,6 +129,7 @@ def test_reference_intake_is_idempotent_visible_and_has_capability_plan():
 
         assert first["asset_kind"] == "web_page"
         assert first["job"]["adapter_key"] == "core.document"
+        assert first["job"]["correlation_id"] == first["job"]["id"]
         assert first["job"]["requested_capabilities"] == ["extract_text", "layout"]
         assert second["id"] == first["id"]
         assert second["deduplicated"] is True

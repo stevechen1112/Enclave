@@ -20,7 +20,7 @@ function statusLabel(asset: VideoAsset) {
   const state = asset.job?.status || asset.status
   const labels: Record<string, string> = {
     pending: '排隊中', running: '處理中', retry: '等待重試', failed: '處理失敗',
-    review_required: '待人員覆核', ready: '已完成', active: '已啟用',
+    review_required: '等待人工確認', ready: '已完成', active: '已啟用',
   }
   return labels[state] || state
 }

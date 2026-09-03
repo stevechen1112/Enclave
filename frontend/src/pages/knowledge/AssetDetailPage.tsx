@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertCircle, CheckCircle2, Circle, RefreshCw, RotateCcw } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Circle, MessageCircleQuestion, RefreshCw, RotateCcw, UserCheck } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
@@ -61,12 +61,18 @@ export default function AssetDetailPage() {
       : null
   const failed = asset.job?.status === 'failed' || asset.status === 'failed'
   const failureCode = typeof asset.job?.error?.code === 'string' ? asset.job.error.code : null
-  const failureMessage = failureCode === 'document_ingestion_failed'
+  const explicitFailureMessage = typeof asset.job?.error?.user_message === 'string' ? asset.job.error.user_message : null
+  const retryable = asset.job?.error?.retryable !== false
+  const failureMessage = explicitFailureMessage || (failureCode === 'document_ingestion_failed'
     ? '內容處理服務目前不可用。原始來源已保留，可稍後重新處理；若持續失敗，請管理員檢查解析與索引服務。'
-    : '系統已保留原始來源，請重新處理；若持續失敗，請聯絡管理員查看服務狀態。'
-  return <WorkspacePage title={asset.title} subtitle={`${asset.asset_kind} · ${asset.source_system} · ${asset.data_classification}`} backTo="/knowledge/assets" backLabel="回所有資產" actions={<><LifecycleBadge status={asset.job?.status || asset.status} answerReady={asset.job?.status === 'ready'} />{(asset.job?.status === 'failed' || asset.status === 'failed') && <button className="btn-outline" onClick={() => void retry()}><RefreshCw className="h-4 w-4" />重新處理</button>}</>}>
+    : '系統已保留原始來源，請重新處理；若持續失敗，請聯絡管理員查看服務狀態。')
+  const lifecycle = asset.lifecycle_status || asset.job?.status || asset.status
+  return <WorkspacePage title={asset.title} subtitle={`${asset.asset_kind} · ${asset.source_system} · ${asset.data_classification}`} backTo="/knowledge/assets" backLabel="回所有資產" actions={<><LifecycleBadge status={lifecycle} answerReady={asset.answer_ready} />{failed && retryable && <button className="btn-outline" onClick={() => void retry()}><RefreshCw className="h-4 w-4" />重新處理</button>}</>}>
     <EvidenceLocatorBanner />
-    {failed && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span><strong className="block">來源處理失敗</strong><span className="mt-1 block">{failureMessage}</span></span></div>}
+    {failed && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span><strong className="block">需要處理</strong><span className="mt-1 block">{failureMessage}</span><span className="mt-2 block text-xs">{retryable ? '系統自動嘗試已結束；可按「重新處理」再試一次。' : '這類問題不會自動重試，請依上方說明更換來源或格式。'}{asset.job?.correlation_id ? ` 追蹤碼：${asset.job.correlation_id}` : ''}</span></span></div>}
+    {asset.lifecycle_status === 'processing' && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent-soft p-4 text-sm text-accent-ink"><RefreshCw className="mt-0.5 h-5 w-5 shrink-0 animate-spin" /><span><strong className="block">系統正在處理</strong><span className="mt-1 block">你可以離開此頁；系統會在背景繼續解析、OCR、轉錄或建立索引。</span></span></div>}
+    {asset.lifecycle_status === 'awaiting_review' && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-highlight/30 bg-highlight-soft p-4 text-sm text-highlight"><UserCheck className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1"><strong className="block">等待人工確認</strong><span className="mt-1 block">系統已完成候選內容，共 {asset.pending_review_count || 0} 筆；租戶擁有者需核對證據後才能發布。建立者不可自行核准高風險內容。</span></span><Link className="btn-outline shrink-0" to="/knowledge/review">前往人工確認</Link></div>}
+    {asset.answer_ready && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-success/30 bg-success-soft p-4 text-sm text-success"><CheckCircle2 className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1"><strong className="block">此來源已可問答</strong><span className="mt-1 block">問答結果會附上可追溯的來源證據。</span></span><Link className="btn-primary shrink-0" to="/ask"><MessageCircleQuestion className="h-4 w-4" />前往問知識</Link></div>}
     <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-5">
         <SectionPanel title="來源與專業工具" description="原始來源與衍生內容使用相同資產身分、權限及版本。">
