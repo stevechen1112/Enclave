@@ -636,6 +636,30 @@ export const knowledgeControlApi = {
   scanFreshness: () => api.post('/knowledge-control/freshness/scan').then(r => r.data),
 }
 
+export interface KnowledgeDecisionDiff {
+  record_id: string
+  captured_at: string
+  legacy_decision: string
+  new_evidence_state: string
+  new_response_action: string
+  execution_status: string
+  decision_hash: string
+  transition: string
+  false_accept_candidate: boolean
+  false_reject_candidate: boolean
+  reason_codes: string[]
+  source_refs: Array<{ document_id: string; document_revision?: string; unit_id?: string }>
+}
+
+export const knowledgeDecisionApi = {
+  listDiffs: (limit = 100) => api.get<{
+    schema_version: string
+    read_only: boolean
+    tenant_id: string
+    items: KnowledgeDecisionDiff[]
+  }>('/knowledge/decision-diffs', { params: { limit } }).then(r => r.data),
+}
+
 // ─── Phase 10: Agent ───
 export const agentApi = {
   scanPreview: (subfolders: Array<{ path: string; name: string; files: string[]; content_samples?: string[] }>) =>

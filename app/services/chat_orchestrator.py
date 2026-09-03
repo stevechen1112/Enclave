@@ -1,6 +1,7 @@
 import logging
 import json
 import asyncio
+import time
 from datetime import date
 from typing import Dict, Any, List, Optional, AsyncGenerator
 from uuid import UUID
@@ -138,6 +139,7 @@ class ChatOrchestrator:
         use_gateway: bool = True,
         db = None,  # request-scoped SQLAlchemy Session
         filter_dict: Optional[Dict[str, Any]] = None,
+        decision_channel: str = "sync",
     ) -> Dict[str, Any]:
         """純檢索：經 MultiStepOrchestrator（計劃→多臂→合成）組裝上下文。"""
         request_id = str(uuid.uuid4())
@@ -151,6 +153,7 @@ class ChatOrchestrator:
 
         from app.services.multi_step_orchestrator import MultiStepOrchestrator
 
+        retrieval_started = time.perf_counter()
         try:
             orch_result = await MultiStepOrchestrator().run(
                 authz=authz,
@@ -191,11 +194,45 @@ class ChatOrchestrator:
             "refusal": orch_result.get("refusal"),
         }
 
-        return self._build_context(
+        context = self._build_context(
             question=question,
             company_policy=company_policy_result,
             request_id=request_id,
         )
+        decision_mode = str(
+            getattr(settings, "KNOWLEDGE_DECISION_MODE", "off") or "off"
+        ).strip().lower()
+        if decision_mode != "off" and not bool(
+            getattr(settings, "KNOWLEDGE_DECISION_KILL_SWITCH", False)
+        ):
+            from app.services.evidence_contract import ExecutionStatus
+            from app.services.knowledge_decision_shadow import (
+                run_knowledge_decision_shadow,
+            )
+
+            raw_error = str(orch_result.get("error") or "").casefold()
+            if orch_result.get("status") == "error":
+                execution_status = (
+                    ExecutionStatus.TIMEOUT
+                    if "timeout" in raw_error
+                    else ExecutionStatus.PROVIDER_ERROR
+                )
+            else:
+                execution_status = ExecutionStatus.OK
+            context["knowledge_decision_shadow"] = run_knowledge_decision_shadow(
+                tenant_id=tenant_id,
+                request_id=request_id,
+                query_plan=company_policy_result.get("query_plan") or {},
+                results=[
+                    *list(company_policy_result.get("results") or []),
+                    *list(company_policy_result.get("catalog_hits") or []),
+                ],
+                legacy_coverage=context.get("evidence_contract") or {},
+                execution_status=execution_status,
+                retrieval_latency_ms=(time.perf_counter() - retrieval_started) * 1000,
+                channel=decision_channel,
+            )
+        return context
 
     @staticmethod
     def _merge_policy_results(

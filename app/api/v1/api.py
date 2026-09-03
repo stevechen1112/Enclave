@@ -33,6 +33,7 @@ from app.api.v1.endpoints import (
     internal_service_auth,
     knowledge_control,
     knowledge_assets,
+    knowledge_decision,
     review_items,
     video_assets,
     deprecations,
@@ -89,6 +90,7 @@ api_router.include_router(voice.router, tags=["voice"])
 api_router.include_router(audio_policy.router, tags=["audio-policy"])
 api_router.include_router(knowledge_control.router, tags=["knowledge-control"])
 api_router.include_router(knowledge_assets.router)
+api_router.include_router(knowledge_decision.router)
 api_router.include_router(review_items.router)
 api_router.include_router(video_assets.router, tags=["video-assets"])
 api_router.include_router(deprecations.router, tags=["deprecations"])

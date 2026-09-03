@@ -1,0 +1,36 @@
+{
+  "schema_version": "kq-shadow-threshold.v1",
+  "frozen_at": "2026-09-03T11:00:00Z",
+  "immutable": true,
+  "release_binding_required": true,
+  "case_manifest": {
+    "minimum_cases": 30,
+    "minimum_distinct_subjects": 2,
+    "minimum_deny_or_forbidden_cases": 4,
+    "exclusions": [
+      "telemetry_status_not_written",
+      "execution_status_not_ok",
+      "missing_release_identity",
+      "duplicate_request_ref"
+    ]
+  },
+  "quality_thresholds": {
+    "maximum_false_accept_rate": 0.02,
+    "maximum_false_reject_rate": 0.05,
+    "minimum_sync_stream_decision_parity": 1.0,
+    "maximum_execution_failure_rate": 0.01
+  },
+  "latency_overhead_ms": {
+    "p50": 20,
+    "p95": 75,
+    "p99": 150
+  },
+  "stop_conditions": [
+    "tenant_mutation_nonzero",
+    "cross_tenant_trace_or_source_reference",
+    "unredacted_secret_or_source_text",
+    "sync_stream_decision_mismatch",
+    "shadow_writer_blocks_or_changes_user_answer"
+  ],
+  "revision_policy": "A threshold change requires a new manifest version and a full rerun; this file is never overwritten after a formal first-run starts."
+}

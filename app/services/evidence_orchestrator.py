@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Iterable, List, Mapping
@@ -147,15 +148,22 @@ def decide_evidence(
     pack_versions: Mapping[str, str] | None = None,
 ) -> EvidenceDecision:
     """Run admission→applicability→completeness and issue one decision."""
+    parse_started = time.perf_counter()
     items = list(evidence)
     status = ExecutionStatus(execution_status)
     spec = dict(query_spec or {})
+    parse_ms = (time.perf_counter() - parse_started) * 1000
+    applicability_started = time.perf_counter()
     coverage = contract.decision(items, execution_status=status)
+    applicability_ms = (time.perf_counter() - applicability_started) * 1000
+    select_started = time.perf_counter()
     passed = set(coverage["answered_requirements"])
     verified = [item for item in items if item.slot_id in passed]
     near = [item for item in items if item.slot_id not in passed]
     conflicts = _detect_conflicts(verified)
+    select_ms = (time.perf_counter() - select_started) * 1000
     reason_codes: list[str] = []
+    completeness_started = time.perf_counter()
 
     if status is not ExecutionStatus.OK:
         state = EvidenceState(coverage["evidence_state"])
@@ -201,34 +209,41 @@ def decide_evidence(
             tier, reason = 2, "source-grounded narrative evidence"
         reason_codes.append("decision.verified")
 
+    completeness_ms = (time.perf_counter() - completeness_started) * 1000
+
     trace = [
         {
             "stage": "parse",
             "status": "blocked" if spec.get("ambiguity") else "ok",
             "query_spec_version": str(spec.get("plan_version") or "2.0"),
             "ambiguity_count": len(spec.get("ambiguity") or []),
+            "latency_ms": round(parse_ms, 6),
         },
-        {"stage": "retrieve", "status": status.value, "candidate_count": len(items)},
+        {"stage": "retrieve", "status": status.value, "candidate_count": len(items), "latency_ms": None},
         {
             "stage": "select",
             "status": "conflict" if conflicts else "ok",
             "verified_count": len(verified),
             "near_evidence_count": len(near),
+            "latency_ms": round(select_ms, 6),
         },
         {
             "stage": "applicability",
             "status": "ok" if not near else "filtered",
             "rejected_count": len(near),
+            "latency_ms": round(applicability_ms, 6),
         },
         {
             "stage": "completeness",
             "status": state.value,
             "answered_count": len(coverage["answered_requirements"]),
             "missing_count": len(coverage["missing_requirements"]),
+            "latency_ms": round(completeness_ms, 6),
         },
         {
             "stage": "conversation",
             "status": "needs_context" if state is EvidenceState.INSUFFICIENT_CONTEXT else "ok",
+            "latency_ms": 0.0,
         },
     ]
     stable = {

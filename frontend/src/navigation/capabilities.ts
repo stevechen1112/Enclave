@@ -71,6 +71,7 @@ export const SYSTEM_SUBNAV: { to: string; label: string; capability: Capability 
   { to: '/system/tenant-admin', label: '租戶設定', capability: 'admin_home' },
   { to: '/system/health', label: '資料健檢', capability: 'system_ops' },
   { to: '/system/input-pilot', label: 'Input 試行', capability: 'system_ops' },
+  { to: '/system/decision-diffs', label: '回答決策差異', capability: 'system_ops' },
   { to: '/system/backup', label: '備份', capability: 'system_ops' },
   { to: '/system/deploy', label: '版本更新', capability: 'system_ops' },
 ]

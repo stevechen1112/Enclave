@@ -261,6 +261,7 @@ async def chat_stream(
                 authz=authz,
                 db=stream_db,
                 filter_dict=filter_dict or None,
+                decision_channel="stream",
             )
 
             # Retrieval honesty (degraded / request_id) before sources

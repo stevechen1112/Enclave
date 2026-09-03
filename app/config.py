@@ -170,6 +170,14 @@ class Settings(BaseSettings):
     )
     SOURCE_VERIFY_MODEL: str = ""  # 稽核專用模型覆寫；空字串 = 沿用內部模型設定
 
+    # KQ3 — canonical EvidenceDecision rollout.  Defaults are deliberately off.
+    KNOWLEDGE_DECISION_MODE: str = "off"  # off | shadow | enforce
+    KNOWLEDGE_DECISION_TENANT_ALLOWLIST: str = ""
+    KNOWLEDGE_DECISION_KILL_SWITCH: bool = False
+    KNOWLEDGE_DECISION_SHADOW_STORE_PATH: str = "artifacts/knowledge/kq_shadow"
+    KNOWLEDGE_DECISION_SHADOW_KEY: str = ""
+    KNOWLEDGE_DECISION_SHADOW_RETENTION_DAYS: int = 30
+
     # Legacy vertical rules live behind a compatibility-pack boundary.  Keep
     # disabled for the domain-neutral product; explicitly enable only for
     # tenants covered by the frozen HR regression suite.
@@ -416,6 +424,14 @@ class Settings(BaseSettings):
         normalized = str(value or "off").strip().lower()
         if normalized not in {"off", "shadow", "enforce"}:
             raise ValueError("SOURCE_VERIFY_MODE must be off, shadow, or enforce")
+        return normalized
+
+    @field_validator("KNOWLEDGE_DECISION_MODE", mode="before")
+    @classmethod
+    def _normalize_knowledge_decision_mode(cls, value: object) -> str:
+        normalized = str(value or "off").strip().lower()
+        if normalized not in {"off", "shadow", "enforce"}:
+            raise ValueError("KNOWLEDGE_DECISION_MODE must be off, shadow, or enforce")
         return normalized
 
     @model_validator(mode="after")
