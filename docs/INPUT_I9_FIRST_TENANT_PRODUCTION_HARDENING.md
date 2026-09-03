@@ -59,8 +59,9 @@
 | I9-017 | 首租戶尚無 active KB revision 時 shadow scope 關閉所有問答 | P0 | VERIFIED | shadow 模式可讀取既有 answer-ready 文件並附引用；enforce 與無權 revision 仍 fail-closed |
 | I9-018 | 首次圖片尚待人工確認卻提前列入已可問答 | P0 | VERIFIED | 首版待確認不列入可問答；已有正式舊版者在新版待確認期間仍可使用舊版 |
 | I9-019 | staging 與 production 共用小型主機造成記憶體競爭 | P0 | MITIGATED | 首租戶驗證期間停止 staging compute；後續將 staging 移機或建立明確啟停／資源政策 |
-| I9-020 | 正式 Gemini 專案遭 403，內部整理、掃描理解與雲端 OCR 不可用 | P0 | FIXING | 所有必要 Provider 必須以真實呼叫通過；失效路徑切換至已驗證 Provider 並保留本機後備 |
-| I9-021 | 高量保護只統計預設 `celery` queue，未統計獨立 Input queues | P0 | FIXED_IN_CODE | admission guard 同時統計 `celery`、`input.document`、`input.media`，任一來源造成的總積壓都受上限保護 |
+| I9-020 | 正式 Gemini 專案遭 403，內部整理、掃描理解與雲端 OCR 不可用 | P0 | VERIFIED | 所有必要 Provider 必須以真實呼叫通過；失效路徑切換至已驗證 Provider 並保留本機後備 |
+| I9-021 | 高量保護只統計預設 `celery` queue，未統計獨立 Input queues | P0 | VERIFIED | admission guard 同時統計 `celery`、`input.document`、`input.media`，任一來源造成的總積壓都受上限保護 |
+| I9-022 | 從「所有資產」刪除來源時，對應 Document 投影可能仍可被檢索 | P0 | FIXED_IN_CODE | 刪除來源必須先走共用 deny-first 文件撤權，清除檢索、快取、Wiki 與圖譜投影；撤權失敗時不可只隱藏來源 |
 
 ### 實作進度（持續追加）
 
@@ -72,6 +73,7 @@
 - 2026-09-03 I9-6 `FIXED_IN_CODE`：真實 `pcm_s24le` WAV 正規化回歸、76 項後端 focused tests、135 項前端 tests 與 production build 完成；Code Review CONDITIONAL PASS，正式 PostgreSQL／容器驗證移入 I9-7。
 - 2026-09-03 I9-7 `DEPLOYED / VERIFYING`：正式環境備份、migration、獨立 Input Worker 與 release `243d784` 已上線；兩支 24-bit PCM WAV 均成功轉寫並進入人工確認，孤兒圖片成功復原且可問答，5 支影片維持人工確認，原始來源未被覆寫。
 - 2026-09-03 I9-7 擴大檢查：真實 Ask 測試發現第一方網頁 `source_system=web` 被 Connector ACL 誤擋，且既有完成文件缺 lexical projection；八策 4 個既有 chunks 已安全回填。永久修復、Redis 認證修復與回歸測試完成，待第二版部署後再驗證引用鏈。
+- 2026-09-03 I9-8 `DEPLOYED / VERIFYING`：release `1a371e4` 上線；7 條正式 Provider 真實呼叫全數通過，三條 queue 的總量保護已由正式 runtime 驗證。第一輪來源已清空，等待李永仁第二輪高量真實複測。
 
 ## 4. 實作階段與 Code Review Gate
 
@@ -208,11 +210,11 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 
 ### 10.2 擴大檢查發現與處理
 
-- 真實 Provider probe 共 7 條能力：OpenAI 問答、Ollama 向量索引、OpenAI 一般語音、OpenAI 長音檔均通過。
-- Gemini 內部整理、Gemini 掃描理解與 Gemini Cloud OCR 因供應商專案 403 未通過，不能只以「API Key 有設定」視為可用；列為 I9-020。
-- 正式環境將把上述三條失效路徑切換到既有且已實測可用的 OpenAI 憑證；Cloud OCR 同時保留本機 OCR 作為文件處理基礎。切換後必須重新執行全部 7 條真實 Provider probe。
-- queue guard 原本只讀取 `celery`，未看獨立的 `input.document` 與 `input.media`；高量媒體可能避開全域保護。永久修復改為統計三條 queue 總深度，並在飽和回應中保留各 queue 深度，列為 I9-021。
-- 本機 focused tests 共 11 項通過；`ruff` 與 `git diff --check` 通過。正式部署後仍需再次檢查真實 queue、Provider、容器與網域。
+- 初次真實 Provider probe 共 7 條能力：OpenAI 問答、Ollama 向量索引、OpenAI 一般語音、OpenAI 長音檔通過；Gemini 內部整理、掃描理解與 Cloud OCR 因供應商專案 403 未通過，不能只以「API Key 有設定」視為可用。
+- 已將三條失效路徑切換到既有且已實測可用的 OpenAI 憑證，Cloud OCR 同時保留本機 OCR 基礎。部署後重新執行 7 條正式真實呼叫，結果為 7/7 通過：主要問答、內部整理、掃描理解、向量索引、一般語音、長音檔與 Cloud OCR 均可連通及運作。
+- queue guard 原本只讀取 `celery`，未看獨立的 `input.document` 與 `input.media`；永久修復已統計三條 queue 總深度，並在飽和回應中保留各 queue 深度。正式 runtime 回傳三條 queue 均為 0，總上限 500。
+- release `1a371e4` 已部署；API、前端、Gateway、Worker、Input Worker 與 Beat 均 healthy，restart 0、OOMKilled false，近期沒有新 Traceback、Critical、WorkerLost 或 OOM。
+- 本機 focused tests 共 11 項通過；`ruff` 與 `git diff --check` 通過。正式網域 `/health` 及部署後 Provider／queue／容器檢查均通過。
 
 ### 10.3 第二輪測試的正常預期
 
@@ -223,3 +225,13 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 - 若來源超過單檔大小或影片長度上限，介面應在送出前直接說明限制，不應讓工作無限處理後才失敗。
 
 本節在部署與正式 probe 完成後更新 release、驗證結果與李永仁第二輪複測結果；尚未取得真實複測前，不宣稱 I9 已關閉。
+
+### 10.4 李永仁第一輪資料清空與第二輪基線
+
+- 清空前唯讀盤點：9 個可見來源均由李永仁建立；包含影片 5、音檔 2、圖片 1、網頁 1，另有 9 個 revision、230 個衍生 artifact、9 個 ingestion job 及 8 個已提交 upload session。
+- 清空前已建立可回復的 PostgreSQL 備份：`/opt/enclave/backups/enclave_pre_second_tenant_test_20260903_075923.dump`；SHA-256 與還原清單驗證均通過。
+- 兩個具相容 Document 投影的來源先走 deny-first 文件撤權，再將其餘來源 tombstone；沒有硬刪原始二進位，必要時仍可由備份或保留資料復原。
+- 清空後正式 API 顯示可見來源 0、等待人工確認 0；資料庫顯示可見 Document 0、可見 SourceAsset 0，9 個舊來源及 2 個舊 Document 均已 tombstone。
+- 重新詢問第一輪曠職問題後，回答引用來源為 0；驗證用對話已移除，證明舊知識不再由 Ask 檢索。
+- 八策租戶、陳宥竹與李永仁帳號及兩人的 Owner 權限均保留；此次依約只清空來源，沒有刪除使用者原有對話紀錄。
+- 清理過程發現 I9-022：統一資產庫的來源刪除原先未保證同步撤銷相容 Document 投影。永久修正改為刪除前呼叫共用撤權服務；若撤權失敗回傳 409，避免出現「介面看不到但 AI 仍可能查到」的半完成狀態。

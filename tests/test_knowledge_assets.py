@@ -22,8 +22,10 @@ from app.api.v1.endpoints.knowledge_assets import (
     _validate_source_url,
 )
 from app.models.asset import AssetRevision, DerivedArtifact, SourceAsset
+from app.models.document import Document
 from app.models.audit import UsageRecord
 from app.models.ingestion import IngestionJob, IngestionJobEvent
+from app.models.knowledge_base import KnowledgeBase
 from app.models.mka import JobRole, MKATaskCost
 from app.models.permission import Department
 from app.models.tenant import Tenant
@@ -76,7 +78,9 @@ def _session():
         Department.__table__,
         JobRole.__table__,
         User.__table__,
+        KnowledgeBase.__table__,
         SourceAsset.__table__,
+        Document.__table__,
         AssetRevision.__table__,
         DerivedArtifact.__table__,
         UsageRecord.__table__,
@@ -282,6 +286,104 @@ def test_asset_lifecycle_retry_events_tombstone_and_tenant_isolation(monkeypatch
         with pytest.raises(HTTPException) as missing:
             get_asset(asset_id, db=db, current_user=user)
         assert missing.value.status_code == 404
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_tombstone_asset_revokes_linked_document_projection(monkeypatch):
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        created = _reference(db, user)
+        asset_id = UUID(created["id"])
+        document = Document(
+            tenant_id=user.tenant_id,
+            filename="scan.png",
+            file_type="png",
+            file_path="/private/scan.png",
+            file_size=123,
+            source_type="upload",
+            status="completed",
+            uploaded_by=user.id,
+            source_asset_id=asset_id,
+        )
+        db.add(document)
+        db.commit()
+        calls = []
+
+        class _Revocation:
+            def revoke(self, target_db, **kwargs):
+                calls.append(kwargs)
+                row = target_db.query(Document).filter(Document.id == kwargs["document_id"]).one()
+                row.status = "deleted"
+                from datetime import datetime, timezone
+
+                row.tombstoned_at = datetime.now(timezone.utc)
+                target_db.commit()
+                return {"ok": True}
+
+        monkeypatch.setattr(
+            "app.services.document_revocation.get_document_revocation",
+            lambda: _Revocation(),
+        )
+
+        result = tombstone_asset(asset_id, db=db, current_user=user)
+
+        assert result["status"] == "tombstoned"
+        assert result["revoked_documents"] == 1
+        assert calls == [
+            {
+                "document_id": document.id,
+                "actor_id": user.id,
+                "tenant_id": user.tenant_id,
+                "reason": "source_asset_user_request",
+            }
+        ]
+        assert db.query(Document).filter(Document.id == document.id).one().tombstoned_at is not None
+        assert db.query(SourceAsset).filter(SourceAsset.id == asset_id).one().tombstoned_at is not None
+    finally:
+        db.close()
+        engine.dispose()
+
+
+def test_tombstone_asset_fails_closed_when_linked_document_cannot_be_revoked(
+    monkeypatch,
+):
+    engine, db = _session()
+    try:
+        _tenant, user = _user(db)
+        created = _reference(db, user)
+        asset_id = UUID(created["id"])
+        document = Document(
+            tenant_id=user.tenant_id,
+            filename="scan.png",
+            file_type="png",
+            file_path="/private/scan.png",
+            file_size=123,
+            source_type="upload",
+            status="completed",
+            uploaded_by=user.id,
+            source_asset_id=asset_id,
+        )
+        db.add(document)
+        db.commit()
+
+        class _Revocation:
+            def revoke(self, _target_db, **_kwargs):
+                return {"ok": False, "reason": "tombstone_failed"}
+
+        monkeypatch.setattr(
+            "app.services.document_revocation.get_document_revocation",
+            lambda: _Revocation(),
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            tombstone_asset(asset_id, db=db, current_user=user)
+
+        assert exc_info.value.status_code == 409
+        assert db.query(Document).filter(Document.id == document.id).one().tombstoned_at is None
+        assert db.query(SourceAsset).filter(SourceAsset.id == asset_id).one().tombstoned_at is None
     finally:
         db.close()
         engine.dispose()

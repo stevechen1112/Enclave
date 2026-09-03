@@ -1286,9 +1286,53 @@ def tombstone_asset(
         asset_id=asset_id,
         authz=AuthorizationContext.from_user(current_user),
     )
+    # Document/image/web intake keeps a compatibility Document projection for
+    # retrieval. Revoking only the canonical SourceAsset would hide it from the
+    # Asset Library while leaving the old document chunks answerable. Always use
+    # the shared deny-first document revocation path before tombstoning the
+    # canonical asset so every read model and cache is invalidated together.
+    linked_documents = (
+        db.query(Document)
+        .filter(
+            Document.tenant_id == asset.tenant_id,
+            Document.source_asset_id == asset.id,
+            Document.tombstoned_at.is_(None),
+        )
+        .all()
+    )
+    revoked_documents = 0
+    if linked_documents:
+        from app.services.document_revocation import get_document_revocation
+
+        revocation = get_document_revocation()
+        for document in linked_documents:
+            result = revocation.revoke(
+                db,
+                document_id=document.id,
+                actor_id=current_user.id,
+                tenant_id=current_user.tenant_id,
+                reason="source_asset_user_request",
+            )
+            if not result.get("ok"):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="linked document could not be revoked",
+                )
+            revoked_documents += 1
+        # Document projection commits and may have tombstoned this asset.
+        # Reload the canonical row before finishing job cancellation.
+        asset = (
+            db.query(SourceAsset)
+            .filter(
+                SourceAsset.tenant_id == current_user.tenant_id,
+                SourceAsset.id == asset_id,
+            )
+            .one()
+        )
     from datetime import datetime, timezone
 
-    asset.tombstoned_at = datetime.now(timezone.utc)
+    if asset.tombstoned_at is None:
+        asset.tombstoned_at = datetime.now(timezone.utc)
     asset.status = "tombstoned"
     jobs = (
         db.query(IngestionJob)
@@ -1310,7 +1354,11 @@ def tombstone_asset(
                 db, job, to_status="cancelled", phase="asset_tombstoned"
             )
     db.commit()
-    return {"asset_id": str(asset.id), "status": "tombstoned"}
+    return {
+        "asset_id": str(asset.id),
+        "status": "tombstoned",
+        "revoked_documents": revoked_documents,
+    }
 
 
 @router.get("/{asset_id}/events")
