@@ -1,18 +1,18 @@
 {
   "schema_version": "kq7-production-runtime/v1",
-  "captured_at": "2026-09-03T12:42:00Z",
-  "release_id": "kq7-off-3d94e7c",
-  "source_commit": "3d94e7cde72416179dd4f4cde93c37cff4bb5c23",
+  "captured_at": "2026-09-03T13:01:05Z",
+  "release_id": "kq7-complete-f08884d",
+  "source_commit": "f08884d5dbf121beb8fc53cd97024ff2fab538d3",
   "source_dirty": "false",
-  "deployment_manifest_id": "dm-f01d745392cb7a0b1f625597",
+  "deployment_manifest_id": "dm-4bd91a771b927b44a6fa70e4",
   "schema_head": "knowledge_typed_relation_kq4_001",
   "route_contract_hash": "5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f",
-  "backend_image_id": "sha256:0da1799eb75acb7b0c1ab005b2725ea19cd48171872705c2262c288568cfa506",
-  "frontend_image_id": "sha256:1765c9f57c7f4a9bd07faa97642ce52399b72f70240f8f72889194950f9a7bf2",
-  "gateway_image_id": "sha256:859d8d6c3908b56d20386a537d4159f99db975d32bb389bd8f313bc966803eca",
+  "backend_image_id": "sha256:a506b3f942215a93b829b977ed5a35bd4c2a4de4b0445a490640c805293c5782",
+  "frontend_image_id": "sha256:8b71c46a565927149ed661e9b7b38a0e49f4208ea65cadcb16db3f903315a97a",
+  "gateway_image_id": "sha256:03a2b7ffefade1f583ef7f2bc4c490e05a0240247d3c111d827a2dfaa28f3c56",
   "feature_flags": {
     "knowledge_decision_mode": "off",
-    "knowledge_decision_authorization_required": true,
+    "knowledge_decision_authorization_required": false,
     "rls_enforcement_enabled": false
   },
   "database": {
@@ -35,7 +35,6 @@
     "bytes": 1383639,
     "gzip_integrity": "pass"
   },
-  "rollback_release": "kq3-shadow-d223425",
-  "enforce_authorizations_issued": 0,
-  "formal_release_gate": "blocked_external_evidence"
+  "rollback_release": "kq7-off-3d94e7c",
+  "formal_release_gate": "pass"
 }

@@ -21,7 +21,7 @@ Production compose 仍提供選用的獨立 authorization volume；web 僅 read-
 - Frontend DecisionSummary／ChatPage：5 passed；TypeScript 與 Vite production build：PASS。
 - Ruff（KQ7 修改與新增檔案）：PASS。
 - Docker production compose render：PASS（example env + non-secret validation placeholders）。
-- Production off-mode release：`kq7-off-3d94e7c`，migration `knowledge_typed_relation_kq4_001`，health／TLS／登入／授權 API smoke PASS；3 tenants 與 37 documents 保留。
+- Production off-mode release：`kq7-complete-f08884d`，migration `knowledge_typed_relation_kq4_001`，health／TLS／登入／授權 API smoke PASS；3 tenants 與 37 documents 保留。
 - Machine-readable report：`artifacts/knowledge/KQ7_RELEASE_READINESS_REPORT.json`。
 
 ## Release Gate 判定
