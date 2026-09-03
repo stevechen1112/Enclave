@@ -269,4 +269,18 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 - candidate 在獨立暫時 PostgreSQL 資料庫完成 28 項測試：ingestion orchestrator 9、I7 admission／fairness／recovery 8、P0 correctness 10、data lifecycle 1，全數通過。暫時資料庫於測試後自動刪除，正式八策資料未被測試使用。
 - 正式設定衛生檢查另發現 `ACCESS_TOKEN_EXPIRE_MINUTES`、`VOICE_STT_ENABLED`、`MAX_FILE_SIZE` 帶行尾註解，會被部分非 Compose 工具視為值的一部分。已備份並改成純值；獨立容器驗證為 `480 / 52428800 / True`。
 
-本節尚未完成條件：I9-023 部署、正式四格式並行 Gate 重跑、來源層級人工確認分組、刪除後 0 引用、瀏覽器手機版主要畫面與最終乾淨基線全部通過。
+### 12.1 I9-023 部署後結論
+
+- 永久修正已部署為 release `dd5a6bd`；API、前端、Gateway、core worker、Input worker 與 Beat 均使用本次正式 release，容器 restart 0、OOMKilled false。
+- 正式四格式並行 Gate 重跑：短文字、圖片、真正 24-bit PCM WAV 與含語音短影片四筆同時上傳，全部回傳 HTTP 202；文件到達已可問答，另外三種來源到達等待人工確認，沒有 failed。
+- 人工確認 API 顯示 3 個來源分組、16 筆候選；不再把候選片段數誤呈現為文件數。
+- 刪除前 Ask 正確回答測試唯一碼 8246 並附 2 筆來源；四筆測試來源刪除後再次提問為 0 筆來源，證明撤權與檢索同步生效。
+- iPhone 尺寸 390×844 的正式網域驗證通過：首頁、所有資產、等待人工確認、新增知識與問知識均可操作，頁面沒有 body 橫向溢位；「已可問答」可直接進入問知識。
+- 前端四個關鍵頁面測試共 11 項通過；後端 candidate 使用獨立 PostgreSQL 的 orchestrator、I7 resilience、P0 correctness 與 data lifecycle 共 28 項通過。
+- 7 條外部／本機 Provider 真實 probe 全部通過；三條 queue 深度皆為 0；部署後日誌沒有 deadlock、Traceback、Critical、WorkerLost 或 OOM。
+- 最後維運檢查發現 I9-025：映像雖有正確 tag，公開 `/health` 的 release identity 仍為 `dev/unknown`。後端、前端與 Gateway 已用同一份 release identity 重建；目前 `/health` 與 `/release.json` 均回傳 `input-i9-dd5a6bd`、完整 source commit、schema head、route contract hash 及 deployment manifest，後端 `identifiable=true`。
+- I9-025 重啟驗證也發現 release 目錄的舊環境檔會讓三條 Provider 路徑退回失效 Gemini。正式 runtime 已改回 `/opt/enclave` 的唯一 canonical 環境檔；release 內三個 runtime env 改成 canonical symlink，舊副本移至 mode 0700 的備份目錄，canonical 檔案權限統一為 0600。修正後 Provider 再次 7/7 通過。
+- 修正 I9-025 時曾因缺少固定 Compose project name 建立一套未接流量的全新空白容器／volume；正式 `enclave` 專案持續服務且資料未受影響。空白專案的容器、network 與三個 volume 已精確移除，最終掃描確認無殘留；後續正式操作固定使用 project `enclave`。
+- 最終正式資料庫基線：可見 SourceAsset 0、可見 Document 0、未完成 upload session 0、啟用使用者 2、Owner 2；隔離測試資料庫已移除。
+
+I9-023、I9-024、I9-025 狀態：`VERIFIED`。程式與正式環境技術驗收已完成，可交由李永仁進行第二輪高量真實複測；在租戶實際內容完成 Input → 人工確認 → 發布 → Ask 引用前，本輪仍不標記為 `CLOSED`。

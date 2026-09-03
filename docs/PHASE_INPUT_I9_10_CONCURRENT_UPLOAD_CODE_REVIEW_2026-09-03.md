@@ -4,7 +4,7 @@
 
 ## 結論
 
-`PASS FOR DEPLOYMENT`。
+`DEPLOYED / VERIFIED`。
 
 正式四格式並行上傳發現的 HTTP 500 已定位為 PostgreSQL tenant row lock upgrade deadlock。修正只改變 admission 序列化的 row-lock 強度，不放寬租戶上限、不改變 queue guard，也不改動 Input 內容與人工確認規則。
 
@@ -41,3 +41,16 @@
 4. 文件 Ask 能回答唯一碼且附來源；刪除全部測試來源後再次 Ask 為 0 引用。
 5. 八策最終可見來源 0、可見 Document 0、等待人工確認 0，兩位 Owner 保留。
 6. 應用容器 restart 0、OOMKilled false，三條 queue 清空，部署後無新 deadlock、Traceback 或 WorkerLost。
+
+## 部署後驗證結果
+
+- 正式 release：`dd5a6bd`。
+- 四個並行來源全部 HTTP 202；文件到達 ready，圖片、24-bit PCM WAV 與短影片到達 review_required，沒有 failed。
+- 人工確認 API：3 個來源分組、16 筆候選。
+- 刪除前 Ask 命中唯一碼 8246 並附 2 筆來源；刪除全部測試來源後 Ask 為 0 筆來源。
+- 正式資料庫最終基線：可見 SourceAsset 0、可見 Document 0、未完成 upload session 0、啟用使用者 2、Owner 2。
+- 7/7 Provider probe 通過；三條 queue 深度皆為 0；六個應用容器 restart 0、OOMKilled false，部署後未發現 deadlock、Traceback、Critical、WorkerLost 或 OOM。
+- `/health` 與 `/release.json` 的正式版本資訊一致，後端 release identity 為 `identifiable=true`；runtime 固定讀取主機 canonical env，避免 release 舊副本讓 Provider 設定倒退。
+- iPhone 尺寸正式網域主要旅程與前端 11 項關鍵頁面測試通過。
+
+部署 Gate 六項全數通過，本次 Code Review 結論由 `PASS FOR DEPLOYMENT` 更新為 `DEPLOYED / VERIFIED`。
