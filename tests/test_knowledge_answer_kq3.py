@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import inspect
 import json
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -237,3 +238,21 @@ def test_authorized_read_only_view_is_registered_and_rechecks_sources():
     assert "Document.tenant_id == current_user.tenant_id" in source
     assert "Document.tombstoned_at.is_(None)" in source
     assert '"read_only": True' in source
+
+
+def test_production_compose_persists_shadow_store_outside_tenant_db():
+    root = Path(__file__).resolve().parents[1]
+    compose = (root / "docker-compose.prod.yml").read_text(encoding="utf-8")
+    assert "knowledge_shadow_data:/var/lib/enclave/knowledge-shadow" in compose
+    assert "KNOWLEDGE_DECISION_SHADOW_STORE_PATH=/var/lib/enclave/knowledge-shadow" in compose
+    assert "knowledge_shadow_data:" in compose
+
+
+def test_production_example_keeps_shadow_disabled_and_key_unset():
+    root = Path(__file__).resolve().parents[1]
+    env_example = (root / ".env.production.example").read_text(encoding="utf-8")
+    normalized = env_example.replace("\r\n", "\n")
+    assert "KNOWLEDGE_DECISION_MODE=off" in normalized
+    assert "KNOWLEDGE_DECISION_TENANT_ALLOWLIST=" in normalized
+    assert "KNOWLEDGE_DECISION_KILL_SWITCH=false" in normalized
+    assert "KNOWLEDGE_DECISION_SHADOW_KEY=\n" in normalized

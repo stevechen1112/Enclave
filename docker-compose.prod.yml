@@ -23,10 +23,11 @@ services:
       context: .
       dockerfile: Dockerfile
     user: "0:0"
-    command: ["sh", "-c", "chown -R enclave:enclave /code/uploads && chmod 0750 /code/uploads"]
+    command: ["sh", "-c", "chown -R enclave:enclave /code/uploads /var/lib/enclave/knowledge-shadow && chmod 0750 /code/uploads /var/lib/enclave/knowledge-shadow"]
     restart: "no"
     volumes:
       - uploads_data:/code/uploads
+      - knowledge_shadow_data:/var/lib/enclave/knowledge-shadow
 
   # ── Backend API ──
   web:
@@ -68,8 +69,10 @@ services:
       - WEKNORA_API_KEY=${WEKNORA_API_KEY:-}
       - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
       - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
+      - KNOWLEDGE_DECISION_SHADOW_STORE_PATH=/var/lib/enclave/knowledge-shadow
     volumes:
       - uploads_data:/code/uploads    # Persist uploaded files only
+      - knowledge_shadow_data:/var/lib/enclave/knowledge-shadow
     depends_on:
       init-storage:
         condition: service_completed_successfully
@@ -571,6 +574,7 @@ volumes:
   postgres_data:
   redis_data:
   uploads_data:
+  knowledge_shadow_data:
   prometheus_data:
   grafana_data:
   ollama_embed_data:
