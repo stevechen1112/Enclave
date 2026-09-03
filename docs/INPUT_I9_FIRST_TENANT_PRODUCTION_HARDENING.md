@@ -57,6 +57,7 @@
 | I9-015 | 舊有完成文件缺少 lexical projection | P0 | DEPLOYED | 既有文件完成受稽核且具租戶邊界的索引回填，關鍵字檢索可命中 |
 | I9-016 | 共用 IMAGE_TAG 導致未變更 gateway 缺少部署標籤 | P1 | MITIGATED | 發布流程能保證所有 compose image 均有相同 release tag，部署前先驗證映像完整性 |
 | I9-017 | 首租戶尚無 active KB revision 時 shadow scope 關閉所有問答 | P0 | FIXED_IN_CODE | shadow 模式可讀取既有 answer-ready 文件並附引用；enforce 與無權 revision 仍 fail-closed |
+| I9-018 | 首次圖片尚待人工確認卻提前列入已可問答 | P0 | FIXED_IN_CODE | 首版待確認不列入可問答；已有正式舊版者在新版待確認期間仍可使用舊版 |
 
 ### 實作進度（持續追加）
 

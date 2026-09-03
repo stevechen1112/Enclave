@@ -21,6 +21,7 @@
 - lexical backfill 改用獨立 maintenance identity，跨租戶探索必須寫入 bypass audit，實際回填逐租戶套用 RLS context；另支援明確 `--tenant-id`。
 - 八策既有 2 份完成文件、共 4 個 chunks 已冪等回填 lexical projection。
 - 租戶尚未發布第一個 active KB revision 時，`shadow` 模式維持 legacy read compatibility；`enforce` 模式、明確指定 revision，以及已有 active revision但使用者無權存取時，仍 fail-closed。
+- 首次匯入且仍需人工確認的來源不再因 shadow document profile 提前顯示「已可問答」；只有既有正式 release 可在新版待確認期間繼續提供舊版回答。
 
 ## Review 檢核
 
@@ -28,7 +29,7 @@
 - 多租戶：回填不以普通應用身分跨租戶讀取；探索與逐租戶操作分離。
 - 可恢復：回填為 upsert，可重跑；原始來源、chunks 與 embeddings 不變。
 - 資料語意：沒有替使用者核准任何音訊／影片候選。
-- 測試：新增 canonical／Gateway 第一方 URL ACL、Redis 密碼、shadow compatibility 與 enforce fail-closed 回歸；I9 readiness／review focused suite共 11 passed，Python compileall 與 diff check 通過。
+- 測試：新增 canonical／Gateway 第一方 URL ACL、Redis 密碼、shadow compatibility、enforce fail-closed 與首版待確認 readiness 回歸；I9 readiness／review focused suite 共 12 passed，Python compileall 與 diff check 通過。
 - 限制：本機 PostgreSQL `localhost:5435` 未啟動，因此 DB 整合由正式環境的實際 RLS、lexical 與 Ask 測試補足。
 
 ## 部署後 Gate

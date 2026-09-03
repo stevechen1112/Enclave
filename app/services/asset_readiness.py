@@ -39,6 +39,19 @@ class AssetReadinessState:
         }
 
 
+def is_asset_answer_ready(
+    *, document_ready: bool, released_unit: bool, job_status: str | None
+) -> bool:
+    """Do not serve a first draft while its current source still needs review.
+
+    A previously released immutable unit remains usable while a newer source
+    revision is being reviewed.  A first-time shadow document does not.
+    """
+    if released_unit:
+        return True
+    return document_ready and job_status != "review_required"
+
+
 def derive_asset_lifecycle(
     *,
     answer_ready: bool,
@@ -218,7 +231,11 @@ def load_asset_readiness_states(
     for asset_id, asset in assets_by_id.items():
         current_revision = current_revision_by_asset.get(asset_id)
         job = jobs_by_revision.get(current_revision.id) if current_revision else None
-        answer_ready = asset_id in document_ready_assets or asset_id in released_asset_ids
+        answer_ready = is_asset_answer_ready(
+            document_ready=asset_id in document_ready_assets,
+            released_unit=asset_id in released_asset_ids,
+            job_status=job.status if job else None,
+        )
         pending_review_count = review_counts.get(asset_id, 0)
         lifecycle, reasons = derive_asset_lifecycle(
             answer_ready=answer_ready,
