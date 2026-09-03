@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional
 from uuid import UUID
 
+from app.config import settings
 from app.db.session import SessionLocal
 from app.models.knowledge_base import (
     KnowledgeBase,
@@ -71,14 +72,28 @@ def resolve_kb_revision_scope(
                 query = query.filter(KnowledgeBaseRevision.status == "active")
         else:
             query = base_query.filter(KnowledgeBaseRevision.status == "active")
+        candidates = query.all()
         allowed = [
-            revision.id for revision in query.all() if _can_access(revision.kb, authz)
+            revision.id for revision in candidates if _can_access(revision.kb, authz)
         ]
     finally:
         if own:
             session.close()
 
     scope.pop("kb_revision_id", None)
+    if (
+        not requested_ids
+        and not candidates
+        and settings.KNOWLEDGE_UNIT_READ_MODE == "shadow"
+    ):
+        # Shadow is the deliberate compatibility period while a tenant has
+        # not yet published its first immutable KB revision.  Returning an
+        # explicit empty list here silently disabled the legacy read path even
+        # though readiness correctly reported completed documents as usable.
+        # Once any active revision exists, membership denial must still remain
+        # explicit and fail closed; enforce mode always remains fail closed.
+        scope.pop("kb_revision_ids", None)
+        return scope
     scope["kb_revision_ids"] = [str(value) for value in sorted(allowed, key=str)]
     # No active revision is not a legacy-search escape hatch. Processing a
     # document and publishing knowledge are separate states; an empty active

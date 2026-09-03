@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from unittest.mock import Mock
+from unittest.mock import patch
 
 from sqlalchemy.dialects import postgresql
 
 from app.models.document import Document
 from app.services import kb_retrieval
 from app.services.document_visibility import apply_document_visibility
+from app.services.kb_scope_policy import resolve_kb_revision_scope
 
 
 def test_first_party_web_input_is_not_treated_as_an_external_connector() -> None:
@@ -78,3 +80,37 @@ def test_gateway_visibility_keeps_first_party_web_input_visible() -> None:
     )
     assert "documents.source_type != 'connector'" in sql
     assert "documents.source_system IS NULL" not in sql
+
+
+def test_shadow_tenant_without_first_release_uses_legacy_read_scope(monkeypatch) -> None:
+    authz = Mock()
+    authz.tenant_id = Mock()
+    query = Mock()
+    query.join.return_value = query
+    query.filter.return_value = query
+    query.all.return_value = []
+    db = Mock()
+    db.query.return_value = query
+    monkeypatch.setattr(kb_retrieval.settings, "KNOWLEDGE_UNIT_READ_MODE", "shadow")
+
+    with patch("app.services.rls.apply_rls_context"):
+        scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
+
+    assert scope == {}
+
+
+def test_enforce_tenant_without_first_release_remains_fail_closed(monkeypatch) -> None:
+    authz = Mock()
+    authz.tenant_id = Mock()
+    query = Mock()
+    query.join.return_value = query
+    query.filter.return_value = query
+    query.all.return_value = []
+    db = Mock()
+    db.query.return_value = query
+    monkeypatch.setattr(kb_retrieval.settings, "KNOWLEDGE_UNIT_READ_MODE", "enforce")
+
+    with patch("app.services.rls.apply_rls_context"):
+        scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
+
+    assert scope == {"kb_revision_ids": []}
