@@ -252,6 +252,8 @@ services:
     command: >
       celery -A app.celery_app worker
         --loglevel=info
+        --queues=celery
+        --hostname=core@%h
         --concurrency=2
         --max-tasks-per-child=200
     restart: always
@@ -299,6 +301,76 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # Heavy document/OCR/audio/video work is serialised away from lifecycle,
+  # outbox and governance jobs. This prevents one FFmpeg/OCR spike from
+  # terminating every asynchronous capability in the product.
+  worker-input:
+    image: ${IMAGE_PREFIX:-ghcr.io/enclave}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      celery -A app.celery_app worker
+        --loglevel=info
+        --queues=input.media,input.document
+        --hostname=input@%h
+        --concurrency=1
+        --prefetch-multiplier=1
+        --max-tasks-per-child=10
+        --max-memory-per-child=1500000
+    restart: always
+    env_file:
+      - ${APP_ENV_FILE:-.env.production}
+      - ${MAINTENANCE_ENV_FILE:-.env.maintenance}
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - POSTGRES_SERVER=db
+      - REDIS_HOST=redis
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - OMP_THREAD_LIMIT=${MEDIA_PROCESSING_THREADS:-1}
+      - OMP_NUM_THREADS=${MEDIA_PROCESSING_THREADS:-1}
+      - OPENBLAS_NUM_THREADS=${MEDIA_PROCESSING_THREADS:-1}
+      - RAGFLOW_ENABLED=${RAGFLOW_ENABLED:-false}
+      - PIPESHUB_ENABLED=${PIPESHUB_ENABLED:-false}
+      - WEKNORA_ENABLED=${WEKNORA_ENABLED:-false}
+      - RAGFLOW_BASE_URL=${RAGFLOW_BASE_URL:-http://ragflow:9380}
+      - PIPESHUB_BASE_URL=${PIPESHUB_BASE_URL:-http://pipeshub-api:3000}
+      - WEKNORA_BASE_URL=${WEKNORA_BASE_URL:-http://weknora:8080}
+      - RAGFLOW_API_KEY=${RAGFLOW_API_KEY:-}
+      - PIPESHUB_API_KEY=${PIPESHUB_API_KEY:-}
+      - WEKNORA_API_KEY=${WEKNORA_API_KEY:-}
+      - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
+      - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
+    volumes:
+      - uploads_data:/code/uploads
+    depends_on:
+      init-storage:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.celery_app inspect ping --timeout 10 2>/dev/null | grep -q OK"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
     logging:
       driver: json-file
       options:

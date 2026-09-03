@@ -24,7 +24,9 @@ from app.models.asset import AssetRevision, DerivedArtifact, EvidenceSpan
 
 
 class VideoPolicyError(ValueError):
-    pass
+    retryable = False
+    code = "video_policy_rejected"
+    user_message = "此影片不符合目前的處理規格，請查看問題詳情後重新上傳。"
 
 
 @dataclass(frozen=True)
@@ -186,6 +188,8 @@ def extract_audio_chunks(
     chunk_seconds: int,
     runner: Callable[..., subprocess.CompletedProcess[str]] = _run,
 ) -> list[str]:
+    from app.config import settings
+
     pattern = str(Path(output_dir) / "audio-%04d.mp3")
     runner(
         [
@@ -194,6 +198,8 @@ def extract_audio_chunks(
             "-loglevel",
             "error",
             "-y",
+            "-threads",
+            str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
             "-i",
             video_path,
             "-vn",
@@ -252,6 +258,10 @@ def extract_keyframes(
                 "-loglevel",
                 "error",
                 "-y",
+                "-threads",
+                str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
+                "-filter_threads",
+                str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
                 "-ss",
                 f"{timestamp_seconds:.3f}",
                 "-i",
@@ -331,11 +341,15 @@ def detect_first_audio_activity_ms(
 ) -> int:
     """Return the first non-silent sample offset for timestamp alignment."""
 
+    from app.config import settings
+
     completed = runner(
         [
             "ffmpeg",
             "-hide_banner",
             "-nostats",
+            "-threads",
+            str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
             "-i",
             path,
             "-af",

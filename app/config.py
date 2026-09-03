@@ -226,6 +226,9 @@ class Settings(BaseSettings):
         "mp3,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,"
         "aac,vorbis,flac,opus,alac,amr_nb,amr_wb"
     )
+    MEDIA_PROCESSING_THREADS: int = 1
+    INGESTION_STALE_AFTER_SECONDS: int = 30 * 60
+    INGESTION_MAX_ATTEMPTS: int = 3
 
     # Query embedding cache（ENGINEERING_PLAN §7.2 P0 補強）
     EMBEDDING_CACHE_ENABLED: bool = True

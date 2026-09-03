@@ -195,9 +195,14 @@ def test_reconciliation_requeues_then_dead_letters_without_loss(test_engine):
         tenant = Tenant(id=uuid.uuid4(), name="I7 reconcile", plan="free", status="active")
         db.add(tenant)
         db.flush()
-        revision = _seed_revision(db, tenant.id)
-        retry = _seed_job(db, tenant.id, revision.id, index=1, status="running", attempt=1)
-        exhausted = _seed_job(db, tenant.id, revision.id, index=2, status="running", attempt=3)
+        retry_revision = _seed_revision(db, tenant.id)
+        exhausted_revision = _seed_revision(db, tenant.id)
+        retry = _seed_job(
+            db, tenant.id, retry_revision.id, index=1, status="running", attempt=1
+        )
+        exhausted = _seed_job(
+            db, tenant.id, exhausted_revision.id, index=2, status="running", attempt=3
+        )
         result = reconcile_stale_ingestion_jobs(
             db,
             tenant_id=tenant.id,
@@ -205,9 +210,17 @@ def test_reconciliation_requeues_then_dead_letters_without_loss(test_engine):
             max_attempts=3,
         )
         db.flush()
-        assert result == {"scanned": 2, "requeued": 1, "dead_lettered": 1}
+        assert result == {
+            "scanned": 2,
+            "requeued": 1,
+            "dead_lettered": 1,
+            "requeued_job_ids": [str(retry.id)],
+        }
         assert db.query(IngestionJob).filter(IngestionJob.id == retry.id).one().status == "queued"
         assert db.query(IngestionJob).filter(IngestionJob.id == exhausted.id).one().status == "failed"
+        assert retry_revision.ingestion_status == "queued"
+        assert exhausted_revision.ingestion_status == "failed"
+        assert exhausted.error["retryable"] is False
         assert db.query(DeadLetterEvent).filter(
             DeadLetterEvent.original_event_id == exhausted.id
         ).count() == 1

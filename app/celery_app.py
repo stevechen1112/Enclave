@@ -20,7 +20,15 @@ celery_app.conf.broker_connection_max_retries = 5
 celery_app.conf.broker_pool_limit = 3
 
 celery_app.conf.task_routes = {
-    "app.tasks.*": {"queue": "celery"}
+    # Heavy Input workloads are serialised by the dedicated production worker.
+    # Explicit routes must precede the general task namespaces.
+    "tasks.process_audio_asset": {"queue": "input.media"},
+    "tasks.process_video_asset": {"queue": "input.media"},
+    "tasks.transcribe_knowledge_capture": {"queue": "input.media"},
+    "app.tasks.document_tasks.process_document_task": {"queue": "input.document"},
+    "app.tasks.document_tasks.process_url_task": {"queue": "input.document"},
+    "app.tasks.*": {"queue": "celery"},
+    "tasks.*": {"queue": "celery"},
 }
 
 celery_app.conf.update(
@@ -29,6 +37,7 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    worker_prefetch_multiplier=1,
 )
 
 # Auto-discover tasks so that @celery_app.task decorators in app/tasks/ get registered
@@ -80,6 +89,10 @@ celery_app.conf.beat_schedule = {
     "expire-upload-sessions": {
         "task": "tasks.expire_upload_sessions",
         "schedule": 3600.0,
+    },
+    "reconcile-stale-ingestion": {
+        "task": "tasks.reconcile_stale_ingestion",
+        "schedule": 300.0,
     },
 }
 

@@ -23,7 +23,14 @@ def _segment_digest(*, text: str, start_ms: int, end_ms: int, speaker: str | Non
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-@celery_app.task(name="tasks.process_audio_asset", bind=True, max_retries=2)
+@celery_app.task(
+    name="tasks.process_audio_asset",
+    bind=True,
+    max_retries=2,
+    acks_late=True,
+    soft_time_limit=1500,
+    time_limit=1800,
+)
 def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
     db = SessionLocal()
     tenant_uuid = UUID(tenant_id)

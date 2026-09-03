@@ -15,7 +15,14 @@ from app.db.session import SessionLocal
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="tasks.process_video_asset", bind=True, max_retries=2)
+@celery_app.task(
+    name="tasks.process_video_asset",
+    bind=True,
+    max_retries=2,
+    acks_late=True,
+    soft_time_limit=1500,
+    time_limit=1800,
+)
 def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
     db = SessionLocal()
     tenant_uuid = UUID(tenant_id)
@@ -199,6 +206,10 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
     except Exception as exc:
         db.rollback()
         logger.exception("video processing failed: revision=%s", revision_id)
+        from app.services.ingestion_failures import classify_ingestion_failure
+
+        failure = classify_ingestion_failure(exc)
+        exhausted = (not failure.retryable) or self.request.retries >= self.max_retries
         try:
             from app.models.asset import AssetRevision, SourceAsset
             from app.models.ingestion import IngestionJob
@@ -230,11 +241,13 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 get_ingestion_orchestrator().fail(
                     db,
                     job,
-                    code="video_processing_failed",
-                    message=str(exc),
+                    code=failure.code,
+                    message=failure.technical_message,
                     phase="video_processing",
+                    category=failure.category,
+                    retryable=failure.retryable,
+                    user_message=failure.user_message,
                 )
-            exhausted = self.request.retries >= self.max_retries
             if revision is not None:
                 revision.ingestion_status = "failed" if exhausted else "pending"
                 asset = (
@@ -251,7 +264,7 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
         except Exception:
             db.rollback()
             logger.exception("failed to persist video task failure state")
-        if self.request.retries < self.max_retries:
+        if failure.retryable and self.request.retries < self.max_retries:
             raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
         raise
     finally:

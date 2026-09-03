@@ -1128,42 +1128,13 @@ def _create_reference_asset(
 def _dispatch_retry(
     db: Session, asset: SourceAsset, revision: AssetRevision, job: IngestionJob
 ) -> None:
-    if job.adapter_key == "core.video":
-        from app.tasks.video_tasks import process_video_asset
+    from app.services.ingestion_dispatch import dispatch_ingestion_job
 
-        process_video_asset.delay(str(asset.tenant_id), str(revision.id), str(job.id))
-        return
-    if job.adapter_key == "core.long_interview_audio":
-        from app.tasks.audio_tasks import process_audio_asset
-
-        process_audio_asset.delay(str(asset.tenant_id), str(revision.id), str(job.id))
-        return
-    if job.adapter_key == "core.document":
-        from app.tasks.document_tasks import process_document_task, process_url_task
-
-        document = (
-            db.query(Document)
-            .filter(
-                Document.tenant_id == asset.tenant_id,
-                Document.source_asset_id == asset.id,
-                Document.tombstoned_at.is_(None),
-            )
-            .first()
-        )
-        if document is None:
-            raise RuntimeError("document compatibility projection is unavailable")
-        if document.source_type == "web":
-            process_url_task.delay(
-                str(document.id), str(document.file_path), str(asset.tenant_id)
-            )
-        else:
-            process_document_task.delay(
-                document_id=str(document.id),
-                file_path=str(document.file_path),
-                tenant_id=str(asset.tenant_id),
-            )
-        return
-    raise RuntimeError(f"no retry dispatcher for adapter {job.adapter_key}")
+    # Keep the compatibility signature while centralising routing for manual
+    # retry and automatic stale-job recovery.
+    if revision.id != job.asset_revision_id or asset.id != revision.asset_id:
+        raise RuntimeError("retry dispatch asset lineage does not match")
+    dispatch_ingestion_job(db, job)
 
 
 @router.post("/{asset_id}/retry", status_code=status.HTTP_202_ACCEPTED)

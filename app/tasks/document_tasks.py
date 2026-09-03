@@ -93,7 +93,13 @@ def embed_texts(texts: List[str], input_type: str = "document") -> List[List[flo
         return _embed_voyage(texts, model, input_type)
 
 
-@celery_app.task(bind=True, max_retries=3)
+@celery_app.task(
+    bind=True,
+    max_retries=3,
+    acks_late=True,
+    soft_time_limit=1500,
+    time_limit=1800,
+)
 def process_document_task(self, document_id: str, file_path: str, tenant_id: str):
     """
     背景任務：處理文件
@@ -634,7 +640,13 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         db.close()
 
 
-@celery_app.task(bind=True, max_retries=2)
+@celery_app.task(
+    bind=True,
+    max_retries=2,
+    acks_late=True,
+    soft_time_limit=1500,
+    time_limit=1800,
+)
 def process_url_task(self, document_id: str, url: str, tenant_id: str):
     """
     背景任務：擷取網頁 URL 內容並向量化。

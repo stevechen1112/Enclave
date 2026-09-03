@@ -69,7 +69,7 @@ services:
   
   worker:
     build: .
-    command: celery -A app.celery_app worker --loglevel=info --concurrency=4
+    command: celery -A app.celery_app worker --loglevel=info --concurrency=4 --queues=celery,input.media,input.document
     volumes:
       - .:/code
     healthcheck:

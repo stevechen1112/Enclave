@@ -143,6 +143,8 @@ def extract_audio_chunks(
     chunk_seconds: int,
     runner: Runner = run_media_command,
 ) -> list[str]:
+    from app.config import settings
+
     if chunk_seconds < 10:
         raise MediaPolicyError("audio chunk duration is below safe minimum")
     pattern = str(Path(output_dir) / "audio-%05d.mp3")
@@ -153,6 +155,8 @@ def extract_audio_chunks(
             "-loglevel",
             "error",
             "-y",
+            "-threads",
+            str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
             "-i",
             source_path,
             "-vn",
@@ -193,6 +197,10 @@ def create_browser_video_proxy(
             "-loglevel",
             "error",
             "-y",
+            "-threads",
+            str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
+            "-filter_threads",
+            str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
             "-i",
             source_path,
             "-map",
@@ -232,6 +240,8 @@ def create_browser_audio_proxy(
 ) -> str:
     """Create a broadly supported, bounded MP3 review proxy."""
 
+    from app.config import settings
+
     runner(
         [
             "ffmpeg",
@@ -239,6 +249,8 @@ def create_browser_audio_proxy(
             "-loglevel",
             "error",
             "-y",
+            "-threads",
+            str(max(1, int(settings.MEDIA_PROCESSING_THREADS))),
             "-i",
             source_path,
             "-vn",

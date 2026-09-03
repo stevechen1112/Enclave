@@ -9,9 +9,11 @@ from math import ceil
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
+from app.models.asset import AssetRevision, SourceAsset
 from app.models.ingestion import IngestionJob, InputOperationMetric
 from app.models.outbox import DeadLetterEvent
 from app.services.capacity_gate import load_capacity_spec
@@ -250,18 +252,24 @@ def reconcile_stale_ingestion_jobs(
     tenant_id: UUID,
     stale_before: datetime,
     max_attempts: int = 3,
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Requeue recoverable stale jobs and dead-letter exhausted jobs."""
 
     from app.services.ingestion_orchestrator import get_ingestion_orchestrator
 
+    last_activity = func.coalesce(
+        IngestionJob.updated_at,
+        IngestionJob.started_at,
+        IngestionJob.created_at,
+    )
     jobs = db.query(IngestionJob).filter(
         IngestionJob.tenant_id == tenant_id,
         IngestionJob.status == "running",
-        IngestionJob.started_at < stale_before,
+        last_activity < stale_before,
     ).with_for_update().all()
     requeued = 0
     dead_lettered = 0
+    requeued_job_ids: list[str] = []
     orchestrator = get_ingestion_orchestrator()
     for job in jobs:
         if int(job.attempt or 0) < max_attempts:
@@ -272,7 +280,20 @@ def reconcile_stale_ingestion_jobs(
                 phase="reconciled_retry",
                 details={"reason": "stale_worker", "previous_attempt": job.attempt},
             )
+            revision = db.query(AssetRevision).filter(
+                AssetRevision.tenant_id == tenant_id,
+                AssetRevision.id == job.asset_revision_id,
+            ).first()
+            if revision is not None:
+                revision.ingestion_status = "queued"
+                asset = db.query(SourceAsset).filter(
+                    SourceAsset.tenant_id == tenant_id,
+                    SourceAsset.id == revision.asset_id,
+                ).first()
+                if asset is not None:
+                    asset.status = "processing"
             requeued += 1
+            requeued_job_ids.append(str(job.id))
             continue
         exists = db.query(DeadLetterEvent).filter(
             DeadLetterEvent.tenant_id == tenant_id,
@@ -285,7 +306,22 @@ def reconcile_stale_ingestion_jobs(
             code="retry_exhausted",
             message="stale ingestion job exceeded retry limit",
             phase="dead_lettered",
+            category="resource",
+            retryable=False,
+            user_message="處理程序中斷且已達安全重試上限，請由管理員重新處理。",
         )
+        revision = db.query(AssetRevision).filter(
+            AssetRevision.tenant_id == tenant_id,
+            AssetRevision.id == job.asset_revision_id,
+        ).first()
+        if revision is not None:
+            revision.ingestion_status = "failed"
+            asset = db.query(SourceAsset).filter(
+                SourceAsset.tenant_id == tenant_id,
+                SourceAsset.id == revision.asset_id,
+            ).first()
+            if asset is not None:
+                asset.status = "failed"
         if exists is None:
             db.add(
                 DeadLetterEvent(
@@ -301,4 +337,9 @@ def reconcile_stale_ingestion_jobs(
             )
         dead_lettered += 1
     db.flush()
-    return {"scanned": len(jobs), "requeued": requeued, "dead_lettered": dead_lettered}
+    return {
+        "scanned": len(jobs),
+        "requeued": requeued,
+        "dead_lettered": dead_lettered,
+        "requeued_job_ids": requeued_job_ids,
+    }
