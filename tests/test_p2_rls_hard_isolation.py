@@ -308,7 +308,9 @@ def test_shadow_visibility_matches_explicit_tenant_ownership(seed: Seed) -> None
             minimum_tenants=2,
         )
     assert report["status"] == "PASS", report
-    assert report["protected_table_count"] == 100
+    # P2 established the 100-table floor; later product migrations add tenant
+    # tables and must raise the verified count instead of making this stale.
+    assert report["protected_table_count"] >= 100
     assert report["comparison_count"] >= 200
     assert report["difference_count"] == 0
 

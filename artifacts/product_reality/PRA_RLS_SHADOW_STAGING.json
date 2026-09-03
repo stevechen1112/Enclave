@@ -1,0 +1,1568 @@
+{
+  "comparison_count": 222,
+  "comparisons": [
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "agent_approval_requests",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "approval_policies",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "artifact_review_decisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "asset_revisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "auditlogs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "billing_records",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "categories",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "categoryrevisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "chat_feedbacks",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "connector_instances",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "connector_resources",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "conversations",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "dead_letter_events",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "departments",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "derived_artifacts",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "document_artifacts",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "document_profiles",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "documentchunks",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "documents",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "documentversions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "evidence_spans",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "external_principals",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "featurepermissions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "form_definitions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "form_instances",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "gateway_resources",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "generatedreports",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "graph_edges",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "graph_entities",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "import_batch_items",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "import_batches",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "index_artifact_revisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "ingestion_job_events",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "ingestion_jobs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_operation_metrics",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_acceptances",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_audits",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_daily_metrics",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_incidents",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilots",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "integrityreports",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "interaction_sessions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "job_modules",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "kbbackups",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowhow_cards",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_base_members",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_base_revision_documents",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_base_revisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_bases",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_entities",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_entity_aliases",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_evaluation_case_results",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_evaluation_human_reviews",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_evaluation_runs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_freshness_states",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_lexical_index",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_policy_snapshots",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_procedure_graphs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_procedure_phases",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_releases",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_rollback_points",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_runtime_releases",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_structured_fields",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_structured_rows",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_structured_tables",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_relation_projections",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_release_memberships",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_releases",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_revisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_units",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledgegaps",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "messages",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_approval_requests",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_audio_policies",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_events",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_form_templates",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_job_roles",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowhow_lineage",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowledge_capture_chunks",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowledge_capture_sessions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowledge_capture_transcript_segments",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_review_reminders",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_scene_registry",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_costs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_definitions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_run_events",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_runs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_user_job_role_assignments",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_write_audits",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_write_requests",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "outbox_events",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "policy_deny_entries",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "projection_status",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "retrievaltraces",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "review_items",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "rule_sets",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "source_acl_entries",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "source_assets",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "sync_cursors",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "tenant_module_bindings",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "tenant_sidecar_bindings",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "tenant_sso_configs",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "tenant_term_dictionaries",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "tenants",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "upload_parts",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "upload_sessions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "usagerecords",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "users",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "watch_folders",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "wiki_pages",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "wiki_revisions",
+      "tenant_id": "0d7199cc-7ee3-4289-a2e2-0b7d27f6198f"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "agent_approval_requests",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "approval_policies",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "artifact_review_decisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "asset_revisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "auditlogs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "billing_records",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "categories",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "categoryrevisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "chat_feedbacks",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "connector_instances",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "connector_resources",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "conversations",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "dead_letter_events",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "departments",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "derived_artifacts",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "document_artifacts",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "document_profiles",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "documentchunks",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 2,
+      "difference": 0,
+      "expected_rows": 2,
+      "table": "documents",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "documentversions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "evidence_spans",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "external_principals",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "featurepermissions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "form_definitions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "form_instances",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "gateway_resources",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "generatedreports",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "graph_edges",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "graph_entities",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "import_batch_items",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "import_batches",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "index_artifact_revisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "ingestion_job_events",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "ingestion_jobs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_operation_metrics",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_acceptances",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_audits",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_daily_metrics",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilot_incidents",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "input_pilots",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "integrityreports",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "interaction_sessions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "job_modules",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "kbbackups",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowhow_cards",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_base_members",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_base_revision_documents",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_base_revisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_bases",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_entities",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_entity_aliases",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_evaluation_case_results",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_evaluation_human_reviews",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_evaluation_runs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_freshness_states",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_lexical_index",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_policy_snapshots",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_procedure_graphs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_procedure_phases",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_releases",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_rollback_points",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_runtime_releases",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_structured_fields",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_structured_rows",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_structured_tables",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_relation_projections",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_release_memberships",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_releases",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_unit_revisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledge_units",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "knowledgegaps",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "messages",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_approval_requests",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_audio_policies",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_events",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_form_templates",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_job_roles",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowhow_lineage",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowledge_capture_chunks",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowledge_capture_sessions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_knowledge_capture_transcript_segments",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_review_reminders",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_scene_registry",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_costs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_definitions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_run_events",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_task_runs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_user_job_role_assignments",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_write_audits",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "mka_write_requests",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "outbox_events",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "policy_deny_entries",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "projection_status",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "retrievaltraces",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "review_items",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "rule_sets",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "source_acl_entries",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "source_assets",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "sync_cursors",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "tenant_module_bindings",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "tenant_sidecar_bindings",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "tenant_sso_configs",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "tenant_term_dictionaries",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "tenants",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "upload_parts",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "upload_sessions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "usagerecords",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 1,
+      "difference": 0,
+      "expected_rows": 1,
+      "table": "users",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "watch_folders",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "wiki_pages",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    },
+    {
+      "application_visible_rows": 0,
+      "difference": 0,
+      "expected_rows": 0,
+      "table": "wiki_revisions",
+      "tenant_id": "54a223af-37a7-4ff3-8f94-9f8d7352139b"
+    }
+  ],
+  "difference_count": 0,
+  "differences": [],
+  "errors": [],
+  "gate": "RLS-SHADOW-DIFFERENCE",
+  "generated_at": "2026-09-03T14:08:08.150177+00:00",
+  "protected_table_count": 111,
+  "schema_version": 1,
+  "status": "PASS",
+  "tenant_count": 2
+}

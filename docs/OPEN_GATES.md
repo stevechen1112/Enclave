@@ -72,7 +72,8 @@ python scripts/mka_progress_gate.py --all   # MKA 獨立閘門（不混入主計
 - 計畫 checkbox：**47/48**
 - 可驗證 code：**100% (32/32)**
 - false_green：**0**
-- 剩餘 human gate：**1**（外部滲透）
+- 內部工程 Gate：**0 個阻擋項**
+- 外部商業化追蹤：滲透、法律與客戶 DR；不計入開發完成率
 - 本機階段 SKIP：SharePoint / Google Drive OAuth
 
 ## 真治本閘門（FD-*，架構契約）
@@ -106,7 +107,7 @@ python scripts/mka_progress_gate.py --all   # MKA 獨立閘門（不混入主計
 > **唯一仍未勾的出口條件 checkbox**：外部滲透測試。  
 > **DD P0／P1**：已完成（pytest 277+）。  
 > **P2 進度**：…；code-review 修復：資源級 deny、watcher review 清舊索引、SSO tenant filter、deploy stop→migrate→up、憑證 Fernet 加密。  
-> 剩餘人工閘門：外部滲透／法律／DR。
+> 外部商業化追蹤：外部滲透／法律／DR；與工程完成判定分開。
 
 ## 已可由自動化關閉（本輪已關）
 

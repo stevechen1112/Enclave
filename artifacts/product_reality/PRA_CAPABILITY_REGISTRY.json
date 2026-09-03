@@ -1,0 +1,3531 @@
+{
+  "schema_version": "pra-capability-registry/v1",
+  "api_routes": [
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/dashboard",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:39",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/quota/plans",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:383",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/system/health",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:259",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/system/provider-health",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:322",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/system/provider-health/probe",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:330",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tenants/{tenant_id}/quota",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:342",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/tenants/{tenant_id}/quota",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:355",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/tenants/{tenant_id}/quota/apply-plan",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:369",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/tenants/{tenant_id}/security",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:396",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/tenants/{tenant_id}/security",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:409",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:126",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/users/invite",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:169",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/users/{user_id}",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:234",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/users/{user_id}",
+      "module": "admin",
+      "source": "app/api/v1/endpoints/admin.py:210",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent-approvals/pending",
+      "module": "agent_approvals",
+      "source": "app/api/v1/endpoints/agent_approvals.py:25",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent-approvals/{request_id}/approve",
+      "module": "agent_approvals",
+      "source": "app/api/v1/endpoints/agent_approvals.py:53",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent-approvals/{request_id}/reject",
+      "module": "agent_approvals",
+      "source": "app/api/v1/endpoints/agent_approvals.py:71",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/batches",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:791",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/batches/report",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:830",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/batches/trigger",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:812",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/browse",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:266",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/folders",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:209",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/folders",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:222",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/agent/folders/{folder_id}",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:594",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/agent/folders/{folder_id}/toggle",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:612",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/pick-local-folder",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:312",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/review",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:681",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/review/batch-approve",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:773",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/review/{item_id}/approve",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:713",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/review/{item_id}/modify",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:752",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/review/{item_id}/reject",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:732",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/scan",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:633",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/scan-preview",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:513",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/start",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:651",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/agent/status",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:164",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/agent/stop",
+      "module": "agent",
+      "source": "app/api/v1/endpoints/agent.py:665",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/analytics/anomalies",
+      "module": "analytics",
+      "source": "app/api/v1/endpoints/analytics.py:197",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/analytics/budget-alerts",
+      "module": "analytics",
+      "source": "app/api/v1/endpoints/analytics.py:286",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/analytics/cost-units",
+      "module": "analytics",
+      "source": "app/api/v1/endpoints/analytics.py:26",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/analytics/trends/daily",
+      "module": "analytics",
+      "source": "app/api/v1/endpoints/analytics.py:86",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/analytics/trends/monthly-by-tenant",
+      "module": "analytics",
+      "source": "app/api/v1/endpoints/analytics.py:135",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/approvals",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:138",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/approvals/inbox",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:138",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/approvals/policies",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:79",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/approvals/policies",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:95",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/approvals/{approval_id}",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:150",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/approvals/{approval_id}/approve",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:195",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/approvals/{approval_id}/reject",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:211",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/approvals/{approval_id}/request-changes",
+      "module": "mka_approvals",
+      "source": "app/api/v1/endpoints/mka_approvals.py:227",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audio-policy",
+      "module": "audio_policy",
+      "source": "app/api/v1/endpoints/audio_policy.py:39",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/audio-policy",
+      "module": "audio_policy",
+      "source": "app/api/v1/endpoints/audio_policy.py:51",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audio-policy/costs",
+      "module": "audio_policy",
+      "source": "app/api/v1/endpoints/audio_policy.py:66",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/logs",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:20",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/logs/export",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:248",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/usage/by-action",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:74",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/usage/export",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:288",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/usage/me/by-action",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:119",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/usage/me/summary",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:99",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/usage/records",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:139",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/usage/summary",
+      "module": "audit",
+      "source": "app/api/v1/endpoints/audit.py:51",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/change-password",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:243",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login/access-token",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:186",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login/demo",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:124",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/login/options",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:39",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/mfa/disable",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:398",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/mfa/enable",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:353",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/mfa/setup",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:321",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/mfa/verify",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:387",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/resend-verification",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:449",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/verify-email",
+      "module": "auth",
+      "source": "app/api/v1/endpoints/auth.py:425",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/analytics/summary",
+      "module": "chat_analytics",
+      "source": "app/api/v1/endpoints/chat_analytics.py:50",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/analytics/top-queries",
+      "module": "chat_analytics",
+      "source": "app/api/v1/endpoints/chat_analytics.py:194",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/analytics/trend",
+      "module": "chat_analytics",
+      "source": "app/api/v1/endpoints/chat_analytics.py:124",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/analytics/unanswered",
+      "module": "chat_analytics",
+      "source": "app/api/v1/endpoints/chat_analytics.py:245",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/chat",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:388",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/chat/stream",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:122",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/conversations",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:570",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/conversations/search",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:591",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/chat/conversations/{conversation_id}",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:670",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/conversations/{conversation_id}",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:609",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/conversations/{conversation_id}/export",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:754",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/conversations/{conversation_id}/messages",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:627",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/dashboard/rag",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:790",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/feedback",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:693",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/feedback/stats",
+      "module": "chat",
+      "source": "app/api/v1/endpoints/chat.py:735",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/dashboard",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:54",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/deployment-mode",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:113",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/company/deployment-mode",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:129",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/profile",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:82",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/quota",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:104",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/usage/by-user",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:285",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/usage/summary",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:270",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/company/users",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:193",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/company/users/invite",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:153",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/company/users/{user_id}",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:247",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/company/users/{user_id}",
+      "module": "company",
+      "source": "app/api/v1/endpoints/company.py:217",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors/",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:196",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:215",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors/acl/sample/{source_record_id}",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:360",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors/batches/{batch_id}",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:371",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/batches/{batch_id}/retry-failed",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:412",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/oauth/authorize-url",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:67",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/oauth/token-exchange",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:108",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors/types",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:48",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/connectors/{connector_id}",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:345",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/credentials/rotate",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:327",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/pause",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:234",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/reindex",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:318",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/resume",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:251",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connectors/{connector_id}/status",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:268",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/connectors/{connector_id}/sync",
+      "module": "connectors",
+      "source": "app/api/v1/endpoints/connectors.py:298",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments/",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:51",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/departments/",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:86",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments/features/",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:161",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/departments/features/",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:171",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments/features/available",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:153",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments/options",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:35",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments/tree",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:64",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/departments/{department_id}",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:133",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/departments/{department_id}",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:101",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/departments/{department_id}",
+      "module": "departments",
+      "source": "app/api/v1/endpoints/departments.py:115",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/deprecations",
+      "module": "deprecations",
+      "source": "app/api/v1/endpoints/deprecations.py:58",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/deprecations/usage",
+      "module": "deprecations",
+      "source": "app/api/v1/endpoints/deprecations.py:28",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/documents/",
+      "module": "documents",
+      "source": "app/api/v1/endpoints/documents.py:65",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/documents/batch",
+      "module": "documents",
+      "source": "app/api/v1/endpoints/documents.py:466",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/documents/supported-formats",
+      "module": "documents",
+      "source": "app/api/v1/endpoints/documents.py:53",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/documents/upload",
+      "module": "documents",
+      "source": "app/api/v1/endpoints/documents.py:116",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/documents/{document_id}",
+      "module": "documents",
+      "source": "app/api/v1/endpoints/documents.py:556",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/documents/{document_id}",
+      "module": "documents",
+      "source": "app/api/v1/endpoints/documents.py:512",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/enterprise/adapters",
+      "module": "enterprise",
+      "source": "app/api/v1/endpoints/enterprise.py:34",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/enterprise/writes",
+      "module": "enterprise",
+      "source": "app/api/v1/endpoints/enterprise.py:67",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/enterprise/writes/audit",
+      "module": "enterprise",
+      "source": "app/api/v1/endpoints/enterprise.py:102",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/enterprise/{system}/health",
+      "module": "enterprise",
+      "source": "app/api/v1/endpoints/enterprise.py:44",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/enterprise/{system}/prefill",
+      "module": "enterprise",
+      "source": "app/api/v1/endpoints/enterprise.py:55",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/experience/bootstrap",
+      "module": "experience",
+      "source": "app/api/v1/endpoints/experience.py:197",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/feature-flags/",
+      "module": "feature_flags",
+      "source": "app/api/v1/endpoints/feature_flags.py:34",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/feature-flags/",
+      "module": "feature_flags",
+      "source": "app/api/v1/endpoints/feature_flags.py:42",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/feature-flags/{key}",
+      "module": "feature_flags",
+      "source": "app/api/v1/endpoints/feature_flags.py:101",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/feature-flags/{key}",
+      "module": "feature_flags",
+      "source": "app/api/v1/endpoints/feature_flags.py:67",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/feature-flags/{key}",
+      "module": "feature_flags",
+      "source": "app/api/v1/endpoints/feature_flags.py:79",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/feature-flags/{key}/evaluate",
+      "module": "feature_flags",
+      "source": "app/api/v1/endpoints/feature_flags.py:115",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:83",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms/instances",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:202",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms/instances/{instance_id}",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:226",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/forms/instances/{instance_id}",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:243",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/instances/{instance_id}/calculate",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:267",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/instances/{instance_id}/export",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:338",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms/instances/{instance_id}/exports",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:404",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms/instances/{instance_id}/exports/{artifact_index}/download",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:425",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/instances/{instance_id}/submit",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:311",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/instances/{instance_id}/validate",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:289",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms/templates",
+      "module": "form_templates",
+      "source": "app/api/v1/endpoints/form_templates.py:48",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/templates",
+      "module": "form_templates",
+      "source": "app/api/v1/endpoints/form_templates.py:58",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/templates/{template_id}/activate",
+      "module": "form_templates",
+      "source": "app/api/v1/endpoints/form_templates.py:110",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/forms/templates/{template_id}/mapping",
+      "module": "form_templates",
+      "source": "app/api/v1/endpoints/form_templates.py:89",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/templates/{template_id}/preview",
+      "module": "form_templates",
+      "source": "app/api/v1/endpoints/form_templates.py:128",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/{form_name}/instances",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:167",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/forms/{form_name}/schema",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:104",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/forms/{form_name}/validate",
+      "module": "forms",
+      "source": "app/api/v1/endpoints/forms.py:134",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/gateway/health",
+      "module": "gateway",
+      "source": "app/api/v1/endpoints/gateway.py:127",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/gateway/search",
+      "module": "gateway",
+      "source": "app/api/v1/endpoints/gateway.py:46",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/generate/export/docx",
+      "module": "generate",
+      "source": "app/api/v1/endpoints/generate.py:249",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/generate/export/pdf",
+      "module": "generate",
+      "source": "app/api/v1/endpoints/generate.py:278",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/generate/reports",
+      "module": "reports",
+      "source": "app/api/v1/endpoints/reports.py:110",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/generate/reports",
+      "module": "reports",
+      "source": "app/api/v1/endpoints/reports.py:150",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/generate/reports/{report_id}",
+      "module": "reports",
+      "source": "app/api/v1/endpoints/reports.py:193",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/generate/reports/{report_id}",
+      "module": "reports",
+      "source": "app/api/v1/endpoints/reports.py:137",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/generate/reports/{report_id}",
+      "module": "reports",
+      "source": "app/api/v1/endpoints/reports.py:172",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/generate/stream",
+      "module": "generate",
+      "source": "app/api/v1/endpoints/generate.py:112",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/generate/templates",
+      "module": "generate",
+      "source": "app/api/v1/endpoints/generate.py:69",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/graph/entities/{entity_id}",
+      "module": "graph",
+      "source": "app/api/v1/endpoints/graph.py:86",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/graph/product-status",
+      "module": "graph",
+      "source": "app/api/v1/endpoints/graph.py:39",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/graph/search",
+      "module": "graph",
+      "source": "app/api/v1/endpoints/graph.py:51",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/graph/traverse",
+      "module": "graph",
+      "source": "app/api/v1/endpoints/graph.py:67",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/interaction/sessions",
+      "module": "interaction",
+      "source": "app/api/v1/endpoints/interaction.py:83",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/interaction/sessions/{session_id}/resolve",
+      "module": "interaction",
+      "source": "app/api/v1/endpoints/interaction.py:151",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/interaction/sessions/{session_id}/transcript",
+      "module": "interaction",
+      "source": "app/api/v1/endpoints/interaction.py:114",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/interaction/transcriptions",
+      "module": "interaction",
+      "source": "app/api/v1/endpoints/interaction.py:42",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/internal/service-echo",
+      "module": "internal_service_auth",
+      "source": "app/api/v1/endpoints/internal_service_auth.py:25",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/internal/service-ping",
+      "module": "internal_service_auth",
+      "source": "app/api/v1/endpoints/internal_service_auth.py:61",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-modules",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:39",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-modules/admin/compatibility",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:129",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-modules/admin/register",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:138",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/job-modules/admin/{module_key}/config",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:110",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/job-modules/admin/{module_key}/disable",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:95",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-modules/admin/{module_key}/enable",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:72",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-modules/{module_key}",
+      "module": "job_modules",
+      "source": "app/api/v1/endpoints/job_modules.py:165",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/job-modules/{module_key}/binding",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:191",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/job-modules/{module_key}/config",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:336",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-modules/{module_key}/effective-config",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:323",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-modules/{module_key}/lifecycle",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:226",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-modules/{module_key}/lifecycle/{action}",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:262",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-roles",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:90",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-roles",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:134",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-roles/active",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:355",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-roles/assignments",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:375",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-roles/assignments",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:395",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/job-roles/assignments/{assignment_id}",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:453",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/job-roles/me",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:158",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/job-roles/seed",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:71",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/job-roles/{role_id}",
+      "module": "job_roles",
+      "source": "app/api/v1/endpoints/job_roles.py:112",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/documents/{document_id}/diff",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:205",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/documents/{document_id}/reupload",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:107",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/documents/{document_id}/versions",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:86",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/backups",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:685",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/backups",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:663",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/backups/restore",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:707",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/categories",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:457",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/categories",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:470",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/kb-maintenance/kb/categories/{cat_id}",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:536",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/kb-maintenance/kb/categories/{cat_id}",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:497",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/categories/{cat_id}/revisions",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:561",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/categories/{cat_id}/rollback/{revision}",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:584",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/gaps",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:399",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/gaps/scan",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:437",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/gaps/{gap_id}/resolve",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:413",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/health",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:287",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/integrity/reports",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:636",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb-maintenance/kb/integrity/scan",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:626",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb-maintenance/kb/usage-report",
+      "module": "kb_maintenance",
+      "source": "app/api/v1/endpoints/kb_maintenance.py:732",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/kb/search",
+      "module": "kb",
+      "source": "app/api/v1/endpoints/kb.py:37",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/kb/stats",
+      "module": "kb",
+      "source": "app/api/v1/endpoints/kb.py:131",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-captures",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:202",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-captures/policy",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:147",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/knowledge-captures/policy",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:184",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-captures/{session_id}",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:564",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-captures/{session_id}/chunks",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:287",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-captures/{session_id}/complete",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:475",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-captures/{session_id}/retry",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:542",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-captures/{session_id}/transcript",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:575",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/knowledge-captures/{session_id}/transcript/segments/{segment_id}",
+      "module": "knowledge_capture",
+      "source": "app/api/v1/endpoints/knowledge_capture.py:613",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-control/documents",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:134",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-control/entities",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:304",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/entities",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:313",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/entities/{entity_id}/aliases",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:326",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-control/feedback",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:159",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/knowledge-control/feedback/{feedback_id}",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:174",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-control/freshness",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:205",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/freshness/scan",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:220",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-control/overview",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:90",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/revisions/candidate",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:228",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge-control/revisions/{revision_id}/members",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:293",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/revisions/{revision_id}/promote",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:258",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/revisions/{revision_id}/rollback",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:284",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge-control/revisions/{revision_id}/transition",
+      "module": "knowledge_control",
+      "source": "app/api/v1/endpoints/knowledge_control.py:249",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/assets",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:254",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/assets",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:511",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/knowledge/assets/{asset_id}",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:1278",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/assets/{asset_id}",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:424",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/assets/{asset_id}/events",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:1365",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/assets/{asset_id}/retry",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:1185",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/assets/{asset_id}/revisions",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:497",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/assets/{asset_id}/status",
+      "module": "knowledge_assets",
+      "source": "app/api/v1/endpoints/knowledge_assets.py:475",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/decision-diffs",
+      "module": "knowledge_decision",
+      "source": "app/api/v1/endpoints/knowledge_decision.py:18",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/input-capabilities",
+      "module": "input_capabilities",
+      "source": "app/api/v1/endpoints/input_capabilities.py:17",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/review-items",
+      "module": "review_items",
+      "source": "app/api/v1/endpoints/review_items.py:56",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/review-items/batch/approve",
+      "module": "review_items",
+      "source": "app/api/v1/endpoints/review_items.py:145",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/review-items/{item_id}",
+      "module": "review_items",
+      "source": "app/api/v1/endpoints/review_items.py:115",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/review-items/{item_id}/decision",
+      "module": "review_items",
+      "source": "app/api/v1/endpoints/review_items.py:125",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/upload-sessions",
+      "module": "upload_sessions",
+      "source": "app/api/v1/endpoints/upload_sessions.py:133",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/knowledge/upload-sessions/{session_id}",
+      "module": "upload_sessions",
+      "source": "app/api/v1/endpoints/upload_sessions.py:479",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/knowledge/upload-sessions/{session_id}",
+      "module": "upload_sessions",
+      "source": "app/api/v1/endpoints/upload_sessions.py:263",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/knowledge/upload-sessions/{session_id}/commit",
+      "module": "upload_sessions",
+      "source": "app/api/v1/endpoints/upload_sessions.py:350",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/knowledge/upload-sessions/{session_id}/parts/{part_number}",
+      "module": "upload_sessions",
+      "source": "app/api/v1/endpoints/upload_sessions.py:273",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/mcp/openapi.json",
+      "module": "mcp",
+      "source": "app/api/v1/endpoints/mcp.py:68",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/mcp/tools",
+      "module": "mcp",
+      "source": "app/api/v1/endpoints/mcp.py:16",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mcp/tools/{tool_name}",
+      "module": "mcp",
+      "source": "app/api/v1/endpoints/mcp.py:41",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/media/artifacts/{artifact_id}/content",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:626",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/media/video-artifacts/{artifact_id}/content",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:626",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/media/video-artifacts/{artifact_id}/review",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:683",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/media/videos",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:146",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/media/videos",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:172",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/media/videos/{asset_id}",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:426",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/media/videos/{asset_id}/content",
+      "module": "video_assets",
+      "source": "app/api/v1/endpoints/video_assets.py:596",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mka/events",
+      "module": "mka_metrics",
+      "source": "app/api/v1/endpoints/mka_metrics.py:53",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/mka/metrics/summary",
+      "module": "mka_metrics",
+      "source": "app/api/v1/endpoints/mka_metrics.py:73",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mobile/auth/refresh-token",
+      "module": "mobile",
+      "source": "app/api/v1/endpoints/mobile.py:55",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mobile/auth/revoke-token",
+      "module": "mobile",
+      "source": "app/api/v1/endpoints/mobile.py:77",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/mobile/security/cert-fingerprint",
+      "module": "mobile",
+      "source": "app/api/v1/endpoints/mobile.py:190",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mobile/security/events",
+      "module": "mobile",
+      "source": "app/api/v1/endpoints/mobile.py:159",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/mobile/users/me/push-token",
+      "module": "mobile",
+      "source": "app/api/v1/endpoints/mobile.py:134",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/mobile/users/me/push-token",
+      "module": "mobile",
+      "source": "app/api/v1/endpoints/mobile.py:105",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/capacity-estimate",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:144",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/input/dashboard",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:118",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/input/pilots",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:128",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:151",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/acceptance",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:450",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/audits",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:298",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/daily-metrics",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:211",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/evidence",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:354",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/gate",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:343",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/incidents",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:251",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/incidents/{incident_id}/resolve",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:273",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/retrospective",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:326",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/pilots/{pilot_id}/start",
+      "module": "input_pilots",
+      "source": "app/api/v1/endpoints/input_pilots.py:190",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/input/reconcile",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:154",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/modules",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:83",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/preflight",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:30",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/release",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:65",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/sbom",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:90",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/operations/support-bundle",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:49",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/operations/version-matrix",
+      "module": "operations",
+      "source": "app/api/v1/endpoints/operations.py:58",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organization/me",
+      "module": "tenants",
+      "source": "app/api/v1/endpoints/tenants.py:20",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/organization/{tenant_id}",
+      "module": "tenants",
+      "source": "app/api/v1/endpoints/tenants.py:32",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/organization/{tenant_id}",
+      "module": "tenants",
+      "source": "app/api/v1/endpoints/tenants.py:54",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payment/checkout",
+      "module": "payment",
+      "source": "app/api/v1/endpoints/payment.py:71",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payment/notify",
+      "module": "payment",
+      "source": "app/api/v1/endpoints/payment.py:126",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/payment/plans",
+      "module": "payment",
+      "source": "app/api/v1/endpoints/payment.py:55",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/payment/return",
+      "module": "payment",
+      "source": "app/api/v1/endpoints/payment.py:155",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/scene/registry",
+      "module": "scene_admin",
+      "source": "app/api/v1/endpoints/scene_admin.py:60",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scene/registry",
+      "module": "scene_admin",
+      "source": "app/api/v1/endpoints/scene_admin.py:76",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/scene/registry/{scene_id}",
+      "module": "scene_admin",
+      "source": "app/api/v1/endpoints/scene_admin.py:149",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/scene/registry/{scene_id}",
+      "module": "scene_admin",
+      "source": "app/api/v1/endpoints/scene_admin.py:108",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/scene/resolve",
+      "module": "scene",
+      "source": "app/api/v1/endpoints/scene.py:25",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sso/callback",
+      "module": "sso",
+      "source": "app/api/v1/endpoints/sso.py:159",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sso/config",
+      "module": "sso",
+      "source": "app/api/v1/endpoints/sso.py:315",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/sso/config/{provider}",
+      "module": "sso",
+      "source": "app/api/v1/endpoints/sso.py:328",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sso/state",
+      "module": "sso",
+      "source": "app/api/v1/endpoints/sso.py:130",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:97",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/definitions",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:346",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/tasks/definitions/{definition_id}",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:430",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tasks/definitions/{task_key}/override",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:370",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/metrics/summary",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:458",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/runs",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:136",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/runs/{run_id}",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:160",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/runs/{run_id}/events",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:470",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tasks/runs/{run_id}/execute",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:277",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/tasks/runs/{run_id}/inputs",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:170",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tasks/runs/{run_id}/parse-text",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:197",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tasks/runs/{run_id}/transition",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:294",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tasks/{task_key}/runs",
+      "module": "tasks",
+      "source": "app/api/v1/endpoints/tasks.py:110",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/terms",
+      "module": "terms",
+      "source": "app/api/v1/endpoints/terms.py:39",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/terms",
+      "module": "terms",
+      "source": "app/api/v1/endpoints/terms.py:90",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/terms/correct",
+      "module": "terms",
+      "source": "app/api/v1/endpoints/terms.py:73",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/terms/search",
+      "module": "terms",
+      "source": "app/api/v1/endpoints/terms.py:56",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/terms/{term}",
+      "module": "terms",
+      "source": "app/api/v1/endpoints/terms.py:110",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/users/",
+      "module": "users",
+      "source": "app/api/v1/endpoints/users.py:27",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "module": "users",
+      "source": "app/api/v1/endpoints/users.py:17",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/voice/sessions/{session_id}/confirm",
+      "module": "voice",
+      "source": "app/api/v1/endpoints/voice.py:242",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/voice/sessions/{session_id}/resolve",
+      "module": "voice",
+      "source": "app/api/v1/endpoints/voice.py:265",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/voice/synthesize",
+      "module": "voice",
+      "source": "app/api/v1/endpoints/voice.py:286",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/voice/transcribe",
+      "module": "voice",
+      "source": "app/api/v1/endpoints/voice.py:88",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/wiki/compile",
+      "module": "wiki",
+      "source": "app/api/v1/endpoints/wiki.py:184",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wiki/pages",
+      "module": "wiki",
+      "source": "app/api/v1/endpoints/wiki.py:74",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wiki/pages/{page_id}",
+      "module": "wiki",
+      "source": "app/api/v1/endpoints/wiki.py:101",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/wiki/pages/{page_id}",
+      "module": "wiki",
+      "source": "app/api/v1/endpoints/wiki.py:153",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/wiki/product-status",
+      "module": "wiki",
+      "source": "app/api/v1/endpoints/wiki.py:38",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    }
+  ],
+  "frontend_routes": [
+    {
+      "path": "/",
+      "source": "frontend/src/App.tsx:126",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/",
+      "source": "frontend/src/components/Layout.test.tsx:48",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/",
+      "source": "frontend/src/components/Layout.test.tsx:68",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/",
+      "source": "frontend/src/components/Layout.test.tsx:84",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/",
+      "source": "frontend/src/pages/LandingPage.test.tsx:43",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/forms/:formKey",
+      "source": "frontend/src/pages/forms/FormPage.test.tsx:76",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/job/tasks/handover",
+      "source": "frontend/src/pages/job/JobHomePage.tsx:48",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/job/tasks/incident",
+      "source": "frontend/src/pages/job/JobHomePage.tsx:47",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/job/tasks/quote",
+      "source": "frontend/src/pages/job/JobHomePage.tsx:46",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowhow",
+      "source": "frontend/src/pages/job/JobHomePage.tsx:49",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowhow",
+      "source": "frontend/src/pages/job/JobHomePage.tsx:54",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowhow",
+      "source": "frontend/src/pages/knowhow/KnowhowListPage.test.tsx:83",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowhow/:id",
+      "source": "frontend/src/pages/knowhow/KnowhowDetailPage.test.tsx:54",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowhow/interview",
+      "source": "frontend/src/pages/knowhow/KnowhowListPage.test.tsx:84",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowledge/assets/:assetId",
+      "source": "frontend/src/pages/knowledge/AssetDetailPage.test.tsx:25",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowledge/documents",
+      "source": "frontend/src/pages/job/JobHomePage.tsx:53",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowledge/videos/:assetId",
+      "source": "frontend/src/pages/knowledge/VideoReviewPage.test.tsx:58",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowledge/wiki",
+      "source": "frontend/src/pages/knowledge/WikiListPage.test.tsx:40",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/knowledge/wiki/:id",
+      "source": "frontend/src/pages/knowledge/WikiDetailPage.test.tsx:43",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/login",
+      "source": "frontend/src/components/Layout.test.tsx:51",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/login",
+      "source": "frontend/src/pages/AccountPage.test.tsx:56",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/login",
+      "source": "frontend/src/pages/LandingPage.test.tsx:44",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    },
+    {
+      "path": "/me/account",
+      "source": "frontend/src/pages/AccountPage.test.tsx:55",
+      "surface_state": "declared_in_source",
+      "reality_level": "R1"
+    }
+  ],
+  "background_tasks": [
+    {
+      "task": "process_document_task",
+      "function": "process_document_task",
+      "source": "app/tasks/document_tasks.py:103",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "process_url_task",
+      "function": "process_url_task",
+      "source": "app/tasks/document_tasks.py:650",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.detect_knowledge_gaps",
+      "function": "detect_knowledge_gaps_task",
+      "source": "app/tasks/kb_maintenance_tasks.py:457",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.expire_upload_sessions",
+      "function": "expire_upload_sessions",
+      "source": "app/tasks/upload_tasks.py:13",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.integrity_check",
+      "function": "integrity_check_task",
+      "source": "app/tasks/kb_maintenance_tasks.py:354",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.kb_backup",
+      "function": "kb_backup_task",
+      "source": "app/tasks/kb_maintenance_tasks.py:56",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.kb_restore",
+      "function": "kb_restore_task",
+      "source": "app/tasks/kb_maintenance_tasks.py:219",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.poll_pending_connectors",
+      "function": "poll_pending_connectors",
+      "source": "app/tasks/connector_tasks.py:50",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.process_audio_asset",
+      "function": "process_audio_asset",
+      "source": "app/tasks/audio_tasks.py:34",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.process_outbox",
+      "function": "process_outbox_batch",
+      "source": "app/tasks/outbox_worker.py:305",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.process_video_asset",
+      "function": "process_video_asset",
+      "source": "app/tasks/video_tasks.py:26",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.purge_mka_retention",
+      "function": "purge_mka_retention",
+      "source": "app/tasks/input_capture_tasks.py:16",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.reconcile_projections",
+      "function": "reconcile_projections_batch",
+      "source": "app/tasks/reconciliation_tasks.py:16",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.reconcile_stale_ingestion",
+      "function": "reconcile_stale_ingestion_batch",
+      "source": "app/tasks/reconciliation_tasks.py:52",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.refresh_knowledge_freshness",
+      "function": "refresh_knowledge_freshness_task",
+      "source": "app/tasks/kb_maintenance_tasks.py:591",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.render_form_export",
+      "function": "render_form_export",
+      "source": "app/tasks/workflow_tasks.py:19",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.sync_connector",
+      "function": "sync_connector_task",
+      "source": "app/tasks/connector_tasks.py:17",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.transcribe_knowledge_capture",
+      "function": "transcribe_knowledge_capture",
+      "source": "app/tasks/input_capture_tasks.py:48",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.watcher_delete_file",
+      "function": "watcher_delete_file_task",
+      "source": "app/tasks/document_tasks.py:1091",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "task": "tasks.watcher_ingest_file",
+      "function": "watcher_ingest_file_task",
+      "source": "app/tasks/document_tasks.py:940",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    }
+  ],
+  "feature_flags": [
+    {
+      "key": "ADMIN_IP_WHITELIST_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:400",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "AGENT_WATCH_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:405",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "CLAMAV_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:358",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "CONNECTOR_MATERIALIZE_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:303",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "CONTEXT_FITTING_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:155",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "DEMO_LOGIN_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:27",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "DOCLING_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:320",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "EMAIL_VERIFICATION_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:326",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "EMBEDDING_CACHE_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:251",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "FIXED_FORM_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:257",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "HR_COMPATIBILITY_PACK_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:193",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "KNOWHOW_CARD_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:284",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "KNOWLEDGE_DECISION_AUTHORIZATION_REQUIRED",
+      "declared_default": false,
+      "source": "app/config.py:181",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "KNOWLEDGE_DECISION_KILL_SWITCH",
+      "declared_default": false,
+      "source": "app/config.py:176",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "KNOWLEDGE_DECISION_MODE",
+      "declared_default": "off",
+      "source": "app/config.py:174",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "KNOWLEDGE_DECISION_TENANT_ALLOWLIST",
+      "declared_default": "",
+      "source": "app/config.py:175",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "KNOWLEDGE_UNIT_READ_MODE",
+      "declared_default": "shadow",
+      "source": "app/config.py:123",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "LANGFUSE_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:352",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "LLAMAPARSE_AUTO_MODE",
+      "declared_default": true,
+      "source": "app/config.py:94",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "LLAMAPARSE_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:91",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "MCP_CLIENT_ALLOWLIST",
+      "declared_default": "",
+      "source": "app/config.py:315",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "MCP_CLIENT_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:314",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "MCP_SERVER_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:309",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "MEDIA_PROXY_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:234",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "MODULE_ROUTER_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:270",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "NEWEBPAY_TEST_MODE",
+      "declared_default": true,
+      "source": "app/config.py:344",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PACK_INCIDENT_HANDOVER_ENABLED",
+      "declared_default": null,
+      "source": "app/config.py:277",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PACK_MKA_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:273",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PACK_QUALITY_8D_ENABLED",
+      "declared_default": null,
+      "source": "app/config.py:278",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PACK_SALES_QUOTE_ENABLED",
+      "declared_default": null,
+      "source": "app/config.py:276",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PACK_TRAINING_KNOWHOW_ENABLED",
+      "declared_default": null,
+      "source": "app/config.py:279",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PAGEINDEX_ABLATION_REQUIRED",
+      "declared_default": true,
+      "source": "app/config.py:295",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PAGEINDEX_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:293",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "PARENT_DOC_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:145",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "QUEUE_GUARD_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:396",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "RATE_LIMIT_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:387",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "RETRIEVAL_MODE",
+      "declared_default": "hybrid",
+      "source": "app/config.py:136",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "RLS_ENFORCEMENT_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:120",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "SIBLING_EXPANSION_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:148",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "SOURCE_VERIFY_MODE",
+      "declared_default": "off",
+      "source": "app/config.py:167",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "VIDEO_INGESTION_ENABLED",
+      "declared_default": true,
+      "source": "app/config.py:225",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "VOICE_REALTIME_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:218",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "VOICE_STT_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:198",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "VOICE_TTS_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:199",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    },
+    {
+      "key": "WIKI_LINT_ENABLED",
+      "declared_default": false,
+      "source": "app/config.py:298",
+      "evidence_scope": "implementation",
+      "reality_level": "R1"
+    }
+  ],
+  "packs": [
+    {
+      "key": "hr_knowledge",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": false,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "incident_handover",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": false,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "manufacturing_knowledge",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": false,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "mka",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": false,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "quality_8d",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": false,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "sales_quote",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": true,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "training_knowhow",
+      "kind": "application_pack",
+      "backend_manifest": true,
+      "frontend_bundle": true,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "workflow",
+      "kind": "application_pack",
+      "backend_manifest": false,
+      "frontend_bundle": true,
+      "tenant_binding": "runtime_inventory_required",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    },
+    {
+      "key": "hr_compatibility",
+      "kind": "knowledge_contribution",
+      "backend_manifest": true,
+      "frontend_bundle": false,
+      "tenant_binding": "not_applicable",
+      "product_validation": "UNVERIFIED",
+      "reality_level": "R1"
+    }
+  ],
+  "connectors": [
+    {
+      "key": "google_drive",
+      "implementation": "present",
+      "live_credential_state": "UNVERIFIED",
+      "reality_level": "R1",
+      "source": "app/services/connector_schemas.py"
+    },
+    {
+      "key": "nas_smb",
+      "implementation": "present",
+      "live_credential_state": "UNVERIFIED",
+      "reality_level": "R1",
+      "source": "app/services/connector_schemas.py"
+    },
+    {
+      "key": "sharepoint",
+      "implementation": "present",
+      "live_credential_state": "UNVERIFIED",
+      "reality_level": "R1",
+      "source": "app/services/connector_schemas.py"
+    }
+  ],
+  "providers": [
+    {
+      "role": "cloud_ocr",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    },
+    {
+      "role": "embedding",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    },
+    {
+      "role": "internal_llm",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    },
+    {
+      "role": "long_audio",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    },
+    {
+      "role": "main_llm",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    },
+    {
+      "role": "scan_llm",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    },
+    {
+      "role": "voice_roundtrip",
+      "configuration_state": "runtime_probe_required",
+      "reality_level": "R1",
+      "source": "app/services/provider_runtime_health.py"
+    }
+  ],
+  "interpretation": "Presence is implementation evidence only; workflow and product value remain independently graded."
+}

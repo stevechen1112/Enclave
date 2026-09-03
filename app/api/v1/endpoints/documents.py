@@ -93,7 +93,12 @@ def list_documents(
     allowed_revision_ids = None
     if not can_manage:
         scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
-        allowed_revision_ids = [UUID(value) for value in scope["kb_revision_ids"]]
+        # A missing key is the shadow-mode legacy sentinel used by retrieval.
+        # The document catalogue is not a retrieval compatibility surface, so
+        # ordinary readers must fail closed instead of crashing or widening.
+        allowed_revision_ids = [
+            UUID(value) for value in (scope.get("kb_revision_ids") or [])
+        ]
         query = apply_answer_ready_filter(
             query,
             tenant_id=current_user.tenant_id,
@@ -533,7 +538,10 @@ def get_document(
     allowed_revision_ids = None
     if not can_manage:
         scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
-        allowed_revision_ids = [UUID(value) for value in scope["kb_revision_ids"]]
+        # Keep direct document reads aligned with the fail-closed list policy.
+        allowed_revision_ids = [
+            UUID(value) for value in (scope.get("kb_revision_ids") or [])
+        ]
         query = apply_answer_ready_filter(
             query,
             tenant_id=current_user.tenant_id,

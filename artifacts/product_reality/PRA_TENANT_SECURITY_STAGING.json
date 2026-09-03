@@ -1,0 +1,35 @@
+{
+  "application_role": {
+    "application_member": true,
+    "bypass_member": false,
+    "can_insert_maintenance_audit": false,
+    "can_resolve_login_tenant": true,
+    "rolbypassrls": false,
+    "rolcanlogin": true,
+    "rolname": "enclave_pra_app",
+    "rolsuper": false
+  },
+  "direct_tenant_table_count": 103,
+  "errors": [],
+  "gate": "TENANT-HARD-ISOLATION",
+  "generated_at": "2026-09-03T14:07:12.821152+00:00",
+  "identity_table_count": 1,
+  "inherited_tenant_table_count": 7,
+  "maintenance_role": {
+    "bypass_member": true,
+    "can_delete_maintenance_audit": false,
+    "can_insert_maintenance_audit": true,
+    "can_update_maintenance_audit": false,
+    "rolbypassrls": false,
+    "rolcanlogin": true,
+    "rolinherit": true,
+    "rolname": "enclave_pra_maintenance",
+    "rolsuper": false
+  },
+  "nullable_global_read_table_count": 8,
+  "platform_global_table_count": 1,
+  "protected_table_count": 111,
+  "require_force_rls": true,
+  "schema_version": 1,
+  "status": "PASS"
+}

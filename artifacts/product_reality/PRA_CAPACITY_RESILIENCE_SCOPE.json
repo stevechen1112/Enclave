@@ -1,0 +1,36 @@
+{
+  "schema_version": "pra-capacity-resilience-scope/v1",
+  "generated_at": "2026-09-03T14:10:11Z",
+  "status": "ENGINEERING_CONTROLS_PASS",
+  "automated_controls": {
+    "passed": 70,
+    "failed": 0,
+    "coverage": [
+      "capacity telemetry",
+      "capacity runner and report validation",
+      "2x load contract",
+      "queue guardrails",
+      "evidence binding",
+      "tenant integrity probe",
+      "degradation drivers",
+      "P4 resilience gate",
+      "Input I7 operations resilience",
+      "knowledge capacity gate"
+    ]
+  },
+  "production_probe": {
+    "runner": "scripts/run_product_reality_bounded_probe.py",
+    "mutation": false,
+    "maximum_concurrency": 50,
+    "maximum_requests": 200,
+    "default_concurrency": 40,
+    "default_requests": 80,
+    "status": "PENDING_FINAL_RELEASE_DEPLOYMENT"
+  },
+  "formal_p5": {
+    "status": "NOT_RUN",
+    "reason": "formal mixed-workload capacity, degradation injection, and soak require a dedicated isolated staging deployment and must not run against production",
+    "development_gate": false,
+    "commercial_capacity_claim_allowed": false
+  }
+}

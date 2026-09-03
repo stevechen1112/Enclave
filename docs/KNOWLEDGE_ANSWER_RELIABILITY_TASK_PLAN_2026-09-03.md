@@ -27,7 +27,7 @@ source_reference: "AIHR技術成果與Enclave通用知識庫轉用建議_2026090
 4. 李永仁的 Input 第二輪真實測試與本計畫分線進行；KQ3 前不得改變正式使用者答案。
 5. 任何既有責任若已有 canonical owner，只能擴充或收斂，禁止建立平行 aggregate、平行 revision、平行 retrieval 或平行 citation。
 6. AIHR 的題目、客戶名、固定答案、HR 文件家族與手工特判不得進入 Enclave core。
-7. 本文件通過複查只代表施工計畫可供 Owner 決定是否啟動；在新任務明確說「開工」前，KQ0 不得開始，亦不得部署或修改正式環境。
+7. 歷史啟動規則已履行：Owner 於 2026-09-03 指示開工，KQ0–KQ7 隨後完成實作、Review 與 production 部署。
 
 ## 1. 與既有計畫的關係
 
@@ -721,9 +721,9 @@ KQ0 → KQ1 → KQ2 → KQ3 → KQ4 → KQ5 → KQ6 → KQ7
 9. 正式 Shadow mutation 0，受控 enforce 可一鍵回舊版。
 10. 每個 KQ phase 均有 Code Review、測試證據、部署／不部署決策與回滾記錄。
 
-## 16. 第一個可執行工作包
+## 16. 已完成的第一個工作包（歷史）
 
-核准本計畫後先執行 KQ0，不直接修改 Live Ask：
+本計畫核准後先執行 KQ0，當時未直接修改 Live Ask：
 
 1. 建立目前 sync/stream Ask 呼叫圖。
 2. 凍結 12 類代表問題及完整回答／sources／trace。
@@ -732,7 +732,7 @@ KQ0 → KQ1 → KQ2 → KQ3 → KQ4 → KQ5 → KQ6 → KQ7
 5. 建立 core contamination scan 與 known-failure registry。
 6. 完成 `KQ-BL-01` Code Review 後，回報 KQ1 精確修改檔案、migration 判斷、測試數與 effort。
 
-KQ0 不改正式回答、不部署新 decision，也不干擾李永仁第二輪 Input 測試。
+KQ0 執行期間未改正式回答、未部署新 decision，也未干擾李永仁第二輪 Input 測試；後續 KQ1–KQ7 已依序完成。
 
 ## 17. 最終產品意義
 

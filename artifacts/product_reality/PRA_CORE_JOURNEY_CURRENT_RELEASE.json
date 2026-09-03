@@ -1,0 +1,35 @@
+{
+  "schema_version": "pra-core-journey/v1",
+  "status": "PASS",
+  "execution_class": "production_synthetic",
+  "release_id": "kq7-complete-f08884d",
+  "source_commit": "f08884d5dbf121beb8fc53cd97024ff2fab538d3",
+  "tenant_ref_sha256": "45c4bdb347b2a2b3ea5f7561b9724e7376d1cc83cf24e912831e4f3faa04b485",
+  "marker": "PRA-E2E-4d49c374595d456ea720b402b8e56c9c",
+  "asset_id": "3f538f49-b2a6-489f-b8c0-da413da55efe",
+  "document_id": "aeb6a7ab-52d1-4166-afae-284bfc337337",
+  "started_at": "2026-09-03T13:56:58.842001+00:00",
+  "completed_at": "2026-09-03T13:57:12.255838+00:00",
+  "duration_ms": 13414,
+  "observations": {
+    "terminal_state": {
+      "asset": "active",
+      "revision": "ready",
+      "job": "ready"
+    },
+    "search_before_revoke": "hit",
+    "chat": {
+      "grounded_value": true,
+      "source_count": 2
+    },
+    "revoke": {
+      "asset_http": 404,
+      "search_identity_leak": false
+    }
+  },
+  "cleanup": {
+    "attempted": true,
+    "status_code": 200
+  },
+  "error": null
+}

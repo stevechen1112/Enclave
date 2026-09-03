@@ -1,0 +1,132 @@
+{
+  "schema_version": "pra-claim-registry/v1",
+  "claims": [
+    {
+      "claim": "掃描 PDF 可由「完全不可檢索」轉為「可檢索」（DeepDOC vs PlainText）",
+      "declared_evidence": "CV-RF-01a 覆蓋率 PROVEN",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:14"
+    },
+    {
+      "claim": "乾淨印刷掃描的欄位抽取可達可用水準（CER ≈ 0.18–0.33）",
+      "declared_evidence": "CV-RF-01b 子集",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:15"
+    },
+    {
+      "claim": "RAGFlow 檢索在可答黃金題上 Hit@5 = 14/15（vs 本機 canonical 0/15）",
+      "declared_evidence": "E1 answerable-only PROVEN",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:16"
+    },
+    {
+      "claim": "BookStack → PipesHub ACL 搜尋：fixture 零洩漏",
+      "declared_evidence": "CV-PH-03",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:17"
+    },
+    {
+      "claim": "WeKnora Auto-Wiki 真實編譯（含 source_refs）；sole-source 撤權後不可見",
+      "declared_evidence": "CV-WK-03、CV-WK-06；瀏覽 UI＋管理員手動編輯（新增 revision）已上線（`/knowledge/wiki`，2026-08-03）",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:18"
+    },
+    {
+      "claim": "page/bbox lineage 可從 DeepDOC `positions` 寫入 Citation",
+      "declared_evidence": "B4 / lineage 50/50",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:19"
+    },
+    {
+      "claim": "Specialist 路徑延遲 p95 ≈ 432ms（預算 3000ms）；旗標預設關閉",
+      "declared_evidence": "CV-RF-06 PASS（仍不進預設 fan-out）",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:20"
+    },
+    {
+      "claim": "掃描交付閘門＋雲端 OCR 救援後，答案正確性硬 span：**10 pass／0 fail／10 review**（20 題）",
+      "declared_evidence": "`artifacts/answer_correctness_last_run.json`（2026-08-03；review＝尚無轉錄 ground truth）",
+      "category": "已證明（可對外宣稱）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:21"
+    },
+    {
+      "claim": "DeepDOC 對**全語料**抽取品質",
+      "declared_evidence": "CV-RF-01b 整體 MARGINAL／FAIL（手寫／拍照 CER 0.8+）；雲端四臂：luna 24.2%（幻覺風險）、terra 25.8%、**gemini-3-flash-preview 與 mistral-ocr-4 並列最佳 30.3%**（命中欄位完全相同、DeepDOC 嚴格超集、手寫切結書 4/4），仍未達 20pp 門檻（`cloud_vision_{ocr,terra,gemini,mistral}_ablation_last_run.json`）。2026-08-03：雲端 OCR 增強臂觸發擴及 `text_fallback`／髒 OCR／DeepDOC 未交貨；**`SCAN_PARSE_STRICT=true` 時 `native/text_fallback` 不得 completed**（見 `parse_pipeline.py`）",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:27"
+    },
+    {
+      "claim": "parent-child 分塊",
+      "declared_evidence": "結構已啟動；Hit@5 vs naive = NO_VALUE（天花板）",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:28"
+    },
+    {
+      "claim": "切片模板 laws/manual/table",
+      "declared_evidence": "CV-RF-02：與 naive 同 Hit@5（NO_VALUE）；table 臂失敗",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:29"
+    },
+    {
+      "claim": "RAPTOR",
+      "declared_evidence": "CV-RF-04 NO_VALUE（OpenAI gpt-5.6-luna 真實跑完索引 465.8s；Hit@5 90% vs 90% Δ=0）；預設關閉",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:30"
+    },
+    {
+      "claim": "RAGFlow GraphRAG（RF-05）",
+      "declared_evidence": "CV-RF-05 NO_VALUE（gpt-5.6-luna 真實建圖 225.3s；Hit@5 Δ=0）；預設關閉",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:31"
+    },
+    {
+      "claim": "WeKnora Neo4j GraphRAG",
+      "declared_evidence": "gpt-5.6-luna 重抽取後 **3,239 ENTITY／3,017 關係**（8B 時代僅 8 個類型標籤節點）——接線品質證實依賴模型規模；價值消融仍 NO_VALUE；見 ADR-007",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:32"
+    },
+    {
+      "claim": "PipesHub 企業脈絡圖",
+      "declared_evidence": "CV-PH-05 NO_VALUE（ACL 圖≠知識圖；useGraph 無增益）",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:33"
+    },
+    {
+      "claim": "PipesHub LOCAL_FS",
+      "declared_evidence": "C2 BLOCKED（此映像 registry 無 LOCAL_FS）；BookStack 已證真實 connector",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:34"
+    },
+    {
+      "claim": "RAGFlow 拒答不可答問題",
+      "declared_evidence": "E1：過度召回 0/5 refuse",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:35"
+    },
+    {
+      "claim": "SharePoint／Drive connector",
+      "declared_evidence": "OPEN_GATES（需 OAuth／客戶租戶）",
+      "category": "已接線、未證明（不得當賣點）",
+      "current_release_state": "UNVERIFIED",
+      "source": "docs/CAPABILITY_CLAIMS.md:36"
+    }
+  ],
+  "interpretation": "Historical claims are UNVERIFIED for the current release until linked to current evidence."
+}

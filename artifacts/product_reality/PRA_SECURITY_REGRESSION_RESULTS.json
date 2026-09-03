@@ -1,0 +1,45 @@
+{
+  "schema_version": "pra-security-regression/v1",
+  "generated_at": "2026-09-03T14:10:11Z",
+  "status": "PASS_WITH_DEPLOYMENT_FINDING",
+  "application_regression": {
+    "tests_collected": 83,
+    "passed": 72,
+    "skipped_without_postgresql_roles": 11,
+    "failed": 0
+  },
+  "isolated_postgresql": {
+    "database_lifecycle": "created_migrated_tested_and_removed",
+    "schema_head": "tenant_policy_reconcile_pra_001",
+    "force_rls": true,
+    "tenant_security_gate": "PASS",
+    "protected_table_count": 111,
+    "attack_matrix": {
+      "passed": 11,
+      "failed": 0
+    },
+    "shadow_comparisons": 222,
+    "shadow_differences": 0,
+    "temporary_roles_removed": true
+  },
+  "resolved_defects": [
+    {
+      "severity": "P1",
+      "component": "document reader",
+      "result": "missing shadow revision scope now fails closed instead of raising KeyError"
+    },
+    {
+      "severity": "P1",
+      "component": "post-P2 tenant policies",
+      "result": "11 later tables now require both bypass GUC and audited marker-role membership"
+    }
+  ],
+  "production_observation": {
+    "status": "OPEN",
+    "application_db_role": "postgres",
+    "application_role_is_superuser": true,
+    "rls_enforcement_enabled": false,
+    "impact": "current dedicated deployment must not be represented as shared multi-tenant ready",
+    "next_safe_step": "deploy policy reconciliation, then validate a least-privilege application role in an isolated production-like canary before switching production credentials"
+  }
+}
