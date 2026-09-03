@@ -20,6 +20,7 @@ Phase 0 安全修復：
 import hashlib
 import json
 import logging
+import os
 import re
 from typing import List, Dict, Any, Optional, Set
 from uuid import UUID
@@ -80,6 +81,22 @@ except ImportError:
     _HAS_OPENAI = False
 
 
+def _connect_redis_cache():
+    """Create the authenticated retrieval-cache client used in production."""
+    if not _HAS_REDIS or not getattr(settings, "REDIS_HOST", None):
+        return None
+    client = redis_lib.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        password=os.environ.get("REDIS_PASSWORD") or None,
+        db=1,  # db=0 is reserved for Celery
+        decode_responses=True,
+        socket_connect_timeout=2,
+    )
+    client.ping()
+    return client
+
+
 class KnowledgeBaseRetriever:
     """
     進階知識庫檢索服務。
@@ -125,14 +142,7 @@ class KnowledgeBaseRetriever:
         self._redis = None
         if _HAS_REDIS and getattr(settings, "REDIS_HOST", None):
             try:
-                self._redis = redis_lib.Redis(
-                    host=settings.REDIS_HOST,
-                    port=settings.REDIS_PORT,
-                    db=1,  # 用 db=1 做檢索快取（db=0 給 Celery）
-                    decode_responses=True,
-                    socket_connect_timeout=2,
-                )
-                self._redis.ping()
+                self._redis = _connect_redis_cache()
             except Exception:
                 logger.warning("Redis 連線失敗，檢索快取已停用")
                 self._redis = None
@@ -159,8 +169,17 @@ class KnowledgeBaseRetriever:
         principal_ids = [row[0] for row in principal_rows]
 
         if not principal_ids:
-            # 無映射 → 僅允許非 connector 來源
-            return query_obj.filter(Document.source_system.is_(None))
+            # ``source_system`` is also populated by first-party URL input
+            # (for example ``source_system=web``).  Connector ACL projection
+            # applies only to documents explicitly classified as connector
+            # sources; treating every non-null source_system as external made
+            # ordinary uploaded URLs invisible to their own tenant.
+            return query_obj.filter(
+                or_(
+                    Document.source_type.is_(None),
+                    Document.source_type != "connector",
+                )
+            )
 
         allow_exists = (
             db.query(SourceAclEntry.id)
@@ -186,7 +205,8 @@ class KnowledgeBaseRetriever:
         )
         return query_obj.filter(
             or_(
-                Document.source_system.is_(None),
+                Document.source_type.is_(None),
+                Document.source_type != "connector",
                 and_(Document.source_record_id.isnot(None), allow_exists, ~deny_exists),
             )
         )

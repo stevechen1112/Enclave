@@ -52,6 +52,10 @@
 | I9-010 | 失敗頁只顯示通用訊息 | P1 | OPEN | 顯示安全、白話、可採取行動的原因與追蹤代碼 |
 | I9-011 | 狀態卡缺乏下一步 | P1 | OPEN | 每個狀態可直接前往提問、人工確認、查看進度或處理問題 |
 | I9-012 | 上傳相同檔案容易產生重複失敗來源 | P1 | OPEN | 內容雜湊去重與重送語意清楚，不重複計費或產生垃圾來源 |
+| I9-013 | 第一方網頁 Input 被誤判為外部 Connector 而無法檢索 | P0 | FIXED_IN_CODE | 網頁知識可由正式 Ask 命中並回傳來源引用；外部 Connector 仍維持 fail-closed |
+| I9-014 | 正式 Redis 要求密碼但檢索快取未帶認證 | P1 | FIXED_IN_CODE | 正式環境不再出現檢索快取認證失敗，且快取仍維持租戶／權限隔離 |
+| I9-015 | 舊有完成文件缺少 lexical projection | P0 | DEPLOYED | 既有文件完成受稽核且具租戶邊界的索引回填，關鍵字檢索可命中 |
+| I9-016 | 共用 IMAGE_TAG 導致未變更 gateway 缺少部署標籤 | P1 | MITIGATED | 發布流程能保證所有 compose image 均有相同 release tag，部署前先驗證映像完整性 |
 
 ### 實作進度（持續追加）
 
@@ -61,6 +65,8 @@
 - 2026-09-03 I9-4 `FIXED_IN_CODE`：核心狀態用詞、可操作狀態卡、deep link、白話錯誤、自動重試說明與追蹤碼完成；Code Review PASS。
 - 2026-09-03 I9-5 `FIXED_IN_CODE`：人工確認依來源分組、來源／候選雙重計數、風險摘要及 rolling compatibility 完成；Code Review PASS。
 - 2026-09-03 I9-6 `FIXED_IN_CODE`：真實 `pcm_s24le` WAV 正規化回歸、76 項後端 focused tests、135 項前端 tests 與 production build 完成；Code Review CONDITIONAL PASS，正式 PostgreSQL／容器驗證移入 I9-7。
+- 2026-09-03 I9-7 `DEPLOYED / VERIFYING`：正式環境備份、migration、獨立 Input Worker 與 release `243d784` 已上線；兩支 24-bit PCM WAV 均成功轉寫並進入人工確認，孤兒圖片成功復原且可問答，5 支影片維持人工確認，原始來源未被覆寫。
+- 2026-09-03 I9-7 擴大檢查：真實 Ask 測試發現第一方網頁 `source_system=web` 被 Connector ACL 誤擋，且既有完成文件缺 lexical projection；八策 4 個既有 chunks 已安全回填。永久修復、Redis 認證修復與回歸測試完成，待第二版部署後再驗證引用鏈。
 
 ## 4. 實作階段與 Code Review Gate
 
