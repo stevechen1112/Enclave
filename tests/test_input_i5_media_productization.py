@@ -29,6 +29,9 @@ from app.tasks.audio_tasks import _segment_digest
     [
         ("mp3", "mp3"),
         ("pcm_s16le", "wav"),
+        ("pcm_s24le", "wav"),
+        ("pcm_s32le", "wav"),
+        ("pcm_f32le", "wav"),
         ("aac", "mov,mp4,m4a"),
         ("vorbis", "ogg"),
         ("flac", "flac"),
@@ -53,6 +56,15 @@ def test_audio_probe_fails_closed_for_unknown_codec(monkeypatch):
     monkeypatch.setattr("app.config.settings.AUDIO_ALLOWED_CODECS", "aac,flac")
     with pytest.raises(MediaPolicyError, match="unsupported audio codec"):
         validate_audio_probe(AudioProbe(1_000, "evil", "bin", 1, 1))
+
+
+def test_audio_policy_error_is_permanent_and_actionable(monkeypatch):
+    monkeypatch.setattr("app.config.settings.AUDIO_ALLOWED_CODECS", "aac,flac")
+    with pytest.raises(MediaPolicyError) as caught:
+        validate_audio_probe(AudioProbe(1_000, "pcm_s24le", "wav", 1, 1))
+    assert caught.value.code == "unsupported_audio_codec"
+    assert caught.value.retryable is False
+    assert "pcm_s24le" in caught.value.user_message
 
 
 def test_audio_chunking_is_bounded_and_sorted(tmp_path):

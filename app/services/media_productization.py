@@ -15,7 +15,20 @@ from typing import Any
 
 
 class MediaPolicyError(ValueError):
-    pass
+    """A deterministic media rejection that retries cannot repair."""
+
+    retryable = False
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "media_policy_rejected",
+        user_message: str = "此媒體格式目前無法處理，請轉換格式後重新上傳。",
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.user_message = user_message
 
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -88,9 +101,17 @@ def validate_audio_probe(probe: AudioProbe) -> None:
         if item.strip()
     }
     if probe.codec not in codecs:
-        raise MediaPolicyError(f"unsupported audio codec: {probe.codec}")
+        raise MediaPolicyError(
+            f"unsupported audio codec: {probe.codec}",
+            code="unsupported_audio_codec",
+            user_message=f"此音檔使用尚未支援的編碼（{probe.codec}），請轉換後重新上傳。",
+        )
     if probe.duration_ms > int(settings.AUDIO_MAX_SECONDS) * 1000:
-        raise MediaPolicyError("audio duration exceeds tenant-safe limit")
+        raise MediaPolicyError(
+            "audio duration exceeds tenant-safe limit",
+            code="audio_duration_exceeded",
+            user_message="音檔長度超過目前允許上限，請分段後重新上傳。",
+        )
 
 
 def probe_audio(path: str, *, runner: Runner = run_media_command) -> AudioProbe:

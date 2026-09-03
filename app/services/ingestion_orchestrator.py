@@ -203,6 +203,10 @@ class IngestionOrchestrator:
             job.readiness = dict(readiness)
         if error is not None:
             job.error = dict(error)
+        elif to_status in {"running", "review_required", "ready"}:
+            # A previous attempt remains available in the immutable event log,
+            # but must not look like an active error after recovery succeeds.
+            job.error = {}
         self._append_event(db, job, from_status=from_status, details=details or {})
         db.flush()
         return job
@@ -266,13 +270,23 @@ class IngestionOrchestrator:
         code: str,
         message: str,
         phase: str,
+        category: str | None = None,
+        retryable: bool | None = None,
+        user_message: str | None = None,
     ) -> IngestionJob:
+        error: dict[str, Any] = {"code": code, "message": str(message)[:500]}
+        if category is not None:
+            error["category"] = category
+        if retryable is not None:
+            error["retryable"] = retryable
+        if user_message is not None:
+            error["user_message"] = user_message
         return self.transition(
             db,
             job,
             to_status="failed",
             phase=phase,
-            error={"code": code, "message": str(message)[:500]},
+            error=error,
         )
 
     @staticmethod

@@ -219,7 +219,13 @@ class Settings(BaseSettings):
     MEDIA_PROXY_VIDEO_BITRATE: str = "1800k"
     AUDIO_CHUNK_SECONDS: int = 300
     AUDIO_MAX_SECONDS: int = 4 * 60 * 60
-    AUDIO_ALLOWED_CODECS: str = "mp3,pcm_s16le,aac,vorbis,flac,opus"
+    # Common recorders (including DJI devices) frequently emit 24/32-bit PCM.
+    # Originals remain immutable; accepted codecs are normalised to bounded MP3
+    # chunks before any external transcription request.
+    AUDIO_ALLOWED_CODECS: str = (
+        "mp3,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_f64le,"
+        "aac,vorbis,flac,opus,alac,amr_nb,amr_wb"
+    )
 
     # Query embedding cache（ENGINEERING_PLAN §7.2 P0 補強）
     EMBEDDING_CACHE_ENABLED: bool = True

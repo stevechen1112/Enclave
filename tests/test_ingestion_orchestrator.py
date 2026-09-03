@@ -156,12 +156,21 @@ def test_failed_job_retry_increments_attempt(ingestion_db):
     )
     orchestrator.transition(ingestion_db, job, to_status="running", phase="parsing")
     orchestrator.fail(
-        ingestion_db, job, code="parse_failed", message="failed", phase="parsing"
+        ingestion_db,
+        job,
+        code="parse_failed",
+        message="failed",
+        phase="parsing",
+        category="transient",
+        retryable=True,
+        user_message="系統會再次嘗試。",
     )
+    assert job.error["retryable"] is True
     orchestrator.transition(ingestion_db, job, to_status="running", phase="parsing")
 
     assert job.status == "running"
     assert job.attempt == 2
+    assert job.error == {}
 
 
 def test_idempotency_key_rejects_different_capability_request(ingestion_db):
