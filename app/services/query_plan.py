@@ -10,13 +10,14 @@
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Literal, Optional
 
 from app.gateway.fusion_policy import classify_query_domain
 
-QUERY_PLAN_VERSION = "1.3"
+QUERY_PLAN_VERSION = "2.0"
 
 Intent = Literal[
     "inventory",
@@ -70,6 +71,10 @@ _BARE_FILENAME = re.compile(
 _DATE_TOKEN = re.compile(r"(?:19|20)\d{2}(?:[-/.年]\d{1,2})?(?:[-/.月]\d{1,2}日?)?|民國\s*\d{2,3}年?(?:\d{1,2}月)?")
 _NUMBER_TOKEN = re.compile(r"(?<![A-Za-z])[-+]?\d[\d,]*(?:\.\d+)?\s*(?:元|萬|億|%|％|台|件|個|公斤|kg|天|日|小時)?")
 _NEGATIONS = ("不要", "不含", "不是", "不得", "未", "無", "排除", "否")
+_CODE_TOKEN = re.compile(
+    r"\b(?=[A-Za-z0-9_-]*[A-Za-z])(?=[A-Za-z0-9_-]*\d)"
+    r"[A-Za-z0-9]+(?:[-_/.][A-Za-z0-9]+)+\b"
+)
 
 
 def _query_spec_fields(query: str, intent: str, mentioned: List[str]) -> Dict[str, Any]:
@@ -94,19 +99,39 @@ def _query_spec_fields(query: str, intent: str, mentioned: List[str]) -> Dict[st
     dates = _DATE_TOKEN.findall(q)
     numbers = [n.strip() for n in _NUMBER_TOKEN.findall(q)]
     negations = [n for n in _NEGATIONS if n in q]
+    codes = _CODE_TOKEN.findall(q)
+    requirement_shape = {
+        "list": "set",
+        "compare": "comparison",
+        "aggregate": "scalar",
+    }.get(
+        operation,
+        "procedure" if set(requested) & {"steps", "procedure"} else "scalar",
+    )
     return {
+        "query_id": hashlib.sha256(q.encode("utf-8")).hexdigest()[:24],
+        "original_question": q,
         "operation": operation,
+        "requirement_shape": requirement_shape,
         "target_types": ["document"] if mentioned else [],
         "entities": [{"type": "document", "value": m} for m in mentioned],
         "requested_slots": requested,
+        "requested_facets": list(requested),
         "operators": operators,
         "temporal_scope": {"mentions": dates} if dates else {},
+        "source_scope": {"document_names": list(mentioned)} if mentioned else {},
         "expected_cardinality": None,
         "completeness_mode": "exhaustive" if any(t in q for t in ("全部", "完整", "所有", "分別", "各自")) else "best_effort",
         "ambiguity": [],
         "risk_class": "safety_critical" if any(t in q for t in ("工安", "安全", "危險", "停機", "品質放行")) else "normal",
         "confidence": 1.0 if mentioned or requested or operation != "lookup" else 0.8,
-        "preserved_tokens": {"dates": dates, "numbers": numbers, "negations": negations},
+        "preserved_tokens": {
+            "dates": dates,
+            "numbers": numbers,
+            "negations": negations,
+            "codes": codes,
+            "document_names": list(mentioned),
+        },
     }
 
 
@@ -163,13 +188,18 @@ class QueryPlan:
     mentioned_documents: List[str] = field(default_factory=list)
     notes: str = ""
     plan_version: str = QUERY_PLAN_VERSION
+    query_id: str = ""
+    original_question: str = ""
     operation: str = "lookup"
+    requirement_shape: str = "scalar"
     target_types: List[str] = field(default_factory=list)
     entities: List[Dict[str, str]] = field(default_factory=list)
     requested_slots: List[str] = field(default_factory=list)
+    requested_facets: List[str] = field(default_factory=list)
     operators: List[str] = field(default_factory=list)
     temporal_scope: Dict[str, Any] = field(default_factory=dict)
     knowledge_base_scope: List[str] = field(default_factory=list)
+    source_scope: Dict[str, Any] = field(default_factory=dict)
     authority_constraints: List[str] = field(default_factory=list)
     expected_cardinality: Optional[int] = None
     completeness_mode: str = "best_effort"
@@ -180,6 +210,19 @@ class QueryPlan:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+    def validate_preservation(self) -> List[str]:
+        """Return named proposal violations without mutating the question."""
+        errors: list[str] = []
+        for category, values in self.preserved_tokens.items():
+            for value in values:
+                if str(value) not in self.original_question:
+                    errors.append(f"preserved_{category}_missing:{value}")
+        if self.requested_facets != self.requested_slots:
+            errors.append("requested_facets_slots_diverged")
+        if self.mentioned_documents != self.source_scope.get("document_names", []):
+            errors.append("document_scope_not_preserved")
+        return errors
 
     @property
     def wants_catalog(self) -> bool:

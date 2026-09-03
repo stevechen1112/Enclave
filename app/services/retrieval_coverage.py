@@ -4,6 +4,12 @@ from __future__ import annotations
 import re
 from typing import Any, Mapping, Sequence
 
+from app.services.evidence_contract import (
+    EvidenceState,
+    ExecutionStatus,
+    ResponseAction,
+)
+
 
 SLOT_RULES = {
     "unit_price": ("單價", re.compile(r"單價.{0,20}\d")),
@@ -18,6 +24,47 @@ SLOT_RULES = {
     "actor": ("負責人／角色", re.compile(r"(?:負責|承辦|操作人|角色)")),
     "revision": ("版本", re.compile(r"(?:版本|版次|revision|rev\.?\s*\d)", re.I)),
 }
+
+
+def legacy_coverage_to_evidence_decision(
+    legacy: Mapping[str, Any],
+    *,
+    execution_status: ExecutionStatus | str = ExecutionStatus.OK,
+) -> dict[str, Any]:
+    """Adapt the legacy response without giving it new decision authority."""
+    status = ExecutionStatus(execution_status)
+    covered = [str(value) for value in legacy.get("covered_slots") or []]
+    missing = [str(value) for value in legacy.get("missing_slots") or []]
+    legacy_decision = str(legacy.get("decision") or "abstain")
+    if status is not ExecutionStatus.OK:
+        state = EvidenceState.PARTIAL if covered else EvidenceState.INSUFFICIENT_CONTEXT
+        action = ResponseAction.ESCALATE
+    elif legacy_decision == "answer":
+        state, action = EvidenceState.COMPLETE, ResponseAction.ANSWER
+    elif legacy_decision == "partial":
+        state, action = EvidenceState.PARTIAL, ResponseAction.ANSWER_PARTIAL
+    else:
+        state, action = EvidenceState.ABSENT, ResponseAction.ABSTAIN
+    return {
+        **dict(legacy),
+        "schema_version": "legacy-coverage-adapter.v1",
+        "legacy_decision": legacy_decision,
+        "evidence_state": state.value,
+        "response_action": action.value,
+        "execution_status": status.value,
+        "answered_requirements": covered,
+        "missing_requirements": [
+            {
+                "requirement_id": slot_id,
+                "label": slot_id,
+                "reason_codes": [str(legacy.get("reason") or "legacy_coverage_missing")],
+                "required": True,
+            }
+            for slot_id in missing
+        ],
+        "reviewed_scope": {},
+        "conflicts": [],
+    }
 
 
 def assess_retrieval_coverage(query_plan: Mapping[str, Any], results: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
