@@ -146,6 +146,33 @@ def test_shadow_writer_failure_never_raises_or_changes_legacy_decision(monkeypat
     assert result["error_class"] == "OSError"
 
 
+def test_legacy_retrieval_result_without_new_authority_metadata_is_not_false_rejected(
+    monkeypatch, tmp_path
+):
+    tenant = "tenant-a"
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_MODE", "shadow")
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_TENANT_ALLOWLIST", tenant)
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_KILL_SWITCH", False)
+    result = run_knowledge_decision_shadow(
+        tenant_id=tenant,
+        request_id="legacy-result",
+        query_plan={"requested_slots": ["answer"], "operation": "lookup"},
+        results=[
+            {
+                "id": "chunk-1",
+                "document_id": "doc-1",
+                "document_revision": "1",
+                "content": "已由可信任檢索層核准的既有文件內容",
+                "metadata": {},
+            }
+        ],
+        legacy_coverage={"decision": "answer"},
+        store=EncryptedAppendOnlyShadowStore(tmp_path, key="test-key"),
+    )
+    assert result["evidence_state"] == "complete"
+    assert result["false_accept_candidate"] is False
+
+
 @pytest.mark.asyncio
 async def test_sync_and_stream_share_retrieve_context_shadow_adapter(monkeypatch, tmp_path):
     tenant = uuid4()

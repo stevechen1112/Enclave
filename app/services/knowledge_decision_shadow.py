@@ -237,6 +237,25 @@ def _compile_shadow_inputs(
     for index, result in enumerate(results):
         content = str(result.get("content") or "")
         metadata = dict(result.get("metadata") or {})
+        # Results entering this adapter have already passed the server-owned
+        # RetrievalFacade current-revision/ACL checks.  Older providers do not
+        # emit the newer authority flags, so absence means "legacy verified";
+        # an explicit false value must still fail closed.
+        active_revision = (
+            bool(metadata["active_revision"])
+            if "active_revision" in metadata
+            else True
+        )
+        release_active = (
+            bool(metadata["release_active"])
+            if "release_active" in metadata
+            else True
+        )
+        quality_ready = (
+            bool(metadata["quality_ready"])
+            if "quality_ready" in metadata
+            else True
+        )
         for slot_id in requested:
             rule = SLOT_RULES.get(slot_id)
             if slot_id != "answer" and (rule is None or not rule[1].search(content)):
@@ -256,15 +275,15 @@ def _compile_shadow_inputs(
                     authority_class=str(metadata.get("authority_class") or "primary_document"),
                     kb_revision_id=metadata.get("kb_revision_id"),
                     acl_verified=metadata.get("accessible") is not False and not metadata.get("denied", False),
-                    active_revision=bool(metadata.get("active_revision", False)),
+                    active_revision=active_revision,
                     tenant_id=str(tenant_id),
                     department_id=metadata.get("department_id"),
                     source_id=str(result.get("document_id") or metadata.get("source_id") or ""),
                     knowledge_release_id=metadata.get("knowledge_release_id"),
                     denied=bool(metadata.get("denied", False)),
                     tombstoned=bool(metadata.get("tombstoned", False)),
-                    release_active=bool(metadata.get("release_active", False)),
-                    quality_ready=bool(metadata.get("quality_ready", False)),
+                    release_active=release_active,
+                    quality_ready=quality_ready,
                 )
             )
     return EvidenceContract(requirements, reviewed_scope=reviewed_scope), evidence
@@ -345,6 +364,8 @@ def run_knowledge_decision_shadow(
             "execution_status": decision.execution_status,
             "decision_hash": decision.decision_hash,
             "transition": transition,
+            "false_accept_candidate": record.false_accept_candidate,
+            "false_reject_candidate": record.false_reject_candidate,
         }
     except Exception as exc:
         return {
