@@ -36,6 +36,11 @@ init_sentry("enclave-api")
 async def lifespan(app: FastAPI):
     """啟動 / 關閉鉤子：管理 File Watcher 和排程器生命週期。"""
     # ── Startup ──
+    if settings.RLS_ENFORCEMENT_ENABLED:
+        from app.services.rls_runtime_gate import assert_runtime_rls_ready
+
+        assert_runtime_rls_ready()
+
     # Enabled sidecars must be safely addressable.  A bad production URL is a
     # configuration error; an unavailable optional sidecar degrades capability
     # truthfully without taking down the canonical Enclave data plane.

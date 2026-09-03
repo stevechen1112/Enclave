@@ -5,7 +5,19 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
 
 from celery import Celery
+from celery.signals import beat_init, worker_process_init
 from app.config import settings
+
+
+def _assert_rls_runtime_ready(**_kwargs) -> None:
+    if settings.RLS_ENFORCEMENT_ENABLED:
+        from app.services.rls_runtime_gate import assert_runtime_rls_ready
+
+        assert_runtime_rls_ready()
+
+
+worker_process_init.connect(_assert_rls_runtime_ready, weak=False)
+beat_init.connect(_assert_rls_runtime_ready, weak=False)
 
 # 使用 settings 中的配置，確保從環境變數讀取
 celery_app = Celery(
