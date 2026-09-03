@@ -1,0 +1,286 @@
+{
+  "generated_at": "2026-09-03T10:34:14.794463+00:00",
+  "schema_version": 1,
+  "sync": {
+    "method": "POST",
+    "path": "/chat",
+    "request_schema": {
+      "properties": {
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "conversation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conversation Id"
+        },
+        "top_k": {
+          "default": 3,
+          "description": "Number of KB chunks to retrieve",
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        },
+        "scene_context": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Context"
+        },
+        "knowledge_mode": {
+          "anyOf": [
+            {
+              "const": "spec_sop",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knowledge Mode"
+        },
+        "module_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Module Key"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "title": "ChatRequest",
+      "type": "object"
+    },
+    "response_schema": {
+      "properties": {
+        "request_id": {
+          "title": "Request Id",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "answer": {
+          "title": "Answer",
+          "type": "string"
+        },
+        "conversation_id": {
+          "format": "uuid",
+          "title": "Conversation Id",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "company_policy": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Company Policy"
+        },
+        "labor_law": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Labor Law"
+        },
+        "sources": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "notes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Notes",
+          "type": "array"
+        },
+        "disclaimer": {
+          "title": "Disclaimer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "question",
+        "answer",
+        "conversation_id",
+        "message_id",
+        "sources",
+        "notes",
+        "disclaimer"
+      ],
+      "title": "ChatResponse",
+      "type": "object"
+    }
+  },
+  "stream": {
+    "method": "POST",
+    "path": "/chat/stream",
+    "media_type": "text/event-stream",
+    "request_schema": {
+      "properties": {
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "conversation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conversation Id"
+        },
+        "top_k": {
+          "default": 3,
+          "description": "Number of KB chunks to retrieve",
+          "maximum": 20,
+          "minimum": 1,
+          "title": "Top K",
+          "type": "integer"
+        },
+        "scene_context": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scene Context"
+        },
+        "knowledge_mode": {
+          "anyOf": [
+            {
+              "const": "spec_sop",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knowledge Mode"
+        },
+        "module_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Module Key"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "title": "ChatRequest",
+      "type": "object"
+    },
+    "events": {
+      "status": {
+        "required": [
+          "type",
+          "content"
+        ]
+      },
+      "retrieval": {
+        "required": [
+          "type",
+          "retrieval"
+        ]
+      },
+      "sources": {
+        "required": [
+          "type",
+          "sources"
+        ]
+      },
+      "token": {
+        "required": [
+          "type",
+          "content"
+        ]
+      },
+      "suggestions": {
+        "required": [
+          "type",
+          "items"
+        ]
+      },
+      "done": {
+        "required": [
+          "type",
+          "message_id",
+          "conversation_id"
+        ]
+      },
+      "error": {
+        "required": [
+          "type",
+          "content"
+        ]
+      }
+    }
+  },
+  "contract_sha256": "500dd3e903a07f4ef8198710e869bf2e8eb5dcc1f6fca5b43ff7afe8516ac0d3"
+}

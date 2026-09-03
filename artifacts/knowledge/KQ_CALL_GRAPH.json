@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-09-03T10:34:14.794463+00:00",
+  "schema_version": 1,
+  "status": "PASS",
+  "decision_owners": {
+    "live": "app.services.retrieval_coverage.assess_retrieval_coverage",
+    "offline_only": "app.services.evidence_orchestrator.decide_evidence",
+    "post_generation": "app.services.source_verifier"
+  },
+  "sync_stream_divergence": [
+    "sync calls process_query and does not invoke SourceVerifier",
+    "stream calls stream_answer; SourceVerifier runs only in shadow/enforce mode",
+    "both paths persist conversation/message/retrieval/usage in normal Live Ask"
+  ],
+  "edges": [
+    {
+      "from": "POST /chat/stream",
+      "to": "crud_chat.create_message(user)",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 164
+      }
+    },
+    {
+      "from": "POST /chat/stream",
+      "to": "ChatOrchestrator.retrieve_context",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 257
+      }
+    },
+    {
+      "from": "POST /chat/stream",
+      "to": "ChatOrchestrator.stream_answer",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 287
+      }
+    },
+    {
+      "from": "POST /chat/stream",
+      "to": "crud_chat.create_message(assistant)",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 306
+      }
+    },
+    {
+      "from": "POST /chat/stream",
+      "to": "crud_chat.create_retrieval_trace",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 314
+      }
+    },
+    {
+      "from": "POST /chat",
+      "to": "ChatOrchestrator.process_query",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 469
+      }
+    },
+    {
+      "from": "POST /chat",
+      "to": "crud_chat.create_message",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 164
+      }
+    },
+    {
+      "from": "POST /chat",
+      "to": "crud_chat.create_retrieval_trace",
+      "source_ref": {
+        "path": "app/api/v1/endpoints/chat.py",
+        "line": 314
+      }
+    },
+    {
+      "from": "ChatOrchestrator.process_query",
+      "to": "HR compatibility resolve (flagged)",
+      "source_ref": {
+        "path": "app/services/chat_orchestrator.py",
+        "line": 769
+      }
+    },
+    {
+      "from": "ChatOrchestrator.process_query",
+      "to": "ChatOrchestrator.retrieve_context",
+      "source_ref": {
+        "path": "app/services/chat_orchestrator.py",
+        "line": 789
+      }
+    },
+    {
+      "from": "ChatOrchestrator.retrieve_context",
+      "to": "MultiStepOrchestrator.run",
+      "source_ref": {
+        "path": "app/services/chat_orchestrator.py",
+        "line": 155
+      }
+    },
+    {
+      "from": "MultiStepOrchestrator.run",
+      "to": "build_query_plan",
+      "source_ref": {
+        "path": "app/services/multi_step_orchestrator.py",
+        "line": 48
+      }
+    },
+    {
+      "from": "MultiStepOrchestrator.run",
+      "to": "RetrievalFacade",
+      "source_ref": {
+        "path": "app/services/multi_step_orchestrator.py",
+        "line": 42
+      }
+    },
+    {
+      "from": "ChatOrchestrator._build_context",
+      "to": "assess_retrieval_coverage",
+      "source_ref": {
+        "path": "app/services/chat_orchestrator.py",
+        "line": 382
+      }
+    },
+    {
+      "from": "ChatOrchestrator.stream_answer",
+      "to": "SourceVerifier (shadow/enforce only)",
+      "source_ref": {
+        "path": "app/services/chat_orchestrator.py",
+        "line": 479
+      }
+    }
+  ]
+}

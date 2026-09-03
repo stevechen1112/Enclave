@@ -1,0 +1,137 @@
+{
+  "generated_at": "2026-09-03T10:34:14.794463+00:00",
+  "schema_version": 1,
+  "status": "PASS",
+  "files_scanned": 271,
+  "forbidden": {
+    "aihr_runtime_pattern": "\\bhr_pv_t0_[A-Za-z0-9_]*\\b",
+    "evaluation_case_pattern": "\\b(?:Blind\\s*)?Z[1-9]\\d*[-_]\\d{2,}\\b|\\breal-\\d{3,}\\b",
+    "fixed_client_terms": [
+      "優利",
+      "八策",
+      "金正昌",
+      "杏壺",
+      "味特",
+      "周秀蘭"
+    ],
+    "full_question_in_runtime_branch": true,
+    "new_domain_formula_or_policy_in_generic_core": true
+  },
+  "findings": [],
+  "waivers": [
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/catalog_retrieval.py:143",
+      "path": "app/services/catalog_retrieval.py",
+      "line": 143,
+      "signals": [
+        "八策"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/multi_step_orchestrator.py:55",
+      "path": "app/services/multi_step_orchestrator.py",
+      "line": 55,
+      "signals": [
+        "Blind Z4-028",
+        "金正昌"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/multi_step_orchestrator.py:416",
+      "path": "app/services/multi_step_orchestrator.py",
+      "line": 416,
+      "signals": [
+        "Blind Z4-028",
+        "味特",
+        "金正昌"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/multi_step_orchestrator.py:478",
+      "path": "app/services/multi_step_orchestrator.py",
+      "line": 478,
+      "signals": [
+        "Z4-009"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/multi_step_orchestrator.py:528",
+      "path": "app/services/multi_step_orchestrator.py",
+      "line": 528,
+      "signals": [
+        "Blind Z3-035"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/query_plan.py:65",
+      "path": "app/services/query_plan.py",
+      "line": 65,
+      "signals": [
+        "Blind Z4-009",
+        "杏壺"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/query_plan.py:125",
+      "path": "app/services/query_plan.py",
+      "line": 125,
+      "signals": [
+        "八策"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/query_plan.py:126",
+      "path": "app/services/query_plan.py",
+      "line": 126,
+      "signals": [
+        "杏壺"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "waiver_id": "KQ0-WAIVER-NONEXEC-app/services/refusal.py:7",
+      "path": "app/services/refusal.py",
+      "line": 7,
+      "signals": [
+        "Blind Z3-049"
+      ],
+      "reason": "non-executable regression provenance comment/docstring",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "remove when the associated regression note is no longer needed"
+    },
+    {
+      "path": "app/services/structured_answers.py",
+      "signals": [
+        "domain_formula_or_policy",
+        "周秀蘭"
+      ],
+      "waiver_id": "KQ0-WAIVER-LEGACY-HR-001",
+      "reason": "existing HR compatibility debt; excluded from generic core execution when the flag is off",
+      "owner": "Knowledge/RAG backend",
+      "retirement_gate": "generic resolver parity and removal of the core direct path"
+    }
+  ]
+}

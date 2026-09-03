@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-09-03T10:34:14.794463+00:00",
+  "schema_version": 1,
+  "failures": [
+    {
+      "id": "KQ0-KF-001",
+      "severity": "critical-architecture",
+      "summary": "Live Ask does not consume EvidenceOrchestrator as its final decision owner.",
+      "evidence": [
+        "app/services/chat_orchestrator.py",
+        "app/services/evidence_orchestrator.py"
+      ],
+      "target_phase": "KQ2"
+    },
+    {
+      "id": "KQ0-KF-002",
+      "severity": "high",
+      "summary": "Legacy retrieval coverage uses a small keyword/regex slot table.",
+      "evidence": [
+        "app/services/retrieval_coverage.py"
+      ],
+      "target_phase": "KQ1/KQ2"
+    },
+    {
+      "id": "KQ0-KF-003",
+      "severity": "high",
+      "summary": "EvidenceContract does not yet enforce value type, source scope, temporal scope, exact KB revision, expected cardinality, or relation closure.",
+      "evidence": [
+        "app/services/evidence_contract.py"
+      ],
+      "target_phase": "KQ1"
+    },
+    {
+      "id": "KQ0-KF-004",
+      "severity": "high",
+      "summary": "Provider/schema/timeout failures can collapse into an absent/abstain-shaped result because execution status is not orthogonal.",
+      "evidence": [
+        "app/services/chat_orchestrator.py",
+        "app/services/retrieval_coverage.py"
+      ],
+      "target_phase": "KQ1"
+    },
+    {
+      "id": "KQ0-KF-005",
+      "severity": "high",
+      "summary": "Conflict, entity, source-scope, and exact-revision admission are not owned by the legacy coverage decision.",
+      "evidence": [
+        "app/services/retrieval_coverage.py"
+      ],
+      "target_phase": "KQ2"
+    },
+    {
+      "id": "KQ0-KF-006",
+      "severity": "medium",
+      "summary": "The synchronous Ask path does not invoke SourceVerifier; stream verification depends on mode.",
+      "evidence": [
+        "app/api/v1/endpoints/chat.py",
+        "app/services/chat_orchestrator.py"
+      ],
+      "target_phase": "KQ2/KQ5"
+    },
+    {
+      "id": "KQ0-KF-007",
+      "severity": "medium",
+      "summary": "Post-generation verification can reject unsupported claims but cannot recover omitted required facets.",
+      "evidence": [
+        "app/services/source_verifier.py"
+      ],
+      "target_phase": "KQ5"
+    },
+    {
+      "id": "KQ0-KF-008",
+      "severity": "high",
+      "summary": "Closed-list, per-entity comparison, and relation completeness are not represented in the live decision.",
+      "evidence": [
+        "app/services/query_plan.py",
+        "app/services/retrieval_coverage.py"
+      ],
+      "target_phase": "KQ1/KQ2/KQ4"
+    },
+    {
+      "id": "KQ0-KF-009",
+      "severity": "medium",
+      "summary": "Multi-turn query rewriting can fail open to the latest short question and does not produce a server-owned ambiguity state.",
+      "evidence": [
+        "app/services/chat_orchestrator.py",
+        "app/services/query_plan.py"
+      ],
+      "target_phase": "KQ1/KQ2"
+    },
+    {
+      "id": "KQ0-KF-010",
+      "severity": "medium",
+      "summary": "User-visible answer states do not yet distinguish partial, insufficient context, conflict, absent, and execution failure as first-class UI states.",
+      "evidence": [
+        "app/schemas/chat.py",
+        "app/api/v1/endpoints/chat.py"
+      ],
+      "target_phase": "KQ5"
+    },
+    {
+      "id": "KQ0-KF-011",
+      "severity": "architecture-debt",
+      "summary": "The flagged HR compatibility path can return before the canonical retrieval/evidence path.",
+      "evidence": [
+        "app/services/chat_orchestrator.py",
+        "app/services/structured_answers.py"
+      ],
+      "target_phase": "KQ6 retirement verification"
+    }
+  ]
+}

@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "gate": "KQ-BL-01",
+  "generated_at": "2026-09-03T10:34:14.794463+00:00",
+  "status": "BLOCKED",
+  "reason": "fresh read-only production release identity requires an authorized operator snapshot",
+  "privacy": "synthetic questions plus source paths, schemas, hashes, IDs, and non-secret runtime metadata; no tenant content",
+  "source_snapshot": {
+    "git_head": "2ba02dd1c62310db313724793ac8d985dd1d3c21",
+    "branch": "codex/production-baseline-20260812",
+    "dirty_entry_count": 79,
+    "dirty_manifest_sha256": "c4d4ec802dd6d008d832f5ba1d212c76eab024f9075d8b8930101cc24c962b04",
+    "runtime_inputs": [
+      {
+        "path": "app/api/v1/endpoints/chat.py",
+        "bytes": 32045,
+        "sha256": "190274bc0b0c094c417898b2f5906010c5b68dc34bd6fb342aaa9b409c356d43"
+      },
+      {
+        "path": "app/schemas/chat.py",
+        "bytes": 3873,
+        "sha256": "cbf3493a803b05a87cf673fd8ea26c32102507f267211fbab26e06d203faa06b"
+      },
+      {
+        "path": "app/services/chat_orchestrator.py",
+        "bytes": 47621,
+        "sha256": "2f5e547c73ffe653c1866f7b7a009ad87e9199dcaa273c56f92c4800e98245d0"
+      },
+      {
+        "path": "app/services/multi_step_orchestrator.py",
+        "bytes": 42220,
+        "sha256": "c61108888db75a2f24f72b23384580a7dfb5945036271ea52de8143c62928e6e"
+      },
+      {
+        "path": "app/services/query_plan.py",
+        "bytes": 13029,
+        "sha256": "4b62554d7db0325e1554dae81345786160df9faebadb12921abb50d1be876e8d"
+      },
+      {
+        "path": "app/services/retrieval_facade.py",
+        "bytes": 28285,
+        "sha256": "a43c661f407f688318ae092981517c1ee9b992c5957a6f406714ce720d01014f"
+      },
+      {
+        "path": "app/services/retrieval_coverage.py",
+        "bytes": 4326,
+        "sha256": "8766dcf496edd8c954331d62229b2d0dbb2e47ac21ae46b9adfe6efa07f01555"
+      },
+      {
+        "path": "app/services/evidence_contract.py",
+        "bytes": 4065,
+        "sha256": "df346c88bc370043ab7b98399dc0a65035e862ebe3816c39e80c7707cce989c4"
+      },
+      {
+        "path": "app/services/evidence_orchestrator.py",
+        "bytes": 1528,
+        "sha256": "4def1468b18085fab4c9138c6436c055c25dacea44c7215377c21b44de8459e9"
+      },
+      {
+        "path": "app/services/source_verifier.py",
+        "bytes": 12463,
+        "sha256": "19dc8001f96e7a657b67eb711923a1ec9a04566436c7538b3df2d9f2ee1c1f36"
+      },
+      {
+        "path": "app/services/knowledge_authority_read.py",
+        "bytes": 8766,
+        "sha256": "e6e7865a9f0b94332294a1a56f5bc659ff9b6d648bab5192bfddf42f3207c045"
+      },
+      {
+        "path": "app/models/knowledge_unit.py",
+        "bytes": 11516,
+        "sha256": "a817674d64c696d9859576466cb118dcd820b072818d686f4915ecafb5ae4bfa"
+      },
+      {
+        "path": "app/platform/packs/contracts.py",
+        "bytes": 32997,
+        "sha256": "8408c50321508431fb03a9ddb06ae09a2c8b8012eb81b0a086b3882f0c574e51"
+      }
+    ],
+    "runtime_inputs_manifest_sha256": "2ebbe6bbb024b24e8e9b06cc6d83c8bc413dd8bb55e7438e0c47c003fd665a46",
+    "kq0_tooling_inputs": [
+      {
+        "path": "docs/KNOWLEDGE_ANSWER_RELIABILITY_TASK_PLAN_2026-09-03.md",
+        "bytes": 43724,
+        "sha256": "9448956d34260d3e0e9a1fc35f2d9011324313ab6b71bdb05af94cdf66ec92f0"
+      },
+      {
+        "path": "docs/adr/ADR-022-aihr-enclave-knowledge-decision-mapping.md",
+        "bytes": 7001,
+        "sha256": "0acaf67ecba8c1d0854573591ebd85ec96d6d50e299cb73baac0e86481190499"
+      },
+      {
+        "path": "docs/knowledge/KQ_BASELINE.md",
+        "bytes": 4349,
+        "sha256": "08a31217422178fff94424d604c45a8fa33555216a87f27138e2034436c71a2f"
+      },
+      {
+        "path": "docs/knowledge/KQ_CAPABILITY_DISPOSITION.md",
+        "bytes": 4765,
+        "sha256": "e28106d234ef19bf886597dba7c232a5e56a72d6d07274ac7ef75893daa71b6f"
+      },
+      {
+        "path": "docs/knowledge/PHASE_KQ0_CODE_REVIEW_2026-09-03.md",
+        "bytes": 7557,
+        "sha256": "6b8183f9d2db817d56d55ec2c58f585702a081e6f693635e5fc46bbfa5abb55a"
+      },
+      {
+        "path": "scripts/freeze_knowledge_answer_baseline.py",
+        "bytes": 31721,
+        "sha256": "3e11b409a92124677297aca63d6720b9096f988bebfb7a267e0f278ddec331c2"
+      },
+      {
+        "path": "tests/test_knowledge_answer_kq0.py",
+        "bytes": 4200,
+        "sha256": "a63bbb481789d60792deb6446d4a770a9bec3b117687948e9860d73e1a2979a7"
+      }
+    ],
+    "kq0_tooling_manifest_sha256": "8ddfc69b81b4313fb7b87ff0f3542fb6e481853e4fcd683274b2f723728c4ebe"
+  },
+  "production_identity": {
+    "status": "HISTORICAL_READ_ONLY_EVIDENCE_REQUIRES_FRESH_OPERATOR_SNAPSHOT",
+    "production_baseline": {
+      "evidence_path": "artifacts/knowledge/k0_baseline.json",
+      "evidence_sha256": "47351b38b0bc221162526997a9fa01fd01d41e7df69353d9622ef1e3afce1f6f",
+      "generated_at": "2026-08-24T18:14:12.740095+00:00",
+      "production_corpus_manifest_id": "pcm-c44a76b497a92b050402da89",
+      "source": {
+        "deployment": "production",
+        "image_digest": "sha256:5f0b0ad1e6aa5707146080c4288472589444ea92c3b12a77cd5786fc30632fb0",
+        "runtime_manifest_hash": "503bc3f3941a99d03655851815975ca7b37013864ea0059af85aacb4bb8e540b"
+      },
+      "production_runtime": {
+        "backend_image_digest": "sha256:5f0b0ad1e6aa5707146080c4288472589444ea92c3b12a77cd5786fc30632fb0",
+        "frontend_image_digest": "sha256:840c751fa0bdc2890fd4a481858ea25a0cad4764dfefec5e0a9e9d6864ed0136",
+        "prompt_hash": "e787145bb3e9f304e96c42367b1365662b73a707ba0cff17e09857372dbf03a9",
+        "runtime": {
+          "DEMO_LOGIN_ENABLED": true,
+          "EMBEDDING_DIMENSION": 1024,
+          "EMBEDDING_PROVIDER": "ollama",
+          "HR_COMPATIBILITY_PACK_ENABLED": null,
+          "OLLAMA_EMBED_MODEL": "bge-m3",
+          "OPENAI_MODEL": "gpt-5.6-luna",
+          "PAGEINDEX_ENABLED": false,
+          "RETRIEVAL_MODE": "hybrid",
+          "RETRIEVAL_RERANK": true,
+          "RLS_ENFORCEMENT_ENABLED": false,
+          "SOURCE_VERIFY_MODE": "off",
+          "VOYAGE_MODEL": "voyage-4-lite"
+        }
+      }
+    },
+    "acceptance_candidate": {
+      "evidence_path": "artifacts/knowledge/deployment_manifest.json",
+      "evidence_sha256": "63f74a59fd5d872a7c41308b5617999fdbfad50147ad9e404cbf5b2240cc8750",
+      "generated_at": "2026-08-25T03:19:09.280055+00:00",
+      "deployment_manifest_id": "dm-14bd422353a946c64dfc1173",
+      "candidate_images": {
+        "backend": {
+          "reference": "enclave-backend:demo-hotfix-92a3ae1",
+          "image_id": "sha256:d5af9e57ebbe94d2cea1ca163cd235408e5f7872f369ad00892da9b486f14d00",
+          "repo_digests": [
+            "enclave-backend@sha256:d5af9e57ebbe94d2cea1ca163cd235408e5f7872f369ad00892da9b486f14d00"
+          ],
+          "size_bytes": 476551123
+        },
+        "frontend": {
+          "reference": "enclave-frontend:rc-20260825-gate6",
+          "image_id": "sha256:78129a51bca15fff697d60ce75545f84c32fe83af82ffec8fe9094fdf3927cab",
+          "repo_digests": [
+            "enclave-frontend@sha256:78129a51bca15fff697d60ce75545f84c32fe83af82ffec8fe9094fdf3927cab"
+          ],
+          "size_bytes": 42031311
+        }
+      }
+    },
+    "newer_unattested_predeploy_input": {
+      "evidence_path": "artifacts/knowledge/predeploy_manifest.json",
+      "evidence_sha256": "04cb11e3cd960952e57145a47c0aa7e041372c8865d154dfcb41a1d3d7ff3e7e",
+      "generated_at": "2026-08-27T09:42:38.321180+00:00",
+      "deployment_manifest_id": "dm-71c4890ac1b41f7f310a2f73",
+      "candidate_images": {}
+    },
+    "limitations": [
+      "No production connection was opened by this KQ0 tool.",
+      "The latest production image, KB revision, Knowledge Unit release, and Pack versions remain unverified for 2026-09-03.",
+      "Historical evidence cannot satisfy KQ-BL-01 freshness by itself."
+    ]
+  },
+  "artifacts": [
+    {
+      "path": "artifacts/knowledge/KQ_API_SCHEMA_SNAPSHOT.json",
+      "sha256": "a53d9ed98899fea6c93f240aa729b62cdb378ccb8c016ab828ee8a0cb4f31d8b",
+      "bytes": 6392
+    },
+    {
+      "path": "artifacts/knowledge/KQ_CALL_GRAPH.json",
+      "sha256": "e72df7025e0d8cf0695aab78c3150566d274c7587a4e3729cb25bcd798d964d1",
+      "bytes": 3718
+    },
+    {
+      "path": "artifacts/knowledge/KQ_BASELINE_OUTPUTS.json",
+      "sha256": "4c05e82ca5dfcf75292514dc31d7f01d74f00b644f21fadf0461c04716bda6f5",
+      "bytes": 27934
+    },
+    {
+      "path": "artifacts/knowledge/KQ_KNOWN_FAILURES.json",
+      "sha256": "7fc0b1457c4b84703ced7f9470ac3d2197097a72f38283e016a8fe3f67906269",
+      "bytes": 3804
+    },
+    {
+      "path": "artifacts/knowledge/KQ_CORE_CONTAMINATION_SCAN.json",
+      "sha256": "844f07fe667e90dd0cd7eed410cb52a6bb96eb308783ca93cd7f15fedadd98bb",
+      "bytes": 4930
+    }
+  ],
+  "gate_checks": [
+    {
+      "name": "offline_case_matrix_complete",
+      "status": "PASS"
+    },
+    {
+      "name": "sync_stream_schema_frozen",
+      "status": "PASS"
+    },
+    {
+      "name": "call_graph_anchors_resolved",
+      "status": "PASS"
+    },
+    {
+      "name": "known_failures_registered",
+      "status": "PASS"
+    },
+    {
+      "name": "core_contamination_zero_unwaived",
+      "status": "PASS"
+    },
+    {
+      "name": "production_snapshot_fresh",
+      "status": "BLOCKED"
+    },
+    {
+      "name": "exact_kb_knowledge_release_pack_versions_frozen",
+      "status": "BLOCKED"
+    }
+  ],
+  "next_allowed_action": "obtain a fresh read-only operator snapshot; do not start KQ1"
+}
