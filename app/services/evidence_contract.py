@@ -124,6 +124,10 @@ class EvidenceItem:
     closed_scope_verified: bool = False
     evidence_id: Optional[str] = None
     conflict_key: Optional[str] = None
+    denied: bool = False
+    tombstoned: bool = False
+    release_active: bool = True
+    quality_ready: bool = True
 
 
 @dataclass(frozen=True)
@@ -252,7 +256,13 @@ class EvidenceContract:
             )
             revision_ok = bool(matched) and all(item.active_revision for item in matched)
             source_ok = bool(matched) and all(
-                item.acl_verified and bool(item.quote.strip()) and _scope_matches(slot, item)
+                item.acl_verified
+                and not item.denied
+                and not item.tombstoned
+                and item.release_active
+                and item.quality_ready
+                and bool(item.quote.strip())
+                and _scope_matches(slot, item)
                 for item in matched
             )
             authority_ok = all(
@@ -274,6 +284,10 @@ class EvidenceContract:
                 and (not slot.entity_binding or item.entity_id == slot.entity_binding)
                 and item.active_revision
                 and item.acl_verified
+                and not item.denied
+                and not item.tombstoned
+                and item.release_active
+                and item.quality_ready
                 and bool(item.quote.strip())
                 and _scope_matches(slot, item)
                 and (
@@ -303,6 +317,10 @@ class EvidenceContract:
                 reasons.append("inactive_or_wrong_revision")
             if matched and not source_ok:
                 reasons.append("source_scope_or_acl_missing")
+                if any(item.denied or item.tombstoned for item in matched):
+                    reasons.append("denied_or_tombstoned")
+                if any(not item.release_active or not item.quality_ready for item in matched):
+                    reasons.append("release_or_quality_not_ready")
             if matched and not authority_ok:
                 reasons.append("authority_not_allowed")
             if matched and not temporal_ok:
@@ -368,9 +386,13 @@ class EvidenceContract:
                 EvidenceState.PARTIAL, ResponseAction.ANSWER_PARTIAL, "partial"
             )
         else:
+            explicit_closed_scope = self.reviewed_scope.exhaustive
             state = (
                 EvidenceState.INSUFFICIENT_CONTEXT
-                if any("binding" in reason for gap in gaps for reason in gap["reason_codes"])
+                if (
+                    not explicit_closed_scope
+                    or any("binding" in reason for gap in gaps for reason in gap["reason_codes"])
+                )
                 else EvidenceState.ABSENT
             )
             action = ResponseAction.CLARIFY if state is EvidenceState.INSUFFICIENT_CONTEXT else ResponseAction.ABSTAIN
