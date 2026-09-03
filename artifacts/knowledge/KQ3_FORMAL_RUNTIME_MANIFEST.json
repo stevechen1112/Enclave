@@ -1,0 +1,41 @@
+{
+  "schema_version": "kq3-runtime-manifest.v1",
+  "captured_at": "2026-09-03T11:54:00Z",
+  "release_id": "kq3-shadow-d223425",
+  "source_commit": "d223425b7c949f70bf73a01ea7dcc9b5ef9c9463",
+  "source_dirty": "false",
+  "deployment_manifest_id": "dm-1b985d37db8da00104263c20",
+  "schema_head": "input_i8_pilot_evidence_001",
+  "backend_image_id": "sha256:33b0044b8045075d575f9043501d31cb4cad21913ca593341a57fe616d44bde8",
+  "frontend_image_id": "sha256:6e0ed172641f0c5964496689faa6f166e332f7c3c6dcd6f5f4cde5b0bdfba485",
+  "gateway_image_id": "sha256:8063c3d69756afffdabeebea7a74c5a2bb1ce84847b07137beb8fd65aee4d412",
+  "prompt_hash": "e787145bb3e9f304e96c42367b1365662b73a707ba0cff17e09857372dbf03a9",
+  "model_manifest": {
+    "generation": "gpt-5.6-luna",
+    "embedding_provider": "ollama",
+    "embedding_model": "bge-m3",
+    "embedding_dimension": 1024
+  },
+  "feature_flags": {
+    "knowledge_decision_mode": "shadow",
+    "knowledge_decision_public_path": "off",
+    "retrieval_mode": "hybrid",
+    "retrieval_rerank": true,
+    "source_verify_mode": "off",
+    "pageindex_enabled": false,
+    "rls_enforcement_enabled": false
+  },
+  "knowledge_identity": {
+    "kb_revision_id": "b48c615a-3826-5ee0-9483-938507fff858",
+    "kb_manifest_hash": "8a349436eac39e71d35be5264ec203ec701f55d392267f5e49071c32553a15e0",
+    "knowledge_unit_releases": [],
+    "pack_versions": {
+      "mka": "1.0.0",
+      "sales_quote": "1.0.0",
+      "incident_handover": "1.0.0",
+      "quality_8d": "1.0.0",
+      "training_knowhow": "1.0.0"
+    }
+  },
+  "rollback_release": "input-i9-dd5a6bd"
+}

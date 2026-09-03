@@ -1,0 +1,39 @@
+{
+  "schema_version": "kq3-shadow-authorization.v2",
+  "status": "AUTHORIZED",
+  "authorized_at": "2026-09-03T11:42:04.470147+00:00",
+  "valid_until": "2026-09-03T13:42:04.470147+00:00",
+  "mode": "shadow",
+  "tenant_refs": [
+    "daa8304e6de45187dfa4d93b"
+  ],
+  "scope": "Full rerun of the unchanged 30 frozen production cases after metric-semantics correction; public path remains off",
+  "allowed_data": [
+    "pseudonymous_refs",
+    "decision_hashes",
+    "reason_codes",
+    "stage_latency",
+    "reauthorized_source_refs"
+  ],
+  "retention_days": 30,
+  "legal_hold": false,
+  "operator": "Codex under explicit Owner instruction",
+  "rollback_owner": "Codex",
+  "rollback_release": "input-i9-dd5a6bd",
+  "release_id": "kq3-shadow-d223425",
+  "source_commit": "d223425b7c949f70bf73a01ea7dcc9b5ef9c9463",
+  "deployment_manifest_id": "dm-1b985d37db8da00104263c20",
+  "backend_image_id": "sha256:33b0044b8045075d575f9043501d31cb4cad21913ca593341a57fe616d44bde8",
+  "frontend_image_id": "sha256:6e0ed172641f0c5964496689faa6f166e332f7c3c6dcd6f5f4cde5b0bdfba485",
+  "case_manifest_sha256": "d68101cceaeaa984b5cb48fce1d47479b742657646cbe33921dc751e43604aa0",
+  "threshold_manifest_sha256": "51618bf3edae3041f6c84a0a2810fed2e97709ee134ef5499da251f53f6c5f71",
+  "runner_sha256": "f59e4c507a4b4ce9f8542e47208b6e8ffc2cfbe75ce757e092394c366e3659ba",
+  "supersedes_failed_report_sha256": "30bae59126bf2e2705e2224de56b872b369eae17a4b91cb100a5563528cd748d",
+  "stop_conditions": [
+    "tenant_mutation_nonzero",
+    "cross_tenant_reference",
+    "unredacted_content",
+    "sync_stream_mismatch",
+    "legacy_answer_change"
+  ]
+}

@@ -1,0 +1,321 @@
+{
+  "schema_version": "kq3-formal-case-manifest.v2",
+  "status": "FROZEN",
+  "immutable": true,
+  "frozen_at": "2026-09-03T11:54:00Z",
+  "supersedes_failed_report_sha256": "30bae59126bf2e2705e2224de56b872b369eae17a4b91cb100a5563528cd748d",
+  "revision_reason": "Correct inverted transition candidate labels; thresholds and all 30 case questions remain unchanged.",
+  "tenant_id": "4a8a6ec2-9be7-5d43-a786-2bf4af10f3d1",
+  "tenant_class": "canonical synthetic demonstration tenant",
+  "execution_policy": {
+    "process_read_only": true,
+    "use_gateway": false,
+    "retrieval_cache": false,
+    "channels": [
+      "sync",
+      "stream"
+    ],
+    "repetitions_per_case": 1
+  },
+  "subjects": [
+    {
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "role": "employee",
+      "department_id": "7492dc39-12e6-58b3-8b2c-628c307f6b2b"
+    },
+    {
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "role": "viewer",
+      "department_id": "709974d2-bd28-5eeb-bb78-25edee5818ac"
+    }
+  ],
+  "release_binding": {
+    "release_id": "kq3-shadow-d223425",
+    "source_commit": "d223425b7c949f70bf73a01ea7dcc9b5ef9c9463",
+    "deployment_manifest_id": "dm-1b985d37db8da00104263c20",
+    "backend_image_id": "sha256:33b0044b8045075d575f9043501d31cb4cad21913ca593341a57fe616d44bde8",
+    "frontend_image_id": "sha256:6e0ed172641f0c5964496689faa6f166e332f7c3c6dcd6f5f4cde5b0bdfba485",
+    "kb_revision_id": "b48c615a-3826-5ee0-9483-938507fff858",
+    "kb_manifest_hash": "8a349436eac39e71d35be5264ec203ec701f55d392267f5e49071c32553a15e0"
+  },
+  "cases": [
+    {
+      "case_id": "KQ3-001",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_EQ-100_虛構設備換線SOP.md》請只根據這份文件摘要主要內容。",
+      "expected_document_ids": [
+        "799edd41-b399-5544-9ad4-f4180b595a57"
+      ],
+      "forbidden_document_ids": [
+        "6d5e6a8c-7dfe-46ae-8139-56d51a934f8d"
+      ]
+    },
+    {
+      "case_id": "KQ3-002",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_EQ-100_虛構設備換線SOP.md》這份文件列出的重點是什麼？",
+      "expected_document_ids": [
+        "799edd41-b399-5544-9ad4-f4180b595a57"
+      ],
+      "forbidden_document_ids": [
+        "d6c3951c-c8f7-4ff9-82f5-96bf215e351c"
+      ]
+    },
+    {
+      "case_id": "KQ3-003",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_EQ-100_虛構設備換線SOP.md》請說明這份文件的適用主題。",
+      "expected_document_ids": [
+        "799edd41-b399-5544-9ad4-f4180b595a57"
+      ],
+      "forbidden_document_ids": [
+        "3bc1ae5f-cfb0-43de-81e1-b1f56f688bb9"
+      ]
+    },
+    {
+      "case_id": "KQ3-004",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_EQ-100_虛構設備換線SOP.md》這份文件提供哪些操作資訊？",
+      "expected_document_ids": [
+        "799edd41-b399-5544-9ad4-f4180b595a57"
+      ],
+      "forbidden_document_ids": [
+        "abe63a35-ca10-4d20-90fe-53f7a4556cd8"
+      ]
+    },
+    {
+      "case_id": "KQ3-005",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_EQ-100_虛構設備換線SOP.md》請依文件內容整理可核對的事實。",
+      "expected_document_ids": [
+        "799edd41-b399-5544-9ad4-f4180b595a57"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-006",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_EQ-100_虛構設備換線SOP.md》請指出這份文件的核心規則。",
+      "expected_document_ids": [
+        "799edd41-b399-5544-9ad4-f4180b595a57"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-007",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_P-100_虛構報價與交期規則.md》請只根據這份文件摘要主要內容。",
+      "expected_document_ids": [
+        "a9e2db10-6e0a-5ba2-93ff-0f8674cc78ba"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-008",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_P-100_虛構報價與交期規則.md》這份文件列出的重點是什麼？",
+      "expected_document_ids": [
+        "a9e2db10-6e0a-5ba2-93ff-0f8674cc78ba"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-009",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_P-100_虛構報價與交期規則.md》請說明這份文件的適用主題。",
+      "expected_document_ids": [
+        "a9e2db10-6e0a-5ba2-93ff-0f8674cc78ba"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-010",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_P-100_虛構報價與交期規則.md》這份文件提供哪些操作資訊？",
+      "expected_document_ids": [
+        "a9e2db10-6e0a-5ba2-93ff-0f8674cc78ba"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-011",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_P-100_虛構報價與交期規則.md》請依文件內容整理可核對的事實。",
+      "expected_document_ids": [
+        "a9e2db10-6e0a-5ba2-93ff-0f8674cc78ba"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-012",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_P-100_虛構報價與交期規則.md》請指出這份文件的核心規則。",
+      "expected_document_ids": [
+        "a9e2db10-6e0a-5ba2-93ff-0f8674cc78ba"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-013",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_合成工廠_公司與安全手冊.md》請只根據這份文件摘要主要內容。",
+      "expected_document_ids": [
+        "0dde44a0-8f70-56b7-91d0-711d88b8c0ab"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-014",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_合成工廠_公司與安全手冊.md》這份文件列出的重點是什麼？",
+      "expected_document_ids": [
+        "0dde44a0-8f70-56b7-91d0-711d88b8c0ab"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-015",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_合成工廠_公司與安全手冊.md》請說明這份文件的適用主題。",
+      "expected_document_ids": [
+        "0dde44a0-8f70-56b7-91d0-711d88b8c0ab"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-016",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_合成工廠_公司與安全手冊.md》這份文件提供哪些操作資訊？",
+      "expected_document_ids": [
+        "0dde44a0-8f70-56b7-91d0-711d88b8c0ab"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-017",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_合成工廠_公司與安全手冊.md》請依文件內容整理可核對的事實。",
+      "expected_document_ids": [
+        "0dde44a0-8f70-56b7-91d0-711d88b8c0ab"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-018",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_合成工廠_公司與安全手冊.md》請指出這份文件的核心規則。",
+      "expected_document_ids": [
+        "0dde44a0-8f70-56b7-91d0-711d88b8c0ab"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-019",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_老師傅經驗_張力飄移判斷.md》請只根據這份文件摘要主要內容。",
+      "expected_document_ids": [
+        "c6a2a8f2-45ea-5041-bb95-924b84b65080"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-020",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_老師傅經驗_張力飄移判斷.md》這份文件列出的重點是什麼？",
+      "expected_document_ids": [
+        "c6a2a8f2-45ea-5041-bb95-924b84b65080"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-021",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_老師傅經驗_張力飄移判斷.md》請說明這份文件的適用主題。",
+      "expected_document_ids": [
+        "c6a2a8f2-45ea-5041-bb95-924b84b65080"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-022",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_老師傅經驗_張力飄移判斷.md》這份文件提供哪些操作資訊？",
+      "expected_document_ids": [
+        "c6a2a8f2-45ea-5041-bb95-924b84b65080"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-023",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_老師傅經驗_張力飄移判斷.md》請依文件內容整理可核對的事實。",
+      "expected_document_ids": [
+        "c6a2a8f2-45ea-5041-bb95-924b84b65080"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-024",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_老師傅經驗_張力飄移判斷.md》請指出這份文件的核心規則。",
+      "expected_document_ids": [
+        "c6a2a8f2-45ea-5041-bb95-924b84b65080"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-025",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_虛構客訴_8D處理範例.md》請只根據這份文件摘要主要內容。",
+      "expected_document_ids": [
+        "5c0b960e-aca1-575b-8512-41a5d387ef6b"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-026",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_虛構客訴_8D處理範例.md》這份文件列出的重點是什麼？",
+      "expected_document_ids": [
+        "5c0b960e-aca1-575b-8512-41a5d387ef6b"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-027",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_虛構客訴_8D處理範例.md》請說明這份文件的適用主題。",
+      "expected_document_ids": [
+        "5c0b960e-aca1-575b-8512-41a5d387ef6b"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-028",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_虛構客訴_8D處理範例.md》這份文件提供哪些操作資訊？",
+      "expected_document_ids": [
+        "5c0b960e-aca1-575b-8512-41a5d387ef6b"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-029",
+      "subject_id": "7fdca88a-9d8c-51fc-816f-62bb7500cea1",
+      "query": "《DEMO_虛構客訴_8D處理範例.md》請依文件內容整理可核對的事實。",
+      "expected_document_ids": [
+        "5c0b960e-aca1-575b-8512-41a5d387ef6b"
+      ],
+      "forbidden_document_ids": []
+    },
+    {
+      "case_id": "KQ3-030",
+      "subject_id": "5d5e9a87-9670-5a90-96f9-9ff6ffec69c1",
+      "query": "《DEMO_虛構客訴_8D處理範例.md》請指出這份文件的核心規則。",
+      "expected_document_ids": [
+        "5c0b960e-aca1-575b-8512-41a5d387ef6b"
+      ],
+      "forbidden_document_ids": []
+    }
+  ]
+}

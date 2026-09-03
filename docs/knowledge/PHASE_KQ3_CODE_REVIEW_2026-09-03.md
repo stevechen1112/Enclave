@@ -1,8 +1,8 @@
 # Phase KQ3 Code Review — 2026-09-03
 
-結論：`BLOCKED`
+結論：`PASS TO NEXT PHASE`
 Gate：`KQ-SHADOW-01`
-範圍：Live Ask shadow code、out-of-band telemetry、授權唯讀 UI；未部署
+範圍：Live Ask shadow code、out-of-band telemetry、授權唯讀 UI、正式唯讀 Shadow 首跑與完整重跑
 
 ## 程式結果
 
@@ -27,21 +27,26 @@ KQ3 code complete：新增預設 off 的 mode/allowlist/kill switch，sync 與 s
 13. Shadow store：tenant DB 外、append-only、加密、retention/legal hold/purge audit、授權唯讀，writer 不 fallback。
 14. Enforce：硬性 off，沒有推定 Owner 授權。
 
-## 未解除 Gate
+## 正式 Shadow 證據
 
-- 尚無 tenant Owner 的獨立 Shadow 核准（tenant、scope、期限、release、資料使用、operator、rollback owner）。
-- 尚未部署最終候選 image，因此沒有 30 個正式真實案例、2 subjects、4 deny/forbidden、mutation=0 與 sync/stream parity 的首跑證據。
-- 此缺口不能用 local synthetic tests 或 KQ0 baseline 取代。
+- Owner 授權已綁定合成 Demo tenant、scope、兩小時時窗、資料種類、30 天 retention、operator、rollback owner、release、image、case/threshold/runner hashes；公開 Web path 在正式 runner 期間及完成後均維持 `off`。
+- 最終正式 release：`kq3-shadow-d223425`；source `d223425b7c949f70bf73a01ea7dcc9b5ef9c9463`；deployment manifest `dm-1b985d37db8da00104263c20`；backend image `sha256:33b0044b8045075d575f9043501d31cb4cad21913ca593341a57fe616d44bde8`；frontend image `sha256:6e0ed172641f0c5964496689faa6f166e332f7c3c6dcd6f5f4cde5b0bdfba485`。
+- 30 個凍結案例、2 個既有 subject、4 個跨租戶 forbidden 文件負例；每案各跑 baseline、sync Shadow 與 stream Shadow。30/30 有效，新增 60 筆加密 append-only telemetry。
+- tenant mutation `0`；legacy context digest 30/30 不變；expected documents 30/30；forbidden absence 30/30；sync/stream parity `1.0`；execution failure `0.0`。
+- ground-truth adjudicated false acceptance `0.0`、false rejection `0.0`；transition candidates 另列為 `abstain→complete` 6、`answer→complete` 24，未把候選直接冒充錯誤率。
+- decision overhead P50/P95/P99 為 `0.11885 / 0.15469 / 0.3289 ms`，均低於預凍結 `20 / 75 / 150 ms`。
+- 首次執行如實留下 FAIL artifact：它揭露 transition candidate labels 顛倒，以及 runner 把候選當 final rate。門檻與 30 題完全未改；修正語意後以新 release 完整重跑。FAIL SHA-256 `30bae59126bf2e2705e2224de56b872b369eae17a4b91cb100a5563528cd748d`，PASS SHA-256 `f3cc0b4d5e7784bd17e2b85a54aafd7177ed8678a5837b70a87c42a6b856462c`。
+- 加密 store 共保留原首跑與完整重跑 120 筆；明文掃描未出現題目、文件名、password 或 token。正式環境仍為 `KNOWLEDGE_DECISION_MODE=off`，rollback point 為 `input-i9-dd5a6bd`。
 
 ## 驗證
 
-- KQ3 專用：10 passed。
+- KQ3／KQ2／production Shadow focused suite：25 passed。
 - KQ1–KQ3、QueryPlan、Knowledge engine、production shadow contract：83 passed。
 - TypeScript `tsc -b`：PASS；Vite production build：PASS。
 - `compileall`、`git diff --check`：PASS。
 
 ## Review 決定
 
-`BLOCKED`
+`PASS TO NEXT PHASE`
 
-依 phase gate 與 tenant authorization 規則，未取得明確 Shadow 授權前不得部署、不得執行正式首跑、不得開始 KQ4。
+KQ-SHADOW-01 已依預凍結門檻通過，可開始 KQ4。此 PASS 不構成 KQ7 Enforce 授權；正式路徑保持 `off`。
