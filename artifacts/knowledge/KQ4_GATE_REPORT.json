@@ -1,0 +1,34 @@
+{
+  "artifact_schema": "knowledge-answer-gate-report/v1",
+  "phase": "KQ4",
+  "gate": "KQ-TYPED-01",
+  "status": "pass",
+  "date": "2026-09-03",
+  "results": {
+    "focused_tests": {
+      "passed": 87,
+      "failed": 0
+    },
+    "ruff": "pass",
+    "postgresql_migration": {
+      "version": "PostgreSQL 16",
+      "upgrade": true,
+      "downgrade": true,
+      "forward_recovery": true,
+      "section_path": true,
+      "rls_forced": true,
+      "tenant_policy": true
+    },
+    "typed_kinds": 12,
+    "relation_kinds": 5,
+    "second_authority_created": false,
+    "input_i9_behavior_changed": false,
+    "production_decision_mode": "off"
+  },
+  "evidence": [
+    "tests/test_knowledge_answer_kq4.py",
+    "scripts/knowledge_kq4_migration_gate.py",
+    "app/db/migrations/versions/knowledge_typed_relation_kq4_001.py",
+    "docs/knowledge/PHASE_KQ4_CODE_REVIEW_2026-09-03.md"
+  ]
+}

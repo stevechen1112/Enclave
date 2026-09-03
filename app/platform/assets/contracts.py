@@ -111,8 +111,11 @@ def _contract_dict(instance: Any) -> dict[str, Any]:
             value = value.value
         elif isinstance(value, Mapping):
             value = dict(value)
-        elif isinstance(value, tuple) and value and hasattr(value[0], "to_dict"):
-            value = [member.to_dict() for member in value]
+        elif isinstance(value, tuple):
+            value = [
+                member.to_dict() if hasattr(member, "to_dict") else member
+                for member in value
+            ]
         result[item.name] = value
     return result
 
@@ -248,6 +251,7 @@ class EvidenceSpan:
     locator_kind: EvidenceLocatorKind
     page: int | None = None
     section: str | None = None
+    section_path: tuple[str, ...] = ()
     bbox: Mapping[str, float] | None = None
     coordinate_space: CoordinateSpace | None = None
     worksheet: str | None = None
@@ -283,6 +287,10 @@ class EvidenceSpan:
         if self.asset_revision < 1:
             raise ValueError("asset_revision must be >= 1")
         _require_text("schema_version", self.schema_version)
+        normalized_path = tuple(
+            str(item).strip() for item in (self.section_path or ()) if str(item).strip()
+        )
+        object.__setattr__(self, "section_path", normalized_path)
         _validate_bbox(self.bbox, self.coordinate_space)
         if self.bbox is not None:
             object.__setattr__(self, "bbox", _freeze_mapping(self.bbox))

@@ -448,6 +448,7 @@ def project_document_text_artifact(
         locator_values: dict[str, Any] = {
             "page": chunk.get("page"),
             "section": chunk.get("section") or (hierarchy[-1] if hierarchy else None),
+            "section_path": hierarchy,
             "paragraph_index": chunk.get("paragraph_index"),
             "slide_number": chunk.get("slide_number"),
             "bbox": bbox,
@@ -487,6 +488,7 @@ def project_document_text_artifact(
         comparable_keys = (
             "page",
             "section",
+            "section_path",
             "paragraph_index",
             "slide_number",
             "bbox",

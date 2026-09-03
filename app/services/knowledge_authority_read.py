@@ -11,7 +11,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 
 from app.core.authorization import AuthorizationContext
-from app.models.asset import SourceAsset
+from app.models.asset import AssetRevision, DerivedArtifact, EvidenceSpan, SourceAsset
 from app.models.knowledge_unit import (
     KnowledgeUnitRecord,
     KnowledgeUnitRelease,
@@ -120,7 +120,58 @@ def list_active_knowledge_units(
                 )
                 if asset is None or not asset_access_allows(db, asset, authz=authz):
                     continue
+                if revision.source_asset_revision_id is None:
+                    continue
+                source_revision = (
+                    db.query(AssetRevision)
+                    .filter(
+                        AssetRevision.tenant_id == authz.tenant_id,
+                        AssetRevision.id == revision.source_asset_revision_id,
+                        AssetRevision.asset_id == unit.source_asset_id,
+                        AssetRevision.ingestion_status == "ready",
+                    )
+                    .first()
+                )
+                if source_revision is None:
+                    continue
+                if revision.source_artifact_id:
+                    source_artifact = (
+                        db.query(DerivedArtifact)
+                        .filter(
+                            DerivedArtifact.tenant_id == authz.tenant_id,
+                            DerivedArtifact.id == revision.source_artifact_id,
+                            DerivedArtifact.asset_revision_id
+                            == revision.source_asset_revision_id,
+                            DerivedArtifact.quality_state == "ready",
+                        )
+                        .first()
+                    )
+                    if source_artifact is None:
+                        continue
+                if unit.source_resource_type == "evidence_span":
+                    try:
+                        evidence_span_id = UUID(str(unit.source_resource_id))
+                    except (TypeError, ValueError, AttributeError):
+                        continue
+                    span = (
+                        db.query(EvidenceSpan.id)
+                        .filter(
+                            EvidenceSpan.tenant_id == authz.tenant_id,
+                            EvidenceSpan.id == evidence_span_id,
+                            EvidenceSpan.artifact_id == revision.source_artifact_id,
+                            EvidenceSpan.asset_revision_id
+                            == revision.source_asset_revision_id,
+                        )
+                        .first()
+                    )
+                    if span is None:
+                        continue
             else:
+                if (
+                    revision.source_asset_revision_id is not None
+                    or revision.source_artifact_id is not None
+                ):
+                    continue
                 if unit.source_resource_type == "document_chunk":
                     from app.models.document import Document
 

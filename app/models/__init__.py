@@ -11,6 +11,7 @@ from app.models.asset import (
 )
 from app.models.ingestion import IngestionJob, IngestionJobEvent, InputOperationMetric
 from app.models.knowledge_unit import (
+    KnowledgeUnitRelationProjection,
     KnowledgeUnitRecord,
     KnowledgeUnitRelease,
     KnowledgeUnitReleaseMembership,

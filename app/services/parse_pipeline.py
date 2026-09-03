@@ -24,6 +24,40 @@ from app.services.content_reference import (
 logger = logging.getLogger(__name__)
 
 
+def _update_heading_path(path: list[str], level: int, title: str) -> list[str]:
+    """Return the heading ancestry after one real heading, never a list row."""
+    normalized = str(title or "").strip()
+    if not normalized or level < 1 or level > 6:
+        return list(path)
+    updated = list(path[: level - 1])
+    while len(updated) < level - 1:
+        updated.append("")
+    updated.append(normalized)
+    return [item for item in updated if item]
+
+
+def _markdown_evidence_chunks(text: str) -> list[ParseChunk]:
+    path: list[str] = []
+    chunks: list[ParseChunk] = []
+    heading_pattern = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+    for line in str(text or "").splitlines():
+        value = line.strip()
+        if not value:
+            continue
+        match = heading_pattern.match(value)
+        if match:
+            path = _update_heading_path(path, len(match.group(1)), match.group(2))
+        chunks.append(
+            ParseChunk(
+                text=value,
+                hierarchy=list(path),
+                section=path[-1] if path else "document",
+                chunk_index=len(chunks),
+            )
+        )
+    return chunks
+
+
 def _native_evidence_chunks(
     file_path: str,
     file_type: str,
@@ -56,18 +90,22 @@ def _native_evidence_chunks(
 
             document = WordDocument(file_path)
             sections: List[ParseChunk] = []
-            heading: str | None = None
+            heading_path: list[str] = []
             for paragraph_index, paragraph in enumerate(document.paragraphs, 1):
                 value = paragraph.text.strip()
                 if not value:
                     continue
-                if str(paragraph.style.name or "").lower().startswith("heading"):
-                    heading = value
+                style_name = str(paragraph.style.name or "").strip().casefold()
+                match = re.match(r"heading\s*([1-6])$", style_name)
+                if match:
+                    heading_path = _update_heading_path(
+                        heading_path, int(match.group(1)), value
+                    )
                 sections.append(
                     ParseChunk(
                         text=value,
-                        hierarchy=[heading] if heading else [],
-                        section=heading or "document",
+                        hierarchy=list(heading_path),
+                        section=heading_path[-1] if heading_path else "document",
                         paragraph_index=paragraph_index,
                         chunk_index=len(sections),
                     )
@@ -85,6 +123,10 @@ def _native_evidence_chunks(
                         )
             if sections:
                 return sections
+        elif kind in {"md", "markdown", "txt"}:
+            chunks = _markdown_evidence_chunks(text)
+            if chunks:
+                return chunks
         elif kind in {"xlsx", "xls"}:
             from openpyxl import load_workbook
             from openpyxl.utils import get_column_letter

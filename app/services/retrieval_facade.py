@@ -8,6 +8,7 @@ P1 — RetrievalFacade
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -459,12 +460,43 @@ class RetrievalFacade:
             explicit = True
             raw_scope.extend((scope or {}).get("kb_revision_ids") or [])
         revision_ids = [UUID(str(item)) for item in raw_scope if item]
-        return list_active_knowledge_units(
+        units = list_active_knowledge_units(
             db,
             authz=authz,
             kb_revision_ids=revision_ids if explicit else None,
             query_text=query,
         )
+        if not query or not units:
+            return units
+        terms = {term.casefold() for term in str(query).split() if term.strip()}
+        seeds = [
+            unit
+            for unit in units
+            if any(term in f"{unit.title} {unit.content}".casefold() for term in terms)
+        ]
+        if not seeds:
+            return units
+        from dataclasses import replace
+
+        from app.services.typed_knowledge_projection import expand_active_relations
+
+        expanded = expand_active_relations(
+            db,
+            authz=authz,
+            seed_revision_ids=[unit.unit_revision_id for unit in seeds],
+            kb_revision_ids=revision_ids if explicit else None,
+            query_text=query,
+        )
+        expanded_ids = {unit.unit_revision_id for unit in expanded}
+        return [
+            replace(
+                unit,
+                metadata={**unit.metadata, "relation_expanded": True},
+            )
+            if unit.unit_revision_id in expanded_ids
+            else unit
+            for unit in units
+        ]
 
     @classmethod
     def _authority_chunks(
@@ -490,15 +522,36 @@ class RetrievalFacade:
         query: str,
         top_k: int,
     ) -> List[ChunkResult]:
-        terms = {term.lower() for term in query.split() if term.strip()}
+        terms = {term.casefold() for term in query.split() if term.strip()}
+        normalized_query = " ".join(str(query or "").casefold().split())
+        exact_tokens = {
+            token.casefold()
+            for token in re.findall(r"(?u)\b[\w./-]{2,32}\b", str(query or ""))
+            if any(character.isdigit() for character in token)
+            or len(token) <= 8
+        }
         scored = []
         for unit in units:
-            haystack = f"{unit.title} {unit.content}".lower()
+            haystack = f"{unit.title} {unit.content}".casefold()
             score = (
                 sum(1 for term in terms if term in haystack) / max(len(terms), 1)
                 if terms
                 else 0.0
             )
+            if unit.metadata.get("relation_expanded"):
+                score += 0.5
+            exact_match = bool(
+                normalized_query
+                and (
+                    normalized_query == " ".join(unit.content.casefold().split())
+                    or any(
+                        re.search(rf"(?<!\w){re.escape(token)}(?!\w)", haystack)
+                        for token in exact_tokens
+                    )
+                )
+            )
+            if exact_match:
+                score += 1.0
             metadata = dict(unit.metadata)
             metadata.update(
                 {
@@ -520,6 +573,7 @@ class RetrievalFacade:
                         if unit.source_artifact_id
                         else None
                     ),
+                    "exact_match": exact_match,
                 }
             )
             scored.append(

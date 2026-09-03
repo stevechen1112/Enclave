@@ -316,6 +316,7 @@ class EvidenceSpan(Base):
     locator_kind = Column(String(32), nullable=False)
     page = Column(Integer, nullable=True)
     section = Column(String(500), nullable=True)
+    section_path = Column(JSON, nullable=False, default=list)
     paragraph_index = Column(Integer, nullable=True)
     slide_number = Column(Integer, nullable=True)
     bbox = Column(JSON, nullable=True)

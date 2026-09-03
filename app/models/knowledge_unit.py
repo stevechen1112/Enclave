@@ -24,12 +24,32 @@ from app.db.base_class import Base
 
 KNOWLEDGE_UNIT_TYPES = (
     "narrative",
+    "fact",
+    "definition",
+    "condition",
+    "exception",
+    "timing",
+    "formula",
+    "list_member",
+    "workflow_step",
+    "table_fact",
+    "record_field",
+    "role_assignment",
+    "contact",
     "row",
     "field",
     "procedure",
     "knowhow",
     "entity",
     "compiled",
+)
+
+KNOWLEDGE_RELATION_KINDS = (
+    "condition",
+    "exception",
+    "member",
+    "next_step",
+    "same_record",
 )
 
 
@@ -302,5 +322,64 @@ class KnowledgeUnitReleaseMembership(Base):
             "ix_knowledge_unit_memberships_release_status",
             "release_id",
             "status",
+        ),
+    )
+
+
+class KnowledgeUnitRelationProjection(Base):
+    """Immutable, provenance-bound edge between two unit revisions."""
+
+    __tablename__ = "knowledge_unit_relation_projections"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(
+        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
+    )
+    relation_key = Column(String(700), nullable=False)
+    source_revision_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    target_revision_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    relation_kind = Column(String(32), nullable=False, index=True)
+    source_content_hash = Column(String(71), nullable=False)
+    target_content_hash = Column(String(71), nullable=False)
+    projector_version = Column(String(100), nullable=False)
+    provenance_json = Column(JSON, nullable=False, default=dict)
+    schema_version = Column(String(20), nullable=False, default="1.0")
+    created_by = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True
+    )
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "relation_key",
+            name="uq_knowledge_unit_relation_projections_key",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "source_revision_id"],
+            ["knowledge_unit_revisions.tenant_id", "knowledge_unit_revisions.id"],
+            name="fk_knowledge_unit_relation_projections_source_revision",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["tenant_id", "target_revision_id"],
+            ["knowledge_unit_revisions.tenant_id", "knowledge_unit_revisions.id"],
+            name="fk_knowledge_unit_relation_projections_target_revision",
+            ondelete="CASCADE",
+        ),
+        CheckConstraint(
+            f"relation_kind IN ({_sql_values(KNOWLEDGE_RELATION_KINDS)})",
+            name="ck_knowledge_unit_relation_projections_kind",
+        ),
+        CheckConstraint(
+            "source_revision_id <> target_revision_id",
+            name="ck_knowledge_unit_relation_projections_distinct",
+        ),
+        Index(
+            "ix_knowledge_unit_relation_projections_source_kind",
+            "source_revision_id",
+            "relation_kind",
         ),
     )
