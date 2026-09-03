@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from threading import Barrier
 
 import pytest
 
@@ -284,3 +286,59 @@ def test_orchestrator_enforces_admission_before_creating_job(
         ).count() == 0
     finally:
         db.close()
+
+
+def test_concurrent_tenant_admission_avoids_foreign_key_lock_upgrade_deadlock(
+    test_engine,
+):
+    import app.models  # noqa: F401
+    from app.composition.ingestion import build_ingestion_adapter_registry
+    from app.db.base_class import Base
+    from app.models.tenant import Tenant
+    from app.services.ingestion_orchestrator import IngestionOrchestrator
+    from sqlalchemy.orm import sessionmaker
+
+    Base.metadata.create_all(test_engine)
+    session_factory = sessionmaker(bind=test_engine)
+    setup = session_factory()
+    try:
+        tenant = Tenant(
+            id=uuid.uuid4(),
+            name=f"I7 concurrent {uuid.uuid4()}",
+            plan="enterprise",
+            status="active",
+        )
+        setup.add(tenant)
+        setup.commit()
+        tenant_id = tenant.id
+    finally:
+        setup.close()
+
+    barrier = Barrier(2)
+
+    def create_job(index: int) -> str:
+        db = session_factory()
+        try:
+            revision = _seed_revision(db, tenant_id)
+            # Both transactions now hold a tenant FK KEY SHARE lock. The
+            # admission lock must serialize without upgrading to FOR UPDATE.
+            barrier.wait(timeout=10)
+            job = IngestionOrchestrator(
+                build_ingestion_adapter_registry()
+            ).ensure_job(
+                db,
+                tenant_id=tenant_id,
+                asset_revision_id=revision.id,
+                capabilities=("extract_text",),
+                idempotency_key=f"concurrent:{index}:{uuid.uuid4()}",
+            )
+            db.commit()
+            return str(job.id)
+        finally:
+            db.close()
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        job_ids = list(pool.map(create_job, (1, 2)))
+
+    assert len(job_ids) == 2
+    assert len(set(job_ids)) == 2

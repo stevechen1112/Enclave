@@ -104,11 +104,20 @@ class IngestionOrchestrator:
             return existing
 
         # Serialize tenant admission so concurrent uploads cannot all observe a
-        # free slot. Global Redis depth remains the deployment-wide hard stop.
+        # free slot. Use FOR NO KEY UPDATE rather than FOR UPDATE: callers have
+        # already inserted tenant-FK asset rows in this transaction, so several
+        # concurrent uploads each hold KEY SHARE. Upgrading all of those locks to
+        # FOR UPDATE can deadlock; NO KEY UPDATE still serializes admissions but
+        # remains compatible with the existing FK locks.
         from app.models.tenant import Tenant
         from app.services.input_operations import admission_decision
 
-        db.query(Tenant).filter(Tenant.id == tenant_id).with_for_update().one()
+        (
+            db.query(Tenant)
+            .filter(Tenant.id == tenant_id)
+            .with_for_update(key_share=True)
+            .one()
+        )
         decision = admission_decision(
             db,
             tenant_id=tenant_id,

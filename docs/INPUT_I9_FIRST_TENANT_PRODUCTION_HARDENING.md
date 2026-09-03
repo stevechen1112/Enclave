@@ -62,6 +62,8 @@
 | I9-020 | 正式 Gemini 專案遭 403，內部整理、掃描理解與雲端 OCR 不可用 | P0 | VERIFIED | 所有必要 Provider 必須以真實呼叫通過；失效路徑切換至已驗證 Provider 並保留本機後備 |
 | I9-021 | 高量保護只統計預設 `celery` queue，未統計獨立 Input queues | P0 | VERIFIED | admission guard 同時統計 `celery`、`input.document`、`input.media`，任一來源造成的總積壓都受上限保護 |
 | I9-022 | 從「所有資產」刪除來源時，對應 Document 投影可能仍可被檢索 | P0 | VERIFIED | 刪除來源必須先走共用 deny-first 文件撤權，清除檢索、快取、Wiki 與圖譜投影；撤權失敗時不可只隱藏來源 |
+| I9-023 | 同租戶同時上傳多種來源時，tenant admission lock upgrade 可能造成 PostgreSQL deadlock 與 HTTP 500 | P0 | FIXED_IN_CODE | admission 使用不與 FK KEY SHARE 衝突的序列化鎖；雙交易測試及正式四格式並行上傳均不得失敗 |
+| I9-024 | `.env.production` 三個非機密設定帶行尾註解，獨立 Docker 維運工具解析失敗 | P1 | VERIFIED | 設定值與註解分離；Compose 及獨立容器均能載入型別正確的設定 |
 
 ### 實作進度（持續追加）
 
@@ -75,6 +77,7 @@
 - 2026-09-03 I9-7 擴大檢查：真實 Ask 測試發現第一方網頁 `source_system=web` 被 Connector ACL 誤擋，且既有完成文件缺 lexical projection；八策 4 個既有 chunks 已安全回填。永久修復、Redis 認證修復與回歸測試完成，待第二版部署後再驗證引用鏈。
 - 2026-09-03 I9-8 `DEPLOYED / VERIFYING`：release `1a371e4` 上線；7 條正式 Provider 真實呼叫全數通過，三條 queue 的總量保護已由正式 runtime 驗證。第一輪來源已清空，等待李永仁第二輪高量真實複測。
 - 2026-09-03 I9-9 `DEPLOYED / VERIFIED`：release `b79d0ca` 上線；統一資產刪除已固定先撤銷相容 Document 與所有問答投影，失敗時 fail-closed。正式 runtime 載入新邏輯，八策可見來源與文件均維持 0。
+- 2026-09-03 I9-10 `FIXED_IN_CODE`：正式四格式同時上傳重現 tenant row lock upgrade deadlock；改用 `FOR NO KEY UPDATE`，隔離 PostgreSQL 28 項回歸與雙交易 deadlock 測試通過，待 Code Review 後部署再跑正式四格式 Gate。
 
 ## 4. 實作階段與 Code Review Gate
 
@@ -256,3 +259,14 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 正常現象：大量來源會可靠排隊；影片與長音檔比文件慢；「等待人工確認」代表系統已完成候選產生、下一步由 Owner 處理。異常現象：工作長時間沒有狀態變化、同一檔案重複建立來源、需要靠重新整理才推進、失敗訊息沒有原因／下一步／追蹤碼、已刪除來源仍出現在引用。
 
 若發生異常，請保留發生時間、檔名、檔案類型與畫面上的追蹤碼並回報；不需要重複上傳同一檔案多次。修復紀錄將繼續追加在本文件，不改寫已發生的歷史。
+
+## 12. 最終驗收擴大診斷（2026-09-03）
+
+- 正式端到端第一輪：同時建立短文字、圖片、24-bit PCM WAV 與含語音短影片；四筆均成功由 queued 前進，文字成為已可問答，圖片／音檔／影片成為等待人工確認。問答正確回答唯一碼 8246 並產生 2 筆來源引用；刪除後再次提問引用為 0，最後來源與人工確認均回到 0。
+- 正式端到端第二輪重跑時，三筆建立成功、文字來源偶發 HTTP 500。request `76d55ce4` 的正式日誌確認為 `ensure_job()` 對 tenant row 執行 `FOR UPDATE` 時發生 `DeadlockDetected`，不是檔案格式或 Provider 失敗。
+- 根因：並行交易已因新增 tenant-FK 資產列持有 `KEY SHARE`，再一起升級成 `FOR UPDATE` 會互相等待。永久修正為 `FOR NO KEY UPDATE`：仍會序列化同租戶 admission，但允許既有 FK KEY SHARE，不再進行衝突式 lock upgrade。
+- 新增 PostgreSQL 雙交易測試：兩個交易先各自建立 asset／revision、同步抵達 admission，再各自建立 ingestion job 並 commit；兩筆都必須成功。
+- candidate 在獨立暫時 PostgreSQL 資料庫完成 28 項測試：ingestion orchestrator 9、I7 admission／fairness／recovery 8、P0 correctness 10、data lifecycle 1，全數通過。暫時資料庫於測試後自動刪除，正式八策資料未被測試使用。
+- 正式設定衛生檢查另發現 `ACCESS_TOKEN_EXPIRE_MINUTES`、`VOICE_STT_ENABLED`、`MAX_FILE_SIZE` 帶行尾註解，會被部分非 Compose 工具視為值的一部分。已備份並改成純值；獨立容器驗證為 `480 / 52428800 / True`。
+
+本節尚未完成條件：I9-023 部署、正式四格式並行 Gate 重跑、來源層級人工確認分組、刪除後 0 引用、瀏覽器手機版主要畫面與最終乾淨基線全部通過。

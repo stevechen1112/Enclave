@@ -6,7 +6,8 @@ from uuid import uuid4
 import pytest
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, select
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
@@ -143,6 +144,14 @@ def test_orchestrator_idempotency_transitions_and_event_sequence(ingestion_db):
     ]
     with pytest.raises(InvalidIngestionTransition):
         orchestrator.transition(ingestion_db, job, to_status="running", phase="illegal")
+
+
+def test_tenant_admission_lock_does_not_conflict_with_foreign_key_key_share():
+    statement = select(Tenant).with_for_update(key_share=True)
+
+    rendered = str(statement.compile(dialect=postgresql.dialect()))
+
+    assert rendered.endswith("FOR NO KEY UPDATE")
 
 
 def test_failed_job_retry_increments_attempt(ingestion_db):
