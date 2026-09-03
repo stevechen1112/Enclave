@@ -272,6 +272,9 @@ async def chat_stream(
             }
             yield _sse({"type": "retrieval", "retrieval": retrieval})
 
+            if ctx.get("answer_plan"):
+                yield _sse({"type": "decision", "decision": ctx["answer_plan"]})
+
             # 立即推送來源（含 document_revision 等欄位）
             yield _sse({"type": "sources", "sources": ctx["sources"]})
 
@@ -559,6 +562,7 @@ async def chat(
         sources=result["sources"],
         notes=result["notes"],
         disclaimer=result["disclaimer"],
+        decision=result.get("decision"),
     )
 
 

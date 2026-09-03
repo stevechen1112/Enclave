@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { chatApi, parseApiError, formatErrorWithTrace } from '../api'
 import { useAuth } from '../auth'
 import RiskBanner from '../components/RiskBanner'
-import type { Conversation, Message, ChatSource, SSEEvent, SearchResult, RetrievalInfo } from '../types'
+import type { Conversation, Message, ChatSource, SSEEvent, SearchResult, RetrievalInfo, KnowledgeDecision } from '../types'
 import {
   Send, Plus, Loader2, Trash2, Download, Search, X, Menu,
   PanelRightOpen, PanelRightClose, FlaskConical, MessageSquare,
@@ -16,6 +16,7 @@ import SourcePanel from '../components/chat/SourcePanel'
 import FeedbackButtons from '../components/chat/FeedbackButtons'
 import FollowUpSuggestions from '../components/chat/FollowUpSuggestions'
 import TypingIndicator from '../components/chat/TypingIndicator'
+import DecisionSummary from '../components/chat/DecisionSummary'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from './ask/EmptyState'
 import { classifyEmptyAnswer, EMPTY_ANSWER_LABEL, type EmptyAnswerKind } from './ask/emptyAnswer'
@@ -44,6 +45,7 @@ export default function ChatPage() {
   const [streamStatus, setStreamStatus] = useState<string | null>(null)
   const [streamingContent, setStreamingContent] = useState('')
   const [streamingSources, setStreamingSources] = useState<ChatSource[]>([])
+  const [streamingDecision, setStreamingDecision] = useState<KnowledgeDecision | null>(null)
   // A 款使用覆蓋式證據抽屜，所有裝置皆由使用者主動開啟。
   const [evidenceOpen, setEvidenceOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -180,6 +182,7 @@ export default function ChatPage() {
     setSending(true)
     setStreamingContent('')
     setStreamingSources([])
+    setStreamingDecision(null)
     setStreamStatus(null)
     setRetrieval(null)
 
@@ -191,6 +194,7 @@ export default function ChatPage() {
     let accumulatedContent = ''
     let suggestions: string[] = []
     let sources: ChatSource[] = []
+    let decision: KnowledgeDecision | undefined
     let hadStreamError = false
     let lastRetrieval: RetrievalInfo | null = null
     const legacyModule = searchParams.get('module') || undefined
@@ -219,6 +223,10 @@ export default function ChatPage() {
             case 'sources':
               sources = event.sources || []
               setStreamingSources(sources)
+              break
+            case 'decision':
+              decision = event.decision
+              setStreamingDecision(event.decision || null)
               break
             case 'token':
               accumulatedContent += event.content || ''
@@ -282,6 +290,7 @@ export default function ChatPage() {
         sources,
         suggestions,
         emptyKind,
+        decision,
       }
 
       setMessages(prev => [
@@ -291,6 +300,7 @@ export default function ChatPage() {
       ])
       setStreamingContent('')
       setStreamingSources([])
+      setStreamingDecision(null)
       setStreamStatus(null)
 
       // Update conversation list if new
@@ -321,6 +331,7 @@ export default function ChatPage() {
     setInput('')
     setStreamingContent('')
     setStreamingSources([])
+    setStreamingDecision(null)
     setStreamStatus(null)
     setSidebarOpen(false)
   }
@@ -738,6 +749,7 @@ export default function ChatPage() {
                       {msg.sources?.length ? <span className="chip-success ml-auto">● 證據可追溯</span> : null}
                     </header>
                     <div className="p-4 md:p-6">
+                      {msg.decision && <DecisionSummary decision={msg.decision} />}
                       {emptyMeta && (
                         <RiskBanner
                           level={kind === 'system_unavailable' ? 'danger' : 'warning'}
@@ -780,6 +792,7 @@ export default function ChatPage() {
                     <Loader2 className="h-5 w-5 animate-spin text-accent" aria-hidden />
                   </header>
                   <div className="p-4 md:p-6">
+                    {streamingDecision && <DecisionSummary decision={streamingDecision} />}
                     <div className="rounded-2xl border-l-4 border-accent bg-accent-soft/35 px-4 py-4 text-[15px] leading-relaxed md:px-5">
                       <p className="mb-2 text-xs font-bold uppercase tracking-wide text-accent">回答產生中</p>
                       <MarkdownRenderer content={streamingContent} />

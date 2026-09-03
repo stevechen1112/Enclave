@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 
 _NUMERIC_TOKEN = re.compile(r"(?<![\w])[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:%|％|元|萬|億|kg|公斤|台|件|天|日|小時))?")
 _DATE_TOKEN = re.compile(r"(?:19|20)\d{2}[-/.年]\d{1,2}(?:[-/.月]\d{1,2}日?)?")
+_CODE_TOKEN = re.compile(
+    r"(?<![\w])(?=[A-Z0-9./_-]{2,32}(?![\w]))(?=[A-Z0-9./_-]*[A-Z])"
+    r"(?=[A-Z0-9./_-]*\d)[A-Z0-9]+(?:[./_-][A-Z0-9]+)+(?![\w])"
+)
 
 
 def deterministic_claim_validation(answer: str, evidence_quotes: List[str]) -> Dict[str, Any]:
@@ -46,8 +50,75 @@ def deterministic_claim_validation(answer: str, evidence_quotes: List[str]) -> D
     for item in unsupported:
         key = (item["type"], item["value"])
         if key not in seen:
-            unique.append(item); seen.add(key)
+            unique.append(item)
+            seen.add(key)
     return {"verified": not unique, "unsupported": unique}
+
+
+def validate_answer_plan_claims(
+    plan,
+    *,
+    answer: str,
+    claim_ids,
+    entity_mentions=(),
+    scope_claims=None,
+) -> Dict[str, Any]:
+    """Fail closed when a paraphrase escapes its verified AnswerPlan."""
+    declared = tuple(str(item) for item in (claim_ids or ()))
+    available = {claim.claim_id: claim for claim in plan.claims}
+    unknown = sorted(set(declared) - set(available))
+    missing = sorted(set(available) - set(declared))
+    selected = [available[item] for item in declared if item in available]
+    evidence_text = "\n".join(
+        [claim.text for claim in selected]
+        + [str(claim.value) for claim in selected]
+    )
+    literal = deterministic_claim_validation(answer, [evidence_text])
+    unsupported = list(literal["unsupported"])
+    normalized_evidence = _normalize(evidence_text)
+    for token in _CODE_TOKEN.findall(answer or ""):
+        if _normalize(token) not in normalized_evidence:
+            unsupported.append({"type": "code", "value": token})
+
+    allowed_entities = {
+        entity
+        for claim in selected
+        for entity in claim.entity_ids
+    }
+    unsupported_entities = sorted(
+        {
+            str(entity)
+            for entity in (entity_mentions or ())
+            if str(entity) not in allowed_entities
+            and _normalize(str(entity)) not in normalized_evidence
+        }
+    )
+    expected_scope = {
+        key: value
+        for key, value in plan.applicability_scope.items()
+        if value not in (None, "", [], (), {})
+    }
+    claimed_scope = dict(scope_claims or {})
+    unsupported_scope = {
+        key: value
+        for key, value in claimed_scope.items()
+        if key not in expected_scope or expected_scope[key] != value
+    }
+    verified = not (
+        unknown
+        or missing
+        or unsupported
+        or unsupported_entities
+        or unsupported_scope
+    )
+    return {
+        "verified": verified,
+        "unknown_claim_ids": unknown,
+        "missing_claim_ids": missing,
+        "unsupported_literals": unsupported,
+        "unsupported_entities": unsupported_entities,
+        "unsupported_scope": unsupported_scope,
+    }
 
 _SYSTEM = (
     "你是嚴謹的文件問答稽核員。給你一份「回答草稿」與若干「文件片段」，"

@@ -1,0 +1,23 @@
+{
+  "artifact_schema": "knowledge-answer-gate-report/v1",
+  "phase": "KQ5",
+  "gate": "KQ-ANSWER-01",
+  "status": "pass",
+  "date": "2026-09-03",
+  "results": {
+    "backend_tests": { "passed": 113, "failed": 0 },
+    "frontend_tests": { "passed": 5, "failed": 0 },
+    "typescript": "pass",
+    "production_build": "pass",
+    "answer_types": 8,
+    "sync_stream_final_parity": true,
+    "invalid_draft_leak": false,
+    "execution_failure_distinct_from_absent": true,
+    "production_decision_mode": "off"
+  },
+  "evidence": [
+    "tests/test_knowledge_answer_kq5.py",
+    "frontend/src/components/chat/DecisionSummary.test.tsx",
+    "docs/knowledge/PHASE_KQ5_CODE_REVIEW_2026-09-03.md"
+  ]
+}

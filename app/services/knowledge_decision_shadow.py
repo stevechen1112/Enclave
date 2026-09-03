@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import threading
+import time
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
@@ -316,6 +317,12 @@ def run_knowledge_decision_shadow(
             query_spec=query_plan,
             execution_status=execution_status,
         )
+        from app.services.answer_plan import build_answer_plan, render_answer_plan
+
+        render_started = time.perf_counter()
+        answer_plan = build_answer_plan(decision, query_spec=query_plan)
+        rendered_answer = render_answer_plan(answer_plan)
+        render_latency_ms = (time.perf_counter() - render_started) * 1000
         legacy = str(legacy_coverage.get("decision") or "abstain")
         transition = f"{legacy}->{decision.evidence_state}"
         source_refs = [
@@ -330,7 +337,7 @@ def run_knowledge_decision_shadow(
             str(row["stage"]): row.get("latency_ms") for row in decision.stage_trace
         }
         stage_latency_ms["retrieve"] = retrieval_latency_ms
-        stage_latency_ms["render"] = None
+        stage_latency_ms["render"] = render_latency_ms
         record = ShadowDiffRecord(
             record_id=str(uuid.uuid4()),
             schema_version=SHADOW_SCHEMA_VERSION,
@@ -371,6 +378,8 @@ def run_knowledge_decision_shadow(
             "transition": transition,
             "false_accept_candidate": record.false_accept_candidate,
             "false_reject_candidate": record.false_reject_candidate,
+            "answer_plan": answer_plan.to_dict(),
+            "deterministic_answer": rendered_answer.to_dict(),
         }
     except Exception as exc:
         return {

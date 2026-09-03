@@ -18,6 +18,11 @@ export default function EvidenceCard({ source, index, className }: Props) {
   const transcriptTime = source.transcript_start_ms != null
     ? `${Math.floor(source.transcript_start_ms / 60000)}:${String(Math.floor((source.transcript_start_ms % 60000) / 1000)).padStart(2, '0')}`
     : null
+  const locatorParams = new URLSearchParams()
+  if (source.page != null) locatorParams.set('page', String(source.page))
+  if (source.transcript_start_ms != null) locatorParams.set('t', String(source.transcript_start_ms))
+  if (source.frame_index != null) locatorParams.set('frame', String(source.frame_index))
+  const documentTarget = `/knowledge/documents/${source.document_id}${locatorParams.size ? `?${locatorParams}` : ''}`
   return (
     <article
       className={clsx(
@@ -44,10 +49,15 @@ export default function EvidenceCard({ source, index, className }: Props) {
             )}
             {source.page != null && <span>第 {source.page} 頁</span>}
             {source.section && <span>章節：{source.section}</span>}
+            {source.section_path && source.section_path.length > 1 && <span>路徑：{source.section_path.join(' › ')}</span>}
             {source.worksheet && <span>工作表：{source.worksheet}</span>}
             {source.row_number != null && <span>第 {source.row_number} 列</span>}
             {source.field_name && <span>欄位：{source.field_name}</span>}
             {transcriptTime && <span>逐字稿 {transcriptTime}</span>}
+            {source.speaker && <span>說話者：{source.speaker}</span>}
+            {source.frame_index != null && <span>影格 {source.frame_index}</span>}
+            {source.keyframe != null && <span>關鍵影格 {source.keyframe}</span>}
+            {source.bbox && <span>圖片區域已定位</span>}
             {source.chunk_index != null && <span>片段 {source.chunk_index}</span>}
             {source.provider && <span>{source.provider}</span>}
             {source.updated_at && (
@@ -66,7 +76,7 @@ export default function EvidenceCard({ source, index, className }: Props) {
           )}
           {source.document_id && accessible && (
             <Link
-              to={`/knowledge/documents/${source.document_id}`}
+              to={documentTarget}
               className="mt-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
             >
               在文件中開啟

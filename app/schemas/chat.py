@@ -77,6 +77,7 @@ class ChatResponse(BaseModel):
     sources: List[Dict[str, Any]]
     notes: List[str]
     disclaimer: str
+    decision: Optional[Dict[str, Any]] = None
 
 
 # ──────────── T7-5: Feedback ────────────

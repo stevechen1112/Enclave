@@ -232,6 +232,13 @@ class ChatOrchestrator:
                 retrieval_latency_ms=(time.perf_counter() - retrieval_started) * 1000,
                 channel=decision_channel,
             )
+            if context["knowledge_decision_shadow"].get("mode") == "enforce":
+                context["answer_plan"] = context["knowledge_decision_shadow"].get(
+                    "answer_plan"
+                )
+                context["deterministic_answer"] = context[
+                    "knowledge_decision_shadow"
+                ].get("deterministic_answer")
         return context
 
     @staticmethod
@@ -373,11 +380,16 @@ class ChatOrchestrator:
                     "updated_at": meta.get("updated_at") or r.get("updated_at"),
                     "page": page,
                     "section": meta.get("section") or meta.get("heading"),
+                    "section_path": meta.get("section_path") or meta.get("hierarchy"),
                     "worksheet": meta.get("worksheet") or meta.get("sheet"),
                     "row_number": meta.get("row_number") or meta.get("row"),
                     "field_name": meta.get("field_name") or meta.get("column"),
                     "transcript_start_ms": meta.get("transcript_start_ms") or meta.get("start_ms"),
                     "transcript_end_ms": meta.get("transcript_end_ms") or meta.get("end_ms"),
+                    "speaker": meta.get("speaker"),
+                    "frame_index": meta.get("frame_index"),
+                    "keyframe": meta.get("keyframe") or meta.get("keyframe_index"),
+                    "bbox": meta.get("bbox"),
                     "applicable_scope": (
                         json.dumps(meta.get("applicable_scope") or meta.get("scope"), ensure_ascii=False, sort_keys=True)
                         if isinstance(meta.get("applicable_scope") or meta.get("scope"), (dict, list))
@@ -488,6 +500,10 @@ class ChatOrchestrator:
         - enforce：先緩衝完整回答再稽核，通過才輸出；失敗則以約束式 prompt
           重新生成一次，再失敗則輸出「僅含已驗證重點」的誠實回答。
         """
+        deterministic = context.get("deterministic_answer") or {}
+        if deterministic.get("text"):
+            yield str(deterministic["text"])
+            return
         if not self._openai_async or not context["has_policy"]:
             yield self._fallback_answer(context)
             return
@@ -843,9 +859,14 @@ class ChatOrchestrator:
             "disclaimer": ctx["disclaimer"],
             # A6: sync chat path must persist providers_called via RetrievalTrace
             "retrieval": ctx.get("retrieval") or {},
+            "decision": ctx.get("answer_plan"),
         }
 
-        if self._openai and ctx["has_policy"]:
+        deterministic = ctx.get("deterministic_answer") or {}
+        if deterministic.get("text"):
+            result["answer"] = str(deterministic["text"])
+            result["notes"].append("使用已驗證 AnswerPlan deterministic renderer")
+        elif self._openai and ctx["has_policy"]:
             try:
                 result["answer"] = self._generate_answer_sync(
                     question, ctx, history=history

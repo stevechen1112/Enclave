@@ -438,16 +438,18 @@ export interface Message {
   feedback?: 'up' | 'down' | null
   /** T7-4: 來源引用 */
   sources?: ChatSource[]
+  decision?: KnowledgeDecision
 }
 
 // ─── T7-1 SSE Streaming ───
-export type SSEEventType = 'status' | 'sources' | 'token' | 'suggestions' | 'done' | 'error' | 'retrieval'
+export type SSEEventType = 'status' | 'sources' | 'decision' | 'token' | 'suggestions' | 'done' | 'error' | 'retrieval'
 
 export interface SSEEvent {
   type: SSEEventType
   content?: string
   sources?: ChatSource[]
   retrieval?: RetrievalInfo
+  decision?: KnowledgeDecision
   items?: string[]
   message_id?: string
   conversation_id?: string
@@ -471,9 +473,27 @@ export interface ChatSource {
   field_name?: string | null
   transcript_start_ms?: number | null
   transcript_end_ms?: number | null
+  speaker?: string | null
+  frame_index?: number | null
+  keyframe?: number | null
+  bbox?: { x: number; y: number; w: number; h: number } | number[] | null
+  section_path?: string[] | null
   applicable_scope?: string | null
   effective_at?: string | null
   accessible?: boolean
+}
+
+export interface KnowledgeDecision {
+  decision_id: string
+  evidence_state: 'complete' | 'partial' | 'insufficient_context' | 'absent' | 'conflict'
+  execution_status: string
+  answer_type: string
+  direct_conclusion: string
+  applicability_scope: Record<string, unknown>
+  answered_items: string[]
+  missing_items: Array<{ requirement_id?: string; label?: string; reason_codes?: string[] }>
+  conflicts: Array<{ requirement_id?: string; conflict_key?: string; evidence_ids?: string[] }>
+  source_versions: Array<{ document_id?: string; document_revision?: string; locator?: Record<string, unknown> }>
 }
 
 export interface RetrievalInfo {
