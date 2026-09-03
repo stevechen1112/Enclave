@@ -133,6 +133,7 @@ def _asset_dict(
     include_history: bool = False,
     revisions_override: list[AssetRevision] | None = None,
     job_override: IngestionJob | None | object = _UNSET,
+    readiness_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     revisions = revisions_override
     if revisions is None:
@@ -194,6 +195,21 @@ def _asset_dict(
         ),
         "job": _job_dict(job if isinstance(job, IngestionJob) else None),
     }
+    if readiness_override is None:
+        from app.services.asset_readiness import load_asset_readiness_states
+
+        state = load_asset_readiness_states(
+            db,
+            tenant_id=asset.tenant_id,
+            assets=[asset],
+            jobs_by_revision=(
+                {current.id: job}
+                if current is not None and isinstance(job, IngestionJob)
+                else {}
+            ),
+        )[asset.id]
+        readiness_override = state.to_dict()
+    result.update(readiness_override)
     if include_history:
         result["revisions"] = [
             {
@@ -359,6 +375,14 @@ def list_assets(
         )
         for job in job_rows:
             jobs_by_revision.setdefault(job.asset_revision_id, job)
+    from app.services.asset_readiness import load_asset_readiness_states
+
+    readiness_by_asset = load_asset_readiness_states(
+        db,
+        tenant_id=current_user.tenant_id,
+        assets=visible_assets,
+        jobs_by_revision=jobs_by_revision,
+    )
     rows = []
     for asset in visible_assets:
         revisions = revisions_by_asset[asset.id]
@@ -372,13 +396,25 @@ def list_assets(
                 asset,
                 revisions_override=revisions,
                 job_override=jobs_by_revision.get(current.id) if current else None,
+                readiness_override=readiness_by_asset[asset.id].to_dict(),
             )
         )
     if processing_status:
+        lifecycle_values = {
+            "received",
+            "processing",
+            "awaiting_review",
+            "answer_ready",
+            "needs_attention",
+        }
         rows = [
             row
             for row in rows
-            if (row.get("job") or {}).get("status") == processing_status
+            if (
+                row.get("lifecycle_status") == processing_status
+                if processing_status in lifecycle_values
+                else (row.get("job") or {}).get("status") == processing_status
+            )
         ]
     return rows[:limit]
 
@@ -446,7 +482,14 @@ def get_asset_status(
         authz=AuthorizationContext.from_user(current_user),
     )
     data = _asset_dict(db, asset)
-    return {"asset_id": data["id"], "status": data["status"], "job": data["job"]}
+    return {
+        "asset_id": data["id"],
+        "status": data["status"],
+        "lifecycle_status": data["lifecycle_status"],
+        "answer_ready": data["answer_ready"],
+        "pending_review_count": data["pending_review_count"],
+        "job": data["job"],
+    }
 
 
 @router.get("/{asset_id}/revisions")

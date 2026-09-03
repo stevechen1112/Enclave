@@ -29,6 +29,39 @@ from app.models.permission import Department
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.services.ingestion_orchestrator import get_ingestion_orchestrator
+from app.services.asset_readiness import AssetReadinessState, derive_asset_lifecycle
+
+
+@pytest.fixture(autouse=True)
+def _isolate_asset_readiness_tables(monkeypatch):
+    """These focused endpoint tests intentionally build only intake tables."""
+
+    def fake_states(_db, *, assets, jobs_by_revision=None, **_kwargs):
+        jobs_by_revision = jobs_by_revision or {}
+        states = {}
+        for asset in assets:
+            revision = _db.query(AssetRevision).filter(
+                AssetRevision.asset_id == asset.id,
+                AssetRevision.revision == asset.current_revision,
+            ).first()
+            job = jobs_by_revision.get(revision.id) if revision else None
+            lifecycle, reasons = derive_asset_lifecycle(
+                answer_ready=False,
+                job_status=job.status if job else None,
+                asset_status=asset.status,
+                pending_review_count=0,
+            )
+            states[asset.id] = AssetReadinessState(
+                answer_ready=False,
+                lifecycle_status=lifecycle,
+                pending_review_count=0,
+                readiness_reasons=reasons,
+            )
+        return states
+
+    monkeypatch.setattr(
+        "app.services.asset_readiness.load_asset_readiness_states", fake_states
+    )
 
 
 def _session():

@@ -318,27 +318,37 @@ def _pack_providers(db: Session, tenant_id: UUID) -> list[Any]:
 
 def list_review_items(db: Session, *, current_user: User) -> list[dict[str, Any]]:
     tenant_id = current_user.tenant_id
-    rows = (
-        db.query(DerivedArtifact, AssetRevision, SourceAsset)
-        .join(
-            AssetRevision,
-            (AssetRevision.tenant_id == DerivedArtifact.tenant_id)
-            & (AssetRevision.id == DerivedArtifact.asset_revision_id),
+    reviewable_revision_ids = {
+        row[0]
+        for row in db.query(IngestionJob.asset_revision_id).filter(
+            IngestionJob.tenant_id == tenant_id,
+            IngestionJob.status == "review_required",
         )
-        .join(
-            SourceAsset,
-            (SourceAsset.tenant_id == AssetRevision.tenant_id)
-            & (SourceAsset.id == AssetRevision.asset_id),
+    }
+    rows = []
+    if reviewable_revision_ids:
+        rows = (
+            db.query(DerivedArtifact, AssetRevision, SourceAsset)
+            .join(
+                AssetRevision,
+                (AssetRevision.tenant_id == DerivedArtifact.tenant_id)
+                & (AssetRevision.id == DerivedArtifact.asset_revision_id),
+            )
+            .join(
+                SourceAsset,
+                (SourceAsset.tenant_id == AssetRevision.tenant_id)
+                & (SourceAsset.id == AssetRevision.asset_id),
+            )
+            .filter(
+                DerivedArtifact.tenant_id == tenant_id,
+                DerivedArtifact.asset_revision_id.in_(reviewable_revision_ids),
+                DerivedArtifact.quality_state == "review_required",
+                SourceAsset.tombstoned_at.is_(None),
+            )
+            .order_by(DerivedArtifact.created_at.desc())
+            .limit(500)
+            .all()
         )
-        .filter(
-            DerivedArtifact.tenant_id == tenant_id,
-            DerivedArtifact.quality_state == "review_required",
-            SourceAsset.tombstoned_at.is_(None),
-        )
-        .order_by(DerivedArtifact.created_at.desc())
-        .limit(500)
-        .all()
-    )
     visible = [
         row
         for row in rows

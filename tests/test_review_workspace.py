@@ -9,6 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from app.config import settings
 from app.models.asset import AssetRevision, DerivedArtifact, EvidenceSpan, SourceAsset
 from app.models.review_item import ReviewItem
+from app.models.ingestion import IngestionJob
 from app.services.review_workspace import list_review_items
 
 
@@ -24,6 +25,7 @@ def _session():
         AssetRevision.__table__,
         DerivedArtifact.__table__,
         EvidenceSpan.__table__,
+        IngestionJob.__table__,
         ReviewItem.__table__,
     ):
         table.create(engine, checkfirst=True)
@@ -74,6 +76,20 @@ def test_review_inbox_preserves_typed_locator_and_separation_of_duty(monkeypatch
         )
         db.add(revision)
         db.flush()
+        db.add(
+            IngestionJob(
+                tenant_id=tenant_id,
+                asset_revision_id=revision.id,
+                status="review_required",
+                phase="human_review",
+                adapter_key="test.audio",
+                adapter_version="1",
+                requested_capabilities=[],
+                idempotency_key="review-workspace-test",
+                readiness={},
+                error={},
+            )
+        )
         artifact = DerivedArtifact(
             tenant_id=tenant_id,
             asset_revision_id=revision.id,

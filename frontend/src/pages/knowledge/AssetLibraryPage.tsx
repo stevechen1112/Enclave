@@ -71,7 +71,7 @@ export default function AssetLibraryPage() {
       <SectionPanel className="mt-5" title="搜尋與篩選" description={`${visible.length} 筆符合目前條件`} actions={filtersActive && <button type="button" className="btn-ghost" onClick={resetFilters}>清除篩選</button>} bodyClassName="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="md:col-span-2"><span className="sr-only">搜尋資產</span><input className="input w-full" value={query} onChange={event => setQuery(event.target.value)} placeholder="搜尋名稱" /></label>
         <select className="input" aria-label="資產類型" value={kind} onChange={event => setKind(event.target.value)}><option value="">所有類型</option>{Object.entries(KIND_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-        <select className="input" aria-label="處理狀態" value={status} onChange={event => setStatus(event.target.value)}><option value="">所有狀態</option><option value="queued">等待處理</option><option value="running">處理中</option><option value="review_required">待審核</option><option value="ready">已就緒</option><option value="failed">處理失敗</option></select>
+        <select className="input" aria-label="處理狀態" value={status} onChange={event => setStatus(event.target.value)}><option value="">所有狀態</option><option value="answer_ready">已可問答</option><option value="processing">系統處理中</option><option value="awaiting_review">等待人工確認</option><option value="needs_attention">需要處理</option></select>
         <select className="input" aria-label="來源" value={source} onChange={event => setSource(event.target.value)}><option value="">所有來源</option><option value="upload">直接上傳</option><option value="capture">行動擷取</option><option value="web">網頁</option><option value="nas_smb">NAS</option><option value="sharepoint">SharePoint</option><option value="google_drive">Google Drive</option></select>
         <select className="input" aria-label="資料分類" value={classification} onChange={event => setClassification(event.target.value)}><option value="">所有分類</option><option value="public">公開</option><option value="internal">內部</option><option value="confidential">機密</option><option value="restricted">高度機密</option></select>
         <select className="input" aria-label="部門" value={department} onChange={event => setDepartment(event.target.value)}><option value="">所有部門</option>{departments.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
@@ -86,7 +86,7 @@ export default function AssetLibraryPage() {
               <span className="rounded-xl bg-accent-soft p-2.5 text-accent"><Icon className="h-5 w-5" aria-hidden /></span>
               <span className="min-w-0 flex-1"><span className="block truncate font-medium text-ink">{asset.title}</span><span className="mt-1 block text-xs text-muted">{KIND_LABELS[asset.asset_kind] || asset.asset_kind} · {asset.source_system} · v{asset.current_revision}</span></span>
               <span className="hidden text-sm text-muted sm:block">{asset.updated_at || asset.created_at ? format(new Date(asset.updated_at || asset.created_at), 'yyyy/MM/dd') : '—'}</span>
-              <LifecycleBadge status={asset.job?.status || asset.status} tombstoned={asset.tombstoned_at} answerReady={asset.job?.status === 'ready'} />
+              <LifecycleBadge status={asset.lifecycle_status || asset.job?.status || asset.status} tombstoned={asset.tombstoned_at} answerReady={asset.answer_ready} />
             </Link>
           })}
         </SectionPanel>

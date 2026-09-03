@@ -53,6 +53,12 @@
 | I9-011 | 狀態卡缺乏下一步 | P1 | OPEN | 每個狀態可直接前往提問、人工確認、查看進度或處理問題 |
 | I9-012 | 上傳相同檔案容易產生重複失敗來源 | P1 | OPEN | 內容雜湊去重與重送語意清楚，不重複計費或產生垃圾來源 |
 
+### 實作進度（持續追加）
+
+- 2026-09-03 I9-1 `FIXED_IN_CODE`：常見 PCM／錄音格式、錯誤分類與有界重試完成；Code Review PASS。
+- 2026-09-03 I9-2 `FIXED_IN_CODE`：媒體 Worker 隔離、資源限制、stale job reconciliation 與安全重送完成；Code Review PASS。
+- 2026-09-03 I9-3 `FIXED_IN_CODE`：serving-mode-aware answer-ready、互斥狀態、來源層級首頁統計與殘留覆核項目排除完成；Code Review PASS。
+
 ## 4. 實作階段與 Code Review Gate
 
 ### I9-1：媒體正規化與錯誤分類

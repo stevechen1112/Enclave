@@ -23,7 +23,7 @@ const CONFIG: Record<
     spin: true,
   },
   pending_review: {
-    label: '待審核',
+    label: '等待人工確認',
     className: 'bg-orange-50 text-orange-800',
     Icon: Clock,
   },
@@ -34,12 +34,12 @@ const CONFIG: Record<
     spin: true,
   },
   searchable: {
-    label: '可搜尋',
+    label: '已可問答',
     className: 'bg-emerald-50 text-emerald-800',
     Icon: CheckCircle,
   },
   not_searchable: {
-    label: '尚不可查',
+    label: '尚不可問答',
     className: 'bg-amber-50 text-amber-800',
     Icon: AlertCircle,
   },
@@ -72,9 +72,10 @@ export function toLifecycle(
   if (answerReady) return 'searchable'
   if (s === 'uploading') return 'uploading'
   if (s === 'pending_review' || s === 'pending' || s === 'review_required') return 'pending_review'
+  if (s === 'awaiting_review') return 'pending_review'
   if (s === 'parsing' || s === 'embedding' || s === 'processing' || s === 'queued' || s === 'running') return 'processing'
   if (s === 'completed' || s === 'indexed' || s === 'searchable' || s === 'ready' || s === 'active' || s === 'draft') return 'not_searchable'
-  if (s === 'failed') return 'failed'
+  if (s === 'failed' || s === 'needs_attention') return 'failed'
   if (s === 'revoked' || s === 'tombstoned') return 'revoked'
   return 'unknown'
 }

@@ -242,6 +242,11 @@ export interface KnowledgeAsset {
   revision: KnowledgeAssetRevision | null
   revisions?: KnowledgeAssetRevision[]
   job: KnowledgeAssetJob | null
+  /** Canonical, serving-mode-aware status exposed by the asset API. */
+  answer_ready?: boolean
+  lifecycle_status?: 'received' | 'processing' | 'awaiting_review' | 'answer_ready' | 'needs_attention'
+  pending_review_count?: number
+  readiness_reasons?: string[]
   preview_url?: string | null
   deduplicated?: boolean
 }

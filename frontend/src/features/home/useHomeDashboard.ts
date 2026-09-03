@@ -11,7 +11,7 @@ export type HomeDashboardModel = {
   loading: boolean
   error: ApiErrorInfo | null
   assets: KnowledgeAsset[]
-  stats: { total: number; ready: number; processing: number; review: number; failed: number }
+  stats: { total: number; ready: number; processing: number; review: number; reviewItems: number; failed: number }
   canUpload: boolean
   canReview: boolean
   canManage: boolean
@@ -55,10 +55,14 @@ export function useHomeDashboard(): HomeDashboardModel {
   }, [fetchDashboard])
   const stats = useMemo(() => ({
     total: assets.length,
-    ready: assets.filter(asset => asset.status === 'active' || asset.job?.status === 'ready').length,
-    processing: assets.filter(asset => ['queued', 'running'].includes(asset.job?.status || '')).length,
-    review: reviewCount || assets.filter(asset => asset.job?.status === 'review_required').length,
-    failed: assets.filter(asset => asset.job?.status === 'failed' || asset.status === 'failed').length,
+    ready: assets.filter(asset => asset.answer_ready === true).length,
+    processing: assets.filter(asset => asset.lifecycle_status === 'processing').length,
+    // Homepage counts affected source assets.  Candidate-level volume belongs
+    // inside the review workspace, otherwise five videos misleadingly appear
+    // as 138 unrelated jobs.
+    review: assets.filter(asset => asset.lifecycle_status === 'awaiting_review').length,
+    reviewItems: reviewCount,
+    failed: assets.filter(asset => asset.lifecycle_status === 'needs_attention').length,
   }), [assets, reviewCount])
   const applications = useMemo(() => {
     const seen = new Set<string>()
