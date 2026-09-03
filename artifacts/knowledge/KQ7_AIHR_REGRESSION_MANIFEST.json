@@ -1,0 +1,10 @@
+{
+  "schema_version": "knowledge-regression-disclosure/v1",
+  "source_reference": "AIHR disclosed 61-case legacy evaluation",
+  "disclosure_status": "disclosed",
+  "split": "regression",
+  "allowed_uses": ["regression", "neighbor_generation"],
+  "forbidden_uses": ["sealed_holdout", "first_run_claim", "platform_gate_substitution"],
+  "case_content_embedded": false,
+  "recorded_at": "2026-09-03"
+}

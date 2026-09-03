@@ -15,6 +15,13 @@ def _passing_summary():
         },
         "required_slot_coverage": {"denominator": 400, "rate": .98},
         "language_profile_distribution": {"standard": 160, "mixed": 40},
+        "pipeline_invariant_violations": 0,
+        "classification_quality": {
+            "false_acceptance": {"numerator": 0, "denominator": 20, "rate": 0.0},
+            "false_rejection": {"numerator": 1, "denominator": 100, "rate": .01},
+            "partial_correctness": {"numerator": 20, "denominator": 20, "rate": 1.0},
+            "conflict_correctness": {"numerator": 20, "denominator": 20, "rate": 1.0},
+        },
     }
 
 

@@ -65,7 +65,9 @@ def _fernet_key(configured: str = "") -> bytes:
     return base64.urlsafe_b64encode(hashlib.sha256(secret).digest())
 
 
-def resolve_knowledge_decision_mode(tenant_id: Any) -> str:
+def resolve_knowledge_decision_mode(
+    tenant_id: Any, *, request_id: str | None = None
+) -> str:
     if bool(getattr(settings, "KNOWLEDGE_DECISION_KILL_SWITCH", False)):
         return "off"
     mode = str(getattr(settings, "KNOWLEDGE_DECISION_MODE", "off") or "off").lower()
@@ -78,8 +80,22 @@ def resolve_knowledge_decision_mode(tenant_id: Any) -> str:
     }
     if str(tenant_id) not in allowlist:
         return "off"
-    # Enforce additionally requires KQ7 Owner authorization.  Until that
-    # service exists, fail closed to off instead of inferring approval.
+    if mode not in {"shadow", "enforce"}:
+        return "off"
+    # KQ7 uses a distinct signed Owner record for each transition. Allowlist,
+    # platform gates and earlier shadow approval never imply enforce approval.
+    if bool(getattr(settings, "KNOWLEDGE_DECISION_AUTHORIZATION_REQUIRED", True)):
+        from app.services.knowledge_release_control import requested_mode_is_authorized
+
+        return (
+            mode
+            if requested_mode_is_authorized(
+                str(tenant_id), mode, request_id=request_id
+            )
+            else "off"
+        )
+    # Compatibility is test/development-only; production configuration keeps
+    # authorization required. Enforce has no legacy compatibility path.
     return "shadow" if mode == "shadow" else "off"
 
 
@@ -303,7 +319,7 @@ def run_knowledge_decision_shadow(
     store: EncryptedAppendOnlyShadowStore | None = None,
 ) -> dict[str, Any]:
     """Run one deterministic shadow case; never raise into the Ask path."""
-    mode = resolve_knowledge_decision_mode(tenant_id)
+    mode = resolve_knowledge_decision_mode(tenant_id, request_id=request_id)
     if mode == "off":
         return {"mode": "off", "executed": False, "telemetry_status": "not_attempted"}
     try:

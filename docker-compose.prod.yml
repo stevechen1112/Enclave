@@ -23,11 +23,12 @@ services:
       context: .
       dockerfile: Dockerfile
     user: "0:0"
-    command: ["sh", "-c", "chown -R enclave:enclave /code/uploads /var/lib/enclave/knowledge-shadow && chmod 0750 /code/uploads /var/lib/enclave/knowledge-shadow"]
+    command: ["sh", "-c", "chown -R enclave:enclave /code/uploads /var/lib/enclave/knowledge-shadow /var/lib/enclave/knowledge-authorizations && chmod 0750 /code/uploads /var/lib/enclave/knowledge-shadow /var/lib/enclave/knowledge-authorizations"]
     restart: "no"
     volumes:
       - uploads_data:/code/uploads
       - knowledge_shadow_data:/var/lib/enclave/knowledge-shadow
+      - knowledge_authorization_data:/var/lib/enclave/knowledge-authorizations
 
   # ── Backend API ──
   web:
@@ -70,9 +71,11 @@ services:
       - RAGFLOW_DATASET_ID=${RAGFLOW_DATASET_ID:-}
       - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
       - KNOWLEDGE_DECISION_SHADOW_STORE_PATH=/var/lib/enclave/knowledge-shadow
+      - KNOWLEDGE_DECISION_AUTHORIZATION_STORE_PATH=/var/lib/enclave/knowledge-authorizations
     volumes:
       - uploads_data:/code/uploads    # Persist uploaded files only
       - knowledge_shadow_data:/var/lib/enclave/knowledge-shadow
+      - knowledge_authorization_data:/var/lib/enclave/knowledge-authorizations:ro
     depends_on:
       init-storage:
         condition: service_completed_successfully
@@ -575,6 +578,7 @@ volumes:
   redis_data:
   uploads_data:
   knowledge_shadow_data:
+  knowledge_authorization_data:
   prometheus_data:
   grafana_data:
   ollama_embed_data:

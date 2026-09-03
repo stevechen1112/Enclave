@@ -177,6 +177,14 @@ class Settings(BaseSettings):
     KNOWLEDGE_DECISION_SHADOW_STORE_PATH: str = "artifacts/knowledge/kq_shadow"
     KNOWLEDGE_DECISION_SHADOW_KEY: str = ""
     KNOWLEDGE_DECISION_SHADOW_RETENTION_DAYS: int = 30
+    KNOWLEDGE_DECISION_AUTHORIZATION_REQUIRED: bool = True
+    KNOWLEDGE_DECISION_AUTHORIZATION_STORE_PATH: str = "artifacts/knowledge/authorizations"
+    KNOWLEDGE_DECISION_AUTHORIZATION_KEY: str = ""
+    KNOWLEDGE_DECISION_KB_REVISION_ID: str = ""
+    KNOWLEDGE_DECISION_RELEASE_ID: str = ""
+    KNOWLEDGE_DECISION_PACK_VERSIONS: str = "{}"
+    KNOWLEDGE_DECISION_PROMPT_VERSION: str = ""
+    KNOWLEDGE_DECISION_ROLLBACK_POINT: str = ""
 
     # Legacy vertical rules live behind a compatibility-pack boundary.  Keep
     # disabled for the domain-neutral product; explicitly enable only for

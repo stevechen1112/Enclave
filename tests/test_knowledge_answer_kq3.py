@@ -16,6 +16,12 @@ from app.services.knowledge_decision_shadow import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _legacy_kq3_shadow_authorization_compatibility(monkeypatch):
+    """KQ3 predates KQ7 signed authorization; enforce remains fail closed."""
+    monkeypatch.setattr(settings, "KNOWLEDGE_DECISION_AUTHORIZATION_REQUIRED", False)
+
+
 def _record(tenant_ref="tenant-ref", **changes):
     values = {
         "record_id": str(uuid4()),

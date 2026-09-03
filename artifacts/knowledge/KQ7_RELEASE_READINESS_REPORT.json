@@ -1,0 +1,37 @@
+{
+  "artifact_schema": "knowledge-answer-gate-report/v1",
+  "phase": "KQ7",
+  "gate": "KQ-RELEASE-01",
+  "implementation_status": "pass",
+  "release_status": "blocked_external_evidence",
+  "date": "2026-09-03",
+  "results": {
+    "six_stage_invariants": true,
+    "alpha_beta_ga_thresholds": true,
+    "separate_classification_rates": true,
+    "provider_failures_excluded_from_safe_refusal": true,
+    "sealed_first_run_immutability": true,
+    "two_nonoverlapping_holdouts_required": true,
+    "signed_two_stage_owner_authorization": true,
+    "release_identity_binding": true,
+    "stable_traffic_allocation": true,
+    "kill_switch_fail_closed": true,
+    "production_compose_validation": "pass",
+    "production_decision_mode": "off",
+    "enforce_authorizations_issued": 0
+  },
+  "external_evidence_required": [
+    "two independent-custodian sealed first-runs, each >=200 cases, four domains >=50 each and >=20% mixed/abbreviation/code/cross-language",
+    "candidate tenant Owner shadow authorization bound to the final production release identity",
+    "tenant shadow, 30-50 case acceptance, ACL negatives, rollback drill and independent browser acceptance",
+    "separate tenant Owner enforce authorization issued only after all prerequisite evidence"
+  ],
+  "evidence": [
+    "tests/test_knowledge_answer_kq7.py",
+    "app/services/knowledge_evaluation_policy.py",
+    "app/services/knowledge_release_control.py",
+    "app/services/knowledge_release_gate.py",
+    "artifacts/knowledge/KQ7_AIHR_REGRESSION_MANIFEST.json",
+    "docs/knowledge/PHASE_KQ7_CODE_REVIEW_2026-09-03.md"
+  ]
+}

@@ -10,6 +10,10 @@ from typing import Any
 
 from app.eval.metrics import wilson_interval
 from app.models.knowledge_engine import EvaluationCaseResult, EvaluationRun
+from app.services.knowledge_evaluation_policy import (
+    classification_quality,
+    stage_trace_errors,
+)
 
 
 def evaluation_key(*, split: str, corpus_hash: str, question_hash: str, scoring_hash: str) -> str:
@@ -85,6 +89,13 @@ def finalize_run(db, run: EvaluationRun) -> dict[str, Any]:
         str((result.metrics_json or {}).get("language_profile") or "standard")
         for result in results
     )
+    result_payloads = [
+        {"metrics": dict(result.metrics_json or {})} for result in results
+    ]
+    invariant_violations = sum(
+        bool(stage_trace_errors((result.metrics_json or {}).get("stage_trace") or ()))
+        for result in results
+    )
     summary = {
         "total": len(results),
         "verdict_counts": {key: counts[key] for key in ("PASS", "FAIL", "BLOCKED", "SKIPPED", "REVIEW")},
@@ -101,6 +112,8 @@ def finalize_run(db, run: EvaluationRun) -> dict[str, Any]:
         "language_profile_distribution": dict(sorted(language_profiles.items())),
         "required_slot_coverage": {"numerator": slot_num, "denominator": slot_den,
                                    "rate": slot_num / slot_den if slot_den else None},
+        "pipeline_invariant_violations": invariant_violations,
+        "classification_quality": classification_quality(result_payloads),
     }
     run.summary_json = summary
     run.status = "completed"
