@@ -70,7 +70,9 @@ jobs:
             set -e
             cd /opt/enclave
             echo "📦 Creating pre-deploy backup..."
-            bash scripts/backup.sh --direct
+            # Production runs PostgreSQL inside the Compose `db` service.  The
+            # host intentionally does not need a standalone pg_dump binary.
+            bash scripts/backup.sh --db-only
             echo "✅ Backup complete"
 
       # ── Deploy ──
