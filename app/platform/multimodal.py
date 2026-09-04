@@ -93,6 +93,4 @@ class SegmentUnderstandingProvider(Protocol):
     provider_version: str
     execution_boundary: str
 
-    def understand(
-        self, segment: MultimodalSegmentInput
-    ) -> list[MultimodalSegmentCandidate]: ...
+    def understand(self, segment: MultimodalSegmentInput) -> list[MultimodalSegmentCandidate]: ...
