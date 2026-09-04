@@ -187,3 +187,14 @@ def test_prod_deploy_uses_canonical_environment_and_operations_services():
     assert "COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance" in text
     for service in ("migrate", "provision-db-roles", "init-superuser", "init-demo"):
         assert f"run --rm -T {service}" in text
+
+
+def test_prod_smoke_uses_public_https_edge_and_canonical_environment():
+    text = (ROOT / ".github" / "workflows" / "deploy-production.yml").read_text(encoding="utf-8")
+    smoke = text.split("- name: Smoke test", maxsplit=1)[1]
+    smoke = smoke.split("- name: Set up Node.js", maxsplit=1)[0]
+    assert "COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance" in smoke
+    assert "PUBLIC_BASE_URL=" in smoke
+    assert '"$PUBLIC_BASE_URL/health"' in smoke
+    assert '"$PUBLIC_BASE_URL/"' in smoke
+    assert "http://localhost/health > /tmp/enclave-health.json" not in smoke

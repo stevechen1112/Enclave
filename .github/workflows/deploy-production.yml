@@ -150,28 +150,31 @@ jobs:
           script: |
             set -e
             cd /opt/enclave
+            export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance
+            PUBLIC_BASE_URL="${{ vars.PRODUCTION_BASE_URL || 'https://kachu.tw' }}"
+            PUBLIC_BASE_URL="${PUBLIC_BASE_URL%/}"
             echo "🔍 Running smoke tests..."
 
-            # API health：必須經 edge；容器內 8000 僅診斷，不可單獨判定成功
-            if curl -sf http://localhost/health | grep -q '"status":"ok"'; then
-              echo "  ✅ API health OK (edge)"
+            # API health：必須經正式 HTTPS edge；容器內 8000 僅診斷，不可單獨判定成功
+            if curl -sf "$PUBLIC_BASE_URL/health" | grep -q '"status":"ok"'; then
+              echo "  ✅ API health OK (public HTTPS edge)"
             else
-              echo "  ❌ edge /health failed; container probe (diagnostic only):"
+              echo "  ❌ public HTTPS edge /health failed; container probe (diagnostic only):"
               docker compose -f docker-compose.prod.yml exec -T web curl -sf http://localhost:8000/health || true
               exit 1
             fi
 
-            # Frontend loads
-            curl -sf -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"
-            echo "  ✅ Frontend OK"
+            # Frontend loads through the same public HTTPS route users reach.
+            curl -sf -o /dev/null -w "%{http_code}" "$PUBLIC_BASE_URL/" | grep -q "200"
+            echo "  ✅ Frontend OK (public HTTPS edge)"
 
             # Emergency rollback may target an image created before release metadata existed.
             # New deployments must always pass strict backend/frontend/schema parity.
             if [ -n "${{ inputs.rollback_tag }}" ]; then
               echo "  ⚠️ Explicit rollback: legacy release metadata may be unavailable"
             else
-              curl -sf http://localhost/health > /tmp/enclave-health.json
-              curl -sf http://localhost/release.json > /tmp/enclave-frontend-release.json
+              curl -sf "$PUBLIC_BASE_URL/health" > /tmp/enclave-health.json
+              curl -sf "$PUBLIC_BASE_URL/release.json" > /tmp/enclave-frontend-release.json
               docker compose -f docker-compose.prod.yml exec -T web alembic current > /tmp/enclave-alembic-current.txt
               python3 - <<'PY'
             import json
