@@ -58,6 +58,8 @@ export default function VideoReviewPage() {
   const keyframes = useMemo(() => artifacts.filter(item => item.kind === 'keyframe'), [artifacts])
   const ocr = useMemo(() => artifacts.filter(item => item.kind === 'ocr_region'), [artifacts])
   const observations = useMemo(() => artifacts.filter(item => ['speaker_turn', 'video_scene', 'action_event', 'equipment_state', 'audio_event'].includes(item.kind)), [artifacts])
+  const ocrTracks = detail?.media_analysis?.artifacts.filter(item => item.kind === 'ocr_track') || []
+  const segmentSummaries = detail?.media_analysis?.artifacts.filter(item => item.kind === 'multimodal_segment_summary') || []
   const alignment = [...artifacts].reverse().find(item => item.kind === 'timeline_alignment')
   const procedure = [...artifacts].reverse().find(item => item.kind === 'procedure_candidate')
   const conflictReport = [...artifacts].reverse().find(item =>
@@ -143,6 +145,18 @@ export default function VideoReviewPage() {
               </div>
             )}
           </div>
+
+          {(ocrTracks.length > 0 || segmentSummaries.length > 0) && <div className="card p-5">
+            <h2 className="mb-1 font-semibold">跨模態片段與畫面文字軌跡</h2>
+            <p className="mb-3 text-xs text-muted">相同畫面文字已合併成時間區間；系統推論仍是候選，核准前不會進入正式問答。</p>
+            <div className="space-y-2">
+              {ocrTracks.map(item => <button key={item.id} type="button" onClick={() => seek(Number(item.metadata.start_ms || 0))} className="flex w-full items-start gap-3 rounded-lg border border-line p-3 text-left hover:border-accent"><span className="font-mono text-xs text-accent">{clock(Number(item.metadata.start_ms || 0))}–{clock(Number(item.metadata.end_ms || 0))}</span><span className="text-sm">{String(item.content || '')}</span></button>)}
+              {segmentSummaries.map(item => {
+                const payload = typeof item.content === 'object' && item.content ? item.content : {}
+                return <button key={item.id} type="button" onClick={() => seek(Number(item.metadata.start_ms || 0))} className="block w-full rounded-lg bg-wash p-3 text-left"><span className="font-mono text-xs text-accent">{clock(Number(item.metadata.start_ms || 0))}</span><span className="mt-1 block text-sm">{String(payload.summary || '此片段沒有足夠證據形成候選')}</span><span className="mt-1 block text-xs text-muted">{String(payload.provider_state || '')} · 尚未發布</span></button>
+              })}
+            </div>
+          </div>}
 
           <div className="card p-5">
             <h2 className="mb-3 flex items-center gap-2 font-semibold"><Image size={18} />關鍵畫面與 OCR</h2>

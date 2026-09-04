@@ -57,3 +57,40 @@ class MultimodalUnderstandingProvider(Protocol):
     def analyze(
         self, context: MultimodalAnalysisContext
     ) -> MultimodalProviderOutput: ...
+
+
+@dataclass(frozen=True)
+class SegmentEvidence:
+    artifact_id: str
+    kind: str
+    start_ms: int
+    end_ms: int
+    content: str
+
+
+@dataclass(frozen=True)
+class MultimodalSegmentInput:
+    segment_id: str
+    start_ms: int
+    end_ms: int
+    evidence: tuple[SegmentEvidence, ...]
+    entity_context: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class MultimodalSegmentCandidate:
+    candidate_type: str
+    statement: str
+    evidence_artifact_ids: tuple[str, ...]
+    risk_level: str = "normal"
+    confidence: float | None = None
+    attributes: dict[str, Any] = field(default_factory=dict)
+
+
+@runtime_checkable
+class SegmentUnderstandingProvider(Protocol):
+    provider_key: str
+    provider_version: str
+    execution_boundary: str
+
+    def understand(self, segment: MultimodalSegmentInput) -> list[MultimodalSegmentCandidate]: ...

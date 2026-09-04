@@ -1,0 +1,12 @@
+{
+  "device_runs": [
+    {"device": "iphone_safari", "physical_device": false, "status": "NOT_RUN"},
+    {"device": "android_chrome", "physical_device": false, "status": "NOT_RUN"},
+    {"device": "desktop_chromium", "physical_device": false, "status": "NOT_RUN"}
+  ],
+  "weak_network_status": "NOT_RUN",
+  "journey_steps_passed": [],
+  "tenant_corpus": {"audio_count": 0, "video_count": 0, "sealed_ratio": 0},
+  "quality_gate_status": "NOT_RUN",
+  "signatures": {"tenant_truth_owner": null, "product": null, "engineering": null}
+}

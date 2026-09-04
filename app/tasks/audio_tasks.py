@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import UUID
 
 from app.celery_app import celery_app
+from app.config import settings
 from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -36,8 +37,20 @@ def _segment_digest(
 def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
     db = SessionLocal()
     tenant_uuid = UUID(tenant_id)
+    from app.services.media_feature_flags import media_capability_enabled_for
+
+    media_v2_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=True
+    )
+    audio_precision_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=settings.AUDIO_PRECISION_PASS_V1
+    )
+    entity_linking_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=settings.ENTITY_LINKING_V1
+    )
     revision_uuid = UUID(revision_id)
     job_uuid = UUID(job_id)
+    analysis_run = None
     try:
         from app.models.asset import (
             AssetRevision,
@@ -80,11 +93,40 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
         revision.ingestion_status = "processing"
         db.commit()
 
-        from app.config import settings
+        if media_v2_enabled:
+            from app.services.media_analysis_runs import (
+                get_or_create_analysis_run,
+                transition_analysis_run,
+            )
+
+            analysis_run, _created = get_or_create_analysis_run(
+                db,
+                tenant_id=tenant_uuid,
+                asset_revision_id=revision.id,
+                pipeline_version="media-v2.1",
+                profile=(
+                    "audio_precision"
+                    if audio_precision_enabled
+                    else "audio_compatibility"
+                ),
+                configuration={
+                    "precision_pass": audio_precision_enabled,
+                    "chunk_target_seconds": 75,
+                    "overlap_ms": 1500,
+                },
+                provider_manifest={
+                    "pass_a": settings.LONG_INTERVIEW_STT_MODEL,
+                    "pass_b": settings.VOICE_STT_MODEL,
+                },
+            )
+            if analysis_run.status in {"queued", "failed", "degraded"}:
+                transition_analysis_run(analysis_run, status="running")
+            db.commit()
         from app.services.media_productization import (
             create_browser_audio_proxy,
             extract_audio_chunks,
             probe_audio,
+            run_media_command,
         )
         from app.services.storage import build_storage_key, get_storage_backend
         from app.services.video_processing import project_media_proxy
@@ -126,6 +168,43 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
 
             probe = probe_audio(local_audio)
             revision.duration_ms = probe.duration_ms
+            if analysis_run is not None:
+                from app.services.media_reliability import (
+                    MediaCostRates,
+                    enforce_media_cost_limit,
+                    estimate_media_cost,
+                )
+
+                estimate = estimate_media_cost(
+                    duration_ms=probe.duration_ms,
+                    selected_frames=0,
+                    precision_ratio=1.0 if audio_precision_enabled else 0.0,
+                    rates=MediaCostRates(
+                        settings.MEDIA_V2_STT_COST_PER_MINUTE,
+                        settings.MEDIA_V2_PRECISION_STT_COST_PER_MINUTE,
+                        settings.MEDIA_V2_VISION_COST_PER_FRAME,
+                        settings.MEDIA_V2_OCR_COST_PER_FRAME,
+                    ),
+                )
+                enforce_media_cost_limit(
+                    estimate,
+                    maximum_usd=float(settings.MEDIA_V2_MAX_COST_USD_PER_ASSET),
+                )
+                analysis_run.cost_metrics = {"estimate": estimate}
+            if entity_linking_enabled:
+                from app.services.entity_knowledge_links import (
+                    project_asset_entities_from_metadata,
+                )
+
+                project_asset_entities_from_metadata(
+                    db,
+                    tenant_id=tenant_uuid,
+                    asset_revision_id=revision.id,
+                    metadata={
+                        **dict(asset.metadata_json or {}),
+                        **dict(revision.metadata_json or {}),
+                    },
+                )
             if settings.MEDIA_PROXY_ENABLED:
                 from uuid import NAMESPACE_URL, uuid5
 
@@ -161,18 +240,133 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
             )
             db.commit()
 
-            chunks = extract_audio_chunks(
-                local_audio, temp_dir, chunk_seconds=int(settings.AUDIO_CHUNK_SECONDS)
-            )
+            precision_enabled = audio_precision_enabled
+            precision_plans = []
+            audio_profile = None
+            processing_source = local_audio
+            if precision_enabled:
+                from app.services.audio_precision import (
+                    analyze_audio_quality,
+                    build_adaptive_chunk_plan,
+                    create_lossless_working_copy,
+                    extract_lossless_chunks,
+                )
+
+                audio_profile = analyze_audio_quality(
+                    local_audio,
+                    duration_ms=probe.duration_ms,
+                    sample_rate=probe.sample_rate,
+                    channels=probe.channels,
+                    runner=run_media_command,
+                )
+                processing_source = str(Path(temp_dir) / "working-16k-mono.wav")
+                create_lossless_working_copy(
+                    local_audio,
+                    processing_source,
+                    profile=audio_profile,
+                    runner=run_media_command,
+                )
+                from uuid import NAMESPACE_URL, uuid5
+
+                working_digest = hashlib.sha256(
+                    Path(processing_source).read_bytes()
+                ).hexdigest()
+                working_artifact = (
+                    db.query(DerivedArtifact)
+                    .filter(
+                        DerivedArtifact.tenant_id == tenant_uuid,
+                        DerivedArtifact.asset_revision_id == revision.id,
+                        DerivedArtifact.artifact_kind == "audio_working_copy",
+                        DerivedArtifact.content_hash == working_digest,
+                    )
+                    .first()
+                )
+                if working_artifact is None:
+                    working_object_id = uuid5(
+                        NAMESPACE_URL,
+                        f"enclave:{revision.id}:audio-working:{working_digest}",
+                    )
+                    working_key = build_storage_key(
+                        tenant_uuid, working_object_id, ".wav"
+                    )
+                    working_uri = backend.put(working_key, processing_source)
+                    working_artifact = DerivedArtifact(
+                        tenant_id=tenant_uuid,
+                        asset_revision_id=revision.id,
+                        artifact_kind="audio_working_copy",
+                        content_hash=working_digest,
+                        provider="ffmpeg",
+                        provider_version="pcm_s16le_16k_mono.v1",
+                        quality_state="ready",
+                        artifact_uri=working_uri,
+                        metadata_json={
+                            "storage_key": working_key,
+                            "filter_profile": "adaptive_precision.v1",
+                            "source_content_hash": revision.content_hash,
+                        },
+                        schema_version="2.0",
+                    )
+                    db.add(working_artifact)
+                    db.flush()
+                precision_plans = build_adaptive_chunk_plan(probe.duration_ms)
+                chunks = extract_lossless_chunks(
+                    processing_source,
+                    temp_dir,
+                    precision_plans,
+                    runner=run_media_command,
+                )
+                profile_payload = json.dumps(
+                    audio_profile.to_dict(), ensure_ascii=False, sort_keys=True
+                )
+                profile_digest = hashlib.sha256(profile_payload.encode()).hexdigest()
+                if (
+                    not db.query(DerivedArtifact.id)
+                    .filter(
+                        DerivedArtifact.tenant_id == tenant_uuid,
+                        DerivedArtifact.asset_revision_id == revision.id,
+                        DerivedArtifact.artifact_kind == "audio_quality_profile",
+                        DerivedArtifact.content_hash == profile_digest,
+                    )
+                    .first()
+                ):
+                    db.add(
+                        DerivedArtifact(
+                            tenant_id=tenant_uuid,
+                            asset_revision_id=revision.id,
+                            artifact_kind="audio_quality_profile",
+                            content_hash=profile_digest,
+                            provider="core.audio",
+                            provider_version="precision.v1",
+                            quality_state=(
+                                "review_required" if audio_profile.risks else "ready"
+                            ),
+                            content=profile_payload,
+                            metadata_json={
+                                "lossless_working_profile": "pcm_s16le_16k_mono"
+                            },
+                            schema_version="2.0",
+                        )
+                    )
+                    db.flush()
+            else:
+                chunks = extract_audio_chunks(
+                    processing_source,
+                    temp_dir,
+                    chunk_seconds=int(settings.AUDIO_CHUNK_SECONDS),
+                )
             if not chunks:
                 raise RuntimeError("audio chunking returned no decodable audio")
 
+            previous_context = ""
+            precision_degraded_chunks = 0
             for chunk_index, chunk_path in enumerate(chunks):
                 with open(chunk_path, "rb") as stream:
                     result = transcribe_long_interview_chunk(
                         stream.read(),
                         filename=os.path.basename(chunk_path),
-                        content_type="audio/mpeg",
+                        content_type=(
+                            "audio/wav" if precision_enabled else "audio/mpeg"
+                        ),
                     )
                 segments = list(result.segments or [])
                 if not segments and result.text.strip():
@@ -184,7 +378,176 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
                             "speaker": None,
                         }
                     ]
-                offset_ms = chunk_index * int(settings.AUDIO_CHUNK_SECONDS) * 1000
+                offset_ms = (
+                    precision_plans[chunk_index].start_ms
+                    if precision_enabled
+                    else chunk_index * int(settings.AUDIO_CHUNK_SECONDS) * 1000
+                )
+                if precision_enabled:
+                    from app.services.audio_precision import extract_critical_tokens
+                    from app.services.voice_gateway import transcribe_precision_chunk
+
+                    glossary = [
+                        str(value)
+                        for value in (metadata.get("approved_glossary") or [])
+                        if str(value).strip()
+                    ]
+                    raw_text = " ".join(
+                        str(segment.get("text") or "").strip() for segment in segments
+                    ).strip()
+                    raw_digest = hashlib.sha256(
+                        json.dumps([chunk_index, raw_text], ensure_ascii=False).encode()
+                    ).hexdigest()
+                    raw_artifact = (
+                        db.query(DerivedArtifact)
+                        .filter(
+                            DerivedArtifact.tenant_id == tenant_uuid,
+                            DerivedArtifact.asset_revision_id == revision.id,
+                            DerivedArtifact.artifact_kind == "transcript_raw",
+                            DerivedArtifact.content_hash == raw_digest,
+                        )
+                        .first()
+                    )
+                    if raw_artifact is None and raw_text:
+                        raw_artifact = DerivedArtifact(
+                            tenant_id=tenant_uuid,
+                            asset_revision_id=revision.id,
+                            artifact_kind="transcript_raw",
+                            content_hash=raw_digest,
+                            provider=result.provider or "openai",
+                            provider_version=result.provider_version
+                            or package_version("openai"),
+                            quality_state="provisional",
+                            content=raw_text,
+                            metadata_json={
+                                "chunk_index": chunk_index,
+                                "start_ms": offset_ms,
+                                "end_ms": precision_plans[chunk_index].end_ms,
+                                "pass": "A_diarization",
+                            },
+                            schema_version="2.0",
+                        )
+                        db.add(raw_artifact)
+                        db.flush()
+                    from app.services.media_reliability import (
+                        provider_circuit_breaker,
+                    )
+
+                    breaker = provider_circuit_breaker("openai:precision_stt")
+                    try:
+                        if not breaker.allow():
+                            raise RuntimeError(
+                                "precision transcription circuit breaker is open"
+                            )
+                        precision = transcribe_precision_chunk(
+                            Path(chunk_path).read_bytes(),
+                            filename=os.path.basename(chunk_path),
+                            content_type="audio/wav",
+                            glossary=glossary,
+                            previous_context=previous_context,
+                        )
+                        breaker.record_success()
+                    except Exception as precision_exc:
+                        # Pass A is still useful and review-gated. A secondary
+                        # provider failure must be visible but must not discard it.
+                        logger.warning(
+                            "audio precision pass degraded: revision=%s chunk=%s error=%s",
+                            revision_id,
+                            chunk_index,
+                            precision_exc,
+                        )
+                        breaker.record_failure()
+                        precision_degraded_chunks += 1
+                        precision = None
+                    if (
+                        precision is not None
+                        and precision.text
+                        and precision.text.strip() != raw_text
+                    ):
+                        correction_payload = json.dumps(
+                            {
+                                "raw": raw_text,
+                                "candidate": precision.text.strip(),
+                                "critical_tokens": list(
+                                    extract_critical_tokens(precision.text, glossary)
+                                ),
+                                "method": "contextual_asr_candidate",
+                                "requires_human_review": True,
+                            },
+                            ensure_ascii=False,
+                            sort_keys=True,
+                        )
+                        correction_digest = hashlib.sha256(
+                            correction_payload.encode()
+                        ).hexdigest()
+                        correction_artifact = (
+                            db.query(DerivedArtifact)
+                            .filter(
+                                DerivedArtifact.tenant_id == tenant_uuid,
+                                DerivedArtifact.asset_revision_id == revision.id,
+                                DerivedArtifact.artifact_kind
+                                == "transcript_correction",
+                                DerivedArtifact.content_hash == correction_digest,
+                            )
+                            .first()
+                        )
+                        if correction_artifact is None:
+                            correction_artifact = DerivedArtifact(
+                                tenant_id=tenant_uuid,
+                                asset_revision_id=revision.id,
+                                artifact_kind="transcript_correction",
+                                content_hash=correction_digest,
+                                provider=precision.provider or "openai",
+                                provider_version=precision.provider_version
+                                or package_version("openai"),
+                                quality_state="review_required",
+                                content=correction_payload,
+                                metadata_json={
+                                    "chunk_index": chunk_index,
+                                    "start_ms": offset_ms,
+                                    "end_ms": precision_plans[chunk_index].end_ms,
+                                    "source_artifact_id": (
+                                        str(raw_artifact.id) if raw_artifact else None
+                                    ),
+                                    "pass": "B_contextual",
+                                },
+                                schema_version="2.0",
+                            )
+                            db.add(correction_artifact)
+                            db.flush()
+                        if (
+                            not db.query(EvidenceSpan.id)
+                            .filter(
+                                EvidenceSpan.tenant_id == tenant_uuid,
+                                EvidenceSpan.artifact_id == correction_artifact.id,
+                            )
+                            .first()
+                        ):
+                            db.add(
+                                EvidenceSpan(
+                                    tenant_id=tenant_uuid,
+                                    artifact_id=correction_artifact.id,
+                                    asset_revision_id=revision.id,
+                                    locator_kind="audio",
+                                    start_ms=offset_ms,
+                                    end_ms=precision_plans[chunk_index].end_ms,
+                                )
+                            )
+                        if analysis_run is not None and raw_artifact is not None:
+                            from app.services.media_analysis_runs import (
+                                project_derivation_link,
+                            )
+
+                            project_derivation_link(
+                                db,
+                                tenant_id=tenant_uuid,
+                                run_id=analysis_run.id,
+                                parent_artifact_id=raw_artifact.id,
+                                child_artifact_id=correction_artifact.id,
+                                relation_kind="corrected_into",
+                                metadata={"chunk_index": chunk_index},
+                            )
+                    previous_context = (previous_context + " " + raw_text)[-2000:]
                 for segment in segments:
                     text = str(segment.get("text") or "").strip()
                     if not text:
@@ -307,6 +670,18 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
                         "total_chunks": len(chunks),
                     },
                 )
+                if analysis_run is not None:
+                    from app.services.media_reliability import merge_checkpoint
+
+                    analysis_run.checkpoint_json = merge_checkpoint(
+                        dict(analysis_run.checkpoint_json or {}),
+                        {
+                            "phase": "transcript_partial",
+                            "completed_chunk_index": chunk_index,
+                            "completed_chunk_count": chunk_index + 1,
+                            "total_chunk_count": len(chunks),
+                        },
+                    )
                 db.commit()
 
         capability_results = audio_capability_results(
@@ -341,6 +716,17 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
                     observed=capability_results,
                 ),
             )
+            if analysis_run is not None:
+                from app.services.media_analysis_runs import transition_analysis_run
+
+                transition_analysis_run(
+                    analysis_run,
+                    status="completed",
+                    checkpoint={
+                        **dict(analysis_run.checkpoint_json or {}),
+                        "phase": "completed_no_speech",
+                    },
+                )
             db.commit()
             return {"job_id": job_id, "status": job.status, "artifact_ids": []}
         revision.ingestion_status = "review_required"
@@ -362,6 +748,22 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 observed=capability_results,
             ),
         )
+        if analysis_run is not None:
+            from app.services.media_analysis_runs import transition_analysis_run
+
+            transition_analysis_run(
+                analysis_run,
+                status="review_required",
+                checkpoint={
+                    **dict(analysis_run.checkpoint_json or {}),
+                    "phase": "human_review",
+                },
+                quality_metrics={
+                    "transcript_count": len(artifact_ids),
+                    "quality_risks": list(audio_profile.risks) if audio_profile else [],
+                    "precision_degraded_chunk_count": precision_degraded_chunks,
+                },
+            )
         db.commit()
         return {"job_id": job_id, "status": job.status, "artifact_ids": artifact_ids}
     except Exception as exc:
@@ -420,6 +822,26 @@ def process_audio_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 )
                 if asset is not None:
                     asset.status = "failed" if exhausted else "processing"
+            if media_v2_enabled:
+                from app.models.media_analysis import MediaAnalysisRun
+                from app.services.media_analysis_runs import transition_analysis_run
+
+                failed_run = (
+                    db.query(MediaAnalysisRun)
+                    .filter(
+                        MediaAnalysisRun.tenant_id == tenant_uuid,
+                        MediaAnalysisRun.asset_revision_id == revision_uuid,
+                        MediaAnalysisRun.status == "running",
+                    )
+                    .order_by(MediaAnalysisRun.created_at.desc())
+                    .first()
+                )
+                if failed_run is not None:
+                    transition_analysis_run(
+                        failed_run,
+                        status="failed",
+                        failure={"code": failure.code, "retryable": failure.retryable},
+                    )
             db.commit()
         except Exception:
             db.rollback()

@@ -39,6 +39,15 @@ _NON_ACTIONABLE_KINDS = {
     "video_scene",
     "timeline_alignment",
     "sop_conflict_report",
+    "media_probe",
+    "audio_quality_profile",
+    "audio_working_copy",
+    "transcript_raw",
+    "video_keyframe_candidate",
+    "ocr_track",
+    "visual_observation",
+    "audio_signal_outlier",
+    "multimodal_segment_summary",
 }
 logger = logging.getLogger(__name__)
 
@@ -163,12 +172,8 @@ def _blocked_reasons(
     # Separation of duty protects inferred decisions and high-risk operating
     # guidance.  It must not make a two-person tenant unable to confirm the
     # literal OCR/transcript extracted from a source they uploaded.
-    if (
-        asset.created_by == current_user.id
-        and (
-            _artifact_risk(artifact) != "low"
-            or artifact.artifact_kind not in _BATCH_KINDS
-        )
+    if asset.created_by == current_user.id and (
+        _artifact_risk(artifact) != "low" or artifact.artifact_kind not in _BATCH_KINDS
     ):
         blocked.append("separation_of_duty")
     if evidence_count == 0:
@@ -687,14 +692,27 @@ def _decide_artifact(
         from app.services.knowledge_authority import publish_knowledge_unit
 
         locator = _locator_dict(spans[0], asset) if spans else {}
+        publish_content = artifact.content or json.dumps(
+            artifact.metadata_json or {}, ensure_ascii=False
+        )
+        if artifact.artifact_kind == "transcript_correction":
+            try:
+                correction = json.loads(artifact.content or "{}")
+                publish_content = str(correction.get("candidate") or "").strip()
+            except (json.JSONDecodeError, TypeError):
+                publish_content = ""
+            if not publish_content:
+                raise HTTPException(
+                    status_code=409,
+                    detail={"code": "invalid_transcript_correction"},
+                )
         authority = publish_knowledge_unit(
             db,
             tenant_id=current_user.tenant_id,
             unit_key=f"artifact:{artifact.id}",
             unit_type=_knowledge_unit_type(artifact.artifact_kind),
             title=asset.title,
-            content=artifact.content
-            or json.dumps(artifact.metadata_json or {}, ensure_ascii=False),
+            content=publish_content,
             authority_class="human_reviewed_artifact",
             acl_snapshot=dict(asset.acl_reference or {}),
             source_resource_type="derived_artifact",
@@ -830,9 +848,7 @@ def decide_source_group(
             detail={"code": "source_confirmation_not_found"},
         )
     blocked = {
-        reason
-        for item in candidates
-        for reason in (item.get("blocked_reasons") or [])
+        reason for item in candidates for reason in (item.get("blocked_reasons") or [])
     }
     if blocked:
         raise HTTPException(
@@ -914,12 +930,14 @@ def decide_review_item(
         snapshot = None
 
     audit_evidence = {
-        "provider": snapshot["provider"]
-        if snapshot
-        else (
-            "core.legacy_file_classification"
-            if prefix == "legacy"
-            else "core.asset_artifact"
+        "provider": (
+            snapshot["provider"]
+            if snapshot
+            else (
+                "core.legacy_file_classification"
+                if prefix == "legacy"
+                else "core.asset_artifact"
+            )
         ),
         "source_type": snapshot["source_type"] if snapshot else None,
         "risk_level": snapshot["risk_level"] if snapshot else None,

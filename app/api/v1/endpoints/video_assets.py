@@ -322,9 +322,7 @@ async def upload_video_asset(
                 **canonical_asset_acl(
                     owner_subject_id=current_user.id,
                     visibility="restricted" if department_id else "tenant",
-                    allowed_department_ids=(
-                        [department_id] if department_id else []
-                    ),
+                    allowed_department_ids=([department_id] if department_id else []),
                 ),
                 "uploaded_by": str(current_user.id),
                 "department_id": str(department_id) if department_id else None,
@@ -500,39 +498,41 @@ def get_video_review(
             except ValueError:
                 content = {"raw": artifact.content}
         row = {
-                "id": str(artifact.id),
-                "kind": artifact.artifact_kind,
-                "quality_state": artifact.quality_state,
-                "confidence": artifact.confidence,
-                "content": content,
-                "metadata": dict(artifact.metadata_json or {}),
-                "content_url": (
-                    f"/api/v1/media/artifacts/{artifact.id}/content?token="
-                    + create_media_token(
-                        tenant_id=current_user.tenant_id,
-                        user_id=current_user.id,
-                        resource_kind="video_artifact",
-                        resource_id=artifact.id,
-                    )
-                    if artifact.artifact_uri
-                    else None
-                ),
-                "evidence": evidence_by_artifact.get(artifact.id, []),
-                "review": (
-                    {
-                        "decision": decision.decision,
-                        "notes": decision.notes,
-                        "reviewer_id": str(decision.reviewer_id),
-                        "created_at": decision.created_at,
-                        "resolution": dict(decision.resolution_json or {}),
-                    }
-                    if decision
-                    else None
-                ),
-            }
+            "id": str(artifact.id),
+            "kind": artifact.artifact_kind,
+            "quality_state": artifact.quality_state,
+            "confidence": artifact.confidence,
+            "content": content,
+            "metadata": dict(artifact.metadata_json or {}),
+            "content_url": (
+                f"/api/v1/media/artifacts/{artifact.id}/content?token="
+                + create_media_token(
+                    tenant_id=current_user.tenant_id,
+                    user_id=current_user.id,
+                    resource_kind="video_artifact",
+                    resource_id=artifact.id,
+                )
+                if artifact.artifact_uri
+                else None
+            ),
+            "evidence": evidence_by_artifact.get(artifact.id, []),
+            "review": (
+                {
+                    "decision": decision.decision,
+                    "notes": decision.notes,
+                    "reviewer_id": str(decision.reviewer_id),
+                    "created_at": decision.created_at,
+                    "resolution": dict(decision.resolution_json or {}),
+                }
+                if decision
+                else None
+            ),
+        }
         rows.append(row)
         if artifact.artifact_kind == "media_proxy":
             proxy_url = row["content_url"]
+    from app.services.media_review_snapshot import safe_media_review_snapshot
+
     return {
         **_serialize_asset(db, asset),
         "content_url": (
@@ -546,6 +546,11 @@ def get_video_review(
         ),
         "proxy_url": proxy_url,
         "artifacts": rows,
+        "media_analysis": safe_media_review_snapshot(
+            db,
+            tenant_id=current_user.tenant_id,
+            asset_revision_id=revision.id,
+        ),
     }
 
 

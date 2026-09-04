@@ -734,15 +734,21 @@ class OpenAISTTProvider:
         if hasattr(result, "segments") and result.segments:
             segments = [
                 {
-                    "start": getattr(s, "start", None)
-                    if not isinstance(s, dict)
-                    else s.get("start", 0),
-                    "end": getattr(s, "end", None)
-                    if not isinstance(s, dict)
-                    else s.get("end", 0),
-                    "text": getattr(s, "text", None)
-                    if not isinstance(s, dict)
-                    else s.get("text", ""),
+                    "start": (
+                        getattr(s, "start", None)
+                        if not isinstance(s, dict)
+                        else s.get("start", 0)
+                    ),
+                    "end": (
+                        getattr(s, "end", None)
+                        if not isinstance(s, dict)
+                        else s.get("end", 0)
+                    ),
+                    "text": (
+                        getattr(s, "text", None)
+                        if not isinstance(s, dict)
+                        else s.get("text", "")
+                    ),
                 }
                 for s in result.segments
             ]
@@ -835,6 +841,64 @@ def transcribe_long_interview_chunk(
         provider="openai",
         provider_version=_installed_package_version("openai"),
         model=settings.LONG_INTERVIEW_STT_MODEL,
+        confidence_provider_supplied=False,
+        confidence_calibration_version="unavailable",
+    )
+
+
+def transcribe_precision_chunk(
+    audio_data: bytes,
+    *,
+    filename: str,
+    content_type: str,
+    language: str = "zh",
+    glossary: list[str] | None = None,
+    previous_context: str = "",
+) -> TranscriptionResult:
+    """Second-pass contextual transcription without fabricating timestamps.
+
+    The result is retained as a correction candidate.  It never silently
+    replaces diarized Pass-A time spans and must be aligned or reviewed before
+    becoming citable content.
+    """
+    import io
+
+    from app.config import settings
+
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        raise RuntimeError("openai package not installed") from exc
+    if not settings.OPENAI_API_KEY:
+        raise RuntimeError("OPENAI_API_KEY is not configured")
+    fname, mime = _sniff_audio_identity(audio_data, filename, content_type)
+    context_parts = []
+    if glossary:
+        context_parts.append("專有名詞：" + "、".join(glossary[:100]))
+    if previous_context:
+        context_parts.append("前文：" + previous_context[-1000:])
+    client = OpenAI(api_key=settings.OPENAI_API_KEY)
+    request: dict[str, Any] = {
+        "model": settings.VOICE_STT_MODEL,
+        "file": (fname, io.BytesIO(audio_data), mime),
+        "language": language,
+        "response_format": "json",
+    }
+    if context_parts:
+        request["prompt"] = "\n".join(context_parts)[:4000]
+    result = client.audio.transcriptions.create(
+        **request,
+    )
+    text = _normalize_stt_text(str(getattr(result, "text", "") or ""))
+    return TranscriptionResult(
+        text=text,
+        language=language,
+        segments=[],
+        duration_seconds=0.0,
+        confidence=None,
+        provider="openai",
+        provider_version=_installed_package_version("openai"),
+        model=settings.VOICE_STT_MODEL,
         confidence_provider_supplied=False,
         confidence_calibration_version="unavailable",
     )

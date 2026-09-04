@@ -198,6 +198,40 @@ export interface VideoAssetDetail extends VideoAsset {
   content_url: string
   proxy_url: string | null
   artifacts: VideoArtifact[]
+  media_analysis?: MediaAnalysisSnapshot
+}
+
+export interface MediaAnalysisRunSummary {
+  id: string
+  status: string
+  profile: string
+  pipeline_version: string
+  provider_manifest: Record<string, unknown>
+  checkpoint: Record<string, unknown>
+  quality_metrics: Record<string, unknown>
+  cost_metrics: Record<string, unknown>
+  failure: Record<string, unknown>
+  created_at: string
+  completed_at: string | null
+}
+
+export interface MediaAnalysisArtifact {
+  id: string
+  kind: string
+  quality_state: string
+  confidence: number | null
+  content: string | Record<string, unknown> | null
+  metadata: Record<string, unknown>
+  evidence: Array<{ id: string; kind: string; start_ms: number | null; end_ms: number | null; speaker?: string | null; frame_index?: number | null }>
+}
+
+export interface MediaAnalysisSnapshot {
+  schema_version: string
+  runs: MediaAnalysisRunSummary[]
+  artifacts: MediaAnalysisArtifact[]
+  entity_links: Array<{ id: string; entity_id: string; link_kind: string; status: string; confidence: number | null; evidence: Record<string, unknown>[] }>
+  partial_use_allowed: boolean
+  unavailable_reason?: string
 }
 
 // ─── Unified Knowledge Assets ───
@@ -271,6 +305,7 @@ export interface KnowledgeAsset {
   pending_review_count?: number
   readiness_reasons?: string[]
   preview_url?: string | null
+  media_analysis?: MediaAnalysisSnapshot
   deduplicated?: boolean
 }
 

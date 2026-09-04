@@ -60,6 +60,16 @@ ARTIFACT_KINDS = (
     "sop_conflict_report",
     "procedure_candidate",
     "entity_candidate",
+    "media_probe",
+    "audio_quality_profile",
+    "audio_working_copy",
+    "transcript_raw",
+    "transcript_correction",
+    "video_keyframe_candidate",
+    "ocr_track",
+    "visual_observation",
+    "audio_signal_outlier",
+    "multimodal_segment_summary",
 )
 
 LOCATOR_KINDS = (

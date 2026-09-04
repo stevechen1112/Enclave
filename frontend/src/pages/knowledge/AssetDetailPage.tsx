@@ -140,6 +140,9 @@ export default function AssetDetailPage() {
     : '系統已保留原始來源，請重新處理；若持續失敗，請聯絡管理員查看服務狀態。')
   const lifecycle = asset.lifecycle_status || asset.job?.status || asset.status
   const capabilityResults = asset.job?.readiness.capability_results
+  const mediaArtifacts = asset.media_analysis?.artifacts || []
+  const audioCorrections = mediaArtifacts.filter(item => item.kind === 'transcript_correction')
+  const audioProfile = mediaArtifacts.find(item => item.kind === 'audio_quality_profile')
   return <WorkspacePage title={asset.title} subtitle={`${asset.asset_kind} · ${asset.source_system} · ${asset.data_classification}`} backTo="/knowledge/assets" backLabel="回所有資產" actions={<><LifecycleBadge status={lifecycle} answerReady={asset.answer_ready} />{failed && retryable && <button className="btn-outline" onClick={() => void retry()}><RefreshCw className="h-4 w-4" />重新處理</button>}</>}>
     <EvidenceLocatorBanner />
     {failed && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span><strong className="block">需要處理</strong><span className="mt-1 block">{failureMessage}</span><span className="mt-2 block text-xs">{retryable ? '系統自動嘗試已結束；可按「重新處理」再試一次。' : '這類問題不會自動重試，請依上方說明更換來源或格式。'}{asset.job?.correlation_id ? ` 追蹤碼：${asset.job.correlation_id}` : ''}</span></span></div>}
@@ -164,6 +167,13 @@ export default function AssetDetailPage() {
             </li>
           })}</ul> : <p className="text-sm text-muted">此來源沒有額外處理能力紀錄。</p>}
         </SectionPanel>
+        {asset.asset_kind === 'audio' && (audioProfile || audioCorrections.length > 0) && <SectionPanel title="音訊品質與校正候選" description="原始辨識與上下文精度候選分開保留；差異需要人員確認，不會靜默改寫。">
+          {audioProfile && <div className="mb-3 rounded-xl bg-wash p-4 text-sm"><strong className="block text-ink">音訊品質剖析</strong><pre className="mt-2 overflow-x-auto whitespace-pre-wrap text-xs text-muted">{JSON.stringify(audioProfile.content, null, 2)}</pre></div>}
+          {audioCorrections.length === 0 ? <p className="text-sm text-muted">目前沒有上下文校正差異。</p> : <div className="space-y-3">{audioCorrections.map(item => {
+            const content = typeof item.content === 'object' && item.content ? item.content : {}
+            return <div key={item.id} className="rounded-xl border border-line p-4 text-sm"><div className="text-xs text-muted">{Math.floor(Number(item.metadata.start_ms || 0) / 1000)} 秒起 · 等待人工確認</div><div className="mt-2 text-muted line-through">{String(content.raw || '')}</div><div className="mt-1 text-ink">{String(content.candidate || '')}</div></div>
+          })}</div>}
+        </SectionPanel>}
       </div>
       <aside className="space-y-5">
         <SectionPanel title="處理進度" bodyClassName="p-4">

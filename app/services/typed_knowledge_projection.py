@@ -1,4 +1,5 @@
 """KQ4 deterministic typed-unit and provenance relation projection."""
+
 from __future__ import annotations
 
 import hashlib
@@ -294,6 +295,22 @@ def _project_typed_knowledge(
         )
         by_key[candidate.candidate_key] = result
         candidate_by_key[candidate.candidate_key] = candidate
+        if candidate.entity_ids:
+            from app.services.entity_knowledge_links import project_unit_entity_links
+
+            project_unit_entity_links(
+                db,
+                tenant_id=tenant_id,
+                unit_revision_id=UUID(result["unit_revision_id"]),
+                entity_ids=candidate.entity_ids,
+                projector_version=projector_version,
+                evidence=[
+                    {
+                        "evidence_span_id": str(candidate.evidence_span_id),
+                        "source_artifact_id": str(source_artifact_id),
+                    }
+                ],
+            )
 
     relation_count = 0
     for relation in relation_rows:
@@ -302,8 +319,12 @@ def _project_typed_knowledge(
             or relation.target_candidate_key not in by_key
         ):
             raise ValueError("relation references an unknown candidate")
-        source_revision_id = UUID(by_key[relation.source_candidate_key]["unit_revision_id"])
-        target_revision_id = UUID(by_key[relation.target_candidate_key]["unit_revision_id"])
+        source_revision_id = UUID(
+            by_key[relation.source_candidate_key]["unit_revision_id"]
+        )
+        target_revision_id = UUID(
+            by_key[relation.target_candidate_key]["unit_revision_id"]
+        )
         relation_key = _relation_key(
             tenant_id,
             source_revision_id,

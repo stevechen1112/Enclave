@@ -315,12 +315,48 @@ def publish_knowledge_unit(
         gate_evidence=gate_evidence,
     )
     membership = memberships[revision.id]
+    entity_projection = {
+        "resolved_count": 0,
+        "ambiguous_count": 0,
+        "unresolved_count": 0,
+    }
+    from app.config import settings
+
+    from app.services.media_feature_flags import media_capability_enabled_for
+
+    if applicability and media_capability_enabled_for(
+        tenant_id, capability_enabled=settings.ENTITY_LINKING_V1
+    ):
+        from app.services.entity_knowledge_links import (
+            project_unit_entities_from_values,
+        )
+
+        entity_values = [
+            str(value)
+            for key in (
+                "entity_ids",
+                "equipment_ids",
+                "product_ids",
+                "customer_ids",
+                "process_ids",
+                "site_ids",
+            )
+            for value in (applicability.get(key) or [])
+            if str(value or "").strip()
+        ]
+        entity_projection = project_unit_entities_from_values(
+            db,
+            tenant_id=tenant_id,
+            unit_revision_id=revision.id,
+            values=entity_values,
+        )
     return {
         "unit_id": str(unit.id),
         "unit_revision_id": str(revision.id),
         "release_id": str(release.id),
         "membership_id": str(membership.id),
         "idempotent": idempotent,
+        "entity_projection": entity_projection,
     }
 
 

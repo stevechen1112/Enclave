@@ -72,6 +72,13 @@ from app.models.input_pilot import (
     InputPilotDailyMetric,
     InputPilotIncident,
 )
+from app.models.media_analysis import (
+    ArtifactDerivationLink,
+    AssetEntityLink,
+    EntityRelationship,
+    KnowledgeUnitEntityLink,
+    MediaAnalysisRun,
+)
 # Workflow Kernel: domain-neutral task, form and approval persistence
 from app.models.workflow import (
     ApprovalPolicy,

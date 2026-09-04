@@ -206,7 +206,10 @@ class EntityRegistry(Base):
     attributes_json = Column(JSON, nullable=False, default=dict)
     status = Column(String(24), nullable=False, default="active")
     aliases = relationship("EntityAlias", cascade="all, delete-orphan", lazy="selectin")
-    __table_args__ = (UniqueConstraint("tenant_id", "entity_type", "canonical_key", name="uq_tenant_entity"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "id", name="uq_knowledge_entities_tenant_id"),
+        UniqueConstraint("tenant_id", "entity_type", "canonical_key", name="uq_tenant_entity"),
+    )
 
 
 class EntityAlias(Base):

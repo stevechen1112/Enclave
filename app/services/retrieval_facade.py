@@ -120,9 +120,9 @@ class RetrievalFacade:
             top_k=top_k,
             genre_filter=genre_filter,
             kb_revision_id=kb_revision_id,
-            kb_revision_ids=kb_revision_ids
-            if "kb_revision_ids" in (filters or {})
-            else None,
+            kb_revision_ids=(
+                kb_revision_ids if "kb_revision_ids" in (filters or {}) else None
+            ),
             authz=authz,
             db=db,
         )
@@ -461,9 +461,7 @@ class RetrievalFacade:
             explicit = True
             raw_scope.extend((scope or {}).get("kb_revision_ids") or [])
         revision_ids = [UUID(str(item)) for item in raw_scope if item]
-        include_tenant_scope = bool(
-            (scope or {}).get("include_tenant_knowledge_units")
-        )
+        include_tenant_scope = bool((scope or {}).get("include_tenant_knowledge_units"))
         units = list_active_knowledge_units(
             db,
             authz=authz,
@@ -471,6 +469,33 @@ class RetrievalFacade:
             include_tenant_scope=include_tenant_scope,
             query_text=query,
         )
+        from app.services.media_feature_flags import media_capability_enabled_for
+
+        if media_capability_enabled_for(
+            authz.tenant_id, capability_enabled=settings.ENTITY_LINKING_V1
+        ):
+            # Entity expansion may surface a unit whose words differ from the
+            # user's approved equipment alias. Re-read only from the same active
+            # release/ACL authority, never directly from projection tables.
+            all_visible = list_active_knowledge_units(
+                db,
+                authz=authz,
+                kb_revision_ids=revision_ids if explicit else None,
+                include_tenant_scope=include_tenant_scope,
+                query_text=None,
+            )
+            from app.services.entity_knowledge_links import (
+                expand_active_units_by_entity,
+            )
+
+            expanded, resolution = expand_active_units_by_entity(
+                db, authz=authz, query=query, visible_units=all_visible
+            )
+            entity_units = [
+                row for row in expanded if row.metadata.get("entity_expanded")
+            ]
+            by_revision = {row.unit_revision_id: row for row in [*units, *entity_units]}
+            units = list(by_revision.values())
         if not query or not units:
             return units
         terms = {term.casefold() for term in str(query).split() if term.strip()}
@@ -495,12 +520,14 @@ class RetrievalFacade:
         )
         expanded_ids = {unit.unit_revision_id for unit in expanded}
         return [
-            replace(
-                unit,
-                metadata={**unit.metadata, "relation_expanded": True},
+            (
+                replace(
+                    unit,
+                    metadata={**unit.metadata, "relation_expanded": True},
+                )
+                if unit.unit_revision_id in expanded_ids
+                else unit
             )
-            if unit.unit_revision_id in expanded_ids
-            else unit
             for unit in units
         ]
 
@@ -545,8 +572,7 @@ class RetrievalFacade:
         exact_tokens = {
             token.casefold()
             for token in re.findall(r"(?u)\b[\w./-]{2,32}\b", str(query or ""))
-            if any(character.isdigit() for character in token)
-            or len(token) <= 8
+            if any(character.isdigit() for character in token) or len(token) <= 8
         }
         scored = []
         for unit in units:
@@ -563,6 +589,8 @@ class RetrievalFacade:
             )
             if unit.metadata.get("relation_expanded"):
                 score += 0.5
+            if unit.metadata.get("entity_expanded"):
+                score += 0.6
             exact_match = bool(
                 normalized_query
                 and (

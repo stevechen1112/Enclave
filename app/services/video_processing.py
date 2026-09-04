@@ -87,6 +87,8 @@ class VideoProcessingResult:
     stt_model: str | None = None
     stt_confidence_provider_supplied: bool = False
     stt_confidence_calibration_version: str | None = None
+    sampling_profile: str = "uniform_v1"
+    ocr_tracks: list[dict[str, Any]] = field(default_factory=list)
 
 
 def _run(command: list[str], *, timeout: int = 300) -> subprocess.CompletedProcess[str]:
@@ -382,6 +384,7 @@ def process_video_file(
     stt: Callable[[str], tuple[list[dict[str, Any]], float | None]] = default_stt,
     ocr: Callable[[str], tuple[str, float | None]] = default_ocr,
     progress: Callable[[str, dict[str, Any]], None] | None = None,
+    adaptive_sampling_enabled: bool | None = None,
 ) -> VideoProcessingResult:
     from app.config import settings
     from app.services.input_capability_results import package_version
@@ -457,7 +460,29 @@ def process_video_file(
                 },
             )
 
-    keyframes = extract_keyframes(path, output_dir, probe, runner=runner)
+    adaptive_enabled = (
+        bool(settings.MEDIA_PIPELINE_V2 and settings.VIDEO_ADAPTIVE_SAMPLING_V1)
+        if adaptive_sampling_enabled is None
+        else bool(adaptive_sampling_enabled)
+    )
+    sampling_profile = "uniform_v1"
+    if adaptive_enabled:
+        from app.services.video_adaptive_sampling import (
+            extract_adaptive_keyframes,
+        )
+
+        keyframes = extract_adaptive_keyframes(
+            path,
+            output_dir,
+            probe,
+            maximum_selected=int(settings.MEDIA_V2_MAX_SELECTED_FRAMES),
+            minimum_fps=float(settings.MEDIA_V2_SCAN_FPS_MIN),
+            maximum_fps=float(settings.MEDIA_V2_SCAN_FPS_MAX),
+            runner=runner,
+        )
+        sampling_profile = "adaptive_v1"
+    else:
+        keyframes = extract_keyframes(path, output_dir, probe, runner=runner)
     if progress:
         progress("keyframes_extracted", {"keyframe_count": len(keyframes)})
     for index, keyframe in enumerate(keyframes, start=1):
@@ -477,6 +502,35 @@ def process_video_file(
                     "ocr_ready": True,
                 },
             )
+    ocr_tracks: list[dict[str, Any]] = []
+    if adaptive_enabled:
+        from app.services.video_adaptive_sampling import (
+            OCRObservation,
+            build_ocr_tracks,
+        )
+
+        ocr_tracks = [
+            {
+                "track_id": track.track_id,
+                "start_ms": track.start_ms,
+                "end_ms": track.end_ms,
+                "text": track.text,
+                "bbox": track.bbox,
+                "confidence": track.confidence,
+                "observation_count": track.observation_count,
+            }
+            for track in build_ocr_tracks(
+                [
+                    OCRObservation(
+                        timestamp_ms=item.timestamp_ms,
+                        text=item.ocr_text,
+                        bbox=None,
+                        confidence=item.ocr_confidence,
+                    )
+                    for item in keyframes
+                ]
+            )
+        ]
     return VideoProcessingResult(
         probe=probe,
         transcript_segments=transcript_segments,
@@ -491,6 +545,8 @@ def process_video_file(
         stt_model=str(settings.LONG_INTERVIEW_STT_MODEL or "unknown"),
         stt_confidence_provider_supplied=False,
         stt_confidence_calibration_version="unavailable",
+        sampling_profile=sampling_profile,
+        ocr_tracks=ocr_tracks,
     )
 
 
@@ -688,6 +744,17 @@ def project_video_result(
         metadata={"ephemeral_processing": True},
     )
 
+    _upsert_artifact(
+        db,
+        revision,
+        artifact_kind="media_probe",
+        content=json.dumps(result.probe.to_dict(), ensure_ascii=False, sort_keys=True),
+        quality_state="ready",
+        metadata={"sampling_profile": result.sampling_profile},
+        provider="core.video",
+        provider_version="2.0" if result.sampling_profile == "adaptive_v1" else "1.0",
+    )
+
     transcript_artifacts: list[DerivedArtifact] = []
     for segment in result.transcript_segments:
         artifact = _upsert_artifact(
@@ -786,6 +853,29 @@ def project_video_result(
                 frame_index=keyframe.frame_index,
             )
             ocr_artifacts.append(ocr_artifact)
+
+    for track in result.ocr_tracks:
+        track_artifact = _upsert_artifact(
+            db,
+            revision,
+            artifact_kind="ocr_track",
+            content=str(track.get("text") or ""),
+            confidence=track.get("confidence"),
+            quality_state="review_required",
+            metadata={
+                **track,
+                "sampling_profile": result.sampling_profile,
+            },
+            provider="core.video.ocr_track",
+            provider_version="1.0",
+        )
+        _ensure_video_evidence(
+            db,
+            revision,
+            track_artifact,
+            start_ms=int(track.get("start_ms") or 0),
+            end_ms=int(track.get("end_ms") or int(track.get("start_ms") or 0) + 1),
+        )
 
     step_sources: list[dict[str, Any]] = [
         {

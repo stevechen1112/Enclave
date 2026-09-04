@@ -250,6 +250,24 @@ class Settings(BaseSettings):
         "aac,vorbis,flac,opus,alac,amr_nb,amr_wb"
     )
     MEDIA_PROCESSING_THREADS: int = 1
+    # Media v2 is shadow-first.  Each capability can be disabled independently
+    # without affecting immutable v1 artifacts or active knowledge releases.
+    MEDIA_PIPELINE_V2: bool = False
+    # Comma-separated tenant UUIDs. Empty/invalid values enable nobody, even
+    # when MEDIA_PIPELINE_V2 is true; this makes production rollout fail closed.
+    MEDIA_V2_TENANT_ALLOWLIST: str = ""
+    AUDIO_PRECISION_PASS_V1: bool = False
+    VIDEO_ADAPTIVE_SAMPLING_V1: bool = False
+    MULTIMODAL_SEGMENT_V1: bool = False
+    ENTITY_LINKING_V1: bool = False
+    MEDIA_V2_MAX_COST_USD_PER_ASSET: float = 10.0
+    MEDIA_V2_MAX_SELECTED_FRAMES: int = 180
+    MEDIA_V2_SCAN_FPS_MIN: float = 0.2
+    MEDIA_V2_SCAN_FPS_MAX: float = 4.0
+    MEDIA_V2_STT_COST_PER_MINUTE: float = 0.0
+    MEDIA_V2_PRECISION_STT_COST_PER_MINUTE: float = 0.0
+    MEDIA_V2_VISION_COST_PER_FRAME: float = 0.0
+    MEDIA_V2_OCR_COST_PER_FRAME: float = 0.0
     INGESTION_STALE_AFTER_SECONDS: int = 30 * 60
     INGESTION_MAX_ATTEMPTS: int = 3
 

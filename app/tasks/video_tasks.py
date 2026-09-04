@@ -10,6 +10,7 @@ from pathlib import Path
 from uuid import UUID
 
 from app.celery_app import celery_app
+from app.config import settings
 from app.db.session import SessionLocal
 
 logger = logging.getLogger(__name__)
@@ -26,8 +27,23 @@ logger = logging.getLogger(__name__)
 def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
     db = SessionLocal()
     tenant_uuid = UUID(tenant_id)
+    from app.services.media_feature_flags import media_capability_enabled_for
+
+    media_v2_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=True
+    )
+    adaptive_sampling_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=settings.VIDEO_ADAPTIVE_SAMPLING_V1
+    )
+    segment_understanding_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=settings.MULTIMODAL_SEGMENT_V1
+    )
+    entity_linking_enabled = media_capability_enabled_for(
+        tenant_uuid, capability_enabled=settings.ENTITY_LINKING_V1
+    )
     revision_uuid = UUID(revision_id)
     job_uuid = UUID(job_id)
+    analysis_run = None
     try:
         from app.models.asset import AssetRevision, SourceAsset
         from app.models.ingestion import IngestionJob
@@ -63,6 +79,37 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
         orchestrator.transition(db, job, to_status="running", phase="video_processing")
         revision.ingestion_status = "processing"
         db.commit()
+
+        if media_v2_enabled:
+            from app.services.media_analysis_runs import (
+                get_or_create_analysis_run,
+                transition_analysis_run,
+            )
+
+            analysis_run, _created = get_or_create_analysis_run(
+                db,
+                tenant_id=tenant_uuid,
+                asset_revision_id=revision.id,
+                pipeline_version="media-v2.1",
+                profile=(
+                    "video_adaptive"
+                    if adaptive_sampling_enabled
+                    else "video_compatibility"
+                ),
+                configuration={
+                    "adaptive_sampling": adaptive_sampling_enabled,
+                    "segment_understanding": segment_understanding_enabled,
+                    "maximum_selected_frames": settings.MEDIA_V2_MAX_SELECTED_FRAMES,
+                },
+                provider_manifest={
+                    "stt": settings.LONG_INTERVIEW_STT_MODEL,
+                    "ocr": "tesseract",
+                    "timeline": "core.multimodal",
+                },
+            )
+            if analysis_run.status in {"queued", "failed", "degraded"}:
+                transition_analysis_run(analysis_run, status="running")
+            db.commit()
 
         from app.services.storage import build_storage_key, get_storage_backend
         from app.services.video_processing import (
@@ -101,12 +148,66 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                     },
                     details=readiness,
                 )
+                if analysis_run is not None:
+                    from app.services.media_reliability import merge_checkpoint
+
+                    analysis_run.checkpoint_json = merge_checkpoint(
+                        dict(analysis_run.checkpoint_json or {}),
+                        {"phase": phase, **readiness},
+                    )
                 db.commit()
 
-            from app.config import settings
             from app.services.media_productization import create_browser_video_proxy
 
             accepted_probe = probe_video(local_video)
+            if entity_linking_enabled:
+                from app.services.entity_knowledge_links import (
+                    project_asset_entities_from_metadata,
+                )
+
+                project_asset_entities_from_metadata(
+                    db,
+                    tenant_id=tenant_uuid,
+                    asset_revision_id=revision.id,
+                    metadata={
+                        **dict(asset.metadata_json or {}),
+                        **dict(revision.metadata_json or {}),
+                    },
+                )
+            if analysis_run is not None:
+                from app.services.media_reliability import (
+                    MediaCostRates,
+                    enforce_media_cost_limit,
+                    estimate_media_cost,
+                )
+
+                estimated_frames = min(
+                    int(settings.MEDIA_V2_MAX_SELECTED_FRAMES),
+                    max(
+                        1,
+                        round(
+                            accepted_probe.duration_ms
+                            / 1000
+                            * float(settings.MEDIA_V2_SCAN_FPS_MIN)
+                        ),
+                    ),
+                )
+                estimate = estimate_media_cost(
+                    duration_ms=accepted_probe.duration_ms,
+                    selected_frames=estimated_frames,
+                    precision_ratio=1.0,
+                    rates=MediaCostRates(
+                        settings.MEDIA_V2_STT_COST_PER_MINUTE,
+                        settings.MEDIA_V2_PRECISION_STT_COST_PER_MINUTE,
+                        settings.MEDIA_V2_VISION_COST_PER_FRAME,
+                        settings.MEDIA_V2_OCR_COST_PER_FRAME,
+                    ),
+                )
+                enforce_media_cost_limit(
+                    estimate,
+                    maximum_usd=float(settings.MEDIA_V2_MAX_COST_USD_PER_ASSET),
+                )
+                analysis_run.cost_metrics = {"estimate": estimate}
             expected_probe = dict((revision.metadata_json or {}).get("probe") or {})
             if expected_probe and (
                 expected_probe.get("video_codec") != accepted_probe.video_codec
@@ -140,7 +241,11 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 )
 
             result = process_video_file(
-                local_video, temp_dir, probe=accepted_probe, progress=progress
+                local_video,
+                temp_dir,
+                probe=accepted_probe,
+                progress=progress,
+                adaptive_sampling_enabled=adaptive_sampling_enabled,
             )
 
             for keyframe in result.keyframes:
@@ -162,6 +267,18 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
 
             understanding = analyze_multimodal_timeline(local_video, result)
             projection.update(project_multimodal_timeline(db, revision, understanding))
+            if segment_understanding_enabled:
+                from app.services.segment_understanding import (
+                    project_segment_understanding,
+                )
+
+                projection.update(
+                    project_segment_understanding(
+                        db,
+                        revision,
+                        run_id=analysis_run.id if analysis_run is not None else None,
+                    )
+                )
             from app.services.video_governance import (
                 project_governed_video_procedure,
             )
@@ -213,6 +330,17 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                     observed=capability_results,
                 ),
             )
+            if analysis_run is not None:
+                from app.services.media_analysis_runs import transition_analysis_run
+
+                transition_analysis_run(
+                    analysis_run,
+                    status="completed",
+                    checkpoint={
+                        **dict(analysis_run.checkpoint_json or {}),
+                        "phase": "completed_no_knowledge",
+                    },
+                )
             db.commit()
             return {"job_id": job_id, "status": job.status, **projection}
 
@@ -234,6 +362,23 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 observed=capability_results,
             ),
         )
+        if analysis_run is not None:
+            from app.services.media_analysis_runs import transition_analysis_run
+
+            transition_analysis_run(
+                analysis_run,
+                status="review_required",
+                checkpoint={
+                    **dict(analysis_run.checkpoint_json or {}),
+                    "phase": "human_review",
+                },
+                quality_metrics={
+                    "transcript_count": int(projection.get("transcript_count") or 0),
+                    "keyframe_count": int(projection.get("keyframe_count") or 0),
+                    "ocr_count": int(projection.get("ocr_count") or 0),
+                    "segment_count": int(projection.get("segment_count") or 0),
+                },
+            )
         db.commit()
         return {"job_id": job_id, "status": job.status, **projection}
     except Exception as exc:
@@ -293,6 +438,26 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 )
                 if asset is not None:
                     asset.status = "failed" if exhausted else "pending"
+            if media_v2_enabled:
+                from app.models.media_analysis import MediaAnalysisRun
+                from app.services.media_analysis_runs import transition_analysis_run
+
+                failed_run = (
+                    db.query(MediaAnalysisRun)
+                    .filter(
+                        MediaAnalysisRun.tenant_id == tenant_uuid,
+                        MediaAnalysisRun.asset_revision_id == revision_uuid,
+                        MediaAnalysisRun.status == "running",
+                    )
+                    .order_by(MediaAnalysisRun.created_at.desc())
+                    .first()
+                )
+                if failed_run is not None:
+                    transition_analysis_run(
+                        failed_run,
+                        status="failed",
+                        failure={"code": failure.code, "retryable": failure.retryable},
+                    )
             db.commit()
         except Exception:
             db.rollback()

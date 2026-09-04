@@ -468,6 +468,14 @@ def get_asset(
             )
         else:
             payload["preview_url"] = None
+        if current is not None:
+            from app.services.media_review_snapshot import safe_media_review_snapshot
+
+            payload["media_analysis"] = safe_media_review_snapshot(
+                db,
+                tenant_id=current_user.tenant_id,
+                asset_revision_id=current.id,
+            )
     return payload
 
 
@@ -1334,6 +1342,23 @@ def tombstone_asset(
     if asset.tombstoned_at is None:
         asset.tombstoned_at = datetime.now(timezone.utc)
     asset.status = "tombstoned"
+    # Revocation is cleanup, not a feature execution path. Always remove any
+    # projections created while a tenant was enrolled, even after its flag is off.
+    from app.services.entity_knowledge_links import revoke_entity_projections
+
+    revision_ids = [
+        row[0]
+        for row in db.query(AssetRevision.id).filter(
+            AssetRevision.tenant_id == asset.tenant_id,
+            AssetRevision.asset_id == asset.id,
+        )
+    ]
+    revoked_entity_links = sum(
+        revoke_entity_projections(
+            db, tenant_id=asset.tenant_id, asset_revision_id=revision_id
+        )
+        for revision_id in revision_ids
+    )
     jobs = (
         db.query(IngestionJob)
         .join(
@@ -1358,6 +1383,7 @@ def tombstone_asset(
         "asset_id": str(asset.id),
         "status": "tombstoned",
         "revoked_documents": revoked_documents,
+        "revoked_entity_links": revoked_entity_links,
     }
 
 
