@@ -1,6 +1,11 @@
 # ── Stage 1: Build ──
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+# Release identity changes for every deployment. Keep it after dependency
+# installation so backend-only releases can reuse the locked npm layer.
 ARG VITE_RELEASE_ID=dev
 ARG VITE_SOURCE_COMMIT=unknown
 ARG VITE_SOURCE_DIRTY=unknown
@@ -17,8 +22,6 @@ LABEL org.opencontainers.image.revision=${VITE_SOURCE_COMMIT} \
       org.opencontainers.image.created=${VITE_BUILD_TIME} \
       io.enclave.release-id=${VITE_RELEASE_ID} \
       io.enclave.schema-head=${VITE_SCHEMA_HEAD}
-COPY package*.json ./
-RUN npm ci
 COPY . .
 RUN npm run build
 
