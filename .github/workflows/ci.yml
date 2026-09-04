@@ -317,7 +317,15 @@ jobs:
           python -m pip install pip==${{ env.PIP_VERSION }}
           pip install -r requirements.lock.txt
           pip install pip-audit==2.9.0 bandit==1.8.6
-          pip-audit -r requirements.lock.txt --ignore-vuln PYSEC-2024-*
+          # GHSA-8mgp-746c-j5xp has no fixed NLTK release as of 2026-09-05.
+          # NLTK is an indirect llama-index-core dependency and Enclave must not
+          # call it directly while this narrowly scoped exception is active.
+          if grep -R -n -E '^[[:space:]]*(from|import)[[:space:]]+nltk\b' app scripts; then
+            echo 'Direct NLTK use is forbidden while GHSA-8mgp-746c-j5xp is open.'
+            exit 1
+          fi
+          python -c "from datetime import date; assert date.today() <= date(2026, 10, 5), 'NLTK GHSA-8mgp-746c-j5xp exception expired'"
+          pip-audit -r requirements.lock.txt --ignore-vuln PYSEC-2024-* --ignore-vuln GHSA-8mgp-746c-j5xp
           pip-audit -r requirements-test.lock.txt
 
       - name: Bandit High severity gate
