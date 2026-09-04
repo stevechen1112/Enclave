@@ -17,7 +17,7 @@ def test_confidence_repair_is_scoped_and_reversible():
     assert "confidence_provider_supplied" in source
     assert "confidence_repaired_by" in source
     assert "confidence IS NULL" in source
-    assert "input_i10_confidence_contract_001" in source
+    assert "input_i10_confidence_001" in source
     assert "provider = 'openai'" in source
     assert "provider_version = 'long_interview_stt.i5'" in source
     assert "confidence_metadata_repaired_by" in source

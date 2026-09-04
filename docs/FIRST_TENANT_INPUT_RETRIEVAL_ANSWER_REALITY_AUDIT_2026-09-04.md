@@ -265,7 +265,7 @@ Ask 回傳的來源具有 `document_id`，前端能開啟文件頁；但本輪�
 - Frontend Vitest：41 個檔案、139 tests passed。
 - TypeScript：PASS。
 - Vite production build：PASS，3,259 modules transformed。
-- Alembic 僅有一個 head：`input_i10_confidence_contract_001`。
+- Alembic 僅有一個 head：`input_i10_confidence_001`。
 - `git diff --check` 沒有 whitespace error。
 
 ### 9.2 未通過或未完成
@@ -303,7 +303,7 @@ Ask 回傳的來源具有 `document_id`，前端能開啟文件頁；但本輪�
 
 1. 修正 RTA-001：統一 answer-ready 與 Ask serving truth，阻止未發布 legacy projection 被檢索。
 2. 修正 RTA-004／005：來源層級確認、技術 artifacts 移出一般待辦、依風險實施職責分離。
-3. 完成乾淨 release，於有授權 migration role 的 release 環境執行 `input_i10_confidence_contract_001`。
+3. 完成乾淨 release，於有授權 migration role 的 release 環境執行 `input_i10_confidence_001`。
 4. 對五筆來源建立新 revision 或可回滾的重新處理批次；保留舊產物供差異比較。
 5. 人工建立最小 truth set：音／影片逐字稿、圖片 OCR、關鍵數字與條件、每題預期來源及拒答條件。
 6. 每個來源完成核准與 active Knowledge Unit release。

@@ -57,7 +57,7 @@
 
 ### 1.6 既有資料修復
 
-新增 migration：`input_i10_confidence_contract_001`。
+新增 migration：`input_i10_confidence_001`。
 
 修復範圍只包含已知舊行為：`core.video`、版本 `1.0`、`transcript_segment`、confidence 為 0 且尚未聲明 confidence 語意的資料。修復後改為 `null` 並標記歷史 Provider／模型資訊；其他 Provider 的真正零分不會被修改。
 
@@ -109,7 +109,7 @@ Review 結論：第二輪嚴格檢視確實找到多項第一輪未覆蓋的真�
 - Ruff：通過。
 - `py_compile`：通過。
 - `git diff --check`：通過（僅 Windows LF/CRLF 提示，無 whitespace error）。
-- Alembic：單一 head `input_i10_confidence_contract_001`。
+- Alembic：單一 head `input_i10_confidence_001`。
 
 ### 擴大回歸限制
 

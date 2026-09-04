@@ -3,12 +3,14 @@ import uuid
 from sqlalchemy.orm import sessionmaker
 
 from app.core.authorization import AuthorizationContext
+from app.db.base_class import Base
 from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
 from app.models.tenant import Tenant
 from app.services.kb_scope_policy import resolve_kb_revision_scope
 
 
 def test_tenant_without_active_revision_is_explicitly_fail_closed(test_engine):
+    Base.metadata.create_all(bind=test_engine)
     db = sessionmaker(bind=test_engine)()
     try:
         tenant = Tenant(id=uuid.uuid4(), name=f"no-active-{uuid.uuid4().hex}", status="active")

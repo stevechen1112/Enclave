@@ -1,6 +1,6 @@
 """Replace historical video confidence sentinels with explicit unknown semantics.
 
-Revision ID: input_i10_confidence_contract_001
+Revision ID: input_i10_confidence_001
 Revises: tenant_force_rls_pra_002
 """
 
@@ -9,7 +9,7 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "input_i10_confidence_contract_001"
+revision: str = "input_i10_confidence_001"
 down_revision: str | None = "tenant_force_rls_pra_002"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
