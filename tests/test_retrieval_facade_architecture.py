@@ -176,7 +176,14 @@ def test_watcher_ingest_clears_tombstone():
 def test_prod_deploy_migrates_before_up():
     text = (ROOT / ".github" / "workflows" / "deploy-production.yml").read_text(encoding="utf-8")
     stop_idx = text.find("stop web worker worker-beat")
-    run_idx = text.find("alembic upgrade head")
+    run_idx = text.find("run --rm -T migrate")
     up_idx = text.find("up -d --no-build --remove-orphans")
     assert stop_idx != -1 and run_idx != -1 and up_idx != -1
     assert stop_idx < run_idx < up_idx
+
+
+def test_prod_deploy_uses_canonical_environment_and_operations_services():
+    text = (ROOT / ".github" / "workflows" / "deploy-production.yml").read_text(encoding="utf-8")
+    assert "COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance" in text
+    for service in ("migrate", "provision-db-roles", "init-superuser", "init-demo"):
+        assert f"run --rm -T {service}" in text
