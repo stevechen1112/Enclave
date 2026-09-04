@@ -9,21 +9,21 @@ Enclave 的核心不是單一聊天機器人，也不是把多套 AI 工具 UI �
 Asset、Artifact、Knowledge Unit、Evidence、Review 與 Release 生命週期；回答與應用
 輸出都必須服從租戶、權限、版本、證據與發布治理。
 
-## 目前狀態（2026-09-03）
+## 目前狀態（2026-09-04）
 
 | 項目 | 狀態 |
 |---|---|
 | 工作區程式基線 | Phase B–M、影片 F1–F3、UI/UX UX-A–UX-D 已完成並通過各階段 Code Review |
 | 核心架構 | 多租戶平台、Enterprise Knowledge Kernel、多模態 Ingestion Fabric、Workflow Kernel、Domain Pack Runtime 已建立 |
-| 最新瀏覽器驗收 | `production-enterprise-login-368989b` 的桌面與 390×844 驗收屬歷史 R3 證據；目前 release 已完成 frontend build、release parity、正式登入與核心 health smoke，完整最新版瀏覽器旅程另由 Product Reality current-release E2E 重驗 |
-| 前端最新回歸 | 問答決策頁改版後為 37 個測試檔／123 項測試通過；ESLint、TypeScript、Vite 與乾淨 Docker production build 通過；登入後人工視覺巡檢 PASS，iPhone Safari／Android Chrome 實機仍待認證 |
-| 後端最新回歸 | Input I8 pre-pilot hardening：1,500 passed／12 skipped／0 failed；I6–I8 新增 8 表的 migration round-trip 與 FORCE RLS 8/8 驗證通過 |
-| Input 平台化 | Input I0–I8 內部工程與逐階段 Code Review 已完成。I8 已具 tenant-scoped Pilot ledger、14–28 天 fail-closed gate，以及可操作每日指標、Incident、Audit、retrospective、signed acceptance 的證據工作台；I6–I8 新增 8 表已補齊並驗證 FORCE RLS。I7 live capacity 與 I8 真實第一租戶 Pilot 均仍為 HOLD，不得宣稱 SLA／GA 或現場驗收完成 |
+| 最新瀏覽器驗收 | 已以李永仁 owner 帳號在 current release 檢查總覽、所有資產、人工確認、音檔詳情與 Ask；5 個來源皆完成系統處理、0 失敗、console error／warning 0。未代替客戶核准內容，因此 Ask 維持 0 筆可問答是正確治理結果 |
+| 前端最新回歸 | ESLint、TypeScript、Vitest 41 個測試檔／140 項測試、Vite production build 與乾淨 Docker release build 全部通過；iPhone Safari／Android Chrome 的獨立實機認證仍屬 Commercial GA gate |
+| 後端最新回歸 | 既有 Input I8 全量基線為 1,500 passed／12 skipped／0 failed；I10 另完成變更範圍測試、fresh PostgreSQL＋pgvector migration from zero 及 8/8 DB 整合回歸 |
+| Input 平台化 | Input I0–I10 工程與逐階段 Code Review 已完成；I10 補上 capability／confidence 契約、跨模態狀態、正式 truth-corpus 驗收工具、來源層級低風險確認與 evidence locator。流程與服務可用；跨格式語意品質仍須以客戶第二輪、獨立人工標註的 truth corpus 驗收，不宣稱 SLA／GA |
 | 後端架構基線 | P4 全量回歸 1,314 passed／12 skipped／0 failed；100 張保護表、3 租戶 × 100 shadow comparisons 與 FORCE-RLS 攻擊矩陣 11 passed |
-| 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `force-rls-7f9416f`（source `7f9416f2de59e2bb7d153591b1542e4bdd8e3c1d`、schema `tenant_force_rls_pra_002`）；backend／frontend release parity、service health、TLS、登入與 current-release synthetic core journey PASS |
+| 正式站 | [https://kachu.tw](https://kachu.tw) 已部署 `rta-i10-a67e937`（source `a67e93743f834f016dafa9b50f95590b00d2ea27`、schema `input_i10_confidence_001`）；backend／frontend release parity、service health、TLS、登入、Provider 7/7 與第一租戶 current-release 瀏覽器驗收 PASS |
 | 必要 AI／Input Provider | 主問答 OpenAI、內部分類 Gemini、掃描理解 Gemini、bge-m3 embedding、短語音 TTS→STT、長音檔說話者辨識、Cloud OCR 已於 production 逐項真實呼叫 7／7 PASS；未讀取額外 `api key.txt` |
 | 產品化 Phase | P0–P4 PASS；P5 工程與內部 review 完成，商用規模 live evidence 為 WAIVED／NOT RUN；P6 internal software gate 與 Code Review PASS；實體裝置 campaign 保留為 Commercial GA gate |
-| 首租戶導入 | 八策股份有限公司／管理部已建立 2 位具名使用者，陳宥竹與李永仁目前皆為 owner；正式登入、租戶歸屬、Ask 與文件清單均 PASS。租戶只啟用 Input＋Knowledge／Ask 核心，場景模組 binding 為 0。舊 release 的四格式合成 E2E 已通過；李永仁第二輪真人高量旅程仍獨立進行 |
+| 首租戶導入 | 八策股份有限公司／管理部已建立 2 位具名使用者，陳宥竹與李永仁目前皆為 owner；李永仁既有 5 個來源均已完成機器處理並等待人工確認，歷史 capability 狀態已回填。租戶只啟用 Input＋Knowledge／Ask 核心，場景模組 binding 為 0；第二輪真人高量與語意真值驗收仍獨立進行 |
 | Production 租戶隔離 | application login 已切為 `enclave_app`（`NOSUPERUSER`、`NOBYPASSRLS`），111/111 張保護表已啟用 FORCE RLS，policy drift 為 0；隔離 canary、production 攻擊矩陣 11/11、shadow parity、Worker／Beat 與回滾演練均 PASS |
 | Legacy removal | HOLD；相容路徑仍在 observe window，不得提前刪除 |
 | 商業 GA | 未宣稱；工程完成狀態與外部商業、法律、滲透、真機及真人活動分開管理，後者不作為開發完成條件 |
@@ -437,8 +437,8 @@ bash scripts/verify_deployment.sh
 
 ### 正式站現況
 
-- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `force-rls-7f9416f`，source commit 為 `7f9416f2de59e2bb7d153591b1542e4bdd8e3c1d`，schema head 為 `tenant_force_rls_pra_002`。
-- Deployment manifest `dm-cedec2c3fec871d62592ff6b` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 backend／frontend release parity；目前 release 的 service health、TLS、登入、synthetic upload／search／grounded Ask／revoke smoke PASS。Provider 7／7 是先前 release 的歷史 R3 證據，需由 current-release probe 才能重新核發。
+- [https://kachu.tw](https://kachu.tw) 已在正式環境與正式網域提供服務；目前 release 為 `rta-i10-a67e937`，source commit 為 `a67e93743f834f016dafa9b50f95590b00d2ea27`，schema head 為 `input_i10_confidence_001`。
+- Deployment manifest `dm-52ca7b60c7a535c183ef7903` 與 route hash `5af2bf671476e71a40b148d374217000cf5271c648b6a96e7632e5ddb525b69f` 已完成 backend／frontend release parity；目前 release 的 service health、TLS、正式登入與第一租戶瀏覽器驗收 PASS。Provider probe 已在 current-release web 容器執行，7／7 PASS 且 `release_bound=true`。
 - 八策股份有限公司已以受控 Pilot 方式建立正式租戶、管理部與兩位具名帳號；陳宥竹與李永仁目前皆為 owner。兩個帳號的 tenant scope、部門、正式環境、Ask 與文件清單已完成驗證；場景應用未自動開通，`tenant_module_bindings=0`。
 - 企業使用者由 [https://kachu.tw/login?mode=enterprise](https://kachu.tw/login?mode=enterprise) 以公司電子郵件與密碼登入。登入後頁首顯示租戶名稱；「我的帳號」會顯示公司、部門、正式／Demo 環境與帳號權限，並提供本人密碼變更。密碼更新後會清除本次登入並要求重新登入。
 - 正式工作區不再依 Owner、HR、Viewer 等職稱切換成不同產品介面；所有人使用同一套 Input＋Knowledge／Ask 核心，安全角色只決定可執行的能力，租戶啟用的場景模組才決定額外功能是否出現。
@@ -525,7 +525,7 @@ Production DB secrets 已分為三檔：`.env.production`（application）、`.e
 |---|---|
 | Enclave 1.x（歷史） | 文件庫、聊天、生成與 Agent 監控 |
 | Enclave 2.0（歷史部署基線） | Control Plane、Triple Injection、UI 2.0 與 MKA 垂直功能；已由模組化多模態平台 production release 取代 |
-| **模組化多模態平台（目前 production）** | 多租戶＋Knowledge Kernel＋Ingestion Fabric＋Workflow Kernel＋可選 Domain Packs；`kachu.tw` 已部署 `force-rls-7f9416f` 並完成 release parity、service health、TLS、least-privilege DB role、111/111 FORCE RLS 與 synthetic current-release 核心旅程；Provider probe 分開留存證據 |
+| **模組化多模態平台（目前 production）** | 多租戶＋Knowledge Kernel＋Ingestion Fabric＋Workflow Kernel＋可選 Domain Packs；`kachu.tw` 已部署 `rta-i10-a67e937` 並完成 release parity、service health、TLS、least-privilege DB role、111/111 FORCE RLS、第一租戶 current-release 瀏覽器驗收與 Provider 7/7；語意品質仍須以獨立人工 truth corpus 驗收 |
 | Controlled Paid Pilot（目前可進行） | 以限定租戶、單一場景、保守配額、客戶自有驗收集與人工治理開始導入；是否共用資料庫依觀察期與風險分級決定 |
 | Staging／Canary（持續 gate） | FORCE RLS 觀察、真實裝置、live capacity／soak、provider、rollback 與跨租戶攻擊持續驗證 |
 | Enclave GA（未來） | 依實際商業範圍另行決定；外部滲透、法律、真機與真人活動不回寫為開發完成 Gate |
