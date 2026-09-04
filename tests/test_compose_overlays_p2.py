@@ -51,10 +51,14 @@ def test_pack_enabled_env_turns_modules_on():
 
 
 def test_staging_and_prod_migrate_before_up():
-    for wf in ("deploy-production.yml", "deploy-staging.yml"):
+    migration_markers = {
+        "deploy-production.yml": "run --rm -T migrate",
+        "deploy-staging.yml": "alembic upgrade head",
+    }
+    for wf, migration_marker in migration_markers.items():
         text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
         stop_idx = text.find("stop web worker worker-beat")
-        run_idx = text.find("alembic upgrade head")
+        run_idx = text.find(migration_marker)
         up_idx = text.find("up -d --no-build --remove-orphans")
         assert stop_idx != -1 and run_idx != -1 and up_idx != -1, wf
         assert stop_idx < run_idx < up_idx, f"{wf}: stop → migrate → up"

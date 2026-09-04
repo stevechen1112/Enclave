@@ -69,6 +69,10 @@ jobs:
           script: |
             set -e
             cd /opt/enclave
+            export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance
+            set -a
+            . ./.env.db-admin
+            set +a
             echo "📦 Creating pre-deploy backup..."
             # Production runs PostgreSQL inside the Compose `db` service.  The
             # host intentionally does not need a standalone pg_dump binary.
@@ -86,6 +90,7 @@ jobs:
             set -e
             cd /opt/enclave
             TAG="${{ steps.tag.outputs.tag }}"
+            export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance
 
             echo "🏷️ Deploying tag: $TAG"
 
@@ -107,7 +112,10 @@ jobs:
 
             # 縮短舊程式與新 schema 重疊：先停 web/worker/beat，migrate，再起全栈
             docker compose -f docker-compose.prod.yml stop web worker worker-beat || true
-            docker compose -f docker-compose.prod.yml run --rm -T web alembic upgrade head
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T migrate
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T provision-db-roles
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T init-superuser
+            docker compose --profile operations -f docker-compose.prod.yml run --rm -T init-demo
             docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
 
             # Health：必須經 edge 對外路徑通過（容器內 8000 僅作除錯，不可單獨判定成功）

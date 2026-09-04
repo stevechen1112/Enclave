@@ -45,9 +45,16 @@ jobs:
         id: release
         shell: bash
         env:
-          GITHUB_SHA: ${{ env.SOURCE_SHA }}
+          ENCLAVE_SOURCE_COMMIT: ${{ env.SOURCE_SHA }}
           ENCLAVE_RELEASE_ID: rc-${{ github.run_id }}-${{ github.run_attempt }}
-        run: python scripts/release_identity.py --github-output >> "$GITHUB_OUTPUT"
+        run: |
+          GITHUB_SHA="$SOURCE_SHA" python scripts/release_identity.py --github-output >> "$GITHUB_OUTPUT"
+
+      - name: Verify resolved source identity
+        shell: bash
+        env:
+          RESOLVED_SOURCE_COMMIT: ${{ steps.release.outputs.source_commit }}
+        run: test "$RESOLVED_SOURCE_COMMIT" = "$SOURCE_SHA"
 
       - name: Pre-build release source gate
         shell: bash
