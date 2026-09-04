@@ -66,6 +66,12 @@ def route_contract() -> tuple[list[str], str]:
 
 
 def source_commit() -> str:
+    # ``GITHUB_SHA`` identifies the workflow definition commit.  A release
+    # builder may deliberately check out and package a different, reviewed
+    # commit, so allow that exact source SHA to be supplied explicitly.
+    override = os.getenv("ENCLAVE_SOURCE_COMMIT", "").strip()
+    if override:
+        return override
     override = os.getenv("GITHUB_SHA", "").strip()
     if override:
         return override

@@ -4,6 +4,7 @@ The seeder never copies an existing tenant or document.  Reset is transactional
 and only accepts a row explicitly marked ``is_demo`` whose name states that it
 is not a real company.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -80,7 +81,9 @@ def _content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict[str, int]:
+def _upsert_demo_documents(
+    db: Session, tenant_id: UUID, owner_id: UUID
+) -> dict[str, int]:
     from app.models.asset import AssetRevision, SourceAsset
     from app.models.document import Document, DocumentChunk
     from app.models.ingestion import IngestionJob
@@ -180,9 +183,7 @@ def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict
         asset.tombstoned_at = None
         db.flush()
 
-        asset_revision_id = _stable_id(
-            tenant_id, "asset-revision", spec["key"], "1"
-        )
+        asset_revision_id = _stable_id(tenant_id, "asset-revision", spec["key"], "1")
         asset_revision = (
             db.query(AssetRevision)
             .filter(AssetRevision.id == asset_revision_id)
@@ -212,9 +213,7 @@ def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict
 
         ingestion_job_id = _stable_id(tenant_id, "ingestion-job", spec["key"], "1")
         ingestion_job = (
-            db.query(IngestionJob)
-            .filter(IngestionJob.id == ingestion_job_id)
-            .first()
+            db.query(IngestionJob).filter(IngestionJob.id == ingestion_job_id).first()
         )
         if ingestion_job is None:
             ingestion_job = IngestionJob(
@@ -241,7 +240,9 @@ def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict
         db.flush()
 
         version_id = _stable_id(tenant_id, "document-version", spec["key"], "1")
-        version = db.query(DocumentVersion).filter(DocumentVersion.id == version_id).first()
+        version = (
+            db.query(DocumentVersion).filter(DocumentVersion.id == version_id).first()
+        )
         if version is None:
             version = DocumentVersion(
                 id=version_id,
@@ -285,7 +286,9 @@ def _upsert_demo_documents(db: Session, tenant_id: UUID, owner_id: UUID) -> dict
         }
 
         profile_id = _stable_id(tenant_id, "document-profile", spec["key"], "1")
-        profile = db.query(DocumentProfile).filter(DocumentProfile.id == profile_id).first()
+        profile = (
+            db.query(DocumentProfile).filter(DocumentProfile.id == profile_id).first()
+        )
         if profile is None:
             profile = DocumentProfile(
                 id=profile_id,
@@ -353,12 +356,14 @@ def seed_demo_tenant(db: Session) -> dict[str, Any]:
         JobRole,
         KnowhowCardModel,
         SceneRegistry,
+        TenantModuleBinding,
         UserJobRoleAssignment,
     )
     from app.models.permission import Department
     from app.models.tenant import Tenant
     from app.models.user import User
     from app.services.mka_module_seed import (
+        CANONICAL_MODULES,
         ensure_tenant_module_bindings,
         seed_canonical_modules,
         seed_canonical_task_definitions,
@@ -409,7 +414,9 @@ def seed_demo_tenant(db: Session) -> dict[str, Any]:
         email = str(spec["email"])
         user = db.query(User).filter(User.email == email).first()
         if user is not None and user.tenant_id != tenant.id:
-            raise RuntimeError(f"Demo email is already owned by another tenant: {email}")
+            raise RuntimeError(
+                f"Demo email is already owned by another tenant: {email}"
+            )
         if user is None:
             user = User(
                 id=_stable_id(tenant.id, "user", persona),
@@ -435,6 +442,14 @@ def seed_demo_tenant(db: Session) -> dict[str, Any]:
     seed_canonical_modules(db)
     seed_canonical_task_definitions(db)
     seed_default_job_roles(db, tenant.id)
+    canonical_module_keys = tuple(str(spec["module_key"]) for spec in CANONICAL_MODULES)
+    # The public Demo is a deterministic synthetic fixture, not a customer
+    # workspace. Remove bindings for modules retired from the canonical Demo
+    # catalog so an ordinary deploy remains idempotent across catalog changes.
+    db.query(TenantModuleBinding).filter(
+        TenantModuleBinding.tenant_id == tenant.id,
+        TenantModuleBinding.module_key.notin_(canonical_module_keys),
+    ).delete(synchronize_session=False)
     ensure_tenant_module_bindings(db, tenant.id)
     roles = {
         role.role_key: role
@@ -549,9 +564,7 @@ def _tenant_scope(table, tenant_id: UUID, memo, stack):
         parent_scope = _tenant_scope(parent, tenant_id, memo, next_stack)
         if parent_scope is not None:
             clauses.append(
-                foreign_key.parent.in_(
-                    select(foreign_key.column).where(parent_scope)
-                )
+                foreign_key.parent.in_(select(foreign_key.column).where(parent_scope))
             )
     result = or_(*clauses) if clauses else None
     memo[table] = result
@@ -567,7 +580,9 @@ def purge_demo_tenant(db: Session, tenant_id: UUID = DEMO_TENANT_ID) -> dict[str
     if tenant is None:
         return {}
     if not tenant.is_demo or "非真實公司" not in tenant.name:
-        raise RuntimeError("refusing to purge a tenant not explicitly marked synthetic Demo")
+        raise RuntimeError(
+            "refusing to purge a tenant not explicitly marked synthetic Demo"
+        )
 
     memo = {}
     deleted: dict[str, int] = {}
@@ -621,19 +636,13 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
     users = db.query(User).filter(User.tenant_id == DEMO_TENANT_ID).all()
     documents = db.query(Document).filter(Document.tenant_id == DEMO_TENANT_ID).all()
     source_assets = (
-        db.query(SourceAsset)
-        .filter(SourceAsset.tenant_id == DEMO_TENANT_ID)
-        .all()
+        db.query(SourceAsset).filter(SourceAsset.tenant_id == DEMO_TENANT_ID).all()
     )
     asset_revisions = (
-        db.query(AssetRevision)
-        .filter(AssetRevision.tenant_id == DEMO_TENANT_ID)
-        .all()
+        db.query(AssetRevision).filter(AssetRevision.tenant_id == DEMO_TENANT_ID).all()
     )
     ingestion_jobs = (
-        db.query(IngestionJob)
-        .filter(IngestionJob.tenant_id == DEMO_TENANT_ID)
-        .all()
+        db.query(IngestionJob).filter(IngestionJob.tenant_id == DEMO_TENANT_ID).all()
     )
     answer_states = load_document_answer_states(
         db,
@@ -660,13 +669,9 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
         .count()
     )
     knowledge_bases = (
-        db.query(KnowledgeBase)
-        .filter(KnowledgeBase.tenant_id == DEMO_TENANT_ID)
-        .all()
+        db.query(KnowledgeBase).filter(KnowledgeBase.tenant_id == DEMO_TENANT_ID).all()
     )
-    job_roles = (
-        db.query(JobRole).filter(JobRole.tenant_id == DEMO_TENANT_ID).all()
-    )
+    job_roles = db.query(JobRole).filter(JobRole.tenant_id == DEMO_TENANT_ID).all()
     module_bindings = (
         db.query(TenantModuleBinding)
         .filter(TenantModuleBinding.tenant_id == DEMO_TENANT_ID)
@@ -678,9 +683,7 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
         .all()
     )
     scenes = (
-        db.query(SceneRegistry)
-        .filter(SceneRegistry.tenant_id == DEMO_TENANT_ID)
-        .all()
+        db.query(SceneRegistry).filter(SceneRegistry.tenant_id == DEMO_TENANT_ID).all()
     )
     knowhow_cards = (
         db.query(KnowhowCardModel)
@@ -746,9 +749,7 @@ def verify_demo_tenant(db: Session) -> dict[str, Any]:
         )
         .count()
         == 5,
-        "exact_module_bindings": {
-            binding.module_key for binding in module_bindings
-        }
+        "exact_module_bindings": {binding.module_key for binding in module_bindings}
         == {str(spec["module_key"]) for spec in CANONICAL_MODULES}
         and all(binding.enabled for binding in module_bindings),
         "exact_form_definitions": {

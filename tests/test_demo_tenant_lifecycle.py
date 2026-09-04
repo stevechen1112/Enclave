@@ -1,4 +1,5 @@
 """Gate 4: deterministic synthetic Demo seed, verification, and reset."""
+
 from __future__ import annotations
 
 import uuid
@@ -56,6 +57,45 @@ def test_seed_verify_and_transactional_reset(test_engine, isolated_demo_catalog)
         db.flush()
         assert reset["deleted_rows"] > 0
         assert verify_demo_tenant(db)["ok"] is True
+    finally:
+        db.rollback()
+        db.close()
+
+
+def test_seed_removes_retired_module_binding_from_synthetic_demo(
+    test_engine, isolated_demo_catalog
+):
+    from app.models.mka import TenantModuleBinding
+
+    Session = sessionmaker(bind=test_engine)
+    db = Session()
+    try:
+        seed_demo_tenant(db)
+        db.add(
+            TenantModuleBinding(
+                tenant_id=DEMO_TENANT_ID,
+                module_key="retired_demo_module",
+                enabled=True,
+                license_state="active",
+                config_json={},
+            )
+        )
+        db.flush()
+        assert verify_demo_tenant(db)["checks"]["exact_module_bindings"] is False
+
+        seed_demo_tenant(db)
+        db.flush()
+
+        assert verify_demo_tenant(db)["checks"]["exact_module_bindings"] is True
+        assert (
+            db.query(TenantModuleBinding)
+            .filter(
+                TenantModuleBinding.tenant_id == DEMO_TENANT_ID,
+                TenantModuleBinding.module_key == "retired_demo_module",
+            )
+            .count()
+            == 0
+        )
     finally:
         db.rollback()
         db.close()
@@ -148,7 +188,9 @@ async def test_all_six_seeded_doors_login_and_bootstrap(
             )
             assert login.status_code == 200, (persona, login.text)
             headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-            bootstrap = await client.get("/api/v1/experience/bootstrap", headers=headers)
+            bootstrap = await client.get(
+                "/api/v1/experience/bootstrap", headers=headers
+            )
             assert bootstrap.status_code == 200, (persona, bootstrap.text)
             body = bootstrap.json()
             assert body["demo_mode"] is True
@@ -188,7 +230,13 @@ def test_public_demo_assets_do_not_reintroduce_shared_credentials():
     for candidate in release_paths:
         files = candidate.rglob("*") if candidate.is_dir() else [candidate]
         for path in files:
-            if not path.is_file() or path.suffix not in {".py", ".ts", ".tsx", ".md", ".sh"}:
+            if not path.is_file() or path.suffix not in {
+                ".py",
+                ".ts",
+                ".tsx",
+                ".md",
+                ".sh",
+            }:
                 continue
             if shared_password_marker in path.read_text(encoding="utf-8"):
                 offenders.append(path.relative_to(ROOT).as_posix())

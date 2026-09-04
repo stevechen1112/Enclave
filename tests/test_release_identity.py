@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from scripts.release_identity import build_identity, migration_heads, route_contract
+from scripts.release_identity import (
+    build_identity,
+    migration_heads,
+    route_contract,
+    source_commit,
+)
 
 
 def test_release_identity_has_exactly_one_schema_head():
@@ -19,6 +24,15 @@ def test_release_route_contract_is_unique_and_hashable():
 def test_release_identity_uses_deployment_input_manifest():
     assert build_identity()["deployment_manifest_id"].startswith("dm-")
     assert len(build_identity()["deployment_manifest_id"]) == 27
+
+
+def test_explicit_packaged_source_commit_wins_over_workflow_sha(monkeypatch):
+    packaged_sha = "a" * 40
+    workflow_sha = "b" * 40
+    monkeypatch.setenv("ENCLAVE_SOURCE_COMMIT", packaged_sha)
+    monkeypatch.setenv("GITHUB_SHA", workflow_sha)
+
+    assert source_commit() == packaged_sha
 
 
 def test_frontend_runtime_image_preserves_release_labels():
