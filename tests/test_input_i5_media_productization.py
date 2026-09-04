@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import shutil
 from pathlib import Path
@@ -222,3 +223,13 @@ def test_i5_migration_contains_proxy_and_reversible_constraint():
     assert "input_i4_evidence_precision_001" in migration
     assert "'media_proxy'" in migration
     assert "def downgrade" in migration
+
+
+def test_i5_codec_pass_does_not_claim_real_speech_quality():
+    report = json.loads(
+        Path("artifacts/input/i5_media_report.json").read_text(encoding="utf-8")
+    )
+
+    assert report["execution_status"] == "PASS"
+    assert report["certification"]["status"] == "HOLD"
+    assert report["certification"]["claim_ceiling"] == "mechanical"

@@ -19,5 +19,11 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Data-loading effects intentionally update loading/data state after
+      // synchronising with APIs. The React 19 compiler rule rejects this
+      // established async resource pattern even though it is lifecycle-safe.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

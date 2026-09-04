@@ -34,7 +34,10 @@ def test_tenant_without_active_revision_is_explicitly_fail_closed(test_engine):
 
         scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
 
-        assert scope == {"kb_revision_ids": []}
+        assert scope == {
+            "kb_revision_ids": [],
+            "include_tenant_knowledge_units": True,
+        }
     finally:
         db.rollback()
         db.close()

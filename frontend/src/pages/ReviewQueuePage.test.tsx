@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../api', () => ({
-  knowledgeReviewApi: { list: vi.fn(), decide: vi.fn(), batchApprove: vi.fn() },
+  knowledgeReviewApi: { list: vi.fn(), decide: vi.fn(), batchApprove: vi.fn(), decideSource: vi.fn() },
   parseApiError: vi.fn(() => ({ message: 'error', retryable: true })),
   formatErrorWithTrace: vi.fn(() => 'error'),
 }))
@@ -28,6 +28,7 @@ describe('ReviewQueuePage', () => {
   beforeEach(() => {
     vi.mocked(knowledgeReviewApi.list).mockResolvedValue({ items: [item], total: 1, limit: 100, offset: 0, facets: { source_types: ['transcript_segment'], policy_keys: ['artifact-human-review-v1'], assignees: [] } })
     vi.mocked(knowledgeReviewApi.decide).mockResolvedValue({ decision: 'approved' })
+    vi.mocked(knowledgeReviewApi.decideSource).mockResolvedValue({ decision: 'approved', decided_count: 1 })
   })
 
   it('renders evidence locator and fail-closed low-confidence acknowledgement', async () => {
@@ -57,13 +58,20 @@ describe('ReviewQueuePage', () => {
     const second = { ...item, id: 'artifact:00000000-0000-0000-0000-000000000002', source_type: 'ocr_region', subtitle: '畫面文字' }
     vi.mocked(knowledgeReviewApi.list).mockResolvedValue({
       items: [item, second], total: 2, source_total: 1,
-      groups: [{ key: 'asset:a1', source_asset_id: 'a1', title: '交接錄音', asset_kind: 'audio', item_count: 2, high_risk_count: 0, low_confidence_count: 2, blocked_reasons: [], item_ids: [item.id, second.id] }],
+      groups: [{ key: 'asset:a1', source_asset_id: 'a1', title: '交接錄音', asset_kind: 'audio', item_count: 2, high_risk_count: 0, low_confidence_count: 2, blocked_reasons: [], item_ids: [item.id, second.id], source_confirmable_count: 2, exception_count: 0, source_approval_ready: true }],
       limit: 500, offset: 0, facets: { source_types: ['transcript_segment', 'ocr_region'], policy_keys: ['artifact-human-review-v1'], assignees: [] },
     })
     render(<MemoryRouter><ReviewQueuePage /></MemoryRouter>)
     expect(await screen.findByText('1 個來源 · 2 筆候選內容')).toBeInTheDocument()
     expect(screen.getByText(/^2 筆候選 ·/)).toBeInTheDocument()
     expect(screen.getAllByText('OCR').length).toBeGreaterThan(1)
+  })
+
+  it('confirms literal source output as one action', async () => {
+    render(<MemoryRouter><ReviewQueuePage /></MemoryRouter>)
+    await userEvent.click(await screen.findByRole('button', { name: /確認此來源的原始內容/ }))
+    await userEvent.click(screen.getByRole('button', { name: '確認原始內容' }))
+    await waitFor(() => expect(knowledgeReviewApi.decideSource).toHaveBeenCalledWith('a1', expect.objectContaining({ acknowledgeLowConfidence: true })))
   })
 
   it('fails closed when evidence points outside the knowledge workspace', async () => {

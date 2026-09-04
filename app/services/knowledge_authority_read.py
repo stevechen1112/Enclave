@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.authorization import AuthorizationContext
@@ -46,13 +47,15 @@ def list_active_knowledge_units(
     *,
     authz: AuthorizationContext,
     kb_revision_ids: Iterable[UUID] | None = None,
+    include_tenant_scope: bool = False,
     unit_types: Iterable[str] | None = None,
     query_text: str | None = None,
 ) -> list[ActiveKnowledgeUnit]:
     """Read only active, visible memberships from the canonical authority.
 
-    Explicit KB revision scope is strict: tenant-default know-how/video units
-    are not silently merged into a scoped query.
+    Explicit KB revision scope is strict by default. ``include_tenant_scope``
+    is set only by the resolved tenant-wide Ask scope so reviewed source units
+    can participate alongside the tenant's active KB revisions.
     """
     explicit_scope = kb_revision_ids is not None
     requested_revisions = tuple(kb_revision_ids or ())
@@ -93,12 +96,18 @@ def list_active_knowledge_units(
         )
     )
     if explicit_scope:
-        if not requested_revisions:
+        if not requested_revisions and not include_tenant_scope:
             return []
-        query = query.filter(
-            KnowledgeUnitRelease.scope_kind == "knowledge_base",
-            KnowledgeUnitRelease.scope_revision_id.in_(requested_revisions),
+        kb_clause = (
+            (KnowledgeUnitRelease.scope_kind == "knowledge_base")
+            & KnowledgeUnitRelease.scope_revision_id.in_(requested_revisions)
         )
+        if include_tenant_scope:
+            query = query.filter(
+                or_(KnowledgeUnitRelease.scope_kind == "tenant", kb_clause)
+            )
+        else:
+            query = query.filter(kb_clause)
     normalized_types = tuple(str(item) for item in (unit_types or ()) if item)
     if normalized_types:
         query = query.filter(KnowledgeUnitRecord.unit_type.in_(normalized_types))
@@ -128,7 +137,6 @@ def list_active_knowledge_units(
                         AssetRevision.tenant_id == authz.tenant_id,
                         AssetRevision.id == revision.source_asset_revision_id,
                         AssetRevision.asset_id == unit.source_asset_id,
-                        AssetRevision.ingestion_status == "ready",
                     )
                     .first()
                 )
@@ -148,6 +156,18 @@ def list_active_knowledge_units(
                     )
                     if source_artifact is None:
                         continue
+                    # A reviewed extract can be released while independent
+                    # high-risk inferences from the same source still require
+                    # review.  The exact artifact is the serving gate here.
+                    if source_revision.ingestion_status not in {
+                        "ready",
+                        "review_required",
+                    }:
+                        continue
+                elif source_revision.ingestion_status != "ready":
+                    # Units without an exact artifact cannot prove which part
+                    # of a partially reviewed revision they represent.
+                    continue
                 if unit.source_resource_type == "evidence_span":
                     try:
                         evidence_span_id = UUID(str(unit.source_resource_id))

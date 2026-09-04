@@ -71,6 +71,11 @@ class TestCitability:
         r = _chunk(score=0.5, filename="a.pdf", document_id=None)
         assert not is_citable(r)
 
+    def test_canonical_media_without_legacy_document_id_is_citable(self):
+        r = _chunk(score=0.5, filename="交接錄音.wav", document_id=None)
+        r.metadata["canonical_resource_id"] = "unit-revision-1"
+        assert is_citable(r)
+
     def test_compiled_with_stable_title_citable(self):
         r = _chunk(score=0.5, provider="weknora", result_type="wiki_page",
                    title="GRI Climate", document_id=None)

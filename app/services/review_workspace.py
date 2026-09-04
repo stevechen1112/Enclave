@@ -7,6 +7,7 @@ import json
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -33,6 +34,12 @@ from app.services.asset_visibility import asset_access_allows
 _LOW_CONFIDENCE = 0.8
 _HIGH_RISK_KINDS = {"procedure_candidate", "sop_conflict_report"}
 _BATCH_KINDS = {"extracted_text", "ocr_region", "table", "transcript_segment"}
+_NON_ACTIONABLE_KINDS = {
+    "speaker_turn",
+    "video_scene",
+    "timeline_alignment",
+    "sop_conflict_report",
+}
 logger = logging.getLogger(__name__)
 
 
@@ -70,7 +77,7 @@ def _artifact_risk(artifact: DerivedArtifact) -> str:
     metadata = dict(artifact.metadata_json or {})
     if artifact.artifact_kind in _HIGH_RISK_KINDS or metadata.get("high_risk"):
         return "high"
-    if artifact.artifact_kind in {"table", "equipment_state", "action_event"}:
+    if artifact.artifact_kind in {"equipment_state", "action_event"}:
         return "medium"
     return "low"
 
@@ -85,9 +92,22 @@ def _artifact_conflicts(content: str | None) -> list[dict[str, Any]]:
 
 
 def _locator_dict(span: EvidenceSpan, asset: SourceAsset) -> dict[str, Any]:
-    query: list[str] = [f"evidence={span.id}"]
+    query: list[tuple[str, str | int]] = [("evidence", str(span.id))]
     if span.start_ms is not None:
-        query.append(f"t={int(span.start_ms) // 1000}")
+        query.append(("t", int(span.start_ms)))
+    if span.end_ms is not None:
+        query.append(("end", int(span.end_ms)))
+    if span.page is not None:
+        query.append(("page", int(span.page)))
+    if span.section:
+        query.append(("section", span.section))
+    if span.frame_index is not None:
+        query.append(("frame", span.frame_index))
+    if span.bbox:
+        bbox = span.bbox
+        if isinstance(bbox, dict):
+            bbox = [bbox.get(key, 0) for key in ("x", "y", "w", "h")]
+        query.append(("bbox", ",".join(str(value) for value in bbox)))
     base = (
         f"/knowledge/videos/{asset.id}"
         if asset.asset_kind == "video"
@@ -115,7 +135,7 @@ def _locator_dict(span: EvidenceSpan, asset: SourceAsset) -> dict[str, Any]:
         "source_system": span.source_system,
         "source_record_id": span.source_record_id,
         "field_path": span.field_path,
-        "deep_link": f"{base}?{'&'.join(query)}",
+        "deep_link": f"{base}?{urlencode(query)}",
     }
 
 
@@ -140,7 +160,16 @@ def _blocked_reasons(
             blocked.append("acl_policy_invalid")
     if _policy_expired(metadata):
         blocked.append("review_policy_expired")
-    if asset.created_by == current_user.id:
+    # Separation of duty protects inferred decisions and high-risk operating
+    # guidance.  It must not make a two-person tenant unable to confirm the
+    # literal OCR/transcript extracted from a source they uploaded.
+    if (
+        asset.created_by == current_user.id
+        and (
+            _artifact_risk(artifact) != "low"
+            or artifact.artifact_kind not in _BATCH_KINDS
+        )
+    ):
         blocked.append("separation_of_duty")
     if evidence_count == 0:
         blocked.append("evidence_missing")
@@ -327,6 +356,8 @@ def group_review_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "low_confidence_count": 0,
                 "blocked_reasons": [],
                 "item_ids": [],
+                "source_confirmable_count": 0,
+                "exception_count": 0,
             },
         )
         group["item_count"] += 1
@@ -339,6 +370,16 @@ def group_review_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         group["blocked_reasons"] = sorted(
             set(group["blocked_reasons"]).union(item.get("blocked_reasons") or [])
         )
+        if (
+            item.get("provider") == "core.asset_artifact"
+            and item.get("source_type") in _BATCH_KINDS
+            and not item.get("blocked_reasons")
+        ):
+            group["source_confirmable_count"] += 1
+        else:
+            group["exception_count"] += 1
+    for group in groups.values():
+        group["source_approval_ready"] = group["source_confirmable_count"] > 0
     return list(groups.values())
 
 
@@ -409,7 +450,12 @@ def list_review_items(db: Session, *, current_user: User) -> list[dict[str, Any]
             conflict_reports[(artifact.asset_revision_id, procedure_id)] = (
                 _artifact_conflicts(artifact.content)
             )
-    visible = [row for row in visible if row[0].artifact_kind != "sop_conflict_report"]
+    # Technical timeline/segmentation records remain auditable but are not
+    # independent business decisions.  Showing them as 32 extra approvals was
+    # both misleading and capable of leaving the ingestion job stuck.
+    visible = [
+        row for row in visible if row[0].artifact_kind not in _NON_ACTIONABLE_KINDS
+    ]
     artifact_ids = [row[0].id for row in visible]
     spans_by_artifact: dict[UUID, list[EvidenceSpan]] = {}
     if artifact_ids:
@@ -640,6 +686,7 @@ def _decide_artifact(
     if decision == "approved":
         from app.services.knowledge_authority import publish_knowledge_unit
 
+        locator = _locator_dict(spans[0], asset) if spans else {}
         authority = publish_knowledge_unit(
             db,
             tenant_id=current_user.tenant_id,
@@ -656,7 +703,13 @@ def _decide_artifact(
             source_asset_revision_id=revision.id,
             source_artifact_id=artifact.id,
             risk_level=("high" if _artifact_risk(artifact) == "high" else "normal"),
-            metadata={"deep_link": f"/knowledge/assets/{asset.id}"},
+            metadata={
+                "source_asset_id": str(asset.id),
+                "artifact_kind": artifact.artifact_kind,
+                "locator": locator,
+                "deep_link": locator.get("deep_link")
+                or f"/knowledge/assets/{asset.id}",
+            },
             created_by=current_user.id,
             gate_evidence={
                 "reviewer_id": str(current_user.id),
@@ -685,10 +738,27 @@ def _decide_artifact(
             DerivedArtifact.tenant_id == current_user.tenant_id,
             DerivedArtifact.asset_revision_id == revision.id,
             DerivedArtifact.quality_state == "review_required",
+            ~DerivedArtifact.artifact_kind.in_(_NON_ACTIONABLE_KINDS),
         )
         .first()
     )
     if remaining is None:
+        # Structural artifacts inherit the source decision; they are retained
+        # for traceability but never published as standalone user knowledge.
+        structural_state = "ready" if decision == "approved" else "rejected"
+        (
+            db.query(DerivedArtifact)
+            .filter(
+                DerivedArtifact.tenant_id == current_user.tenant_id,
+                DerivedArtifact.asset_revision_id == revision.id,
+                DerivedArtifact.quality_state == "review_required",
+                DerivedArtifact.artifact_kind.in_(_NON_ACTIONABLE_KINDS),
+            )
+            .update(
+                {DerivedArtifact.quality_state: structural_state},
+                synchronize_session=False,
+            )
+        )
         has_approved = (
             db.query(ArtifactReviewDecision.id)
             .filter(
@@ -729,6 +799,92 @@ def _decide_artifact(
         "item_id": f"artifact:{artifact.id}",
         "decision": decision,
         "knowledge_authority": authority,
+    }
+
+
+def decide_source_group(
+    db: Session,
+    *,
+    current_user: User,
+    source_asset_id: UUID,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    """Confirm literal extractive output for one source in one transaction.
+
+    Inferred rules, procedures, equipment states and application-pack items are
+    deliberately left in the exception queue.  This keeps the common upload
+    path usable without weakening high-risk governance.
+    """
+    if payload.get("decision") not in {"approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="invalid review decision")
+    candidates = [
+        item
+        for item in list_review_items(db, current_user=current_user)
+        if item.get("source_asset_id") == str(source_asset_id)
+        and item.get("provider") == "core.asset_artifact"
+        and item.get("source_type") in _BATCH_KINDS
+    ]
+    if not candidates:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "source_confirmation_not_found"},
+        )
+    blocked = {
+        reason
+        for item in candidates
+        for reason in (item.get("blocked_reasons") or [])
+    }
+    if blocked:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": sorted(blocked)[0],
+                "blocked_reasons": sorted(blocked),
+            },
+        )
+    low_confidence = [
+        item
+        for item in candidates
+        if item.get("confidence") is not None
+        and float(item["confidence"]) < _LOW_CONFIDENCE
+    ]
+    if (
+        payload["decision"] == "approved"
+        and low_confidence
+        and not payload.get("acknowledge_low_confidence")
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "low_confidence_acknowledgement_required",
+                "item_ids": [item["id"] for item in low_confidence],
+            },
+        )
+    results = []
+    try:
+        for item in candidates:
+            results.append(
+                decide_review_item(
+                    db,
+                    current_user=current_user,
+                    item_id=item["id"],
+                    payload={
+                        **payload,
+                        "acknowledge_high_risk": False,
+                        "conflict_resolutions": {},
+                    },
+                    commit=False,
+                )
+            )
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    return {
+        "source_asset_id": str(source_asset_id),
+        "decision": payload["decision"],
+        "decided_count": len(results),
+        "results": results,
     }
 
 

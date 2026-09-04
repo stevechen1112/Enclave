@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List
 from uuid import UUID
 import httpx
+from celery.exceptions import Retry
 from app.celery_app import celery_app
 from app.config import settings
 from app.db.session import SessionLocal
@@ -22,11 +23,55 @@ logger = logging.getLogger(__name__)
 def _document_job_idempotency_key(asset, document_id: str, version: int) -> str:
     """Reuse the intake key so worker retries converge on the pre-created job."""
     return str(
-        (getattr(asset, "metadata_json", None) or {}).get(
-            "intake_idempotency_key"
-        )
+        (getattr(asset, "metadata_json", None) or {}).get("intake_idempotency_key")
         or f"document:{document_id}:{version}"
     )
+
+
+def _sync_document_asset_state(
+    db,
+    document,
+    *,
+    ingestion_status: str,
+    asset_status: str,
+):
+    """Keep legacy document, canonical revision and source asset in one state."""
+
+    from app.services.asset_projection import project_document
+
+    projection = project_document(db, document, ingestion_status=ingestion_status)
+    projection.asset.status = asset_status
+    return projection
+
+
+def _split_document_content(text_content: str, file_type: str | None) -> list[str]:
+    """Create non-empty chunks while preserving a small structured table whole."""
+
+    stripped = str(text_content or "").strip()
+    if not stripped:
+        return []
+    if file_type in {"csv", "xlsx", "xls"} and len(stripped) <= (
+        settings.TABLE_FULL_CHUNK_MAX_CHARS
+    ):
+        return [stripped]
+    chunks = TextChunker.split_by_tokens(
+        text_content,
+        chunk_size=settings.CHUNK_SIZE,
+        chunk_overlap=settings.CHUNK_OVERLAP,
+    )
+    return chunks or [stripped]
+
+
+def _require_embedding_cardinality(
+    chunks: list[str], embeddings: list[list[float]]
+) -> None:
+    """Reject partial provider responses instead of silently truncating content."""
+
+    if len(embeddings) != len(chunks):
+        raise RuntimeError(
+            "embedding provider returned "
+            f"{len(embeddings)} vectors for {len(chunks)} chunks"
+        )
 
 
 # ── Embedding helpers ────────────────────────────────────────────────────────
@@ -126,6 +171,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         from app.services.asset_projection import project_document
 
         source_projection = project_document(db, doc, ingestion_status="pending")
+        source_projection.asset.status = "processing"
         if source_projection.revision is not None:
             from app.ingestion.core_adapters import document_capabilities
             from app.services.ingestion_orchestrator import get_ingestion_orchestrator
@@ -280,6 +326,14 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     status="failed", error_message=f"解析失敗: {str(e)}"
                 ),
             )
+            exhausted = self.request.retries >= self.max_retries
+            _sync_document_asset_state(
+                db,
+                doc,
+                ingestion_status="failed" if exhausted else "pending",
+                asset_status="failed" if exhausted else "processing",
+            )
+            db.commit()
             if self.request.retries < self.max_retries:
                 raise self.retry(exc=e, countdown=60)
             return {"status": "failed", "error": str(e)}
@@ -296,19 +350,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         )
 
         # 4. 切片（結構化表格優先全量入庫）
-        full_table_ok = doc.file_type in {"csv", "xlsx", "xls"}
-        if full_table_ok and len(text_content) <= settings.TABLE_FULL_CHUNK_MAX_CHARS:
-            chunks = [text_content.strip()]
-        else:
-            chunks = TextChunker.split_by_tokens(
-                text_content,
-                chunk_size=settings.CHUNK_SIZE,
-                chunk_overlap=settings.CHUNK_OVERLAP,
-            )
-
-        # 4.5 小檔案 fallback：若文字有效但太短無法分割，整段作為一個 chunk
-        if not chunks and text_content.strip():
-            chunks = [text_content.strip()]
+        chunks = _split_document_content(text_content, doc.file_type)
 
         if not chunks:
             crud_document.update(
@@ -318,6 +360,34 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     status="failed", error_message="文件切片後無有效內容"
                 ),
             )
+            if ingestion_job_id is not None:
+                from app.models.ingestion import IngestionJob
+                from app.services.ingestion_orchestrator import (
+                    get_ingestion_orchestrator,
+                )
+
+                failed_job = (
+                    db.query(IngestionJob)
+                    .filter(
+                        IngestionJob.tenant_id == UUID(tenant_id),
+                        IngestionJob.id == ingestion_job_id,
+                    )
+                    .first()
+                )
+                if failed_job is not None and failed_job.status == "running":
+                    get_ingestion_orchestrator().fail(
+                        db,
+                        failed_job,
+                        code="document_no_usable_chunks",
+                        message="document parsing produced no usable chunks",
+                        phase="chunking",
+                        retryable=False,
+                        user_message="此來源沒有可建立知識的文字內容。",
+                    )
+            _sync_document_asset_state(
+                db, doc, ingestion_status="failed", asset_status="failed"
+            )
+            db.commit()
             return {"status": "failed", "error": "No valid chunks"}
 
         # 5. 更新狀態：向量化中
@@ -329,6 +399,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
 
         # 6. 向量化（Ollama bge-m3 本地 / Voyage cloud — 由 EMBEDDING_PROVIDER 決定）
         all_embeddings = embed_texts(chunks, input_type="document")
+        _require_embedding_cardinality(chunks, all_embeddings)
 
         # 7. 寫入 pgvector（直接儲存到 PostgreSQL）—— 含去重
         # Pre-fetch existing chunk hashes for this document in one query (avoids N+1)
@@ -381,8 +452,17 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             )
             db.add(db_chunk)
             inserted_chunks.append(db_chunk)
+            existing_hashes.add(chunk_hash)
             inserted += 1
         db.flush()
+        persisted_chunk_count = (
+            db.query(DChunk.id)
+            .filter(
+                DChunk.document_id == UUID(document_id),
+                DChunk.document_revision == int(doc.version or 1),
+            )
+            .count()
+        )
         from app.services.lexical_index import upsert_chunks as upsert_lexical_chunks
 
         upsert_lexical_chunks(db, inserted_chunks, doc)
@@ -395,7 +475,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         from app.services.outbox_events import publish_event
 
         doc.status = "completed"
-        doc.chunk_count = inserted
+        doc.chunk_count = persisted_chunk_count
         doc.quality_report = metadata
         # ADR-008：catalog 粒度 genre 標註；標註失敗不得擋住入庫
         try:
@@ -468,12 +548,15 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         from app.services.asset_projection import document_quality_state
 
         terminal_quality = document_quality_state(metadata)
-        project_document(
+        terminal_projection = project_document(
             db,
             doc,
             ingestion_status=(
                 "review_required" if terminal_quality == "review_required" else "ready"
             ),
+        )
+        terminal_projection.asset.status = (
+            "review_required" if terminal_quality == "review_required" else "active"
         )
         if ingestion_job_id is not None:
             from app.models.ingestion import IngestionJob
@@ -489,23 +572,43 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             )
             if completed_job is not None and completed_job.status == "running":
                 requires_review = terminal_quality == "review_required"
+                from app.services.input_capability_results import (
+                    document_capability_results,
+                    readiness_with_capability_results,
+                )
+
+                capability_results = document_capability_results(
+                    completed_job.requested_capabilities or [],
+                    content_chars=len(text_content or ""),
+                    chunk_count=persisted_chunk_count,
+                    parse_engine=str(metadata.get("parse_engine") or artifact.parser),
+                    parser_version=str(
+                        metadata.get("parser_version") or artifact.version
+                    ),
+                    ocr_used=bool(metadata.get("ocr_used")),
+                )
                 get_ingestion_orchestrator().transition(
                     db,
                     completed_job,
                     to_status="review_required" if requires_review else "ready",
                     phase="human_review" if requires_review else "published",
                     quality_state=terminal_quality,
-                    readiness={
-                        "search": not requires_review,
-                        "answer": not requires_review,
-                        "requires_human_review": requires_review,
-                    },
+                    readiness=readiness_with_capability_results(
+                        {
+                            "search": not requires_review,
+                            "answer": not requires_review,
+                            "requires_human_review": requires_review,
+                        },
+                        requested_capabilities=completed_job.requested_capabilities
+                        or [],
+                        observed=capability_results,
+                    ),
                 )
         payload = {
             "filename": doc.filename,
             "file_type": doc.file_type,
             "tenant_id": tenant_id,
-            "chunk_count": inserted,
+            "chunk_count": persisted_chunk_count,
             "parse_engine": metadata.get("parse_engine", "native"),
             "content_hash": doc.content_hash,
             "file_path": doc.file_path,
@@ -593,9 +696,11 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         return {
             "status": "completed",
             "document_id": document_id,
-            "chunks": inserted,
+            "chunks": persisted_chunk_count,
         }
 
+    except Retry:
+        raise
     except Exception as e:
         # 記錄錯誤
         if db:
@@ -629,6 +734,14 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                     db_obj=doc,
                     obj_in=DocumentUpdate(status="failed", error_message=str(e)),
                 )
+                exhausted = self.request.retries >= self.max_retries
+                _sync_document_asset_state(
+                    db,
+                    doc,
+                    ingestion_status="failed" if exhausted else "pending",
+                    asset_status="failed" if exhausted else "processing",
+                )
+                db.commit()
 
         # 重試機制
         if self.request.retries < self.max_retries:
@@ -685,6 +798,14 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
                     status="failed", error_message=f"網頁擷取失敗: {e}"
                 ),
             )
+            exhausted = self.request.retries >= self.max_retries
+            _sync_document_asset_state(
+                db,
+                doc,
+                ingestion_status="failed" if exhausted else "pending",
+                asset_status="failed" if exhausted else "processing",
+            )
+            db.commit()
             if self.request.retries < self.max_retries:
                 raise self.retry(exc=e, countdown=60)
             return {"status": "failed", "error": str(e)}
@@ -710,6 +831,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             metadata={"source_url": url, **dict(metadata or {})},
         )
         source_projection = project_document(db, doc, ingestion_status="pending")
+        source_projection.asset.status = "processing"
         from app.ingestion.core_adapters import document_capabilities
         from app.services.ingestion_orchestrator import get_ingestion_orchestrator
 
@@ -751,6 +873,34 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
                     status="failed", error_message="網頁內容切片後無有效內容"
                 ),
             )
+            if ingestion_job_id is not None:
+                from app.models.ingestion import IngestionJob
+                from app.services.ingestion_orchestrator import (
+                    get_ingestion_orchestrator,
+                )
+
+                failed_job = (
+                    db.query(IngestionJob)
+                    .filter(
+                        IngestionJob.tenant_id == UUID(tenant_id),
+                        IngestionJob.id == ingestion_job_id,
+                    )
+                    .first()
+                )
+                if failed_job is not None and failed_job.status == "running":
+                    get_ingestion_orchestrator().fail(
+                        db,
+                        failed_job,
+                        code="web_no_usable_chunks",
+                        message="web extraction produced no usable chunks",
+                        phase="chunking",
+                        retryable=False,
+                        user_message="此網頁沒有可建立知識的正文內容。",
+                    )
+            _sync_document_asset_state(
+                db, doc, ingestion_status="failed", asset_status="failed"
+            )
+            db.commit()
             return {"status": "failed", "error": "No valid chunks from URL"}
 
         crud_document.update(
@@ -768,6 +918,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             batch_embs = embed_texts(batch)
             all_embeddings.extend(batch_embs)
             time.sleep(0.1)
+        _require_embedding_cardinality(chunks, all_embeddings)
 
         # 4. 寫入 pgvector（含去重）
         # Pre-fetch existing hashes in one query (avoids N+1)
@@ -808,8 +959,17 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             )
             db.add(db_chunk)
             inserted_chunks.append(db_chunk)
+            existing_hashes.add(chunk_hash)
             inserted += 1
         db.flush()
+        persisted_chunk_count = (
+            db.query(DChunk.id)
+            .filter(
+                DChunk.document_id == UUID(document_id),
+                DChunk.document_revision == int(doc.version or 1),
+            )
+            .count()
+        )
         from app.services.lexical_index import upsert_chunks as upsert_lexical_chunks
 
         upsert_lexical_chunks(db, inserted_chunks, doc)
@@ -819,7 +979,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         from app.services.outbox_events import publish_event
 
         doc.status = "completed"
-        doc.chunk_count = inserted
+        doc.chunk_count = persisted_chunk_count
         doc.quality_report = metadata
         from app.services.document_profile import upsert_document_profile
 
@@ -832,26 +992,46 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         from app.services.asset_projection import document_quality_state
 
         terminal_quality = document_quality_state(metadata)
-        project_document(
+        terminal_projection = project_document(
             db,
             doc,
             ingestion_status=(
                 "review_required" if terminal_quality == "review_required" else "ready"
             ),
         )
+        terminal_projection.asset.status = (
+            "review_required" if terminal_quality == "review_required" else "active"
+        )
         if ingestion_job.status == "running":
             requires_review = terminal_quality == "review_required"
+            from app.services.input_capability_results import (
+                document_capability_results,
+                readiness_with_capability_results,
+            )
+
+            capability_results = document_capability_results(
+                ingestion_job.requested_capabilities or [],
+                content_chars=len(text_content or ""),
+                chunk_count=persisted_chunk_count,
+                parse_engine="trafilatura",
+                parser_version=str(metadata.get("parser_version") or "runtime"),
+                ocr_used=False,
+            )
             orchestrator.transition(
                 db,
                 ingestion_job,
                 to_status="review_required" if requires_review else "ready",
                 phase="human_review" if requires_review else "published",
                 quality_state=terminal_quality,
-                readiness={
-                    "search": not requires_review,
-                    "answer": not requires_review,
-                    "requires_human_review": requires_review,
-                },
+                readiness=readiness_with_capability_results(
+                    {
+                        "search": not requires_review,
+                        "answer": not requires_review,
+                        "requires_human_review": requires_review,
+                    },
+                    requested_capabilities=ingestion_job.requested_capabilities or [],
+                    observed=capability_results,
+                ),
             )
         db.add(doc)
         publish_event(
@@ -864,7 +1044,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
                 "filename": doc.filename,
                 "file_type": doc.file_type or "html",
                 "tenant_id": tenant_id,
-                "chunk_count": inserted,
+                "chunk_count": persisted_chunk_count,
                 "parse_engine": "trafilatura",
                 "content_hash": doc.content_hash,
                 "file_path": doc.file_path,
@@ -888,9 +1068,11 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             "status": "completed",
             "document_id": document_id,
             "url": url,
-            "chunks": inserted,
+            "chunks": persisted_chunk_count,
         }
 
+    except Retry:
+        raise
     except Exception as e:
         if db:
             db.rollback()
@@ -923,6 +1105,14 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
                     db_obj=doc,
                     obj_in=DocumentUpdate(status="failed", error_message=str(e)),
                 )
+                exhausted = self.request.retries >= self.max_retries
+                _sync_document_asset_state(
+                    db,
+                    doc,
+                    ingestion_status="failed" if exhausted else "pending",
+                    asset_status="failed" if exhausted else "processing",
+                )
+                db.commit()
         if self.request.retries < self.max_retries:
             raise self.retry(exc=e, countdown=60)
         return {"status": "failed", "error": str(e)}

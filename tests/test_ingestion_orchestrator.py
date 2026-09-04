@@ -175,11 +175,53 @@ def test_failed_job_retry_increments_attempt(ingestion_db):
         user_message="系統會再次嘗試。",
     )
     assert job.error["retryable"] is True
+    assert job.readiness["capability_results"]["extract_text"] == {
+        "status": "failed",
+        "reason_code": "parse_failed",
+        "artifact_count": 0,
+        "provider": None,
+        "details": {},
+    }
+    assert len(job.readiness["runtime_identity"]["identity_hash"]) == 64
     orchestrator.transition(ingestion_db, job, to_status="running", phase="parsing")
 
     assert job.status == "running"
     assert job.attempt == 2
     assert job.error == {}
+
+
+def test_failure_persistence_repairs_malformed_historical_capability_result(
+    ingestion_db,
+):
+    tenant, _, revision = _source(ingestion_db)
+    orchestrator = IngestionOrchestrator(build_ingestion_adapter_registry())
+    job = orchestrator.ensure_job(
+        ingestion_db,
+        tenant_id=tenant.id,
+        asset_revision_id=revision.id,
+        capabilities=("extract_text",),
+    )
+    orchestrator.transition(ingestion_db, job, to_status="running", phase="parsing")
+    job.readiness = {
+        "capability_results": {
+            "extract_text": {"status": "unknown", "artifact_count": -1}
+        }
+    }
+
+    orchestrator.fail(
+        ingestion_db,
+        job,
+        code="parse_failed",
+        message="failed",
+        phase="parsing",
+    )
+
+    assert job.status == "failed"
+    assert job.readiness["capability_results"]["extract_text"]["status"] == "failed"
+    assert (
+        job.readiness["capability_results"]["extract_text"]["reason_code"]
+        == "parse_failed"
+    )
 
 
 def test_idempotency_key_rejects_different_capability_request(ingestion_db):
@@ -261,7 +303,9 @@ def test_legacy_workers_are_wired_to_common_ingestion_orchestrator():
     document_worker = (root / "app" / "tasks" / "document_tasks.py").read_text(
         encoding="utf-8"
     )
-    audio_worker = (root / "app" / "tasks" / "input_capture_tasks.py").read_text(encoding="utf-8")
+    audio_worker = (root / "app" / "tasks" / "input_capture_tasks.py").read_text(
+        encoding="utf-8"
+    )
 
     assert document_worker.count("get_ingestion_orchestrator") >= 4
     assert "document_capabilities" in document_worker

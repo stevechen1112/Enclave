@@ -309,6 +309,13 @@ def test_typed_projection_relation_provenance_and_fail_closed_lifecycle():
         authz = AuthorizationContext(tenant_id=tenant.id, subject_id=user.id)
         visible = list_active_knowledge_units(db, authz=authz)
         assert {row.unit_type for row in visible} == {"fact", "exception"}
+        revision.ingestion_status = "review_required"
+        db.flush()
+        assert {
+            row.unit_type for row in list_active_knowledge_units(db, authz=authz)
+        } == {"fact", "exception"}
+        revision.ingestion_status = "ready"
+        db.flush()
         expanded = expand_active_relations(
             db,
             authz=authz,
@@ -460,3 +467,42 @@ def test_short_code_exact_arm_ranks_exact_match_without_a_second_retriever():
     assert ranked[0].content == "Use AX-17 for approval."
     assert ranked[0].metadata["exact_match"] is True
     assert ranked[1].metadata["exact_match"] is False
+
+
+def test_authority_search_handles_chinese_and_rejects_unrelated_units():
+    common = {
+        "unit_id": uuid4(),
+        "unit_revision_id": uuid4(),
+        "release_id": uuid4(),
+        "unit_type": "fact",
+        "source_resource_type": "evidence_span",
+        "source_resource_id": "span",
+        "source_asset_id": uuid4(),
+        "source_asset_revision_id": uuid4(),
+        "source_artifact_id": uuid4(),
+        "metadata": {"locator": {"start_ms": 0, "end_ms": 2000}},
+    }
+    units = [
+        SimpleNamespace(
+            **common,
+            title="機台復歸",
+            content="確認壓力歸零後，才可以解除安全門鎖。",
+        )
+    ]
+    matched = RetrievalFacade._authority_chunks_from_units(
+        units=units,
+        query="機台壓力歸零後怎麼復歸？",
+        top_k=5,
+    )
+    assert len(matched) == 1
+    assert matched[0].metadata["start_ms"] == 0
+    assert RetrievalFacade._authority_chunks_from_units(
+        units=units,
+        query="完全不存在的客戶編號 ZX-999",
+        top_k=5,
+    ) == []
+    assert RetrievalFacade._authority_chunks_from_units(
+        units=units,
+        query="公司其他完全無關但提到安全的一般行政問題如何處理？",
+        top_k=5,
+    ) == []

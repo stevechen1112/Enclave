@@ -290,11 +290,47 @@ class IngestionOrchestrator:
             error["retryable"] = retryable
         if user_message is not None:
             error["user_message"] = user_message
+        from app.services.input_capability_results import (
+            capability_result,
+            readiness_with_capability_results,
+        )
+
+        prior_readiness = dict(job.readiness or {})
+        prior_results = dict(prior_readiness.get("capability_results") or {})
+        observed: dict[str, dict[str, Any]] = {}
+        for capability in job.requested_capabilities or []:
+            prior_result = prior_results.get(capability)
+            if prior_result:
+                try:
+                    from app.services.input_capability_results import (
+                        complete_capability_results,
+                    )
+
+                    observed[capability] = complete_capability_results(
+                        [capability], {capability: prior_result}
+                    )[capability]
+                    continue
+                except (TypeError, ValueError):
+                    # Historical or partially-written readiness must never stop
+                    # the current failure from being persisted truthfully.
+                    pass
+            observed[capability] = capability_result("failed", reason_code=code)
+        readiness = readiness_with_capability_results(
+            {
+                **prior_readiness,
+                "searchable": False,
+                "answer": False,
+                "requires_human_review": False,
+            },
+            requested_capabilities=job.requested_capabilities or [],
+            observed=observed,
+        )
         return self.transition(
             db,
             job,
             to_status="failed",
             phase=phase,
+            readiness=readiness,
             error=error,
         )
 

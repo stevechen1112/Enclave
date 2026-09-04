@@ -16,6 +16,7 @@ from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.authorization import AuthorizationContext
 from app.gateway.citation import CitationBuilder
 from app.gateway.contracts import ChunkResult, Citation, SearchDomain
@@ -460,10 +461,14 @@ class RetrievalFacade:
             explicit = True
             raw_scope.extend((scope or {}).get("kb_revision_ids") or [])
         revision_ids = [UUID(str(item)) for item in raw_scope if item]
+        include_tenant_scope = bool(
+            (scope or {}).get("include_tenant_knowledge_units")
+        )
         units = list_active_knowledge_units(
             db,
             authz=authz,
             kb_revision_ids=revision_ids if explicit else None,
+            include_tenant_scope=include_tenant_scope,
             query_text=query,
         )
         if not query or not units:
@@ -485,6 +490,7 @@ class RetrievalFacade:
             authz=authz,
             seed_revision_ids=[unit.unit_revision_id for unit in seeds],
             kb_revision_ids=revision_ids if explicit else None,
+            include_tenant_scope=include_tenant_scope,
             query_text=query,
         )
         expanded_ids = {unit.unit_revision_id for unit in expanded}
@@ -522,7 +528,19 @@ class RetrievalFacade:
         query: str,
         top_k: int,
     ) -> List[ChunkResult]:
-        terms = {term.casefold() for term in query.split() if term.strip()}
+        def terms_for(value: str) -> set[str]:
+            normalized = "".join(str(value or "").casefold().split())
+            latin = set(re.findall(r"[a-z0-9][a-z0-9./_-]{1,31}", normalized))
+            cjk_runs = re.findall(r"[\u3400-\u9fff]+", normalized)
+            cjk = {
+                run[index : index + size]
+                for run in cjk_runs
+                for size in (2, 3)
+                for index in range(max(0, len(run) - size + 1))
+            }
+            return latin | cjk
+
+        terms = terms_for(query)
         normalized_query = " ".join(str(query or "").casefold().split())
         exact_tokens = {
             token.casefold()
@@ -532,9 +550,14 @@ class RetrievalFacade:
         }
         scored = []
         for unit in units:
-            haystack = f"{unit.title} {unit.content}".casefold()
+            title = str(unit.title or "").casefold()
+            content = str(unit.content or "").casefold()
+            haystack = f"{title} {content}"
+            matched = {term for term in terms if term in haystack}
+            title_matched = {term for term in terms if term in title}
             score = (
-                sum(1 for term in terms if term in haystack) / max(len(terms), 1)
+                0.75 * len(matched) / max(len(terms), 1)
+                + 0.25 * len(title_matched) / max(len(terms), 1)
                 if terms
                 else 0.0
             )
@@ -553,6 +576,10 @@ class RetrievalFacade:
             if exact_match:
                 score += 1.0
             metadata = dict(unit.metadata)
+            locator = metadata.get("locator")
+            if isinstance(locator, dict):
+                for key, value in locator.items():
+                    metadata.setdefault(key, value)
             metadata.update(
                 {
                     "knowledge_unit_id": str(unit.unit_id),
@@ -576,6 +603,11 @@ class RetrievalFacade:
                     "exact_match": exact_match,
                 }
             )
+            # A single generic CJK n-gram in a long question is not enough to
+            # present a source as evidence. Exact identifiers still receive
+            # the explicit boost above.
+            if score < settings.KNOWLEDGE_AUTHORITY_RELEVANCE_FLOOR:
+                continue
             scored.append(
                 {
                     "id": str(unit.unit_revision_id),

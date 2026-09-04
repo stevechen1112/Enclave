@@ -20,7 +20,7 @@ from typing import Any, Dict, List
 
 from app.gateway.contracts import ChunkResult
 
-FUSION_POLICY_VERSION = "1.0"
+FUSION_POLICY_VERSION = "1.1"
 
 AUTHORITY_PRIMARY = "primary_document"
 AUTHORITY_COMPILED = "compiled_knowledge"
@@ -62,9 +62,15 @@ def is_citable(result: ChunkResult) -> bool:
     """可引用性：必須有可見標題與穩定 canonical identity。"""
     if not visible_title(result):
         return False
-    if classify_authority(result) == AUTHORITY_PRIMARY:
-        return bool(result.document_id)
     meta = result.metadata or {}
+    if classify_authority(result) == AUTHORITY_PRIMARY:
+        # Canonical media/typed KnowledgeUnits do not have a legacy Document
+        # row.  Their immutable resource/release identity is equally citable.
+        return bool(
+            result.document_id
+            or meta.get("canonical_resource_id")
+            or meta.get("knowledge_unit_revision_id")
+        )
     return bool(meta.get("canonical_resource_id") or result.id)
 
 

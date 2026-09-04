@@ -22,7 +22,9 @@ export default function EvidenceCard({ source, index, className }: Props) {
   if (source.page != null) locatorParams.set('page', String(source.page))
   if (source.transcript_start_ms != null) locatorParams.set('t', String(source.transcript_start_ms))
   if (source.frame_index != null) locatorParams.set('frame', String(source.frame_index))
-  const documentTarget = `/knowledge/documents/${source.document_id}${locatorParams.size ? `?${locatorParams}` : ''}`
+  const canonicalTarget = source.evidence_url
+    || (source.source_asset_id ? `/knowledge/assets/${source.source_asset_id}${locatorParams.size ? `?${locatorParams}` : ''}` : null)
+    || (source.document_id ? `/knowledge/documents/${source.document_id}${locatorParams.size ? `?${locatorParams}` : ''}` : null)
   return (
     <article
       className={clsx(
@@ -74,12 +76,12 @@ export default function EvidenceCard({ source, index, className }: Props) {
           {source.snippet && (
             <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted">{source.snippet}</p>
           )}
-          {source.document_id && accessible && (
+          {canonicalTarget && accessible && (
             <Link
-              to={documentTarget}
+              to={canonicalTarget}
               className="mt-2 inline-flex items-center gap-1 text-xs text-accent hover:underline"
             >
-              在文件中開啟
+              在原始證據中開啟
               <ExternalLink className="h-3 w-3" aria-hidden />
             </Link>
           )}

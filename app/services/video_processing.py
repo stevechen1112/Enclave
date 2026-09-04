@@ -82,6 +82,11 @@ class VideoProcessingResult:
     transcript_segments: list[VideoTranscriptSegment] = field(default_factory=list)
     keyframes: list[VideoKeyframe] = field(default_factory=list)
     audio_chunk_count: int = 0
+    stt_provider: str = "openai"
+    stt_provider_version: str | None = None
+    stt_model: str | None = None
+    stt_confidence_provider_supplied: bool = False
+    stt_confidence_calibration_version: str | None = None
 
 
 def _run(command: list[str], *, timeout: int = 300) -> subprocess.CompletedProcess[str]:
@@ -379,6 +384,7 @@ def process_video_file(
     progress: Callable[[str, dict[str, Any]], None] | None = None,
 ) -> VideoProcessingResult:
     from app.config import settings
+    from app.services.input_capability_results import package_version
 
     probe = probe or probe_video(path, runner=runner)
     if progress:
@@ -413,7 +419,12 @@ def process_video_file(
             else 0
         )
         for row in rows:
-            text = str(row.get("text") or "").strip()
+            from app.services.text_locale import normalize_content_text
+
+            text = normalize_content_text(
+                str(row.get("text") or ""),
+                locale=settings.INPUT_CONTENT_LOCALE,
+            ).strip()
             if not text:
                 continue
             start_ms = (
@@ -451,6 +462,12 @@ def process_video_file(
         progress("keyframes_extracted", {"keyframe_count": len(keyframes)})
     for index, keyframe in enumerate(keyframes, start=1):
         keyframe.ocr_text, keyframe.ocr_confidence = ocr(keyframe.path)
+        from app.services.text_locale import normalize_content_text
+
+        keyframe.ocr_text = normalize_content_text(
+            keyframe.ocr_text,
+            locale=settings.INPUT_CONTENT_LOCALE,
+        )
         if progress:
             progress(
                 "visual_partial",
@@ -465,6 +482,15 @@ def process_video_file(
         transcript_segments=transcript_segments,
         keyframes=keyframes,
         audio_chunk_count=len(audio_paths),
+        stt_provider=str(settings.VOICE_STT_PROVIDER or "unknown"),
+        stt_provider_version=(
+            package_version("openai")
+            if str(settings.VOICE_STT_PROVIDER or "") == "openai"
+            else None
+        ),
+        stt_model=str(settings.LONG_INTERVIEW_STT_MODEL or "unknown"),
+        stt_confidence_provider_supplied=False,
+        stt_confidence_calibration_version="unavailable",
     )
 
 
@@ -499,6 +525,45 @@ def _upsert_artifact(
         )
         .first()
     )
+    if artifact is None and metadata:
+        # Metadata may gain provenance fields across releases. Preserve retry
+        # idempotency when the stable media locator and content are unchanged.
+        identity_keys = tuple(
+            key
+            for key in (
+                "start_ms",
+                "end_ms",
+                "speaker",
+                "timestamp_ms",
+                "frame_index",
+            )
+            if key in metadata
+        )
+        if identity_keys:
+            candidates = (
+                db.query(DerivedArtifact)
+                .filter(
+                    DerivedArtifact.tenant_id == revision.tenant_id,
+                    DerivedArtifact.asset_revision_id == revision.id,
+                    DerivedArtifact.artifact_kind == artifact_kind,
+                    DerivedArtifact.provider == provider,
+                    DerivedArtifact.provider_version == provider_version,
+                    DerivedArtifact.content == content,
+                    DerivedArtifact.artifact_uri == artifact_uri,
+                )
+                .all()
+            )
+            artifact = next(
+                (
+                    candidate
+                    for candidate in candidates
+                    if all(
+                        (candidate.metadata_json or {}).get(key) == metadata.get(key)
+                        for key in identity_keys
+                    )
+                ),
+                None,
+            )
     if artifact is None:
         artifact = DerivedArtifact(
             tenant_id=revision.tenant_id,
@@ -597,6 +662,16 @@ def project_video_result(
 ) -> dict[str, Any]:
     """Idempotently project processing output and a review-gated procedure."""
 
+    from app.config import settings
+    from app.services.input_capability_results import package_version
+    from app.services.input_quality import normalize_provider_confidence
+
+    stt_provider = str(result.stt_provider or settings.VOICE_STT_PROVIDER or "unknown")
+    stt_model = str(result.stt_model or settings.LONG_INTERVIEW_STT_MODEL or "unknown")
+    stt_provider_version = result.stt_provider_version or (
+        package_version("openai") if stt_provider == "openai" else None
+    )
+
     _upsert_artifact(
         db,
         revision,
@@ -620,12 +695,27 @@ def project_video_result(
             revision,
             artifact_kind="transcript_segment",
             content=segment.text,
-            confidence=segment.confidence,
+            confidence=normalize_provider_confidence(
+                segment.confidence,
+                provider_supplied=result.stt_confidence_provider_supplied,
+            ),
             quality_state="review_required",
             metadata={
                 "start_ms": segment.start_ms,
                 "end_ms": segment.end_ms,
                 "speaker": segment.speaker,
+                "source_provider": stt_provider,
+                "source_provider_version": stt_provider_version,
+                "source_model": stt_model,
+                "confidence_semantics": (
+                    "provider_supplied"
+                    if result.stt_confidence_provider_supplied
+                    else "unknown"
+                ),
+                "confidence_provider_supplied": result.stt_confidence_provider_supplied,
+                "confidence_calibration_version": (
+                    result.stt_confidence_calibration_version or "unavailable"
+                ),
             },
         )
         _ensure_video_evidence(
@@ -673,6 +763,19 @@ def project_video_result(
                     "timestamp_ms": keyframe.timestamp_ms,
                     "frame_index": keyframe.frame_index,
                     "keyframe_artifact_id": str(artifact.id),
+                    "source_provider": "tesseract",
+                    "source_provider_version": package_version("pytesseract"),
+                    "confidence_semantics": (
+                        "provider_native_uncalibrated"
+                        if keyframe.ocr_confidence is not None
+                        else "unknown"
+                    ),
+                    "confidence_provider_supplied": keyframe.ocr_confidence is not None,
+                    "confidence_calibration_version": (
+                        "provider-native-uncalibrated"
+                        if keyframe.ocr_confidence is not None
+                        else "unavailable"
+                    ),
                 },
             )
             _ensure_video_evidence(

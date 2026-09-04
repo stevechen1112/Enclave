@@ -61,6 +61,9 @@ def test_required_probe_passes_only_when_every_role_returns_content(monkeypatch)
 
     assert report["status"] == "pass"
     assert report["passed"] == report["total"] == 7
+    assert "probed_at" in report
+    assert "release_bound" in report
+    assert "source_commit" in report["release"]
 
 
 def test_required_probe_fails_closed_and_sanitizes_provider_error(monkeypatch):

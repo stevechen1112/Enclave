@@ -212,6 +212,28 @@ export interface KnowledgeAssetRevision {
   created_at: string
 }
 
+export type InputCapabilityStatus = 'available' | 'degraded' | 'not_applicable' | 'failed'
+
+export interface InputCapabilityResult {
+  status: InputCapabilityStatus
+  reason_code: string | null
+  artifact_count: number
+  provider: {
+    name: string | null
+    version: string | null
+    model: string | null
+    confidence_provider_supplied: boolean | null
+    calibration_version: string | null
+  } | null
+  details: Record<string, unknown>
+}
+
+export interface InputJobReadiness extends Record<string, unknown> {
+  capability_results_schema?: string
+  capability_results?: Record<string, InputCapabilityResult>
+  runtime_identity?: Record<string, unknown>
+}
+
 export interface KnowledgeAssetJob {
   id: string
   status: string
@@ -220,7 +242,7 @@ export interface KnowledgeAssetJob {
   adapter_key: string
   adapter_version: string
   requested_capabilities: string[]
-  readiness: Record<string, unknown>
+  readiness: InputJobReadiness
   error: Record<string, unknown>
   correlation_id?: string
   attempt: number
@@ -384,6 +406,9 @@ export interface KnowledgeReviewSourceGroup {
   low_confidence_count: number
   blocked_reasons: string[]
   item_ids: string[]
+  source_confirmable_count: number
+  exception_count: number
+  source_approval_ready: boolean
 }
 
 export interface KnowledgeReviewInbox {
@@ -461,6 +486,11 @@ export interface ChatSource {
   title: string          // display — mapped from backend `filename`
   snippet: string        // display — mapped from backend `content`
   document_id?: string
+  citation_id?: string | null
+  canonical_resource_type?: string | null
+  canonical_resource_id?: string | null
+  source_asset_id?: string | null
+  evidence_url?: string | null
   document_revision?: string | number | null
   provider?: string | null
   updated_at?: string | null
@@ -471,6 +501,8 @@ export interface ChatSource {
   worksheet?: string | null
   row_number?: number | null
   field_name?: string | null
+  table_name?: string | null
+  cell_range?: string | null
   transcript_start_ms?: number | null
   transcript_end_ms?: number | null
   speaker?: string | null

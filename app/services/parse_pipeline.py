@@ -141,7 +141,8 @@ def _native_evidence_chunks(
                         sheet.iter_rows(values_only=False), sheet.min_row
                     ):
                         values = [
-                            "" if cell.value is None else str(cell.value) for cell in row
+                            "" if cell.value is None else str(cell.value)
+                            for cell in row
                         ]
                         if not any(value.strip() for value in values):
                             continue
@@ -205,11 +206,24 @@ def _native_evidence_chunks(
                     )
             if chunks:
                 return chunks
-        elif kind in {"jpg", "jpeg", "png", "tiff", "tif", "bmp", "webp", "heic", "image"}:
+        elif kind in {
+            "jpg",
+            "jpeg",
+            "png",
+            "tiff",
+            "tif",
+            "bmp",
+            "webp",
+            "heic",
+            "image",
+        }:
             declared = metadata.get("evidence_chunks") or []
             chunks = []
             for index, item in enumerate(declared):
-                if not isinstance(item, dict) or not str(item.get("text") or "").strip():
+                if (
+                    not isinstance(item, dict)
+                    or not str(item.get("text") or "").strip()
+                ):
                     continue
                 chunks.append(
                     ParseChunk(
@@ -503,6 +517,10 @@ async def _parse_via_ragflow(
             }
         )
 
+    raw_confidence = parse_result.get("confidence")
+    confidence_provider_supplied = isinstance(
+        raw_confidence, (int, float)
+    ) and not isinstance(raw_confidence, bool)
     if not chunks:
         # RAGFlow produced nothing usable; label honestly as native fallback.
         # Delivery gate (+ cloud OCR rescue) decides whether ingest may complete.
@@ -523,11 +541,14 @@ async def _parse_via_ragflow(
         chunks = [ParseChunk(text=text[:8000], chunk_index=0)]
         engine_label = "native/text_fallback"
         ocr_used = False
-        confidence = float(parse_result.get("confidence", 0.5))
+        # The provider score described an empty RAGFlow result, not the native
+        # fallback text that replaces it.
+        confidence = 0.5
+        confidence_provider_supplied = False
         warnings.append({"code": "ragflow_chunks_empty_used_text_fallback"})
     else:
         ocr_used = layout_ocr_capable
-        confidence = float(parse_result.get("confidence", 0.9))
+        confidence = float(raw_confidence) if confidence_provider_supplied else 0.9
 
     return ParseArtifact(
         parser=engine_label,
@@ -537,6 +558,12 @@ async def _parse_via_ragflow(
         document_revision=revision,
         chunks=chunks,
         confidence=confidence,
+        confidence_provider_supplied=confidence_provider_supplied,
+        confidence_calibration_version=(
+            "provider-native-uncalibrated"
+            if confidence_provider_supplied
+            else "parse-quality-heuristic.v1"
+        ),
         elapsed_ms=elapsed_ms,
         ocr_used=ocr_used,
         vlm_used=route == ParseRoute.RAGFLOW_VLM
@@ -573,12 +600,32 @@ def _maybe_enhance_with_cloud_ocr(
 
     original_engine = artifact.parser
     try:
-        result = cloud_ocr.transcribe(file_path, (file_type or "").lower().strip())
+        results, candidate_errors = cloud_ocr.transcribe_candidates(
+            file_path, (file_type or "").lower().strip()
+        )
     except Exception as exc:
         artifact.warnings.append(
             {"code": "cloud_ocr_failed", "error": str(exc)[:200], "trigger": reason}
         )
         return text, metadata, artifact
+
+    if not results:
+        artifact.warnings.append(
+            {
+                "code": "cloud_ocr_failed",
+                "error": "all configured OCR providers failed",
+                "trigger": reason,
+                "provider_errors": candidate_errors,
+            }
+        )
+        return text, metadata, artifact
+
+    def candidate_score(value: str) -> tuple[int, int, int]:
+        stripped = (value or "").strip()
+        useful = sum(character.isalnum() for character in stripped)
+        return (0 if _looks_dirty_ocr(stripped) else 1, useful, len(stripped))
+
+    result = max(results, key=lambda row: candidate_score(row.text))
 
     metadata["cloud_ocr"] = {
         "provider": result.provider,
@@ -589,6 +636,20 @@ def _maybe_enhance_with_cloud_ocr(
         "errors": result.errors,
         "trigger": reason,
         "original_engine": original_engine,
+        "candidate_count": len(results),
+        "candidate_errors": candidate_errors,
+        "candidates": [
+            {
+                "provider": row.provider,
+                "model": row.model,
+                "chars": len(row.text.strip()),
+                "content_hash": hashlib.sha256(
+                    row.text.encode("utf-8", errors="replace")
+                ).hexdigest(),
+                "selected": row is result,
+            }
+            for row in results
+        ],
     }
     # Low-yield: require strictly more chars. Fallback/dirty/scan-without-ocr:
     # adopt non-empty cloud text that is cleaner or not shorter than half.
@@ -615,6 +676,11 @@ def _maybe_enhance_with_cloud_ocr(
 
     artifact.parser = f"cloud/{result.provider}:{result.model}"
     artifact.ocr_used = True
+    # The cloud OCR response has no calibrated confidence. Never retain the
+    # primary parser's score after replacing its content with another result.
+    artifact.confidence = None
+    artifact.confidence_provider_supplied = False
+    artifact.confidence_calibration_version = "unavailable"
     artifact.chunks = [ParseChunk(text=result.text, chunk_index=0)]
     artifact.warnings.append(
         {
@@ -627,6 +693,8 @@ def _maybe_enhance_with_cloud_ocr(
     )
     metadata["parse_engine"] = artifact.parser
     metadata["ocr_used"] = True
+    metadata["quality_score"] = None
+    metadata["review_required"] = True
     return result.text, metadata, artifact
 
 
@@ -733,6 +801,7 @@ def parse_document(
     warnings: List[Any] = []
     # P3-4：Docling Parser（feature-flagged，條件式採用）
     docling_text = ""
+    docling_metadata: Dict[str, Any] = {}
     from app.config import settings
 
     if settings.DOCLING_ENABLED:
@@ -744,11 +813,13 @@ def parse_document(
                 docling_result = docling.parse(file_path, file_type)
                 if docling_result.success and docling_result.text:
                     docling_text = docling_result.text
-                    metadata["docling_used"] = True
-                    metadata["docling_elapsed_ms"] = int(
-                        docling_result.elapsed_seconds * 1000
-                    )
-                    metadata["docling_tables"] = len(docling_result.tables)
+                    docling_metadata = {
+                        "docling_used": True,
+                        "docling_elapsed_ms": int(
+                            docling_result.elapsed_seconds * 1000
+                        ),
+                        "docling_tables": len(docling_result.tables),
+                    }
             except Exception as exc:
                 logger.warning("Docling parse failed: %s", exc)
 
@@ -757,8 +828,11 @@ def parse_document(
         # 若 Docling 產出更多文字，採用 Docling
         if docling_text and len(docling_text) > len(text_content or "") * 1.2:
             text_content = docling_text
+            metadata.update(docling_metadata)
             metadata["parse_engine"] = "docling"
             metadata["docling_adopted"] = True
+            metadata["quality_score"] = None
+            metadata["review_required"] = True
     except ValueError as exc:
         if not _scan_route(route):
             raise
@@ -782,6 +856,13 @@ def parse_document(
             metadata["parse_engine"] = "native/text_fallback"
     elapsed_ms = int((time.time() - start) * 1000)
     engine = metadata.get("parse_engine", "native")
+    quality_score = metadata.get("quality_score", 0.8)
+    confidence = (
+        float(quality_score)
+        if isinstance(quality_score, (int, float))
+        and not isinstance(quality_score, bool)
+        else None
+    )
     artifact = ParseArtifact(
         parser=engine,
         version="1.0.0",
@@ -789,7 +870,11 @@ def parse_document(
         document_id=str(document_id),
         document_revision=revision,
         chunks=_native_evidence_chunks(file_path, file_type, text_content, metadata),
-        confidence=float(metadata.get("quality_score", 0.8)),
+        confidence=confidence,
+        confidence_provider_supplied=False,
+        confidence_calibration_version=(
+            "parse-quality-heuristic.v1" if confidence is not None else "unavailable"
+        ),
         elapsed_ms=elapsed_ms,
         ocr_used=bool(metadata.get("ocr_used", False)),
         warnings=warnings,

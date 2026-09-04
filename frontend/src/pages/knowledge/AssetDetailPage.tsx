@@ -4,7 +4,7 @@ import { Link, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 import { knowledgeAssetApi, formatErrorWithTrace, parseApiError, type ApiErrorInfo } from '../../api'
-import type { KnowledgeAsset, KnowledgeAssetEvent } from '../../types'
+import type { InputCapabilityResult, KnowledgeAsset, KnowledgeAssetEvent } from '../../types'
 import AsyncState from '../../components/AsyncState'
 import LifecycleBadge from '../../components/LifecycleBadge'
 import { MetadataList, SectionPanel, WorkspacePage } from '../../components/WorkspacePage'
@@ -31,6 +31,78 @@ const PHASE_LABELS: Record<string, string> = {
   retry_queued: '重新處理',
   asset_tombstoned: '已撤銷',
   completed: '處理完成',
+  completed_no_speech: '處理完成（未偵測到語音）',
+}
+
+const CAPABILITY_LABELS: Record<string, string> = {
+  resumable_upload: '可續傳上傳',
+  background_progress: '背景處理進度',
+  partial_readiness: '分段處理結果',
+  extract_text: '文字擷取',
+  layout: '版面結構',
+  table: '表格結構',
+  browser_proxy: '瀏覽器預覽',
+  probe_metadata: '媒體格式檢查',
+  demux_audio: '音軌分離',
+  transcribe: '語音轉文字',
+  timestamp: '時間碼',
+  terminology_correction: '企業詞彙校正',
+  keyframe: '關鍵畫面',
+  ocr: '畫面文字辨識',
+  diarize: '說話者區分',
+  scene_segment: '鏡頭切分',
+  action_candidate: '動作事件候選',
+  equipment_state: '設備狀態候選',
+  audio_event: '異常聲音候選',
+  temporal_align: '跨模態時間軸對齊',
+  procedure_candidate: '程序候選',
+}
+
+const CAPABILITY_STATUS_LABELS = {
+  available: '已完成',
+  degraded: '有限可用',
+  not_applicable: '本來源不適用',
+  failed: '未完成',
+} as const
+
+function isInputCapabilityResult(value: unknown): value is InputCapabilityResult {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Partial<InputCapabilityResult>
+  return (
+    typeof candidate.status === 'string'
+    && Object.prototype.hasOwnProperty.call(CAPABILITY_STATUS_LABELS, candidate.status)
+    && typeof candidate.artifact_count === 'number'
+    && candidate.artifact_count >= 0
+    && (candidate.reason_code === null || typeof candidate.reason_code === 'string')
+  )
+}
+
+const CAPABILITY_REASON_LABELS: Record<string, string> = {
+  no_speech_detected: '未偵測到可轉錄語音',
+  no_audio_track: '來源沒有音軌',
+  no_text_detected: '畫面未偵測到文字',
+  browser_proxy_disabled: '此環境未啟用瀏覽器預覽檔',
+  terminology_correction_not_implemented: '企業詞彙自動校正尚未啟用',
+  speaker_labels_unavailable: '已有逐字稿，但無法可靠區分說話者',
+  insufficient_signal: '訊號不足，無法可靠判斷',
+  no_evidence_detected: '沒有足夠證據可產生結果',
+  no_evidence_backed_procedure: '沒有足夠證據可建立程序候選',
+  layout_fidelity_not_measured: '已抽出內容，但尚未量測版面還原品質',
+  table_fidelity_not_measured: '已抽出表格內容，但尚未量測結構還原品質',
+  capability_result_missing: '處理器沒有回報這項能力結果',
+  provider_failed: '外部處理服務執行失敗',
+}
+
+function capabilityDescription(result: InputCapabilityResult) {
+  const parts: string[] = []
+  if (result.reason_code) parts.push(CAPABILITY_REASON_LABELS[result.reason_code] || result.reason_code.replaceAll('_', ' '))
+  if (result.provider?.name) {
+    const model = result.provider.model ? ` / ${result.provider.model}` : ''
+    parts.push(`處理來源：${result.provider.name}${model}`)
+  }
+  if (result.provider?.confidence_provider_supplied === false) parts.push('信心度：供應商未提供（不是 0%）')
+  if (result.artifact_count > 0) parts.push(`產出 ${result.artifact_count} 筆`)
+  return parts.join('；')
 }
 
 export default function AssetDetailPage() {
@@ -67,11 +139,12 @@ export default function AssetDetailPage() {
     ? '內容處理服務目前不可用。原始來源已保留，可稍後重新處理；若持續失敗，請管理員檢查解析與索引服務。'
     : '系統已保留原始來源，請重新處理；若持續失敗，請聯絡管理員查看服務狀態。')
   const lifecycle = asset.lifecycle_status || asset.job?.status || asset.status
+  const capabilityResults = asset.job?.readiness.capability_results
   return <WorkspacePage title={asset.title} subtitle={`${asset.asset_kind} · ${asset.source_system} · ${asset.data_classification}`} backTo="/knowledge/assets" backLabel="回所有資產" actions={<><LifecycleBadge status={lifecycle} answerReady={asset.answer_ready} />{failed && retryable && <button className="btn-outline" onClick={() => void retry()}><RefreshCw className="h-4 w-4" />重新處理</button>}</>}>
     <EvidenceLocatorBanner />
     {failed && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-danger/30 bg-danger-soft p-4 text-sm text-danger" role="alert"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0" /><span><strong className="block">需要處理</strong><span className="mt-1 block">{failureMessage}</span><span className="mt-2 block text-xs">{retryable ? '系統自動嘗試已結束；可按「重新處理」再試一次。' : '這類問題不會自動重試，請依上方說明更換來源或格式。'}{asset.job?.correlation_id ? ` 追蹤碼：${asset.job.correlation_id}` : ''}</span></span></div>}
     {asset.lifecycle_status === 'processing' && <div className="mt-5 flex items-start gap-3 rounded-2xl border border-accent/20 bg-accent-soft p-4 text-sm text-accent-ink"><RefreshCw className="mt-0.5 h-5 w-5 shrink-0 animate-spin" /><span><strong className="block">系統正在處理</strong><span className="mt-1 block">你可以離開此頁；系統會在背景繼續解析、OCR、轉錄或建立索引。</span></span></div>}
-    {asset.lifecycle_status === 'awaiting_review' && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-highlight/30 bg-highlight-soft p-4 text-sm text-highlight"><UserCheck className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1"><strong className="block">等待人工確認</strong><span className="mt-1 block">系統已完成候選內容，共 {asset.pending_review_count || 0} 筆；租戶擁有者需核對證據後才能發布。建立者不可自行核准高風險內容。</span></span><Link className="btn-outline shrink-0" to="/knowledge/review">前往人工確認</Link></div>}
+    {asset.lifecycle_status === 'awaiting_review' && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-highlight/30 bg-highlight-soft p-4 text-sm text-highlight"><UserCheck className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1"><strong className="block">等待你確認內容</strong><span className="mt-1 block">系統處理已完成，共 {asset.pending_review_count || 0} 筆需要人員判斷的內容；原始文字可按來源一次確認，高風險推論仍須由另一位擁有者核准。</span></span><Link className="btn-outline shrink-0" to="/knowledge/review">前往人工確認</Link></div>}
     {asset.answer_ready && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-success/30 bg-success-soft p-4 text-sm text-success"><CheckCircle2 className="h-5 w-5 shrink-0" /><span className="min-w-0 flex-1"><strong className="block">此來源已可問答</strong><span className="mt-1 block">問答結果會附上可追溯的來源證據。</span></span><Link className="btn-primary shrink-0" to="/ask"><MessageCircleQuestion className="h-4 w-4" />前往問知識</Link></div>}
     <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-5">
@@ -80,8 +153,16 @@ export default function AssetDetailPage() {
             {asset.asset_kind === 'audio' && asset.preview_url ? <div className="w-full max-w-2xl"><p className="mb-3 text-sm text-ink">可先播放瀏覽器相容預覽；逐字稿會分段出現在覆核佇列。</p><audio controls preload="metadata" src={asset.preview_url} className="w-full" aria-label={`${asset.title} 音訊預覽`} /></div> : professionalTool ? <Link className="btn-primary" to={professionalTool.to}>{professionalTool.label}</Link> : asset.asset_kind === 'web_page' && typeof asset.metadata.source_url === 'string' ? <a className="btn-outline" href={asset.metadata.source_url} target="_blank" rel="noreferrer">開啟原始網址</a> : <p>此來源已安全保存；完成處理後，可引用內容與證據會在這個資產工作區持續更新。</p>}
           </div>
         </SectionPanel>
-        <SectionPanel title="處理能力" description="由系統依來源類型選擇，完成狀態仍以後端工作紀錄為準。">
-          {asset.job?.requested_capabilities?.length ? <ul className="flex flex-wrap gap-2">{asset.job.requested_capabilities.map(capability => <li key={capability} className="chip-neutral">{capability.replaceAll('_', ' ')}</li>)}</ul> : <p className="text-sm text-muted">此來源沒有額外處理能力紀錄。</p>}
+        <SectionPanel title="處理能力" description="每一項都顯示實際結果；未偵測到內容、有限可用與執行失敗會分開呈現。">
+          {asset.job?.requested_capabilities?.length ? <ul className="space-y-2">{asset.job.requested_capabilities.map(capability => {
+            const rawResult = capabilityResults?.[capability]
+            const result = isInputCapabilityResult(rawResult) ? rawResult : undefined
+            const description = result ? capabilityDescription(result) : ''
+            return <li key={capability} className="rounded-xl border border-line bg-surface px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-2"><span className="font-medium text-ink">{CAPABILITY_LABELS[capability] || capability.replaceAll('_', ' ')}</span>{result ? <span className={result.status === 'available' ? 'text-sm text-success' : result.status === 'failed' ? 'text-sm text-danger' : 'text-sm text-highlight'}>{CAPABILITY_STATUS_LABELS[result.status]}</span> : <span className="text-sm text-muted">{rawResult == null ? '尚未回報' : '狀態資料無法辨識'}</span>}</div>
+              {description && <p className="mt-1 text-xs text-muted">{description}</p>}
+            </li>
+          })}</ul> : <p className="text-sm text-muted">此來源沒有額外處理能力紀錄。</p>}
         </SectionPanel>
       </div>
       <aside className="space-y-5">

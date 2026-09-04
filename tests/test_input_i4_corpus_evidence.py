@@ -35,6 +35,8 @@ def test_i4_corpus_is_sealed_and_contains_no_customer_claim():
 def test_every_open_document_ui_format_has_passed_quality_and_failure_sample():
     report = _read(REPORT)
     assert report["status"] == "PASS"
+    assert report["certification"]["status"] == "HOLD"
+    assert report["certification"]["claim_ceiling"] == "mechanical"
     opened = {
         spec.extension
         for spec in DOCUMENT_FORMAT_SPECS

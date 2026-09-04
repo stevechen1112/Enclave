@@ -10,6 +10,7 @@ import os
 import tempfile
 import time
 from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -227,6 +228,8 @@ def _run_probe(
 
 def probe_required_providers() -> dict[str, Any]:
     """Perform real, non-cached calls for every required production capability."""
+    from app.services.release_metadata import get_release_metadata
+
     configurations = provider_configuration()
     by_role = {item["role"]: item for item in configurations}
     probes: list[tuple[str, Callable[[], Any]]] = [
@@ -240,9 +243,13 @@ def probe_required_providers() -> dict[str, Any]:
     ]
     results = [asdict(_run_probe(by_role[role], probe)) for role, probe in probes]
     passed = sum(result["status"] == "pass" for result in results)
+    release = get_release_metadata()
     return {
         "status": "pass" if passed == len(results) else "fail",
         "passed": passed,
         "total": len(results),
+        "probed_at": datetime.now(timezone.utc).isoformat(),
+        "release_bound": bool(release.get("identifiable")),
+        "release": release,
         "results": results,
     }

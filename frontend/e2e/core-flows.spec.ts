@@ -1,23 +1,9 @@
 /** Browser acceptance for the server-composed application shell. */
-import { test, expect, type Page } from '@playwright/test'
-
-const ADMIN_EMAIL = process.env.E2E_USER || 'admin@example.com'
-const ADMIN_PASS = process.env.E2E_PASS ?? ''
-
-if (!ADMIN_PASS) {
-  throw new Error('E2E_PASS must be injected for authenticated browser tests')
-}
-
-async function login(page: Page) {
-  await page.goto('/login')
-  await page.locator('input[type="email"]').fill(ADMIN_EMAIL)
-  await page.locator('input[type="password"]').fill(ADMIN_PASS)
-  await page.getByRole('button', { name: /登入|login|sign in/i }).click()
-  await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 })
-  await expect(page.getByRole('navigation', { name: '主要導覽' })).toBeVisible()
-}
+import { test, expect } from '@playwright/test'
 
 test.describe('Authentication and fail-closed shell', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test('login page and invalid-credential feedback work', async ({ page }) => {
     await page.goto('/login')
     await expect(page.getByRole('button', { name: /登入|login|sign in/i })).toBeVisible()
@@ -33,17 +19,19 @@ test.describe('Authentication and fail-closed shell', () => {
     await expect(page).toHaveURL(/\/login/)
   })
 
-  test('admin login lands on the server-authorized home', async ({ page }) => {
-    await login(page)
+})
+
+test.describe('Authenticated shell', () => {
+  test('authenticated owner lands on the server-authorized home', async ({ page }) => {
+    await page.goto('/overview')
     await expect(page).toHaveURL(/\/overview$/)
-    await expect(page.getByRole('heading', { name: '公司知識營運總覽' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /公司知識工作區|公司知識營運總覽/ })).toBeVisible()
   })
 })
 
 test.describe('Canonical knowledge experience', () => {
-  test.beforeEach(async ({ page }) => login(page))
-
   test('knowledge navigation opens the unified asset library', async ({ page }) => {
+    await page.goto('/overview')
     await page.getByRole('link', { name: '知識', exact: true }).click()
     await expect(page).toHaveURL(/\/knowledge\/assets$/)
     await expect(page.getByRole('heading', { name: '所有資產' })).toBeVisible()
@@ -77,9 +65,8 @@ test.describe('Canonical knowledge experience', () => {
 })
 
 test.describe('Composed navigation and compatibility', () => {
-  test.beforeEach(async ({ page }) => login(page))
-
   test('command palette opens by keyboard and restores focus', async ({ page }) => {
+    await page.goto('/overview')
     const trigger = page.getByRole('button', { name: '搜尋可用功能' })
     await trigger.focus()
     await page.keyboard.press('Control+K')
@@ -100,6 +87,7 @@ test.describe('Composed navigation and compatibility', () => {
   })
 
   test('stable v1 bootstrap is not marked deprecated', async ({ page }) => {
+    await page.goto('/overview')
     const metadata = await page.evaluate(async () => {
       const token = window.localStorage.getItem('token')
       const response = await fetch('/api/v1/experience/bootstrap', {

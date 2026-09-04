@@ -7,6 +7,7 @@ describe('normalizeEvidenceDeepLink', () => {
     expect(normalizeEvidenceDeepLink('/knowledge/documents/doc-1?page=2&section=safety')).toBe('/knowledge/documents/doc-1?page=2&section=safety')
     expect(normalizeEvidenceDeepLink('/knowledge/assets/a1?t=402000&end=438000&frame=42&bbox=1,2,3,4')).toBe('/knowledge/assets/a1?t=402000&end=438000&frame=42&bbox=1,2,3,4')
     expect(normalizeEvidenceDeepLink('/knowhow/card-1?evidence=2')).toBe('/knowhow/card-1?evidence=2')
+    expect(normalizeEvidenceDeepLink('/knowledge/videos/a1?evidence=550e8400-e29b-41d4-a716-446655440000&t=402000&end=438000')).toBe('/knowledge/videos/a1?evidence=550e8400-e29b-41d4-a716-446655440000&t=402000&end=438000')
   })
 
   it.each([

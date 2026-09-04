@@ -48,7 +48,7 @@
 | I9-006 | 同一資產跨表狀態互相矛盾 | P0 | VERIFIED | source、revision、job、document、artifact、publication 投影一致 |
 | I9-007 | 成功終態殘留舊錯誤 | P1 | VERIFIED | 成功／人工確認終態清除 active error，歷史保留在 event |
 | I9-008 | 「待覆核／待審核」用詞不一致 | P1 | DEPLOYED | 全產品統一為「等待人工確認」，並說明責任人 |
-| I9-009 | 140 個技術片段直接暴露給一般使用者 | P1 | VERIFIED | 先依來源分組，再展開例外或片段；支援適當批次處置 |
+| I9-009 | 140 個技術片段直接暴露給一般使用者 | P1 | REOPENED / PARTIAL | 分組已完成，但第二輪仍暴露 122 筆候選且沒有來源層級確認；移交 I10-004／I10-005 |
 | I9-010 | 失敗頁只顯示通用訊息 | P1 | DEPLOYED | 顯示安全、白話、可採取行動的原因與追蹤代碼 |
 | I9-011 | 狀態卡缺乏下一步 | P1 | DEPLOYED | 每個狀態可直接前往提問、人工確認、查看進度或處理問題 |
 | I9-012 | 上傳相同檔案容易產生重複失敗來源 | P1 | OPEN | 內容雜湊去重與重送語意清楚，不重複計費或產生垃圾來源 |
@@ -284,3 +284,13 @@ I9 完成前，不宣稱所有音檔、影片或圖片均已達到生產可靠�
 - 最終正式資料庫基線：可見 SourceAsset 0、可見 Document 0、未完成 upload session 0、啟用使用者 2、Owner 2；隔離測試資料庫已移除。
 
 I9-023、I9-024、I9-025 狀態：`VERIFIED`。程式與正式環境技術驗收已完成，可交由李永仁進行第二輪高量真實複測；在租戶實際內容完成 Input → 人工確認 → 發布 → Ask 引用前，本輪仍不標記為 `CLOSED`。
+
+## 13. 第二輪真實資料解析品質稽核（2026-09-04）
+
+- 李永仁上傳 5 筆：音檔 1、圖片 1、影片 3。正式資料庫唯讀檢查確認 5/5 均有原檔 revision，工作只執行 1 次，無 active error 或 Provider failure；不是再次上傳失敗。
+- 五筆共產生 153 個衍生 artifact 及 145 個 typed evidence span；122 筆進入人工確認。人工決策 0、active KnowledgeUnit 0，因此仍未進入正式 Ask serving。
+- 新的通用稽核 Gate 發現：1 筆可人工處置文字缺 typed evidence、26 筆影片逐字稿把未知 confidence 表示成 0、圖片 OCR 平均僅 52%、32 筆 speaker／scene／timeline 結構資料進入人工佇列。
+- 音檔與相同主題影片的正規化逐字稿相似度為 97.41%，證明主要內容抽取具一致性；但仍有個別錯字，不能取代人工 ground truth 的 CER／WER 驗收。
+- I9-009 因第二輪真實操作重新標記為 `REOPENED / PARTIAL`。來源分組降低了視覺混亂，但沒有降低使用者實際要做的逐筆工作。
+- 後續不以五個檔名建立特例。解析品質、信心契約、多路 fallback、來源層級發布、Ask 與引用驗收移交 [Input I10 可泛化解析品質驗收與提升計畫](INPUT_I10_GENERALIZABLE_PARSE_QUALITY_ACCEPTANCE_PLAN_2026-09-04.md)。
+- 可重跑程式：`scripts/audit_asset_parse_quality.py`；本次唯讀證據：`artifacts/input/INPUT_I10_FIRST_TENANT_PARSE_QUALITY_AUDIT_2026-09-04.json`。

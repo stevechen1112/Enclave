@@ -8,7 +8,6 @@ Covers the opt-in cloud OCR fallback in parse_document:
 """
 from __future__ import annotations
 
-import os
 import uuid
 
 import pytest
@@ -61,10 +60,19 @@ class TestCloudOCRConfig:
 
     def test_default_models(self, monkeypatch):
         monkeypatch.delenv("CLOUD_OCR_MODEL", raising=False)
-        assert cloud_ocr.model_for("gemini") == "gemini-3-flash-preview"
+        monkeypatch.delenv("CLOUD_OCR_MODEL_GEMINI", raising=False)
+        assert cloud_ocr.model_for("gemini") == "gemini-3.6-flash"
         assert cloud_ocr.model_for("mistral") == "mistral-ocr-latest"
         monkeypatch.setenv("CLOUD_OCR_MODEL", "custom-model")
         assert cloud_ocr.model_for("gemini") == "custom-model"
+
+    def test_ordered_fallback_providers_require_their_own_credentials(self, monkeypatch):
+        monkeypatch.setenv("CLOUD_OCR_PROVIDER", "gemini")
+        monkeypatch.setenv("CLOUD_OCR_PROVIDERS", "mistral,gemini,mistral")
+        monkeypatch.setenv("GEMINI_API_KEY", "configured")
+        monkeypatch.setenv("MISTRAL_API_KEY", "configured")
+
+        assert cloud_ocr.configured_providers() == ["gemini", "mistral"]
 
 
 class TestParsePipelineCloudArm:

@@ -17,6 +17,11 @@ from app.services.provider_runtime_health import probe_required_providers  # noq
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", help="Optional JSON evidence path")
+    parser.add_argument(
+        "--allow-unidentified-release",
+        action="store_true",
+        help="Development only: do not fail when build release identity is absent",
+    )
     args = parser.parse_args()
     report = probe_required_providers()
     payload = json.dumps(report, ensure_ascii=False, indent=2)
@@ -25,7 +30,11 @@ def main() -> int:
         output = Path(args.output)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(payload + "\n", encoding="utf-8")
-    return 0 if report["status"] == "pass" else 1
+    providers_pass = report["status"] == "pass"
+    release_bound = bool(report.get("release_bound"))
+    return 0 if providers_pass and (
+        release_bound or args.allow_unidentified_release
+    ) else 1
 
 
 if __name__ == "__main__":

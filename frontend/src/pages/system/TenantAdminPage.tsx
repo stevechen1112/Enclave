@@ -175,7 +175,6 @@ function RolesSection() {
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload()
   }, [reload])
 
@@ -458,7 +457,6 @@ function ModulesSection() {
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload()
   }, [reload])
 
@@ -604,7 +602,6 @@ function ApprovalsSection() {
   }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     reload()
   }, [reload])
 

@@ -41,4 +41,47 @@ describe('AssetDetailPage recovery guidance', () => {
     renderPage()
     expect(await screen.findByRole('link', { name: /前往問知識/ })).toHaveAttribute('href', '/ask')
   })
+
+  it('distinguishes unknown confidence from a measured zero', async () => {
+    get.mockResolvedValue({
+      ...asset,
+      status: 'review_required',
+      lifecycle_status: 'awaiting_review',
+      job: {
+        ...asset.job,
+        status: 'review_required',
+        requested_capabilities: ['transcribe'],
+        readiness: {
+          capability_results: {
+            transcribe: {
+              status: 'available', reason_code: null, artifact_count: 3, details: {},
+              provider: { name: 'openai', version: '2.0', model: 'gpt-4o-transcribe-diarize', confidence_provider_supplied: false, calibration_version: 'unavailable' },
+            },
+          },
+        },
+        error: {},
+      },
+    })
+    renderPage()
+    expect(await screen.findByText(/信心度：供應商未提供（不是 0%）/)).toBeInTheDocument()
+    expect(screen.queryByText('0%')).not.toBeInTheDocument()
+  })
+
+  it('fails closed when historical capability readiness is malformed', async () => {
+    get.mockResolvedValue({
+      ...asset,
+      job: {
+        ...asset.job,
+        requested_capabilities: ['transcribe', 'timestamp'],
+        readiness: {
+          capability_results: {
+            transcribe: { status: 'mystery', artifact_count: -1 },
+          },
+        },
+      },
+    })
+    renderPage()
+    expect(await screen.findByText('狀態資料無法辨識')).toBeInTheDocument()
+    expect(screen.getByText('尚未回報')).toBeInTheDocument()
+  })
 })

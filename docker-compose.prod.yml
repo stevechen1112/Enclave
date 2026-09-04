@@ -72,6 +72,8 @@ services:
       - OLLAMA_EMBED_URL=${OLLAMA_EMBED_URL:-http://ollama-embed:11434}
       - KNOWLEDGE_DECISION_SHADOW_STORE_PATH=/var/lib/enclave/knowledge-shadow
       - KNOWLEDGE_DECISION_AUTHORIZATION_STORE_PATH=/var/lib/enclave/knowledge-authorizations
+      # Fail closed: production Ask reads only active canonical releases.
+      - KNOWLEDGE_UNIT_READ_MODE=enforce
       - ENCLAVE_BACKEND_IMAGE_DIGEST=${ENCLAVE_BACKEND_IMAGE_DIGEST:-unknown}
       - ENCLAVE_FRONTEND_IMAGE_DIGEST=${ENCLAVE_FRONTEND_IMAGE_DIGEST:-unknown}
     volumes:

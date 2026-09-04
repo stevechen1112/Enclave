@@ -161,7 +161,11 @@ def test_document_projection_creates_superseding_revision(asset_db):
         (
             "image",
             "image",
-            {"text": "marker", "bbox": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}, "locator_fallback": True},
+            {
+                "text": "marker",
+                "bbox": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0},
+                "locator_fallback": True,
+            },
             "image",
             ("bbox", [0.0, 0.0, 1.0, 1.0]),
         ),
@@ -206,6 +210,13 @@ def test_document_parse_projection_creates_typed_evidence(
     assert projected.quality_state == (
         "review_required" if file_type == "image" else "ready"
     )
+    assert artifact.metadata_json["confidence_semantics"] == (
+        "internal_parse_quality_heuristic"
+    )
+    assert artifact.metadata_json["confidence_provider_supplied"] is False
+    assert projected.metadata_json["confidence_calibration_version"] == (
+        "parse-quality-heuristic.v1"
+    )
     assert evidence.locator_kind == locator_kind
     assert getattr(evidence, coordinate[0]) == coordinate[1]
     if file_type == "image":
@@ -221,6 +232,43 @@ def test_document_quality_policy_requires_review_for_low_ocr_confidence():
         )
         == "review_required"
     )
+
+
+def test_document_projection_preserves_provider_supplied_confidence_semantics(
+    asset_db,
+):
+    tenant, user = _tenant_and_user(asset_db)
+    document = Document(
+        tenant_id=tenant.id,
+        uploaded_by=user.id,
+        filename="provided.pdf",
+        file_type="pdf",
+        file_path="s3://bucket/provided.pdf",
+        content_hash="d" * 64,
+        version=1,
+        status="processing",
+    )
+    asset_db.add(document)
+    asset_db.flush()
+
+    artifact = project_document_text_artifact(
+        asset_db,
+        document=document,
+        content="供應商文字",
+        provider="ragflow",
+        provider_version="2",
+        metadata={
+            "parse_artifact": {
+                "confidence": 0.0,
+                "confidence_provider_supplied": True,
+                "confidence_calibration_version": "provider-native-uncalibrated",
+            }
+        },
+    )
+
+    assert artifact.confidence == 0.0
+    assert artifact.metadata_json["confidence_semantics"] == "provider_supplied"
+    assert artifact.metadata_json["confidence_provider_supplied"] is True
 
 
 def test_composite_foreign_key_rejects_cross_tenant_revision(asset_db):

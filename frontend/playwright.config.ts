@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const authenticatedState = 'test-results/.auth/user.json'
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -21,8 +23,14 @@ export default defineConfig({
   },
   projects: [
     {
+      name: 'auth-setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /auth\.setup\.ts/,
+      dependencies: ['auth-setup'],
+      use: { ...devices['Desktop Chrome'], storageState: authenticatedState },
     },
     {
       name: 'mobile-chromium',

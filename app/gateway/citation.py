@@ -33,6 +33,13 @@ class CitationBuilder:
                     doc_id = UUID(int=0)
 
             meta = dict(r.metadata or {})
+            locator = meta.get("locator")
+            if isinstance(locator, dict):
+                # KnowledgeUnit revisions keep the exact source locator nested
+                # so it can be hashed as one immutable metadata payload.  The
+                # public citation contract is flat for every modality.
+                for key, value in locator.items():
+                    meta.setdefault(key, value)
             if db is not None and doc_id and doc_id.int != 0:
                 meta = self._enrich_from_db(db, doc_id, meta)
 
@@ -74,6 +81,27 @@ class CitationBuilder:
                     page=meta.get("page"),
                     bbox=meta.get("bbox"),
                     section=meta.get("section"),
+                    section_path=meta.get("section_path"),
+                    paragraph_index=meta.get("paragraph_index"),
+                    slide_number=meta.get("slide_number"),
+                    worksheet=meta.get("worksheet"),
+                    table_name=meta.get("table_name"),
+                    row_number=meta.get("row_number"),
+                    column_name=meta.get("column_name"),
+                    cell_range=meta.get("cell_range"),
+                    start_ms=(
+                        meta.get("start_ms")
+                        if meta.get("start_ms") is not None
+                        else meta.get("transcript_start_ms")
+                    ),
+                    end_ms=(
+                        meta.get("end_ms")
+                        if meta.get("end_ms") is not None
+                        else meta.get("transcript_end_ms")
+                    ),
+                    speaker=meta.get("speaker"),
+                    frame_index=meta.get("frame_index"),
+                    evidence_url=meta.get("deep_link") or meta.get("evidence_url"),
                     provider=r.provider or meta.get("provider") or "enclave",
                     provider_version=r.provider_version
                     or meta.get("provider_version")

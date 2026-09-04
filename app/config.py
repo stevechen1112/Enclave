@@ -120,7 +120,12 @@ class Settings(BaseSettings):
     RLS_ENFORCEMENT_ENABLED: bool = False
     # Canonical KnowledgeUnit serving cutover: shadow compares authority with
     # legacy retrieval; enforce serves only active release memberships.
-    KNOWLEDGE_UNIT_READ_MODE: str = "shadow"  # shadow | enforce
+    # Canonical active KnowledgeUnit releases are the only production serving
+    # authority.  ``shadow`` remains an explicit rollback/debug mode; making it
+    # the default can leak a legacy document projection that is still awaiting
+    # human review.
+    KNOWLEDGE_UNIT_READ_MODE: str = "enforce"  # shadow | enforce
+    KNOWLEDGE_AUTHORITY_RELEVANCE_FLOOR: float = 0.08
 
     # Document Processing
     CHUNK_SIZE: int = 1000  # tokens
@@ -131,6 +136,7 @@ class Settings(BaseSettings):
 
     # OCR
     OCR_LANGS: str = "chi_tra+eng"
+    INPUT_CONTENT_LOCALE: str = "zh-TW"
 
     # Retrieval
     RETRIEVAL_MODE: str = "hybrid"  # semantic / keyword / hybrid

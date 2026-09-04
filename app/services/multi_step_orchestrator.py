@@ -576,6 +576,7 @@ class MultiStepOrchestrator:
                         "filename": filename,
                         "chunk_index": (r.get("metadata") or {}).get("chunk_index"),
                         "source": r.get("provider"),
+                        "metadata": dict(r.get("metadata") or {}),
                         "citations": (
                             [
                                 {
@@ -585,6 +586,22 @@ class MultiStepOrchestrator:
                                     "canonical_resource_id": c.canonical_resource_id,
                                     "document_revision": c.document_revision,
                                     "provider": c.provider,
+                                    "page": c.page,
+                                    "bbox": c.bbox,
+                                    "section": c.section,
+                                    "section_path": c.section_path,
+                                    "paragraph_index": c.paragraph_index,
+                                    "slide_number": c.slide_number,
+                                    "worksheet": c.worksheet,
+                                    "table_name": c.table_name,
+                                    "row_number": c.row_number,
+                                    "column_name": c.column_name,
+                                    "cell_range": c.cell_range,
+                                    "start_ms": c.start_ms,
+                                    "end_ms": c.end_ms,
+                                    "speaker": c.speaker,
+                                    "frame_index": c.frame_index,
+                                    "evidence_url": c.evidence_url,
                                 }
                             ]
                             if c is not None

@@ -381,6 +381,17 @@ export const knowledgeReviewApi = {
   }).then(r => r.data),
   batchApprove: (itemIds: string[], notes?: string) =>
     api.post('/knowledge/review-items/batch/approve', { item_ids: itemIds, notes }).then(r => r.data),
+  decideSource: (sourceAssetId: string, input: {
+    decision?: 'approved' | 'rejected'
+    notes?: string
+    acknowledgeLowConfidence?: boolean
+    idempotencyKey?: string
+  }) => api.post(`/knowledge/review-items/source/${encodeURIComponent(sourceAssetId)}/decision`, {
+    decision: input.decision || 'approved',
+    notes: input.notes,
+    acknowledge_low_confidence: input.acknowledgeLowConfidence || false,
+    idempotency_key: input.idempotencyKey || crypto.randomUUID(),
+  }).then(r => r.data),
 }
 
 // ─── Chat ───

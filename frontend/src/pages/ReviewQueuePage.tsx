@@ -76,6 +76,7 @@ export default function ReviewQueuePage() {
   const [acting, setActing] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
   const [batchOpen, setBatchOpen] = useState(false)
+  const [sourceConfirmGroup, setSourceConfirmGroup] = useState<KnowledgeReviewSourceGroup | null>(null)
   const [mobileStep, setMobileStep] = useState<MobileStep>('list')
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
 
@@ -113,11 +114,15 @@ export default function ReviewQueuePage() {
       const key = item.source_group_key || `item:${item.id}`
       const existing = fallback.get(key)
       if (existing) {
+        const confirmable = item.provider === 'core.asset_artifact' && ['extracted_text', 'ocr_region', 'table', 'transcript_segment'].includes(item.source_type) && item.blocked_reasons.length === 0
         existing.item_count += 1
         existing.high_risk_count += item.risk_level === 'high' ? 1 : 0
         existing.low_confidence_count += item.confidence != null && item.confidence < 0.8 ? 1 : 0
         existing.blocked_reasons = [...new Set([...existing.blocked_reasons, ...item.blocked_reasons])]
         existing.item_ids.push(item.id)
+        existing.source_confirmable_count += confirmable ? 1 : 0
+        existing.exception_count += confirmable ? 0 : 1
+        existing.source_approval_ready = existing.source_confirmable_count > 0
       } else fallback.set(key, {
         key,
         source_asset_id: item.source_asset_id || null,
@@ -128,10 +133,13 @@ export default function ReviewQueuePage() {
         low_confidence_count: item.confidence != null && item.confidence < 0.8 ? 1 : 0,
         blocked_reasons: item.blocked_reasons,
         item_ids: [item.id],
+        source_confirmable_count: item.provider === 'core.asset_artifact' && ['extracted_text', 'ocr_region', 'table', 'transcript_segment'].includes(item.source_type) && item.blocked_reasons.length === 0 ? 1 : 0,
+        exception_count: item.provider === 'core.asset_artifact' && ['extracted_text', 'ocr_region', 'table', 'transcript_segment'].includes(item.source_type) && item.blocked_reasons.length === 0 ? 0 : 1,
+        source_approval_ready: item.provider === 'core.asset_artifact' && ['extracted_text', 'ocr_region', 'table', 'transcript_segment'].includes(item.source_type) && item.blocked_reasons.length === 0,
       })
     }
     return [...fallback.values()]
-  }, [inbox?.groups, items])
+  }, [inbox, items])
   const itemsByGroup = useMemo(() => {
     const grouped = new Map<string, KnowledgeReviewItem[]>()
     for (const item of items) {
@@ -197,6 +205,20 @@ export default function ReviewQueuePage() {
     } catch (reason) { toast.error(formatErrorWithTrace(parseApiError(reason, '批量核准失敗'))) }
     finally { setActing(false) }
   }
+  const confirmSource = async () => {
+    if (!sourceConfirmGroup?.source_asset_id) return
+    setActing(true)
+    try {
+      await knowledgeReviewApi.decideSource(sourceConfirmGroup.source_asset_id, {
+        notes: `確認來源「${sourceConfirmGroup.title}」的原始擷取內容`,
+        acknowledgeLowConfidence: sourceConfirmGroup.low_confidence_count > 0,
+      })
+      toast.success(`已確認 ${sourceConfirmGroup.source_confirmable_count} 筆原始擷取內容；推論與高風險項目仍分開處理`)
+      setSourceConfirmGroup(null)
+      await load()
+    } catch (reason) { toast.error(formatErrorWithTrace(parseApiError(reason, '來源確認失敗'))) }
+    finally { setActing(false) }
+  }
 
   return <AsyncState loading={loading} error={error} onRetry={load} empty={false} className="h-full">
     <div className="flex h-full flex-col md:flex-row">
@@ -213,7 +235,7 @@ export default function ReviewQueuePage() {
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted"><label className="flex items-center gap-1"><input type="checkbox" checked={overdueOnly} onChange={event => setOverdueOnly(event.target.checked)} />已逾期</label><label className="flex items-center gap-1"><input type="checkbox" checked={lowConfidenceOnly} onChange={event => setLowConfidenceOnly(event.target.checked)} />低信心</label></div>
           {selectedIds.size > 0 && <button type="button" className="btn-primary mt-3 w-full" onClick={() => setBatchOpen(true)}>批量核准（{selectedIds.size}）</button>}
         </div>
-        {items.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><CheckCircle className="h-10 w-10 text-success" /><p className="mt-3 font-medium">目前沒有待確認內容</p><Link className="btn-primary mt-4" to="/knowledge/new">新增知識來源</Link></div> : <ul className="flex-1 overflow-y-auto">{groups.map(group => { const expanded = expandedGroups.has(group.key); const groupItems = itemsByGroup.get(group.key) || []; return <li key={group.key} className="border-b border-line"><button type="button" className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left hover:bg-wash" onClick={() => toggleGroup(group.key)} aria-expanded={expanded}><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-ink">{group.title}</span><span className="mt-0.5 block text-xs text-muted">{group.item_count} 筆候選{group.high_risk_count ? ` · ${group.high_risk_count} 筆高風險` : ''}{group.low_confidence_count ? ` · ${group.low_confidence_count} 筆低信心` : ''}</span>{group.blocked_reasons.includes('separation_of_duty') && <span className="mt-1 block text-xs text-highlight">需由另一位擁有者確認</span>}</span><ArrowRight className={clsx('h-4 w-4 shrink-0 text-muted transition-transform', expanded && 'rotate-90')} /></button>{expanded && <ul className="border-t border-line bg-wash/40">{groupItems.map(item => <li key={item.id} className={clsx('flex border-b border-line/70 last:border-0', item.id === selectedId && 'bg-accent-soft/60')}><span className="flex items-start px-3 py-3"><input type="checkbox" checked={selectedIds.has(item.id)} disabled={!item.batch_eligible} onChange={() => toggleBatch(item)} aria-label={`選取 ${item.subtitle}`} title={item.batch_eligible ? '加入批量核准' : '僅低風險、同策略項目可批量'} className="mt-1 h-5 w-5" /></span><button type="button" onClick={() => choose(item)} className="min-h-11 min-w-0 flex-1 py-3 pr-3 text-left hover:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><span className="block truncate text-sm font-medium text-ink">{sourceLabels[item.source_type] || item.source_type}</span><span className="block truncate text-xs text-muted">{item.subtitle}{item.confidence != null ? ` · ${Math.round(item.confidence * 100)}%` : ''}</span><span className="mt-1 flex flex-wrap gap-1"><span className={clsx('rounded-full px-2 py-0.5 text-xs', item.risk_level === 'high' ? 'bg-danger-soft text-danger' : item.risk_level === 'medium' ? 'bg-highlight-soft text-highlight' : 'bg-success-soft text-success')}>{item.risk_level === 'high' ? '高風險' : item.risk_level === 'medium' ? '中風險' : '低風險'}</span>{item.blocked_reasons.map(reason => <span key={reason} className="rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">{blockedLabels[reason] || reason}</span>)}</span></button></li>)}</ul>}</li> })}</ul>}
+        {items.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><CheckCircle className="h-10 w-10 text-success" /><p className="mt-3 font-medium">目前沒有待確認內容</p><Link className="btn-primary mt-4" to="/knowledge/new">新增知識來源</Link></div> : <ul className="flex-1 overflow-y-auto">{groups.map(group => { const expanded = expandedGroups.has(group.key); const groupItems = itemsByGroup.get(group.key) || []; return <li key={group.key} className="border-b border-line"><button type="button" className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left hover:bg-wash" onClick={() => toggleGroup(group.key)} aria-expanded={expanded}><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-ink">{group.title}</span><span className="mt-0.5 block text-xs text-muted">{group.item_count} 筆候選{group.high_risk_count ? ` · ${group.high_risk_count} 筆高風險` : ''}{group.low_confidence_count ? ` · ${group.low_confidence_count} 筆低信心` : ''}</span>{group.blocked_reasons.includes('separation_of_duty') && <span className="mt-1 block text-xs text-highlight">高風險推論需由另一位擁有者確認</span>}</span><ArrowRight className={clsx('h-4 w-4 shrink-0 text-muted transition-transform', expanded && 'rotate-90')} /></button>{group.source_approval_ready && group.source_asset_id && <div className="px-4 pb-3"><button type="button" className="btn-outline min-h-11 w-full" onClick={() => setSourceConfirmGroup(group)}><CheckCircle className="h-4 w-4" />確認此來源的原始內容（{group.source_confirmable_count}）</button>{group.exception_count > 0 && <p className="mt-1 text-xs text-muted">另有 {group.exception_count} 筆推論或高風險內容，會保留供逐項確認。</p>}</div>}{expanded && <ul className="border-t border-line bg-wash/40">{groupItems.map(item => <li key={item.id} className={clsx('flex border-b border-line/70 last:border-0', item.id === selectedId && 'bg-accent-soft/60')}><span className="flex items-start px-3 py-3"><input type="checkbox" checked={selectedIds.has(item.id)} disabled={!item.batch_eligible} onChange={() => toggleBatch(item)} aria-label={`選取 ${item.subtitle}`} title={item.batch_eligible ? '加入批量核准' : '僅低風險、同策略項目可批量'} className="mt-1 h-5 w-5" /></span><button type="button" onClick={() => choose(item)} className="min-h-11 min-w-0 flex-1 py-3 pr-3 text-left hover:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><span className="block truncate text-sm font-medium text-ink">{sourceLabels[item.source_type] || item.source_type}</span><span className="block truncate text-xs text-muted">{item.subtitle}{item.confidence != null ? ` · ${Math.round(item.confidence * 100)}%` : ''}</span><span className="mt-1 flex flex-wrap gap-1"><span className={clsx('rounded-full px-2 py-0.5 text-xs', item.risk_level === 'high' ? 'bg-danger-soft text-danger' : item.risk_level === 'medium' ? 'bg-highlight-soft text-highlight' : 'bg-success-soft text-success')}>{item.risk_level === 'high' ? '高風險' : item.risk_level === 'medium' ? '中風險' : '低風險'}</span>{item.blocked_reasons.map(reason => <span key={reason} className="rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">{blockedLabels[reason] || reason}</span>)}</span></button></li>)}</ul>}</li> })}</ul>}
       </aside>
 
       <section className={clsx('min-h-0 flex-1 flex-col overflow-y-auto border-b border-line p-5 md:flex md:border-b-0 md:border-r lg:p-7', mobileStep === 'evidence' ? 'flex' : 'hidden')} aria-label="證據與建議">
@@ -242,6 +264,7 @@ export default function ReviewQueuePage() {
       </aside>
       <ConfirmDialog open={rejectOpen} danger busy={acting} title="駁回此知識候選？" description="不會發布至知識檢索，決策與備註會保留在稽核紀錄。" confirmLabel="確認駁回" onCancel={() => !acting && setRejectOpen(false)} onConfirm={() => void decide('rejected')} />
       <ConfirmDialog open={batchOpen} busy={acting} title={`批量核准 ${selectedIds.size} 筆？`} description="系統只允許同一 provider、來源類型、政策版本且低風險無衝突的項目批量核准。" confirmLabel="批量核准" onCancel={() => !acting && setBatchOpen(false)} onConfirm={() => void batchApprove()} />
+      <ConfirmDialog open={Boolean(sourceConfirmGroup)} busy={acting} title="確認這個來源的原始擷取內容？" description={`會核准 ${sourceConfirmGroup?.source_confirmable_count || 0} 筆 OCR、逐字稿或文件文字；不會連帶核准程序、判斷規則或高風險推論。${sourceConfirmGroup?.low_confidence_count ? '此來源含低信心內容，請先對照原檔。' : ''}`} confirmLabel="確認原始內容" onCancel={() => !acting && setSourceConfirmGroup(null)} onConfirm={() => void confirmSource()} />
     </div>
   </AsyncState>
 }

@@ -427,7 +427,11 @@ def test_multimodal_registry_isolates_provider_failure_and_fails_closed():
 
     assert understanding.capability_states["audio_anomaly"] == "failed"
     assert understanding.provider_failures == [
-        {"provider": "tenant.audio_anomaly", "error": "provider offline"}
+        {
+            "provider": "tenant.audio_anomaly",
+            "capabilities": ["audio_anomaly"],
+            "error": "provider offline",
+        }
     ]
     assert any(row.kind == "action_event" for row in understanding.observations)
 
@@ -441,9 +445,19 @@ def test_multimodal_projection_preserves_provider_and_exact_evidence(video_db):
         result,
         registry=MultimodalProviderRegistry([EvidenceRuleTimelineProvider()]),
     )
+    understanding.provider_failures = [
+        {
+            "provider": "tenant.scene",
+            "capabilities": ["scene_segmentation"],
+            "error": "secret provider detail",
+        }
+    ]
     summary = project_multimodal_timeline(video_db, revision, understanding)
 
     assert summary["capability_states"]["audio_anomaly"] == "unavailable"
+    assert summary["provider_failures"] == [
+        {"provider": "tenant.scene", "capabilities": ["scene_segmentation"]}
+    ]
     action = (
         video_db.query(DerivedArtifact)
         .filter(DerivedArtifact.artifact_kind == "action_event")
@@ -722,6 +736,81 @@ def test_projection_creates_temporal_lineage_and_review_candidate(video_db):
         .filter(DerivedArtifact.artifact_kind == "procedure_candidate")
         .count()
         == 1
+    )
+
+
+def test_projection_reuses_historical_transcript_when_only_provenance_metadata_changed(
+    video_db,
+):
+    _, _, _, revision = _video_source(video_db)
+    legacy = DerivedArtifact(
+        tenant_id=revision.tenant_id,
+        asset_revision_id=revision.id,
+        artifact_kind="transcript_segment",
+        content_hash="b" * 64,
+        provider="core.video",
+        provider_version="1.0",
+        quality_state="review_required",
+        confidence=None,
+        content="先確認壓力歸零",
+        metadata_json={
+            "start_ms": 1_000,
+            "end_ms": 4_000,
+            "speaker": "師傅",
+        },
+    )
+    video_db.add(legacy)
+    video_db.flush()
+
+    project_video_result(video_db, revision, _result())
+
+    transcripts = (
+        video_db.query(DerivedArtifact)
+        .filter(DerivedArtifact.artifact_kind == "transcript_segment")
+        .all()
+    )
+    assert len(transcripts) == 2
+    assert legacy in transcripts
+
+
+def test_projection_keeps_unknown_confidence_distinct_from_measured_zero(video_db):
+    _, _, _, unknown_revision = _video_source(video_db)
+    unknown = _result()
+    unknown.transcript_segments[0] = VideoTranscriptSegment(
+        start_ms=1_000,
+        end_ms=4_000,
+        text="未知信心度",
+        confidence=0.0,
+    )
+    project_video_result(video_db, unknown_revision, unknown)
+    unknown_artifact = (
+        video_db.query(DerivedArtifact)
+        .filter(DerivedArtifact.content == "未知信心度")
+        .one()
+    )
+
+    _, _, _, measured_revision = _video_source(video_db)
+    measured = _result()
+    measured.stt_confidence_provider_supplied = True
+    measured.stt_confidence_calibration_version = "test-calibration-v1"
+    measured.transcript_segments[0] = VideoTranscriptSegment(
+        start_ms=1_000,
+        end_ms=4_000,
+        text="實測零分",
+        confidence=0.0,
+    )
+    project_video_result(video_db, measured_revision, measured)
+    measured_artifact = (
+        video_db.query(DerivedArtifact)
+        .filter(DerivedArtifact.content == "實測零分")
+        .one()
+    )
+
+    assert unknown_artifact.confidence is None
+    assert unknown_artifact.metadata_json["confidence_semantics"] == "unknown"
+    assert measured_artifact.confidence == 0.0
+    assert (
+        measured_artifact.metadata_json["confidence_semantics"] == "provider_supplied"
     )
 
 

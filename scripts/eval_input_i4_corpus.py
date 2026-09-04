@@ -14,12 +14,13 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from app.services.document_parser import DocumentParser
-from app.services.input_quality import (
+from app.services.document_parser import DocumentParser  # noqa: E402
+from app.services.input_quality import (  # noqa: E402
+    assess_evidence_claim,
     evaluate_observations,
     provider_drift,
 )
-from app.services.parse_pipeline import _native_evidence_chunks
+from app.services.parse_pipeline import _native_evidence_chunks  # noqa: E402
 
 MANIFEST = ROOT / "artifacts" / "input" / "i4_quality_corpus_manifest.json"
 DEFAULT_OUTPUT = ROOT / "artifacts" / "input" / "i4_quality_report.json"
@@ -147,13 +148,21 @@ def evaluate(manifest: dict) -> dict:
         for extension in formats
     }
     passed = not manifest_errors and all(row["status"] == "PASS" for row in formats.values())
+    execution_status = "PASS" if passed else "FAIL"
     return {
         "schema_version": 1,
         "phase": "Input I4",
         "run_id": str(uuid4()),
         "corpus_sha256": manifest.get("corpus_sha256"),
         "corpus_status": manifest.get("status"),
-        "status": "PASS" if passed else "FAIL",
+        "status": execution_status,
+        "certification": assess_evidence_claim(
+            evidence_class=str(manifest.get("status") or "contract_only"),
+            execution_status=execution_status,
+            requested_claim="semantic",
+            ground_truth_verified=False,
+            declared_gaps=manifest.get("declared_gaps") or [],
+        ),
         "manifest_errors": manifest_errors,
         "formats": formats,
         "failure_samples": failure_samples,

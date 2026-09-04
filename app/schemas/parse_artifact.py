@@ -53,7 +53,10 @@ class ParseArtifact(BaseModel):
     tables: List[ParseTable] = Field(default_factory=list)
     chunks: List[ParseChunk] = Field(default_factory=list)
     warnings: List[Dict[str, Any]] = Field(default_factory=list)
-    confidence: float = 0.0
+    # Unknown must remain None; numeric zero is a legitimate measured value.
+    confidence: Optional[float] = None
+    confidence_provider_supplied: bool = False
+    confidence_calibration_version: Optional[str] = None
     elapsed_ms: int = 0
     ocr_used: bool = False
     vlm_used: bool = False

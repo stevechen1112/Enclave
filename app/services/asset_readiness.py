@@ -22,6 +22,13 @@ from app.models.knowledge_unit import (
 )
 from app.services.document_readiness import load_document_answer_states
 
+_NON_ACTIONABLE_REVIEW_KINDS = {
+    "speaker_turn",
+    "video_scene",
+    "timeline_alignment",
+    "sop_conflict_report",
+}
+
 
 @dataclass(frozen=True)
 class AssetReadinessState:
@@ -222,7 +229,7 @@ def load_asset_readiness_states(
             AssetRevision.asset_id.in_(asset_ids),
             DerivedArtifact.asset_revision_id.in_(current_revision_ids),
             DerivedArtifact.quality_state == "review_required",
-            DerivedArtifact.artifact_kind != "sop_conflict_report",
+            ~DerivedArtifact.artifact_kind.in_(_NON_ACTIONABLE_REVIEW_KINDS),
         )
         .group_by(AssetRevision.asset_id)
     }

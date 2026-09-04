@@ -365,6 +365,7 @@ def expand_active_relations(
     seed_revision_ids: Iterable[UUID],
     relation_kinds: Iterable[str] = RELATION_KINDS,
     kb_revision_ids: Iterable[UUID] | None = None,
+    include_tenant_scope: bool = False,
     query_text: str | None = None,
 ) -> list[ActiveKnowledgeUnit]:
     """Expand only to endpoints that independently pass live authority checks."""
@@ -376,6 +377,7 @@ def expand_active_relations(
         db,
         authz=authz,
         kb_revision_ids=kb_revision_ids,
+        include_tenant_scope=include_tenant_scope,
         query_text=query_text,
     )
     visible_by_revision = {row.unit_revision_id: row for row in visible}

@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from sqlalchemy.dialects import postgresql
 
-from app.models.document import Document
 from app.services import kb_retrieval
 from app.services.document_visibility import apply_document_visibility
 from app.services.kb_scope_policy import resolve_kb_revision_scope
@@ -113,4 +112,7 @@ def test_enforce_tenant_without_first_release_remains_fail_closed(monkeypatch) -
     with patch("app.services.rls.apply_rls_context"):
         scope = resolve_kb_revision_scope(authz=authz, requested=None, db=db)
 
-    assert scope == {"kb_revision_ids": []}
+    assert scope == {
+        "kb_revision_ids": [],
+        "include_tenant_knowledge_units": True,
+    }

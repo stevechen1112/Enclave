@@ -1,10 +1,8 @@
 """Citation lineage, module gating, wiki/graph revoke convergence tests."""
 from __future__ import annotations
 
-import os
 import uuid
 import hashlib
-from datetime import datetime, timezone
 
 import pytest
 
@@ -96,6 +94,34 @@ class TestCitationLineage:
         cites = CitationBuilder().build(results, acl_revision=1)
         assert cites[0].content_hash
         assert CitationBuilder().completeness(cites)["rate"] == 1.0
+
+    def test_media_locator_and_deep_link_survive_citation_build(self):
+        unit_revision_id = str(uuid.uuid4())
+        results = [
+            ChunkResult(
+                id=unit_revision_id,
+                content="壓力歸零後才可開門",
+                score=0.9,
+                result_type="knowledge_unit",
+                document_id=None,
+                metadata={
+                    "filename": "機台操作.mp4",
+                    "canonical_resource_type": "knowledge_unit_revision",
+                    "canonical_resource_id": unit_revision_id,
+                    "locator": {
+                        "start_ms": 0,
+                        "end_ms": 36000,
+                        "frame_index": 12,
+                        "deep_link": "/knowledge/videos/asset-1?evidence=span-1&t=0",
+                    },
+                },
+            )
+        ]
+        citation = CitationBuilder().build(results, acl_revision=1)[0]
+        assert citation.start_ms == 0
+        assert citation.end_ms == 36000
+        assert citation.frame_index == 12
+        assert citation.evidence_url.endswith("&t=0")
 
     def test_opaque_document_revision_is_deterministic(self):
         """Opaque connector revisions must survive process restarts unchanged."""

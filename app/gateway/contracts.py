@@ -7,7 +7,6 @@ Phase 1 — Gateway Contracts (版本化 Schema)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -95,8 +94,21 @@ class Citation:
     source_system: Optional[str] = None     # google_drive | sharepoint | ...
     source_record_id: Optional[str] = None
     page: Optional[int] = None
-    bbox: Optional[Dict[str, float]] = None  # {x, y, w, h}
+    bbox: Optional[Any] = None  # normalized list or {x, y, w, h}
     section: Optional[str] = None
+    section_path: Optional[List[str]] = None
+    paragraph_index: Optional[int] = None
+    slide_number: Optional[int] = None
+    worksheet: Optional[str] = None
+    table_name: Optional[str] = None
+    row_number: Optional[int] = None
+    column_name: Optional[str] = None
+    cell_range: Optional[str] = None
+    start_ms: Optional[int] = None
+    end_ms: Optional[int] = None
+    speaker: Optional[str] = None
+    frame_index: Optional[int] = None
+    evidence_url: Optional[str] = None
     provider: str = "enclave"
     provider_version: str = ""
     acl_revision: int = 1

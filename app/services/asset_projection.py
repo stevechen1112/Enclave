@@ -316,6 +316,32 @@ def project_document_text_artifact(
     confidence = (
         float(confidence_value) if isinstance(confidence_value, (int, float)) else None
     )
+    confidence_provider_supplied = confidence is not None and bool(
+        parse_artifact.get("confidence_provider_supplied", False)
+    )
+    confidence_calibration_version = str(
+        parse_artifact.get("confidence_calibration_version")
+        or (
+            "provider-native-uncalibrated"
+            if confidence_provider_supplied
+            else "parse-quality-heuristic.v1"
+            if confidence is not None
+            else "unavailable"
+        )
+    )
+    confidence_metadata = {
+        "source_provider": provider,
+        "source_provider_version": provider_version,
+        "confidence_semantics": (
+            "provider_supplied"
+            if confidence_provider_supplied
+            else "internal_parse_quality_heuristic"
+            if confidence is not None
+            else "unknown"
+        ),
+        "confidence_provider_supplied": confidence_provider_supplied,
+        "confidence_calibration_version": confidence_calibration_version,
+    }
     asset_kind = projection.asset.asset_kind
     parse_chunks = parse_artifact.get("chunks") or [
         {"text": content, "section": "document", "chunk_index": 0}
@@ -332,11 +358,12 @@ def project_document_text_artifact(
                 "." + str(getattr(document, "file_type", "") or "").lower().lstrip(".")
             ),
             "content_hash": str(
-                getattr(document, "content_hash", "") or parse_artifact.get("source_hash") or ""
+                getattr(document, "content_hash", "")
+                or parse_artifact.get("source_hash")
+                or ""
             ),
             "locator_fallback": bool(
-                (metadata or {}).get("locator_fallback")
-                or inferred_locator_fallback
+                (metadata or {}).get("locator_fallback") or inferred_locator_fallback
             ),
             "quality_score": parse_artifact.get("confidence"),
             **{
@@ -372,6 +399,7 @@ def project_document_text_artifact(
             content=content,
             metadata_json={
                 **dict(metadata or {}),
+                **confidence_metadata,
                 "legacy_document_id": str(document.id),
                 "legacy_document_revision": int(document.version or 1),
             },
@@ -381,6 +409,10 @@ def project_document_text_artifact(
     else:
         artifact.quality_state = quality_state
         artifact.confidence = confidence
+        artifact.metadata_json = {
+            **dict(artifact.metadata_json or {}),
+            **confidence_metadata,
+        }
 
     for index, raw_chunk in enumerate(parse_chunks):
         chunk = dict(raw_chunk or {})
@@ -421,6 +453,7 @@ def project_document_text_artifact(
                 confidence=confidence,
                 content=chunk_content,
                 metadata_json={
+                    **confidence_metadata,
                     "parse_chunk_index": int(chunk.get("chunk_index", index)),
                     "legacy_document_id": str(document.id),
                     "legacy_document_revision": int(document.version or 1),
@@ -431,7 +464,10 @@ def project_document_text_artifact(
         else:
             child.quality_state = quality_state
             child.confidence = confidence
-
+            child.metadata_json = {
+                **dict(child.metadata_json or {}),
+                **confidence_metadata,
+            }
         hierarchy = [
             str(item).strip()
             for item in chunk.get("hierarchy") or []
@@ -476,15 +512,6 @@ def project_document_text_artifact(
             locator_values["bbox"] = [0.0, 0.0, 1.0, 1.0]
             locator_values["coordinate_space"] = "normalized"
             locator_values["locator_fallback"] = True
-        existing_spans = (
-            db.query(EvidenceSpan)
-            .filter(
-                EvidenceSpan.tenant_id == document.tenant_id,
-                EvidenceSpan.artifact_id == child.id,
-                EvidenceSpan.asset_revision_id == projection.revision.id,
-            )
-            .all()
-        )
         comparable_keys = (
             "page",
             "section",
@@ -500,27 +527,41 @@ def project_document_text_artifact(
             "column_name",
             "cell_range",
         )
-        exists = any(
-            span.locator_kind == locator_kind
-            and all(
-                getattr(span, key) == locator_values.get(key) for key in comparable_keys
-            )
-            for span in existing_spans
-        )
-        if not exists:
-            db.add(
-                EvidenceSpan(
-                    tenant_id=document.tenant_id,
-                    artifact_id=child.id,
-                    asset_revision_id=projection.revision.id,
-                    locator_kind=locator_kind,
-                    **{
-                        key: value
-                        for key, value in locator_values.items()
-                        if value is not None
-                    },
+        # The whole extracted-text artifact is itself reviewable.  Give it the
+        # same exact evidence coverage as its child chunks; otherwise the UI
+        # presents a parent candidate that can never be approved.
+        for evidence_artifact in (child, artifact):
+            existing_spans = (
+                db.query(EvidenceSpan)
+                .filter(
+                    EvidenceSpan.tenant_id == document.tenant_id,
+                    EvidenceSpan.artifact_id == evidence_artifact.id,
+                    EvidenceSpan.asset_revision_id == projection.revision.id,
                 )
+                .all()
             )
+            exists = any(
+                span.locator_kind == locator_kind
+                and all(
+                    getattr(span, key) == locator_values.get(key)
+                    for key in comparable_keys
+                )
+                for span in existing_spans
+            )
+            if not exists:
+                db.add(
+                    EvidenceSpan(
+                        tenant_id=document.tenant_id,
+                        artifact_id=evidence_artifact.id,
+                        asset_revision_id=projection.revision.id,
+                        locator_kind=locator_kind,
+                        **{
+                            key: value
+                            for key, value in locator_values.items()
+                            if value is not None
+                        },
+                    )
+                )
     db.flush()
     return artifact
 

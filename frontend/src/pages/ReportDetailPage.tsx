@@ -67,11 +67,6 @@ export default function ReportDetailPage() {
 
   const token = localStorage.getItem('token') || ''
 
-  useEffect(() => {
-    fetchReport()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
-
   const fetchReport = async () => {
     setLoading(true)
     try {
@@ -89,6 +84,13 @@ export default function ReportDetailPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    void fetchReport()
+    // The route id is the resource identity; navigation is intentionally the
+    // only automatic reload trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   const handleCopy = async () => {
     if (!report) return

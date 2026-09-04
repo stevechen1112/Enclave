@@ -413,7 +413,11 @@ class MultimodalProviderRegistry:
                     "multimodal provider failed: %s", provider.provider_key
                 )
                 result.provider_failures.append(
-                    {"provider": provider.provider_key, "error": str(exc)[:300]}
+                    {
+                        "provider": provider.provider_key,
+                        "capabilities": list(provider.capability_keys),
+                        "error": str(exc)[:300],
+                    }
                 )
                 for capability in provider.capability_keys:
                     if result.capability_states.get(capability) == "unavailable":
@@ -590,9 +594,18 @@ def project_multimodal_timeline(
         start_ms=0,
         end_ms=max(1, int(revision.duration_ms or 1)),
     )
+    public_provider_failures = [
+        {
+            "provider": str(failure.get("provider") or "unknown"),
+            "capabilities": list(failure.get("capabilities") or []),
+        }
+        for failure in understanding.provider_failures
+    ]
     return {
         "timeline_artifact_id": str(timeline.id),
         "observation_count": len(projected),
         "capability_states": understanding.capability_states,
-        "provider_failures": understanding.provider_failures,
+        # Technical exception text remains in the governed timeline artifact;
+        # job readiness is user-visible and therefore only exposes identity.
+        "provider_failures": public_provider_failures,
     }

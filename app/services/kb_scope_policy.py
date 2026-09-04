@@ -9,7 +9,6 @@ from app.config import settings
 from app.db.session import SessionLocal
 from app.models.knowledge_base import (
     KnowledgeBase,
-    KnowledgeBaseMember,
     KnowledgeBaseRevision,
 )
 
@@ -37,6 +36,9 @@ def resolve_kb_revision_scope(
     *, authz, requested: Optional[dict[str, Any]], db=None
 ) -> dict[str, Any]:
     scope = dict(requested or {})
+    caller_selected_scope = bool(
+        scope.get("kb_revision_id") or scope.get("kb_revision_ids")
+    )
     raw_ids = []
     if scope.get("kb_revision_id"):
         raw_ids.append(scope["kb_revision_id"])
@@ -48,6 +50,7 @@ def resolve_kb_revision_scope(
         except (TypeError, ValueError):
             scope.pop("kb_revision_id", None)
             scope["kb_revision_ids"] = []
+            scope["include_tenant_knowledge_units"] = False
             return scope
 
     own = db is None
@@ -95,6 +98,11 @@ def resolve_kb_revision_scope(
         scope.pop("kb_revision_ids", None)
         return scope
     scope["kb_revision_ids"] = [str(value) for value in sorted(allowed, key=str)]
+    # An ordinary tenant-wide Ask session searches both the tenant's active KB
+    # revisions and reviewed source units (audio/video/image extracts) that are
+    # published to the tenant release.  A caller-selected KB remains strict and
+    # must never be widened silently.
+    scope["include_tenant_knowledge_units"] = not caller_selected_scope
     # No active revision is not a legacy-search escape hatch. Processing a
     # document and publishing knowledge are separate states; an empty active
     # scope must therefore remain explicit and fail closed in every reader.

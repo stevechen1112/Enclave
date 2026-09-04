@@ -10,6 +10,7 @@ P1-1：Voice Interaction Gateway — STT/TTS 抽象層。
 
 不引入 WeKnora RBAC／UI，Enclave 掌控身分、權限、來源、表單與審核。
 """
+
 from __future__ import annotations
 
 import logging
@@ -19,9 +20,27 @@ from typing import Any, Dict, List, Optional, Protocol
 logger = logging.getLogger(__name__)
 
 
+def _installed_package_version(distribution: str) -> str | None:
+    import importlib.metadata
+
+    try:
+        return importlib.metadata.version(distribution)
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
 _CN_DIGIT = {
-    "零": 0, "一": 1, "二": 2, "兩": 2, "三": 3, "四": 4,
-    "五": 5, "六": 6, "七": 7, "八": 8, "九": 9,
+    "零": 0,
+    "一": 1,
+    "二": 2,
+    "兩": 2,
+    "三": 3,
+    "四": 4,
+    "五": 5,
+    "六": 6,
+    "七": 7,
+    "八": 8,
+    "九": 9,
 }
 _CN_UNIT = {"十": 10, "百": 100, "千": 1000}
 
@@ -61,16 +80,50 @@ def _normalize_number(raw: str) -> Optional[str]:
     return raw.replace(",", "")
 
 
-_STT_SIMPLIFIED_TO_TRADITIONAL = str.maketrans({
-    "报": "報", "价": "價", "号": "號", "单": "單", "个": "個",
-    "帮": "幫", "户": "戶", "为": "為", "设": "設", "备": "備",
-    "异": "異", "类": "類", "别": "別", "严": "嚴", "处": "處",
-    "线": "線", "产": "產", "发": "發", "现": "現", "时": "時",
-    "间": "間", "问": "問", "题": "題", "务": "務", "员": "員",
-    "导": "導", "计": "計", "划": "畫", "换": "換", "检": "檢",
-    "机": "機", "厂": "廠", "区": "區", "额": "額", "总": "總",
-    "数": "數", "进": "進", "维": "維", "责": "責", "决": "決",
-})
+_STT_SIMPLIFIED_TO_TRADITIONAL = str.maketrans(
+    {
+        "报": "報",
+        "价": "價",
+        "号": "號",
+        "单": "單",
+        "个": "個",
+        "帮": "幫",
+        "户": "戶",
+        "为": "為",
+        "设": "設",
+        "备": "備",
+        "异": "異",
+        "类": "類",
+        "别": "別",
+        "严": "嚴",
+        "处": "處",
+        "线": "線",
+        "产": "產",
+        "发": "發",
+        "现": "現",
+        "时": "時",
+        "间": "間",
+        "问": "問",
+        "题": "題",
+        "务": "務",
+        "员": "員",
+        "导": "導",
+        "计": "計",
+        "划": "畫",
+        "换": "換",
+        "检": "檢",
+        "机": "機",
+        "厂": "廠",
+        "区": "區",
+        "额": "額",
+        "总": "總",
+        "数": "數",
+        "进": "進",
+        "维": "維",
+        "责": "責",
+        "决": "決",
+    }
+)
 
 
 def _normalize_stt_text(text: str) -> str:
@@ -81,9 +134,9 @@ def _normalize_stt_text(text: str) -> str:
     Traditional Chinese, so normalizing common manufacturing vocabulary keeps
     a successful transcript from turning into an empty field set.
     """
-    import unicodedata
+    from app.services.text_locale import normalize_content_text
 
-    return unicodedata.normalize("NFKC", text or "").translate(
+    return normalize_content_text(text, locale="zh-TW").translate(
         _STT_SIMPLIFIED_TO_TRADITIONAL
     )
 
@@ -98,27 +151,32 @@ class STTProvider(Protocol):
         *,
         filename: str = "audio.webm",
         content_type: str = "audio/webm",
-    ) -> "TranscriptionResult":
-        ...
+    ) -> "TranscriptionResult": ...
 
 
 class TTSProvider(Protocol):
     """文字轉語音 provider 介面。"""
 
-    def synthesize(self, text: str, voice: str = "alloy") -> bytes:
-        ...
+    def synthesize(self, text: str, voice: str = "alloy") -> bytes: ...
 
 
 @dataclass
 class TranscriptionResult:
     """STT 結果。"""
+
     text: str
     language: str = "zh"
     segments: List[Dict[str, Any]] = field(default_factory=list)
     duration_seconds: float = 0.0
     is_draft: bool = True  # 預設為 draft，需人工確認後才可用於回答
-    confidence: float = 0.0
+    # None means the provider did not supply a calibrated confidence score.
+    # A real 0.0 is valid and must not be used as the "unknown" sentinel.
+    confidence: float | None = None
     provider: str = ""
+    provider_version: str | None = None
+    model: str | None = None
+    confidence_provider_supplied: bool = False
+    confidence_calibration_version: str | None = None
 
     def promote_to_confirmed(self) -> "TranscriptionResult":
         """將 draft 提升為已確認（人工審核後）。"""
@@ -129,6 +187,7 @@ class TranscriptionResult:
 @dataclass
 class VoiceInteractionRequest:
     """語音互動請求。"""
+
     audio_data: bytes
     authz: Any  # AuthorizationContext
     language: str = "zh"
@@ -139,6 +198,7 @@ class VoiceInteractionRequest:
 @dataclass
 class VoiceInteractionResponse:
     """語音互動回應。"""
+
     transcription: Optional[TranscriptionResult] = None
     confirmed_text: str = ""
     needs_confirmation: bool = False
@@ -157,7 +217,11 @@ class VoiceInteractionGateway:
     4. 高風險操作需批准
     """
 
-    def __init__(self, stt_provider: Optional[STTProvider] = None, tts_provider: Optional[TTSProvider] = None):
+    def __init__(
+        self,
+        stt_provider: Optional[STTProvider] = None,
+        tts_provider: Optional[TTSProvider] = None,
+    ):
         self._stt = stt_provider
         self._tts = tts_provider
 
@@ -184,7 +248,9 @@ class VoiceInteractionGateway:
             TranscriptionResult（預設 is_draft=True）
         """
         if authz is None:
-            raise ValueError("AuthorizationContext is required for VoiceInteractionGateway.transcribe")
+            raise ValueError(
+                "AuthorizationContext is required for VoiceInteractionGateway.transcribe"
+            )
 
         from app.config import settings
 
@@ -202,6 +268,14 @@ class VoiceInteractionGateway:
                 content_type=content_type,
             )
             result.provider = settings.VOICE_STT_PROVIDER
+            result.text = _normalize_stt_text(result.text)
+            result.segments = [
+                {
+                    **segment,
+                    "text": _normalize_stt_text(str(segment.get("text") or "")),
+                }
+                for segment in result.segments
+            ]
 
             # 驗收 §6.8：音訊轉寫先進 draft，不可直接回答
             if settings.VOICE_DRAFT_FIRST:
@@ -234,7 +308,9 @@ class VoiceInteractionGateway:
             音訊原始資料
         """
         if authz is None:
-            raise ValueError("AuthorizationContext is required for VoiceInteractionGateway.synthesize")
+            raise ValueError(
+                "AuthorizationContext is required for VoiceInteractionGateway.synthesize"
+            )
 
         from app.config import settings
 
@@ -280,36 +356,38 @@ class VoiceInteractionGateway:
         text = _normalize_stt_text(text)
 
         # 阿拉伯數字或中文數字（一百二／兩百／三千五）
-        num = r'([0-9,]+(?:\.[0-9]+)?|[零一二三四五六七八九十百千兩]+)'
+        num = r"([0-9,]+(?:\.[0-9]+)?|[零一二三四五六七八九十百千兩]+)"
         fields = []
         patterns = {
             # 總金額類（語意上是總價；單價請用 unit_price）
             "amount": (
-                r'(?:金額|總價|總金額|價格|費用|成本)\s*[：:是為]?\s*'
-                + num + r'\s*(?:元|萬|千|塊)?'
+                r"(?:金額|總價|總金額|價格|費用|成本)\s*[：:是為]?\s*"
+                + num
+                + r"\s*(?:元|萬|千|塊)?"
             ),
             "unit_price": (
-                r'(?:單價|每件|每個|每台|一個|一件|一台)\s*[：:是為]?\s*'
-                + num + r'\s*(?:元|塊)?'
+                r"(?:單價|每件|每個|每台|一個|一件|一台)\s*[：:是為]?\s*"
+                + num
+                + r"\s*(?:元|塊)?"
             ),
             "part_number": (
-                r'(?:料號|零件號|品號|型號)\s*[：:是]?\s*'
-                r'([A-Z0-9]+(?:[\s._/-]+[A-Z0-9]+)*)'
+                r"(?:料號|零件號|品號|型號)\s*[：:是]?\s*"
+                r"([A-Z0-9]+(?:[\s._/-]+[A-Z0-9]+)*)"
             ),
             # 關鍵字前綴，或直接「兩百個／200 件」這類單位錨定說法
             "quantity": (
-                r'(?:數量|件數)\s*[：:是為]?\s*' + num + r'\s*(?:個|件|台|批)?'
-                r'|(?<![\w\u4e00-\u9fff])' + num + r'\s*(?:個|件|台|批)'
+                r"(?:數量|件數)\s*[：:是為]?\s*" + num + r"\s*(?:個|件|台|批)?"
+                r"|(?<![\w\u4e00-\u9fff])" + num + r"\s*(?:個|件|台|批)"
             ),
-            "date": r'(?:日期|時間|期限|截止)\s*[：:是]?\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日)',
+            "date": r"(?:日期|時間|期限|截止)\s*[：:是]?\s*(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}月\d{1,2}日)",
             # 關鍵字前綴，或「幫台中精機報價／給某某公司開單」這類動詞框架
             "customer": (
-                r'(?<![\w\u4e00-\u9fff])(?:客戶名稱|客戶|公司|對方)\s*[：:是]?\s*'
-                r'([\u4e00-\u9fff]{2,30}?)'
-                r'(?=\s*(?:報價|估價|開報價單|開單|下單|[，,；;。]|$))'
-                r'|(?:幫|邦|給|向|跟|和)\s*(?:客戶|公司)?\s*'
-                r'([\u4e00-\u9fff]{2,30}?)'
-                r'\s*(?:報價|估價|開報價單|開單|下單)'
+                r"(?<![\w\u4e00-\u9fff])(?:客戶名稱|客戶|公司|對方)\s*[：:是]?\s*"
+                r"([\u4e00-\u9fff]{2,30}?)"
+                r"(?=\s*(?:報價|估價|開報價單|開單|下單|[，,；;。]|$))"
+                r"|(?:幫|邦|給|向|跟|和)\s*(?:客戶|公司)?\s*"
+                r"([\u4e00-\u9fff]{2,30}?)"
+                r"\s*(?:報價|估價|開報價單|開單|下單)"
             ),
         }
 
@@ -330,12 +408,14 @@ class VoiceInteractionGateway:
                         continue
                 elif field_type == "part_number":
                     value = re.sub(r"\s+", "", str(value)).upper()
-                fields.append({
-                    "type": field_type,
-                    "value": value,
-                    "raw_span": value,
-                    "needs_confirm": True,  # 所有提取的欄位都需確認
-                })
+                fields.append(
+                    {
+                        "type": field_type,
+                        "value": value,
+                        "raw_span": value,
+                        "needs_confirm": True,  # 所有提取的欄位都需確認
+                    }
+                )
 
         return fields
 
@@ -357,7 +437,9 @@ class VoiceInteractionGateway:
         from app.services.fixed_form import FieldType
 
         text = _normalize_stt_text(text)
-        usable = [field for field in form_fields if not getattr(field, "calculated", False)]
+        usable = [
+            field for field in form_fields if not getattr(field, "calculated", False)
+        ]
         by_name = {field.name: field for field in usable}
         detected: Dict[str, Dict[str, Any]] = {}
 
@@ -437,14 +519,18 @@ class VoiceInteractionGateway:
         }
 
         aliases_by_name: Dict[str, List[str]] = {}
-        for field in usable:
+        for schema_field in usable:
             aliases: List[str] = []
-            label = re.sub(r"（[^）]*）|\([^)]*\)", "", field.label).strip()
-            for alias in [label, *re.split(r"[／/]", label), *common_aliases.get(field.name, [])]:
+            label = re.sub(r"（[^）]*）|\([^)]*\)", "", schema_field.label).strip()
+            for alias in [
+                label,
+                *re.split(r"[／/]", label),
+                *common_aliases.get(schema_field.name, []),
+            ]:
                 alias = alias.strip()
                 if alias and alias not in aliases:
                     aliases.append(alias)
-            aliases_by_name[field.name] = aliases
+            aliases_by_name[schema_field.name] = aliases
 
         all_aliases = sorted(
             {alias for aliases in aliases_by_name.values() for alias in aliases},
@@ -459,7 +545,9 @@ class VoiceInteractionGateway:
             if not value:
                 return None
             if field.type in {FieldType.NUMBER, FieldType.AMOUNT}:
-                match = re.search(r"[0-9,]+(?:\.[0-9]+)?|[零一二三四五六七八九十百千兩]+", value)
+                match = re.search(
+                    r"[0-9,]+(?:\.[0-9]+)?|[零一二三四五六七八九十百千兩]+", value
+                )
                 if not match:
                     return None
                 normalized = _normalize_number(match.group(0))
@@ -473,7 +561,11 @@ class VoiceInteractionGateway:
                 compact = re.sub(r"[\s（）()]", "", value)
                 for option in field.options:
                     option_compact = re.sub(r"[\s（）()]", "", option)
-                    if value == option or compact in option_compact or option_compact in compact:
+                    if (
+                        value == option
+                        or compact in option_compact
+                        or option_compact in compact
+                    ):
                         return option
                 return None
             if field.type == FieldType.MULTI_SELECT:
@@ -498,30 +590,36 @@ class VoiceInteractionGateway:
             if target_field is None:
                 continue
             raw_value = str(item.get("value") or "")
-            add(target, normalize(target_field, raw_value), str(item.get("raw_span") or raw_value))
+            add(
+                target,
+                normalize(target_field, raw_value),
+                str(item.get("raw_span") or raw_value),
+            )
 
-        for field in usable:
-            own_aliases = aliases_by_name.get(field.name) or []
+        for schema_field in usable:
+            own_aliases = aliases_by_name.get(schema_field.name) or []
             if not own_aliases:
                 continue
-            own = "|".join(re.escape(alias) for alias in sorted(own_aliases, key=len, reverse=True))
+            own = "|".join(
+                re.escape(alias) for alias in sorted(own_aliases, key=len, reverse=True)
+            )
             pattern = re.compile(
-                rf"(?:{own})\s*(?:是|為|[:：])?\s*(.+?)"
-                rf"(?=[，,；;。]|$)",
+                rf"(?:{own})\s*(?:是|為|[:：])?\s*(.+?)" rf"(?=[，,；;。]|$)",
                 re.IGNORECASE,
             )
             for match in pattern.finditer(text):
                 raw_value = match.group(1)
-                normalized = normalize(field, raw_value)
+                normalized = normalize(schema_field, raw_value)
                 if normalized is None:
                     continue
-                add(field.name, normalized, raw_value.strip())
+                add(schema_field.name, normalized, raw_value.strip())
                 break
 
         return list(detected.values())
 
 
 # ── Provider 工廠 ──
+
 
 def _get_stt_provider() -> STTProvider:
     """根據 config 建立 STT provider。"""
@@ -553,7 +651,10 @@ def _get_tts_provider() -> TTSProvider:
 
 # ── OpenAI Provider 實作 ──
 
-def _sniff_audio_identity(audio_data: bytes, filename: str, content_type: str) -> tuple[str, str]:
+
+def _sniff_audio_identity(
+    audio_data: bytes, filename: str, content_type: str
+) -> tuple[str, str]:
     """依 magic bytes／上傳標頭推斷 OpenAI 可接受的檔名與 MIME。"""
     name = (filename or "").strip() or "audio.webm"
     ctype = (content_type or "").split(";")[0].strip().lower()
@@ -574,7 +675,11 @@ def _sniff_audio_identity(audio_data: bytes, filename: str, content_type: str) -
     if len(head) >= 8 and head[4:8] in (b"ftyp", b"moov", b"mdat"):
         return "audio.m4a", "audio/mp4"
 
-    if name.lower().endswith((".mp3", ".mpeg", ".mpga")) or "mpeg" in ctype or "mp3" in ctype:
+    if (
+        name.lower().endswith((".mp3", ".mpeg", ".mpga"))
+        or "mpeg" in ctype
+        or "mp3" in ctype
+    ):
         return "audio.mp3", "audio/mpeg"
     if name.lower().endswith((".wav",)) or "wav" in ctype:
         return "audio.wav", "audio/wav"
@@ -629,9 +734,15 @@ class OpenAISTTProvider:
         if hasattr(result, "segments") and result.segments:
             segments = [
                 {
-                    "start": getattr(s, "start", None) if not isinstance(s, dict) else s.get("start", 0),
-                    "end": getattr(s, "end", None) if not isinstance(s, dict) else s.get("end", 0),
-                    "text": getattr(s, "text", None) if not isinstance(s, dict) else s.get("text", ""),
+                    "start": getattr(s, "start", None)
+                    if not isinstance(s, dict)
+                    else s.get("start", 0),
+                    "end": getattr(s, "end", None)
+                    if not isinstance(s, dict)
+                    else s.get("end", 0),
+                    "text": getattr(s, "text", None)
+                    if not isinstance(s, dict)
+                    else s.get("text", ""),
                 }
                 for s in result.segments
             ]
@@ -650,7 +761,12 @@ class OpenAISTTProvider:
             language=language,
             segments=segments,
             duration_seconds=float(duration),
-            confidence=0.0,  # OpenAI 不直接回傳 confidence
+            confidence=None,  # OpenAI does not supply calibrated confidence here.
+            provider="openai",
+            provider_version=_installed_package_version("openai"),
+            model=model,
+            confidence_provider_supplied=False,
+            confidence_calibration_version="unavailable",
         )
 
 
@@ -695,25 +811,32 @@ def transcribe_long_interview_chunk(
                 "text": getattr(segment, "text", ""),
                 "speaker": getattr(segment, "speaker", None),
             }
-        segments.append({
-            "start": item.get("start", 0),
-            "end": item.get("end", 0),
-            "text": item.get("text", ""),
-            "speaker": item.get("speaker"),
-        })
-    text = getattr(result, "text", "") or " ".join(
-        str(segment.get("text") or "").strip() for segment in segments
-    ).strip()
-    duration = max(
-        [float(segment.get("end") or 0) for segment in segments] or [0.0]
+        segments.append(
+            {
+                "start": item.get("start", 0),
+                "end": item.get("end", 0),
+                "text": _normalize_stt_text(str(item.get("text") or "")),
+                "speaker": item.get("speaker"),
+            }
+        )
+    text = (
+        _normalize_stt_text(str(getattr(result, "text", "") or ""))
+        or " ".join(
+            str(segment.get("text") or "").strip() for segment in segments
+        ).strip()
     )
+    duration = max([float(segment.get("end") or 0) for segment in segments] or [0.0])
     return TranscriptionResult(
         text=text,
         language=language,
         segments=segments,
         duration_seconds=duration,
-        confidence=0.0,
+        confidence=None,
         provider="openai",
+        provider_version=_installed_package_version("openai"),
+        model=settings.LONG_INTERVIEW_STT_MODEL,
+        confidence_provider_supplied=False,
+        confidence_calibration_version="unavailable",
     )
 
 
@@ -739,6 +862,7 @@ class OpenAITTSProvider:
 
 # ── Azure Provider stubs（待真實 Azure 帳號時實作）──
 
+
 class AzureSTTProvider:
     """Azure Speech Service STT（待實作）。"""
 
@@ -750,17 +874,22 @@ class AzureSTTProvider:
         filename: str = "audio.webm",
         content_type: str = "audio/webm",
     ) -> TranscriptionResult:
-        raise NotImplementedError("Azure STT not yet implemented — set VOICE_STT_PROVIDER=openai")
+        raise NotImplementedError(
+            "Azure STT not yet implemented — set VOICE_STT_PROVIDER=openai"
+        )
 
 
 class AzureTTSProvider:
     """Azure Speech Service TTS（待實作）。"""
 
     def synthesize(self, text: str, voice: str = "alloy") -> bytes:
-        raise NotImplementedError("Azure TTS not yet implemented — set VOICE_TTS_PROVIDER=openai")
+        raise NotImplementedError(
+            "Azure TTS not yet implemented — set VOICE_TTS_PROVIDER=openai"
+        )
 
 
 # ── Local Provider stubs（待本機模型整合時實作）──
+
 
 class LocalSTTProvider:
     """本機 STT（如 Whisper.cpp，待實作）。"""
@@ -773,14 +902,18 @@ class LocalSTTProvider:
         filename: str = "audio.webm",
         content_type: str = "audio/webm",
     ) -> TranscriptionResult:
-        raise NotImplementedError("Local STT not yet implemented — set VOICE_STT_PROVIDER=openai")
+        raise NotImplementedError(
+            "Local STT not yet implemented — set VOICE_STT_PROVIDER=openai"
+        )
 
 
 class LocalTTSProvider:
     """本機 TTS（如 Piper TTS，待實作）。"""
 
     def synthesize(self, text: str, voice: str = "alloy") -> bytes:
-        raise NotImplementedError("Local TTS not yet implemented — set VOICE_TTS_PROVIDER=openai")
+        raise NotImplementedError(
+            "Local TTS not yet implemented — set VOICE_TTS_PROVIDER=openai"
+        )
 
 
 # ── 單例 ──

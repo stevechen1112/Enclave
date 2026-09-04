@@ -55,17 +55,36 @@ class CloudOCRResult:
 
 
 def provider() -> Optional[str]:
-    p = os.getenv("CLOUD_OCR_PROVIDER", "").lower().strip()
-    return p if p in DEFAULT_MODELS else None
+    configured = configured_providers()
+    return configured[0] if configured else None
+
+
+def configured_providers() -> List[str]:
+    """Return ordered, credential-backed OCR providers without duplicates."""
+
+    raw = os.getenv("CLOUD_OCR_PROVIDERS", "").strip()
+    names = [item.strip().lower() for item in raw.split(",") if item.strip()]
+    primary = os.getenv("CLOUD_OCR_PROVIDER", "").lower().strip()
+    if primary:
+        names.insert(0, primary)
+    result: List[str] = []
+    for name in names:
+        if (
+            name in DEFAULT_MODELS
+            and name not in result
+            and bool(os.getenv(_KEY_ENV[name], ""))
+        ):
+            result.append(name)
+    return result
 
 
 def is_enabled() -> bool:
-    p = provider()
-    return bool(p and os.getenv(_KEY_ENV[p]))
+    return bool(configured_providers())
 
 
 def model_for(p: str) -> str:
-    return os.getenv("CLOUD_OCR_MODEL", "").strip() or DEFAULT_MODELS[p]
+    provider_model = os.getenv(f"CLOUD_OCR_MODEL_{p.upper()}", "").strip()
+    return provider_model or os.getenv("CLOUD_OCR_MODEL", "").strip() or DEFAULT_MODELS[p]
 
 
 def _client(p: str) -> httpx.Client:
@@ -134,11 +153,20 @@ def _rasterize(file_path: str, ext: str, dpi: int) -> List[bytes]:
     return pages
 
 
-def transcribe(file_path: str, ext: str, *, dpi: int = 200, max_retries: int = 3) -> CloudOCRResult:
+def transcribe(
+    file_path: str,
+    ext: str,
+    *,
+    dpi: int = 200,
+    max_retries: int = 3,
+    provider_name: str | None = None,
+) -> CloudOCRResult:
     """Transcribe a scanned PDF/image via the configured cloud OCR provider."""
-    p = provider()
+    p = provider_name or provider()
     if not p:
         raise RuntimeError("cloud OCR not configured (set CLOUD_OCR_PROVIDER)")
+    if p not in DEFAULT_MODELS or not os.getenv(_KEY_ENV[p], ""):
+        raise RuntimeError("cloud OCR provider is unavailable")
     model = model_for(p)
     start = time.time()
     images = _rasterize(file_path, ext.lower(), dpi)
@@ -173,3 +201,35 @@ def transcribe(file_path: str, ext: str, *, dpi: int = 200, max_retries: int = 3
         retries=retries,
         errors=errors,
     )
+
+
+def transcribe_candidates(
+    file_path: str,
+    ext: str,
+    *,
+    dpi: int = 200,
+    max_retries: int = 3,
+) -> tuple[List[CloudOCRResult], List[Dict[str, str]]]:
+    """Run every configured low-quality fallback arm and retain safe audit errors."""
+
+    results: List[CloudOCRResult] = []
+    errors: List[Dict[str, str]] = []
+    for name in configured_providers():
+        try:
+            results.append(
+                transcribe(
+                    file_path,
+                    ext,
+                    dpi=dpi,
+                    max_retries=max_retries,
+                    provider_name=name,
+                )
+            )
+        except Exception as exc:
+            errors.append(
+                {
+                    "provider": name,
+                    "error": f"provider_failed:{exc.__class__.__name__}",
+                }
+            )
+    return results, errors

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.api import deps
 from app.models.user import User
 from app.services.review_workspace import (
+    decide_source_group,
     decide_review_item,
     get_review_item,
     group_review_items,
@@ -33,6 +35,13 @@ class ReviewDecisionRequest(BaseModel):
 class BatchReviewRequest(BaseModel):
     item_ids: list[str] = Field(min_length=1, max_length=100)
     notes: str | None = Field(default=None, max_length=2000)
+
+
+class SourceReviewRequest(BaseModel):
+    decision: Literal["approved", "rejected"] = "approved"
+    notes: str | None = Field(default=None, max_length=2000)
+    acknowledge_low_confidence: bool = False
+    idempotency_key: str | None = Field(default=None, max_length=200)
 
 
 def _require_reviewer(current_user: User) -> None:
@@ -119,6 +128,26 @@ def review_detail(
 ) -> dict[str, Any]:
     _require_reviewer(current_user)
     return get_review_item(db, current_user=current_user, item_id=item_id)
+
+
+@router.post("/source/{source_asset_id}/decision")
+def decide_source(
+    source_asset_id: str,
+    request: SourceReviewRequest,
+    db: Annotated[Session, Depends(deps.get_db)],
+    current_user: Annotated[User, Depends(deps.get_current_active_user)],
+) -> dict[str, Any]:
+    _require_reviewer(current_user)
+    try:
+        parsed_id = UUID(source_asset_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="source not found") from exc
+    return decide_source_group(
+        db,
+        current_user=current_user,
+        source_asset_id=parsed_id,
+        payload=request.model_dump(),
+    )
 
 
 @router.post("/{item_id}/decision")

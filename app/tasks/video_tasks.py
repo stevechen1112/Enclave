@@ -168,6 +168,31 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
 
             projection.update(project_governed_video_procedure(db, revision))
 
+            from app.services.input_capability_results import (
+                readiness_with_capability_results,
+                video_capability_results,
+            )
+
+            capability_results = video_capability_results(
+                job.requested_capabilities or [],
+                has_audio=accepted_probe.has_audio,
+                audio_chunk_count=result.audio_chunk_count,
+                transcript_count=int(projection.get("transcript_count") or 0),
+                keyframe_count=int(projection.get("keyframe_count") or 0),
+                ocr_count=int(projection.get("ocr_count") or 0),
+                procedure_artifact_id=projection.get("procedure_artifact_id"),
+                preview_ready=bool(settings.MEDIA_PROXY_ENABLED),
+                capability_states=projection.get("capability_states") or {},
+                provider_failures=projection.get("provider_failures") or [],
+                stt_provider=result.stt_provider,
+                stt_provider_version=result.stt_provider_version,
+                stt_model=result.stt_model,
+                stt_confidence_provider_supplied=(
+                    result.stt_confidence_provider_supplied
+                ),
+                stt_calibration_version=result.stt_confidence_calibration_version,
+            )
+
         if not projection.get("procedure_artifact_id"):
             revision.ingestion_status = "ready"
             asset.status = "active"
@@ -177,12 +202,16 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
                 to_status="ready",
                 phase="completed_no_knowledge",
                 quality_state="rejected",
-                readiness={
-                    "searchable": False,
-                    "requires_human_review": False,
-                    "reason": "no_evidence_backed_procedure_candidate",
-                    **projection,
-                },
+                readiness=readiness_with_capability_results(
+                    {
+                        "searchable": False,
+                        "requires_human_review": False,
+                        "reason": "no_evidence_backed_procedure_candidate",
+                        **projection,
+                    },
+                    requested_capabilities=job.requested_capabilities or [],
+                    observed=capability_results,
+                ),
             )
             db.commit()
             return {"job_id": job_id, "status": job.status, **projection}
@@ -195,11 +224,15 @@ def process_video_asset(self, tenant_id: str, revision_id: str, job_id: str):
             to_status="review_required",
             phase="human_review",
             quality_state="review_required",
-            readiness={
-                "searchable": False,
-                "requires_human_review": True,
-                **projection,
-            },
+            readiness=readiness_with_capability_results(
+                {
+                    "searchable": False,
+                    "requires_human_review": True,
+                    **projection,
+                },
+                requested_capabilities=job.requested_capabilities or [],
+                observed=capability_results,
+            ),
         )
         db.commit()
         return {"job_id": job_id, "status": job.status, **projection}

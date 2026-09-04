@@ -293,6 +293,29 @@ def test_document_release_is_exactly_scoped_to_legacy_kb_revision():
         assert result["unit_count"] == 2
         assert {row.content for row in scoped} == {"first", "second"}
         assert len(list_active_knowledge_units(db, authz=authz)) == 2
+
+        _publish(
+            db,
+            tenant,
+            user,
+            key="reviewed-media",
+            content="reviewed audio transcript",
+        )
+        strict = list_active_knowledge_units(
+            db, authz=authz, kb_revision_ids=[revision.id]
+        )
+        tenant_wide = list_active_knowledge_units(
+            db,
+            authz=authz,
+            kb_revision_ids=[revision.id],
+            include_tenant_scope=True,
+        )
+        assert {row.content for row in strict} == {"first", "second"}
+        assert {row.content for row in tenant_wide} == {
+            "first",
+            "second",
+            "reviewed audio transcript",
+        }
     finally:
         db.close()
         engine.dispose()

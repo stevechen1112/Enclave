@@ -26,7 +26,7 @@ export function normalizeEvidenceDeepLink(value: unknown): string | null {
     if (url.searchParams.has('frame') && !SAFE_ID.test(url.searchParams.get('frame') || '')) return null
     if (url.searchParams.has('region') && !SAFE_ID.test(url.searchParams.get('region') || '')) return null
     if (url.searchParams.has('bbox') && !BBOX.test(url.searchParams.get('bbox') || '')) return null
-    if (url.searchParams.has('evidence') && !/^\d+$/.test(url.searchParams.get('evidence') || '')) return null
+    if (url.searchParams.has('evidence') && !SAFE_ID.test(url.searchParams.get('evidence') || '')) return null
     return `${url.pathname}${url.search}${url.hash}`
   } catch {
     return null

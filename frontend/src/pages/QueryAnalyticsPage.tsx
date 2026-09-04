@@ -86,7 +86,6 @@ function OverviewTab({ days }: { days: number }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     chatApi.ragDashboard(days)
       .then(setData)

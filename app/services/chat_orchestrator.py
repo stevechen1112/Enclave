@@ -1,6 +1,5 @@
 import logging
 import json
-import asyncio
 import time
 from datetime import date
 from typing import Dict, Any, List, Optional, AsyncGenerator
@@ -9,7 +8,6 @@ import uuid
 from app.config import settings
 from app.services.deployment_mode import resolve_runtime_profiles_no_db
 from app.services.kb_retrieval import KnowledgeBaseRetriever
-from app.gateway.contracts import SearchDomain
 from app.gateway.runtime import get_configured_gateway_router
 from app.services.unified_retriever import UnifiedRetriever
 
@@ -374,22 +372,29 @@ class ChatOrchestrator:
                     "snippet": (r.get("content") or "")[:200],
                     "score": r.get("score") or 0,
                     "document_id": str(r.get("document_id") or cite0.get("document_id") or "") or None,
+                    "citation_id": cite0.get("citation_id"),
+                    "canonical_resource_type": cite0.get("canonical_resource_type"),
+                    "canonical_resource_id": cite0.get("canonical_resource_id"),
                     "document_revision": revision,
                     "chunk_index": r.get("chunk_index") if r.get("chunk_index") is not None else meta.get("chunk_index"),
                     "provider": r.get("source") or r.get("provider") or cite0.get("provider"),
                     "updated_at": meta.get("updated_at") or r.get("updated_at"),
-                    "page": page,
-                    "section": meta.get("section") or meta.get("heading"),
-                    "section_path": meta.get("section_path") or meta.get("hierarchy"),
-                    "worksheet": meta.get("worksheet") or meta.get("sheet"),
-                    "row_number": meta.get("row_number") or meta.get("row"),
-                    "field_name": meta.get("field_name") or meta.get("column"),
-                    "transcript_start_ms": meta.get("transcript_start_ms") or meta.get("start_ms"),
-                    "transcript_end_ms": meta.get("transcript_end_ms") or meta.get("end_ms"),
-                    "speaker": meta.get("speaker"),
-                    "frame_index": meta.get("frame_index"),
+                    "page": cite0.get("page") if cite0.get("page") is not None else page,
+                    "section": cite0.get("section") or meta.get("section") or meta.get("heading"),
+                    "section_path": cite0.get("section_path") or meta.get("section_path") or meta.get("hierarchy"),
+                    "worksheet": cite0.get("worksheet") or meta.get("worksheet") or meta.get("sheet"),
+                    "table_name": cite0.get("table_name") or meta.get("table_name"),
+                    "row_number": cite0.get("row_number") if cite0.get("row_number") is not None else meta.get("row_number") or meta.get("row"),
+                    "field_name": cite0.get("column_name") or meta.get("field_name") or meta.get("column"),
+                    "cell_range": cite0.get("cell_range") or meta.get("cell_range"),
+                    "transcript_start_ms": cite0.get("start_ms") if cite0.get("start_ms") is not None else meta.get("transcript_start_ms") or meta.get("start_ms"),
+                    "transcript_end_ms": cite0.get("end_ms") if cite0.get("end_ms") is not None else meta.get("transcript_end_ms") or meta.get("end_ms"),
+                    "speaker": cite0.get("speaker") or meta.get("speaker"),
+                    "frame_index": cite0.get("frame_index") if cite0.get("frame_index") is not None else meta.get("frame_index"),
                     "keyframe": meta.get("keyframe") or meta.get("keyframe_index"),
-                    "bbox": meta.get("bbox"),
+                    "bbox": cite0.get("bbox") or meta.get("bbox"),
+                    "source_asset_id": meta.get("source_asset_id"),
+                    "evidence_url": cite0.get("evidence_url") or meta.get("deep_link") or meta.get("evidence_url"),
                     "applicable_scope": (
                         json.dumps(meta.get("applicable_scope") or meta.get("scope"), ensure_ascii=False, sort_keys=True)
                         if isinstance(meta.get("applicable_scope") or meta.get("scope"), (dict, list))
