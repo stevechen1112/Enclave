@@ -226,8 +226,9 @@ def evaluate_media_quality(
         critical_found += found
         metrics["critical_terms_expected"] = len(truth_terms)
         metrics["critical_terms_found"] = found
-        expected_events, predicted_events = truth.get("events", []), predicted.get(
-            "events", []
+        expected_events, predicted_events = (
+            truth.get("events", []),
+            predicted.get("events", []),
         )
         matches = _match_events(expected_events, predicted_events)
         event_expected += len(expected_events)

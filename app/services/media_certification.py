@@ -73,7 +73,9 @@ def build_media_certification_report(
     status = (
         "PILOT_CERTIFIED"
         if software_ready and external_ready
-        else "SOFTWARE_READY_EXTERNAL_PENDING" if software_ready else "NOT_READY"
+        else "SOFTWARE_READY_EXTERNAL_PENDING"
+        if software_ready
+        else "NOT_READY"
     )
     return {
         "schema_version": 1,
