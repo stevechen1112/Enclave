@@ -4,11 +4,11 @@
 
 範圍：李永仁數輪測試所揭露的 Input、Knowledge、Review、Ask 共用核心
 
-判定：`PASS FOR DEPLOYMENT CANDIDATE`
+判定：`DEPLOYED / PRODUCTION SMOKE PASS / TENANT RETEST PENDING`
 
 ## 1. 結論
 
-先前已部署的主要修復仍存在於正式 source commit `e2cc7490217c689343d6cc8aec7890288d31d8f2`，且該版本包含 Reality Audit 修復 commit `8c7c949f0ff230c7c3aebfc6962cf1ed1c6fe072`。本次沒有發現 WAV 支援、Worker 復原、單一狀態真相、人工確認簡化、檢索、證據引用、租戶權限或刪除撤權被後續媒體工程回退。
+先前主要修復已隨本次 source commit `46a189d8cb85708eea9b6abf57e3dded026b475b` 部署至正式環境；該版本包含 Reality Audit 修復 commit `8c7c949f0ff230c7c3aebfc6962cf1ed1c6fe072`。本次沒有發現 WAV 支援、Worker 復原、單一狀態真相、人工確認簡化、檢索、證據引用、租戶權限或刪除撤權被後續媒體工程回退。
 
 本次發現並修正兩項 candidate 缺口：
 
@@ -56,13 +56,23 @@
 
 測試期間曾有五項舊 vertical-slice 測試連到預設 `localhost:5432/enclave` 而失敗；改以隔離 pgvector 測試資料庫的正確環境設定重跑後為 16/16 PASS。此項是測試啟動環境問題，不是產品行為失敗。
 
-## 4. 尚未完成的證據
+## 4. 正式部署證據
 
-- Candidate 尚未部署至正式環境，因此 I9-012／I9-026 現在只能標記 `FIXED_IN_CODE`。
-- 部署後必須在正式網域驗證：同檔循序重送、同檔並行重送、不同資料分級不合併、原來源 tombstone 後可重新上傳。
+- Release tag：`release-20260905-content-dedup-v2`。
+- Source commit：`46a189d8cb85708eea9b6abf57e3dded026b475b`；`source_dirty=false`。
+- Build Release Candidate run：`33933822748`，來源 tag、SHA、pre-build gate、三個映像、digest、SBOM、deployment manifest 與 provenance 全部通過。
+- Deploy Production run：`33934220160`；部署前資料庫備份、正式部署、edge smoke、release parity 與瀏覽器 canonical-route smoke 全部通過。
+- 公開 `/health`：`status=ok`、`env=production`、`database=ready`、`release_id=rc-33933822748-1`、`schema_head=av_media_v2_001`、`identifiable=true`。
+- 公開 `/release.json` 與後端 release identity 的 release id、source commit、dirty flag、schema head 與 route contract hash 完全一致。
+- `/`、`/login`、`/ask`、`/knowledge/assets`、`/system/health` 均由外部網路取得 HTTP 200；自動瀏覽器 smoke 為 3/3 PASS。
+
+## 5. 尚未完成的證據
+
+- I9-012／I9-026 已部署且一般正式 Gate 通過；在正式租戶資料完成特定行為複測前，狀態維持 `DEPLOYED`，不提前標記 `VERIFIED`。
+- 正式租戶複測必須驗證：同檔循序重送、同檔並行重送、不同資料分級不合併、原來源 tombstone 後可重新上傳。
 - 李永仁仍需用真實內容完成 Input → 人工確認 → 發布 → Ask 引用，才能關閉租戶旅程。
 - 音訊、圖片與影片語意準確率仍須獨立人工真值；本次 Code Review 不把流程正確誤當成內容品質已認證。
 
-## 5. 發布判定
+## 6. 發布判定
 
-目前 candidate 沒有未處理的 Code Review blocker，可以進入正式部署 Gate。正式部署及租戶複測完成前，不宣稱問題已全面 `CLOSED`。
+本次程式、建置、備份、正式部署、公開 release parity 與瀏覽器 route smoke 均通過，沒有未處理的發布 blocker。正式租戶重送與完整 Input → 人工確認 → 發布 → Ask 引用複測完成前，不宣稱問題已全面 `VERIFIED` 或 `CLOSED`。

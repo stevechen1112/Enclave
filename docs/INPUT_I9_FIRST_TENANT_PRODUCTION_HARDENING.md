@@ -307,3 +307,12 @@ I9-023、I9-024、I9-025 狀態：`VERIFIED`。程式與正式環境技術驗收
 - 後端 PostgreSQL／SQLite focused regression：202/202 PASS；其中去重與證據核心組合 57/57 PASS。Ruff、format check、`git diff --check` PASS。
 - 前端 Input／資產／人工確認／引用測試：24/24 PASS；ESLint、TypeScript 與 production build PASS。
 - Code Review 判定：`PASS FOR DEPLOYMENT CANDIDATE`。本節是 `FIXED_IN_CODE` 證據，不等於正式部署或租戶複測；部署後仍須以相同檔案重送、不同資料分級上傳及並行重送做正式 Gate，通過後才把 I9-012／I9-026 升為 `VERIFIED`。
+
+## 15. I9-012／I9-026 正式發布（2026-09-05）
+
+- 正式 source commit：`46a189d8cb85708eea9b6abf57e3dded026b475b`；release tag：`release-20260905-content-dedup-v2`。
+- Release Candidate run `33933822748` 通過來源 SHA／tag、乾淨來源、pre-build gate、三個映像、digest、SBOM、deployment manifest 與 provenance 封存。
+- Production run `33934220160` 在部署前完成資料庫備份；正式切換、edge health、前後端 release parity、schema head 與 canonical-route browser smoke 全數通過。
+- 公開 `/health` 回報 production、database ready、`source_dirty=false`、`identifiable=true`、`release_id=rc-33933822748-1`、`schema_head=av_media_v2_001`；公開 `/release.json` 與後端身分完全一致。
+- 外部網路檢查 `/`、`/login`、`/ask`、`/knowledge/assets`、`/system/health` 均為 HTTP 200；自動瀏覽器 canonical-route smoke 為 3/3 PASS。
+- 本次未使用、修改或新增李永仁的真實租戶來源，因此 I9-012／I9-026 現在標記為 `DEPLOYED`，不是 `VERIFIED`。下一輪由陳宥竹或李永仁執行同檔循序重送、同檔並行重送、不同資料分級及 tombstone 後重傳，通過後再升級狀態。
