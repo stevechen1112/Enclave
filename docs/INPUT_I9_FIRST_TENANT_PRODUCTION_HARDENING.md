@@ -51,7 +51,7 @@
 | I9-009 | 140 個技術片段直接暴露給一般使用者 | P1 | REOPENED / PARTIAL | 分組已完成，但第二輪仍暴露 122 筆候選且沒有來源層級確認；移交 I10-004／I10-005 |
 | I9-010 | 失敗頁只顯示通用訊息 | P1 | DEPLOYED | 顯示安全、白話、可採取行動的原因與追蹤代碼 |
 | I9-011 | 狀態卡缺乏下一步 | P1 | DEPLOYED | 每個狀態可直接前往提問、人工確認、查看進度或處理問題 |
-| I9-012 | 上傳相同檔案容易產生重複失敗來源 | P1 | OPEN | 內容雜湊去重與重送語意清楚，不重複計費或產生垃圾來源 |
+| I9-012 | 上傳相同檔案容易產生重複失敗來源 | P1 | FIXED_IN_CODE | 內容雜湊去重與重送語意清楚，不重複計費或產生垃圾來源 |
 | I9-013 | 第一方網頁 Input 被誤判為外部 Connector 而無法檢索 | P0 | VERIFIED | 網頁知識可由正式 Ask 命中並回傳來源引用；外部 Connector 仍維持 fail-closed |
 | I9-014 | 正式 Redis 要求密碼但檢索快取未帶認證 | P1 | VERIFIED | 正式環境不再出現檢索快取認證失敗，且快取仍維持租戶／權限隔離 |
 | I9-015 | 舊有完成文件缺少 lexical projection | P0 | VERIFIED | 既有文件完成受稽核且具租戶邊界的索引回填，關鍵字檢索可命中 |
@@ -64,6 +64,7 @@
 | I9-022 | 從「所有資產」刪除來源時，對應 Document 投影可能仍可被檢索 | P0 | VERIFIED | 刪除來源必須先走共用 deny-first 文件撤權，清除檢索、快取、Wiki 與圖譜投影；撤權失敗時不可只隱藏來源 |
 | I9-023 | 同租戶同時上傳多種來源時，tenant admission lock upgrade 可能造成 PostgreSQL deadlock 與 HTTP 500 | P0 | FIXED_IN_CODE | admission 使用不與 FK KEY SHARE 衝突的序列化鎖；雙交易測試及正式四格式並行上傳均不得失敗 |
 | I9-024 | `.env.production` 三個非機密設定帶行尾註解，獨立 Docker 維運工具解析失敗 | P1 | VERIFIED | 設定值與註解分離；Compose 及獨立容器均能載入型別正確的設定 |
+| I9-026 | 證據定位修復後，舊測試仍假設每個解析案例只能產生一筆 EvidenceSpan | P1 | FIXED_IN_CODE | 整份來源與實際片段均有定位、重跑不重複建立，相關回歸全數通過 |
 
 ### 實作進度（持續追加）
 
@@ -294,3 +295,15 @@ I9-023、I9-024、I9-025 狀態：`VERIFIED`。程式與正式環境技術驗收
 - I9-009 因第二輪真實操作重新標記為 `REOPENED / PARTIAL`。來源分組降低了視覺混亂，但沒有降低使用者實際要做的逐筆工作。
 - 後續不以五個檔名建立特例。解析品質、信心契約、多路 fallback、來源層級發布、Ask 與引用驗收移交 [Input I10 可泛化解析品質驗收與提升計畫](INPUT_I10_GENERALIZABLE_PARSE_QUALITY_ACCEPTANCE_PLAN_2026-09-04.md)。
 - 可重跑程式：`scripts/audit_asset_parse_quality.py`；本次唯讀證據：`artifacts/input/INPUT_I10_FIRST_TENANT_PARSE_QUALITY_AUDIT_2026-09-04.json`。
+
+## 14. 修復保留性 Code Review 與 I9-012 補強（2026-09-05）
+
+- 正式環境 source commit `e2cc7490217c689343d6cc8aec7890288d31d8f2` 仍包含首租戶 Reality Audit 修復 commit `8c7c949f0ff230c7c3aebfc6962cf1ed1c6fe072`；沒有發現後續提交回退 WAV、Worker 復原、狀態、人工確認、檢索、引用、權限或撤權修復。
+- Code Review 發現 I9-012 尚未真正關閉：音檔已有循序內容雜湊去重，但文件與影片主要依賴每次選檔產生的 idempotency key，影片統一入口也會遺失下層 `deduplicated=true`。
+- Candidate 已統一加入租戶範圍 SHA-256 內容身分檢查；只有資產種類、資料分級、部門 ACL、Input context 都相同且目前使用者有權存取時才重用。相同內容若治理語意不同，仍建立獨立邏輯資產。
+- PostgreSQL 使用 transaction advisory lock 序列化同租戶同內容的並行重送，避免兩個請求同時通過 read-before-create；文件建立與 canonical projection 改在同一 transaction 完成。已 tombstone 來源不會被重用。
+- 去重判斷移到 queue、配額、媒體 probe、成本預留及物件儲存之前；命中時不重複派送、不重複計量。未命中或保護 Gate 失敗時會清除暫存檔。
+- I9-026 已同步修正：整份 `extracted_text` 與其片段 artifact 各自保有同一精確來源定位，測試同時驗證兩者存在及重跑冪等，不再以錯誤的單筆假設製造假失敗。
+- 後端 PostgreSQL／SQLite focused regression：202/202 PASS；其中去重與證據核心組合 57/57 PASS。Ruff、format check、`git diff --check` PASS。
+- 前端 Input／資產／人工確認／引用測試：24/24 PASS；ESLint、TypeScript 與 production build PASS。
+- Code Review 判定：`PASS FOR DEPLOYMENT CANDIDATE`。本節是 `FIXED_IN_CODE` 證據，不等於正式部署或租戶複測；部署後仍須以相同檔案重送、不同資料分級上傳及並行重送做正式 Gate，通過後才把 I9-012／I9-026 升為 `VERIFIED`。

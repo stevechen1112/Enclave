@@ -1,4 +1,3 @@
-import os
 import hashlib
 from datetime import datetime, timezone
 from typing import List
@@ -9,17 +8,29 @@ from app.schemas.document import DocumentCreate, DocumentUpdate
 
 
 def get(db: Session, document_id: UUID) -> Document:
-    return db.query(Document).filter(
-        Document.id == document_id,
-        Document.tombstoned_at.is_(None),
-    ).first()
+    return (
+        db.query(Document)
+        .filter(
+            Document.id == document_id,
+            Document.tombstoned_at.is_(None),
+        )
+        .first()
+    )
 
 
-def get_by_tenant(db: Session, tenant_id: UUID, skip: int = 0, limit: int = 100) -> List[Document]:
-    return db.query(Document).filter(
-        Document.tenant_id == tenant_id,
-        Document.tombstoned_at.is_(None),
-    ).offset(skip).limit(limit).all()
+def get_by_tenant(
+    db: Session, tenant_id: UUID, skip: int = 0, limit: int = 100
+) -> List[Document]:
+    return (
+        db.query(Document)
+        .filter(
+            Document.tenant_id == tenant_id,
+            Document.tombstoned_at.is_(None),
+        )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 def create(
@@ -30,6 +41,7 @@ def create(
     uploaded_by: UUID,
     file_size: int,
     department_id: UUID | None = None,
+    commit: bool = True,
 ) -> Document:
     db_obj = Document(
         filename=obj_in.filename,
@@ -44,6 +56,7 @@ def create(
     db.flush()
 
     from app.services.outbox_events import publish_event
+
     publish_event(
         db,
         aggregate_type="document",
@@ -59,8 +72,9 @@ def create(
         },
     )
 
-    db.commit()
-    db.refresh(db_obj)
+    if commit:
+        db.commit()
+        db.refresh(db_obj)
     return db_obj
 
 
@@ -91,6 +105,7 @@ def tombstone(db: Session, *, document_id: UUID, reason: str = "user_request") -
     project_document(db, doc)
 
     from app.services.outbox_events import publish_event
+
     publish_event(
         db,
         aggregate_type="document",
@@ -120,7 +135,7 @@ def create_chunk(
     tenant_id: UUID,
     chunk_index: int,
     content: str,
-    vector_id: str = None
+    vector_id: str = None,
 ) -> DocumentChunk:
     chunk_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
     document = db.query(Document).filter(Document.id == document_id).first()
@@ -132,7 +147,7 @@ def create_chunk(
         chunk_index=chunk_index,
         text=content,
         chunk_hash=chunk_hash,
-        vector_id=vector_id
+        vector_id=vector_id,
     )
     db.add(db_obj)
     db.commit()
@@ -141,6 +156,9 @@ def create_chunk(
 
 
 def get_chunks(db: Session, document_id: UUID) -> List[DocumentChunk]:
-    return db.query(DocumentChunk).filter(
-        DocumentChunk.document_id == document_id
-    ).order_by(DocumentChunk.chunk_index).all()
+    return (
+        db.query(DocumentChunk)
+        .filter(DocumentChunk.document_id == document_id)
+        .order_by(DocumentChunk.chunk_index)
+        .all()
+    )

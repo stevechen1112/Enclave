@@ -1,25 +1,28 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from array import array
 from datetime import UTC, datetime, timedelta
-from io import StringIO
+from io import BytesIO, StringIO
 from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
 from alembic.migration import MigrationContext
 from alembic.operations import Operations
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 import app.models  # noqa: F401
+from app.config import settings
 from app.api.v1.endpoints.video_assets import (
     ArtifactReviewRequest,
     review_video_procedure,
+    upload_video_asset,
 )
 from app.composition.ingestion import build_ingestion_adapter_registry
 from app.core.authorization import AuthorizationContext
@@ -46,6 +49,7 @@ from app.platform.ingestion import IngestionRequest
 from app.platform.knowledge import KnowledgeProviderRegistry
 from app.platform.multimodal import MultimodalAnalysisContext
 from app.services.media_access import create_media_token, decode_media_token
+from app.services.asset_visibility import canonical_asset_acl
 from app.services.video_governance import (
     apply_sop_precedence,
     build_sop_conflict_report,
@@ -204,6 +208,40 @@ def _result() -> VideoProcessingResult:
         ],
         audio_chunk_count=1,
     )
+
+
+@pytest.mark.asyncio
+async def test_video_content_replay_reuses_existing_asset(video_db, monkeypatch):
+    tenant, user, asset, revision = _video_source(video_db)
+    payload = b"same-video-content"
+    asset.data_classification = "confidential"
+    asset.acl_reference = canonical_asset_acl(
+        owner_subject_id=user.id,
+        visibility="tenant",
+        allowed_department_ids=[],
+    )
+    revision.content_hash = hashlib.sha256(payload).hexdigest()
+    video_db.commit()
+    monkeypatch.setattr(settings, "VIDEO_INGESTION_ENABLED", True)
+
+    replay = await upload_video_asset(
+        file=UploadFile(filename="machine.mp4", file=BytesIO(payload)),
+        db=video_db,
+        current_user=user,
+        title="重送影片",
+        equipment_ids=None,
+        applicable_roles=None,
+        idempotency_key="different-attempt",
+        department_id=None,
+        data_classification="confidential",
+        context_metadata=None,
+    )
+
+    assert replay["id"] == str(asset.id)
+    assert replay["deduplicated"] is True
+    assert replay["dispatched"] is False
+    assert video_db.query(SourceAsset).filter_by(tenant_id=tenant.id).count() == 1
+    assert video_db.query(AssetRevision).filter_by(tenant_id=tenant.id).count() == 1
 
 
 def test_probe_parser_extracts_video_audio_and_fractional_rate():

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models.asset import AssetRevision, SourceAsset
@@ -27,6 +29,86 @@ ALLOWED_CONTEXT_KEYS = {
 
 class IntakeContextError(ValueError):
     pass
+
+
+def acquire_content_identity_lock(
+    db: Session, *, tenant_id: UUID, content_hash: str
+) -> None:
+    """Serialize same-tenant, same-content intake until the transaction ends.
+
+    The read-before-create duplicate check is otherwise racy when a user submits
+    the same file twice from separate browser requests. PostgreSQL advisory
+    transaction locks avoid a schema-wide uniqueness rule, which would wrongly
+    merge assets that intentionally use different ACL or intake context.
+    """
+
+    if db.get_bind().dialect.name != "postgresql":
+        return
+    identity = f"{tenant_id}:{content_hash.lower()}".encode("utf-8")
+    lock_key = int.from_bytes(hashlib.sha256(identity).digest()[:8], "big", signed=True)
+    db.execute(text("SELECT pg_advisory_xact_lock(:lock_key)"), {"lock_key": lock_key})
+
+
+def find_matching_content_asset(
+    db: Session,
+    *,
+    current_user: Any,
+    content_hash: str,
+    asset_kind: str,
+    department_id: UUID | None,
+    data_classification: str,
+    context: dict[str, Any] | None,
+) -> SourceAsset | None:
+    """Return an accessible active upload with identical bytes and policy.
+
+    Content equality alone is insufficient: the same bytes may deliberately be
+    imported under a different department, classification or operational
+    context. Those remain distinct logical assets.
+    """
+
+    hashes = {content_hash.lower()}
+    if not content_hash.lower().startswith("sha256:"):
+        hashes.add(f"sha256:{content_hash.lower()}")
+    candidates = (
+        db.query(SourceAsset)
+        .join(
+            AssetRevision,
+            (AssetRevision.tenant_id == SourceAsset.tenant_id)
+            & (AssetRevision.asset_id == SourceAsset.id)
+            & (AssetRevision.revision == SourceAsset.current_revision),
+        )
+        .filter(
+            SourceAsset.tenant_id == current_user.tenant_id,
+            SourceAsset.asset_kind == asset_kind,
+            SourceAsset.source_system == "upload",
+            SourceAsset.tombstoned_at.is_(None),
+            SourceAsset.data_classification == data_classification,
+            AssetRevision.content_hash.in_(hashes),
+        )
+        .order_by(SourceAsset.created_at.desc())
+        .all()
+    )
+    expected_departments = {str(department_id)} if department_id else set()
+    expected_context = dict(context or {})
+    from app.core.authorization import AuthorizationContext
+    from app.services.asset_visibility import asset_access_allows
+
+    for asset in candidates:
+        acl = dict(asset.acl_reference or {})
+        actual_departments = {
+            str(value) for value in (acl.get("allowed_department_ids") or [])
+        }
+        actual_context = dict((asset.metadata_json or {}).get("intake_context") or {})
+        if (
+            actual_departments != expected_departments
+            or actual_context != expected_context
+        ):
+            continue
+        if asset_access_allows(
+            db, asset, authz=AuthorizationContext.from_user(current_user)
+        ):
+            return asset
+    return None
 
 
 def parse_intake_context(raw: str | None) -> dict[str, Any]:
@@ -55,7 +137,9 @@ def parse_intake_context(raw: str | None) -> dict[str, Any]:
             tags = []
             for item in value[:MAX_CONTEXT_LIST_ITEMS]:
                 if not isinstance(item, str):
-                    raise IntakeContextError("context_metadata.tags must contain strings")
+                    raise IntakeContextError(
+                        "context_metadata.tags must contain strings"
+                    )
                 cleaned = item.strip()[:100]
                 if cleaned and cleaned not in tags:
                     tags.append(cleaned)

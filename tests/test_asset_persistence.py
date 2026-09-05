@@ -205,7 +205,7 @@ def test_document_parse_projection_creates_typed_evidence(
     projected = (
         asset_db.query(DerivedArtifact).filter(DerivedArtifact.id != artifact.id).one()
     )
-    evidence = asset_db.query(EvidenceSpan).one()
+    evidence_spans = asset_db.query(EvidenceSpan).all()
     assert asset_db.get(SourceAsset, document.source_asset_id).asset_kind == asset_kind
     assert projected.quality_state == (
         "review_required" if file_type == "image" else "ready"
@@ -217,10 +217,30 @@ def test_document_parse_projection_creates_typed_evidence(
     assert projected.metadata_json["confidence_calibration_version"] == (
         "parse-quality-heuristic.v1"
     )
-    assert evidence.locator_kind == locator_kind
-    assert getattr(evidence, coordinate[0]) == coordinate[1]
+    assert len(evidence_spans) == 2
+    assert {span.artifact_id for span in evidence_spans} == {
+        artifact.id,
+        projected.id,
+    }
+    assert {span.locator_kind for span in evidence_spans} == {locator_kind}
+    assert all(getattr(span, coordinate[0]) == coordinate[1] for span in evidence_spans)
     if file_type == "image":
-        assert evidence.locator_fallback is True
+        assert all(span.locator_fallback is True for span in evidence_spans)
+
+    project_document_text_artifact(
+        asset_db,
+        document=document,
+        content="marker",
+        provider="native",
+        provider_version="1",
+        metadata={
+            "parse_artifact": {
+                "confidence": 0.9,
+                "chunks": [{"chunk_index": 0, **chunk}],
+            }
+        },
+    )
+    assert asset_db.query(EvidenceSpan).count() == 2
 
 
 def test_document_quality_policy_requires_review_for_low_ocr_confidence():

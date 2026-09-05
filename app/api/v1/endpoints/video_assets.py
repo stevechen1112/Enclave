@@ -43,8 +43,10 @@ from app.models.user import User
 from app.platform.intake import VIDEO_CAPABILITIES, VIDEO_MEDIA_TYPES
 from app.services.intake_context import (
     IntakeContextError,
+    acquire_content_identity_lock,
     apply_intake_metadata,
     assert_file_replay_matches,
+    find_matching_content_asset,
     find_idempotent_asset,
     parse_intake_context,
 )
@@ -229,9 +231,6 @@ async def upload_video_asset(
         await file.close()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
-
-    enforce_ingestion_queue_capacity()
     if not settings.VIDEO_INGESTION_ENABLED:
         raise HTTPException(status_code=404, detail="video ingestion is not enabled")
 
@@ -260,6 +259,36 @@ async def upload_video_asset(
         os.remove(temp_path)
         raise HTTPException(status_code=400, detail="video is empty")
 
+    content_hash = digest.hexdigest()
+    acquire_content_identity_lock(
+        db, tenant_id=current_user.tenant_id, content_hash=content_hash
+    )
+    duplicate = find_matching_content_asset(
+        db,
+        current_user=current_user,
+        content_hash=content_hash,
+        asset_kind="video",
+        department_id=department_id,
+        data_classification=data_classification,
+        context=intake_context,
+    )
+    if duplicate is not None:
+        os.remove(temp_path)
+        return {
+            **_serialize_asset(db, duplicate),
+            "deduplicated": True,
+            "dispatched": False,
+        }
+
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    try:
+        enforce_ingestion_queue_capacity()
+    except Exception:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise
+
     storage_key = ""
     try:
         from app.services.file_scan import scan_file_path
@@ -286,7 +315,7 @@ async def upload_video_asset(
             tenant_id=current_user.tenant_id,
             media_kind="video",
             duration_ms=probe.duration_ms,
-            task_id=f"upload:{digest.hexdigest()}",
+            task_id=f"upload:{content_hash}",
         )
         if not cost_reservation.get("allowed", False):
             raise HTTPException(
@@ -356,7 +385,7 @@ async def upload_video_asset(
             revision=1,
             media_type=_VIDEO_TYPES[extension],
             content_uri=content_uri,
-            content_hash=digest.hexdigest(),
+            content_hash=content_hash,
             byte_size=file_size,
             duration_ms=probe.duration_ms,
             ingestion_status="pending",

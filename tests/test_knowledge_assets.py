@@ -42,10 +42,14 @@ def _isolate_asset_readiness_tables(monkeypatch):
         jobs_by_revision = jobs_by_revision or {}
         states = {}
         for asset in assets:
-            revision = _db.query(AssetRevision).filter(
-                AssetRevision.asset_id == asset.id,
-                AssetRevision.revision == asset.current_revision,
-            ).first()
+            revision = (
+                _db.query(AssetRevision)
+                .filter(
+                    AssetRevision.asset_id == asset.id,
+                    AssetRevision.revision == asset.current_revision,
+                )
+                .first()
+            )
             job = jobs_by_revision.get(revision.id) if revision else None
             lifecycle, reasons = derive_asset_lifecycle(
                 answer_ready=False,
@@ -205,12 +209,12 @@ def test_audio_asset_detail_exposes_only_signed_proxy_url():
             capture_manifest=json.dumps({"capture_id": "audio-preview-1"}),
             media_type="audio/wav",
         )
-        asset = db.query(SourceAsset).filter(
-            SourceAsset.id == UUID(created["id"])
-        ).one()
-        revision = db.query(AssetRevision).filter(
-            AssetRevision.asset_id == asset.id
-        ).one()
+        asset = (
+            db.query(SourceAsset).filter(SourceAsset.id == UUID(created["id"])).one()
+        )
+        revision = (
+            db.query(AssetRevision).filter(AssetRevision.asset_id == asset.id).one()
+        )
         proxy = DerivedArtifact(
             tenant_id=asset.tenant_id,
             asset_revision_id=revision.id,
@@ -315,7 +319,11 @@ def test_tombstone_asset_revokes_linked_document_projection(monkeypatch):
         class _Revocation:
             def revoke(self, target_db, **kwargs):
                 calls.append(kwargs)
-                row = target_db.query(Document).filter(Document.id == kwargs["document_id"]).one()
+                row = (
+                    target_db.query(Document)
+                    .filter(Document.id == kwargs["document_id"])
+                    .one()
+                )
                 row.status = "deleted"
                 from datetime import datetime, timezone
 
@@ -340,8 +348,14 @@ def test_tombstone_asset_revokes_linked_document_projection(monkeypatch):
                 "reason": "source_asset_user_request",
             }
         ]
-        assert db.query(Document).filter(Document.id == document.id).one().tombstoned_at is not None
-        assert db.query(SourceAsset).filter(SourceAsset.id == asset_id).one().tombstoned_at is not None
+        assert (
+            db.query(Document).filter(Document.id == document.id).one().tombstoned_at
+            is not None
+        )
+        assert (
+            db.query(SourceAsset).filter(SourceAsset.id == asset_id).one().tombstoned_at
+            is not None
+        )
     finally:
         db.close()
         engine.dispose()
@@ -382,8 +396,14 @@ def test_tombstone_asset_fails_closed_when_linked_document_cannot_be_revoked(
             tombstone_asset(asset_id, db=db, current_user=user)
 
         assert exc_info.value.status_code == 409
-        assert db.query(Document).filter(Document.id == document.id).one().tombstoned_at is None
-        assert db.query(SourceAsset).filter(SourceAsset.id == asset_id).one().tombstoned_at is None
+        assert (
+            db.query(Document).filter(Document.id == document.id).one().tombstoned_at
+            is None
+        )
+        assert (
+            db.query(SourceAsset).filter(SourceAsset.id == asset_id).one().tombstoned_at
+            is None
+        )
     finally:
         db.close()
         engine.dispose()
@@ -465,6 +485,41 @@ async def test_audio_upload_persists_job_and_dispatches_worker(monkeypatch):
         assert result["job"]["adapter_key"] == "core.long_interview_audio"
         assert result["dispatched"] is True
         assert len(dispatched) == 1
+
+        duplicate = await _create_audio_asset(
+            db=db,
+            file=UploadFile(
+                filename="interview.wav", file=BytesIO(b"RIFFtestWAVEdata")
+            ),
+            current_user=user,
+            title="訪談重送",
+            idempotency_key="audio-2",
+            department_id=None,
+            data_classification="internal",
+        )
+        assert duplicate["id"] == result["id"]
+        assert duplicate["deduplicated"] is True
+        assert duplicate["dispatched"] is False
+        assert db.query(SourceAsset).count() == 1
+        assert db.query(AssetRevision).count() == 1
+        assert len(dispatched) == 1
+
+        differently_classified = await _create_audio_asset(
+            db=db,
+            file=UploadFile(
+                filename="interview.wav", file=BytesIO(b"RIFFtestWAVEdata")
+            ),
+            current_user=user,
+            title="機密訪談",
+            idempotency_key="audio-3",
+            department_id=None,
+            data_classification="confidential",
+        )
+        assert differently_classified["id"] != result["id"]
+        assert differently_classified["deduplicated"] is False
+        assert db.query(SourceAsset).count() == 2
+        assert db.query(AssetRevision).count() == 2
+        assert len(dispatched) == 2
     finally:
         db.close()
         engine.dispose()
@@ -476,12 +531,18 @@ async def test_unified_video_intake_uses_canonical_video_response_id(monkeypatch
     try:
         _tenant, user = _user(db)
         existing = _reference(db, user, title="video placeholder")
-        asset = db.query(SourceAsset).filter(SourceAsset.id == UUID(existing["id"])).one()
+        asset = (
+            db.query(SourceAsset).filter(SourceAsset.id == UUID(existing["id"])).one()
+        )
         asset.asset_kind = "video"
         db.commit()
 
         async def fake_upload_video_asset(**_kwargs):
-            return {"id": str(asset.id), "dispatched": True}
+            return {
+                "id": str(asset.id),
+                "deduplicated": True,
+                "dispatched": False,
+            }
 
         monkeypatch.setattr(
             "app.api.v1.endpoints.video_assets.upload_video_asset",
@@ -504,6 +565,7 @@ async def test_unified_video_intake_uses_canonical_video_response_id(monkeypatch
 
         assert result["id"] == str(asset.id)
         assert result["asset_kind"] == "video"
+        assert result["deduplicated"] is True
     finally:
         db.close()
         engine.dispose()

@@ -6,7 +6,16 @@ from typing import Annotated, Any, Dict, List, Optional
 from uuid import UUID
 
 import aiofiles
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -32,8 +41,10 @@ from app.services.document_visibility import apply_document_visibility
 from app.services.kb_scope_policy import resolve_kb_revision_scope
 from app.services.intake_context import (
     IntakeContextError,
+    acquire_content_identity_lock,
     apply_intake_metadata,
     assert_file_replay_matches,
+    find_matching_content_asset,
     find_idempotent_asset,
     parse_intake_context,
 )
@@ -214,21 +225,6 @@ async def upload_document(
         await file.close()
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
-    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
-
-    enforce_ingestion_queue_capacity()
-    doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")
-    if not doc_quota.get("allowed", True):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail={
-                "error": "quota_exceeded",
-                "message": doc_quota.get("message", "文件數量配額已超過"),
-                "current": doc_quota.get("current"),
-                "limit": doc_quota.get("limit"),
-            },
-        )
-
     # 4. 串流寫檔（避免一次把整個檔案讀進記憶體）
     upload_dir = os.path.join(settings.UPLOAD_DIR, str(current_user.tenant_id))
     try:
@@ -318,6 +314,58 @@ async def upload_document(
                 detail="檔案安全掃描服務暫時不可用，請稍後再試",
             )
 
+    content_hash = content_digest.hexdigest()
+    from app.services.asset_projection import infer_asset_kind
+
+    acquire_content_identity_lock(
+        db, tenant_id=current_user.tenant_id, content_hash=content_hash
+    )
+    duplicate_asset = find_matching_content_asset(
+        db,
+        current_user=current_user,
+        content_hash=content_hash,
+        asset_kind=infer_asset_kind(filename=clean_filename, file_type=file_type),
+        department_id=department_id,
+        data_classification=data_classification,
+        context=intake_context,
+    )
+    if duplicate_asset is not None:
+        existing_document = (
+            db.query(DocumentModel)
+            .filter(
+                DocumentModel.tenant_id == current_user.tenant_id,
+                DocumentModel.source_asset_id == duplicate_asset.id,
+                DocumentModel.file_type == file_type,
+                DocumentModel.tombstoned_at.is_(None),
+            )
+            .first()
+        )
+        if existing_document is not None:
+            if os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            setattr(existing_document, "_content_deduplicated", True)
+            return existing_document
+
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    try:
+        enforce_ingestion_queue_capacity()
+        doc_quota = crud_tenant.check_quota(db, current_user.tenant_id, "document")
+        if not doc_quota.get("allowed", True):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail={
+                    "error": "quota_exceeded",
+                    "message": doc_quota.get("message", "文件數量配額已超過"),
+                    "current": doc_quota.get("current"),
+                    "limit": doc_quota.get("limit"),
+                },
+            )
+    except Exception:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        raise
+
     # 儲存配額檢查（FOR UPDATE + 同 transaction create，防 TOCTOU）
     storage_quota = crud_tenant.lock_and_check_storage_quota(
         db, current_user.tenant_id, file_size
@@ -353,6 +401,7 @@ async def upload_document(
             uploaded_by=current_user.id,
             file_size=file_size,
             department_id=department_id,
+            commit=False,
         )
     except Exception:
         if os.path.exists(temp_file_path):
@@ -387,7 +436,7 @@ async def upload_document(
 
     # content_uri 持久化（local=絕對路徑，向後相容；s3=s3://bucket/key）
     document.file_path = content_uri
-    document.content_hash = content_digest.hexdigest()
+    document.content_hash = content_hash
     try:
         from app.services.asset_projection import project_document
 
@@ -450,7 +499,9 @@ async def upload_document(
             tenant_id=str(current_user.tenant_id),
         )
     except Exception as exc:
-        logger.exception("document job persisted but broker dispatch failed: %s", job.id)
+        logger.exception(
+            "document job persisted but broker dispatch failed: %s", job.id
+        )
         orchestrator.fail(
             db,
             job,

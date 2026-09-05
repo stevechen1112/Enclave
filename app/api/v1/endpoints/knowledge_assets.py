@@ -48,8 +48,10 @@ from app.services.asset_visibility import asset_access_allows, canonical_asset_a
 from app.services.ingestion_orchestrator import get_ingestion_orchestrator
 from app.services.intake_context import (
     IntakeContextError,
+    acquire_content_identity_lock,
     apply_intake_metadata,
     assert_file_replay_matches,
+    find_matching_content_asset,
     find_idempotent_asset,
     parse_intake_context,
 )
@@ -592,9 +594,6 @@ async def create_asset(
             return {**_asset_dict(db, existing_asset), "deduplicated": True}
     except IntakeContextError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
-
-    enforce_ingestion_queue_capacity()
     if file is not None:
         extension = Path(os.path.basename(file.filename or "")).suffix.lower()
         if extension in _VIDEO_EXTENSIONS:
@@ -620,7 +619,10 @@ async def create_asset(
                 )
                 .one()
             )
-            return {**_asset_dict(db, asset), "deduplicated": False}
+            return {
+                **_asset_dict(db, asset),
+                "deduplicated": bool(legacy.get("deduplicated", False)),
+            }
         if extension not in _AUDIO_TYPES:
             from app.api.v1.endpoints.documents import upload_document
 
@@ -646,10 +648,12 @@ async def create_asset(
                 )
                 .one()
             )
-            asset.title = (title or asset.title)[:500]
-            db.commit()
-            db.refresh(asset)
-            return {**_asset_dict(db, asset), "deduplicated": False}
+            deduplicated = bool(getattr(document, "_content_deduplicated", False))
+            if not deduplicated:
+                asset.title = (title or asset.title)[:500]
+                db.commit()
+                db.refresh(asset)
+            return {**_asset_dict(db, asset), "deduplicated": deduplicated}
         return await _create_audio_asset(
             db=db,
             file=file,
@@ -660,6 +664,9 @@ async def create_asset(
             data_classification=data_classification,
             intake_context=intake_context,
         )
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    enforce_ingestion_queue_capacity()
     if source_url is not None:
         return _create_url_asset(
             db=db,
@@ -816,24 +823,33 @@ async def _create_audio_asset(
         os.remove(temp_path)
         raise HTTPException(status_code=400, detail="audio is empty")
     content_hash = digest.hexdigest()
-    duplicate = (
-        db.query(AssetRevision)
-        .join(
-            SourceAsset,
-            (SourceAsset.tenant_id == AssetRevision.tenant_id)
-            & (SourceAsset.id == AssetRevision.asset_id),
-        )
-        .filter(
-            AssetRevision.tenant_id == current_user.tenant_id,
-            AssetRevision.content_hash == content_hash,
-            SourceAsset.tombstoned_at.is_(None),
-        )
-        .first()
+    acquire_content_identity_lock(
+        db, tenant_id=current_user.tenant_id, content_hash=content_hash
+    )
+    duplicate = find_matching_content_asset(
+        db,
+        current_user=current_user,
+        content_hash=content_hash,
+        asset_kind="audio",
+        department_id=department_id,
+        data_classification=data_classification,
+        context=intake_context,
     )
     if duplicate is not None:
         os.remove(temp_path)
-        asset = db.query(SourceAsset).filter(SourceAsset.id == duplicate.asset_id).one()
-        return {**_asset_dict(db, asset), "deduplicated": True}
+        return {
+            **_asset_dict(db, duplicate),
+            "deduplicated": True,
+            "dispatched": False,
+        }
+    from app.api.ingestion_guard import enforce_ingestion_queue_capacity
+
+    try:
+        enforce_ingestion_queue_capacity()
+    except Exception:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise
     from app.services.cost_guardrails import (
         MediaDurationError,
         probe_media_duration_ms,
