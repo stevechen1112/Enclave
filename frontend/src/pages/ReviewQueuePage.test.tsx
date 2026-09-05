@@ -43,6 +43,18 @@ describe('ReviewQueuePage', () => {
     await waitFor(() => expect(knowledgeReviewApi.decide).toHaveBeenCalledWith(item.id, expect.objectContaining({ decision: 'approved', acknowledgeLowConfidence: true })))
   })
 
+  it('keeps nested evidence locators out of the readable proposal preview', async () => {
+    vi.mocked(knowledgeReviewApi.list).mockResolvedValue({
+      items: [{ ...item, proposal: { steps: [{ text: '壓力歸零後才能開門', artifact_id: 'internal-artifact', start_ms: 42, deep_link: '/knowledge/assets/a1?t=42' }] } }],
+      total: 1, limit: 100, offset: 0,
+      facets: { source_types: ['transcript_segment'], policy_keys: ['artifact-human-review-v1'], assignees: [] },
+    })
+    render(<MemoryRouter><ReviewQueuePage /></MemoryRouter>)
+    expect(await screen.findByText('壓力歸零後才能開門')).toBeInTheDocument()
+    expect(screen.getByText('技術詳細資料')).toBeInTheDocument()
+    expect(screen.queryByText(/^artifact id$/i)).not.toBeInTheDocument()
+  })
+
   it('exposes all governance filters', async () => {
     render(<MemoryRouter><ReviewQueuePage /></MemoryRouter>)
     await screen.findAllByText('交接錄音')

@@ -22,7 +22,13 @@ const sourceLabels: Record<string, string> = {
   document_classification: '文件分類', extracted_text: '文件文字', ocr_region: 'OCR',
   table: '表格', transcript_segment: '逐字稿', procedure_candidate: '影片程序',
   sop_conflict_report: 'SOP 衝突', knowhow_card: '經驗知識卡', audio_event: '異常聲音',
-  spoken_action_candidate: '操作動作候選', acoustic_signal_outlier: '異常聲音候選',
+  action_event: '操作事件', spoken_action_candidate: '操作動作候選', acoustic_signal_outlier: '異常聲音候選',
+}
+
+const candidateSubtitleLabels: Record<string, string> = {
+  procedure_candidate: 'AI 建議作業程序', spoken_action_candidate: 'AI 偵測操作動作',
+  acoustic_signal_outlier: 'AI 偵測異常聲音', transcript_segment: '逐字稿片段',
+  ocr_region: '影像文字', action_event: '操作事件',
 }
 
 const policyLabels: Record<string, string> = {
@@ -33,6 +39,17 @@ const proposalLabels: Record<string, string> = {
   content: '候選內容', title: '建議標題', summary: '摘要', description: '說明',
   steps: '建議步驟', conditions: '適用條件', risks: '風險提醒', exceptions: '例外情況',
   action: '建議動作', signal: '偵測訊號', confidence: '辨識信心',
+}
+
+const technicalProposalKeys = new Set([
+  'schema_version', 'artifact_id', 'asset_id', 'asset_revision', 'source_asset_id',
+  'source_revision_id', 'source_revision', 'evidence_artifact_id', 'evidence_kind',
+  'deep_link', 'start_ms', 'end_ms', 'frame_index', 'sequence', 'metadata',
+  'effective_from', 'applicable_equipment', 'applicable_roles', 'preconditions',
+])
+
+function candidateSubtitle(value: string) {
+  return candidateSubtitleLabels[value] || value
 }
 
 const blockedLabels: Record<string, string> = {
@@ -58,15 +75,25 @@ function evidenceLabel(evidence: ReviewEvidenceLocator) {
   return `文件${evidence.slide_number ? ` · 投影片 ${evidence.slide_number}` : evidence.page ? ` · 第 ${evidence.page} 頁` : ''}${evidence.section ? ` · ${evidence.section}` : ''}${evidence.paragraph_index ? ` · 段落 ${evidence.paragraph_index}` : ''}`
 }
 
-function readableValue(value: unknown): string {
+function readableValue(value: unknown, depth = 0): string {
   if (typeof value === 'string') return value
   if (typeof value === 'number') return String(value)
   if (typeof value === 'boolean') return value ? '是' : '否'
   if (value == null) return ''
-  if (Array.isArray(value)) return value.map(readableValue).filter(Boolean).join('；')
+  if (Array.isArray(value)) return value.map(entry => readableValue(entry, depth + 1)).filter(Boolean).join('；')
   if (typeof value === 'object') {
-    return Object.entries(value as Record<string, unknown>)
-      .map(([key, entry]) => `${proposalLabels[key] || key.replaceAll('_', ' ')}：${readableValue(entry)}`)
+    const row = value as Record<string, unknown>
+    // Evidence objects often pair human text with locator IDs and timing.  The
+    // review workspace already provides an evidence link below, so the readable
+    // preview must use the text only and keep the locator fields out of sight.
+    if (typeof row.text === 'string') return row.text
+    if (typeof row.content === 'string') return row.content
+    return Object.entries(row)
+      .filter(([key]) => !technicalProposalKeys.has(key))
+      .map(([key, entry]) => {
+        const content = readableValue(entry, depth + 1)
+        return content ? (depth > 0 ? content : `${proposalLabels[key] || key.replaceAll('_', ' ')}：${content}`) : ''
+      })
       .filter(Boolean)
       .join('；')
   }
@@ -77,7 +104,7 @@ function ProposalPreview({ value }: { value: unknown }) {
   if (value == null || value === '') return <p className="text-sm text-muted">沒有內容預覽。</p>
   if (typeof value === 'string') return <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{value}</p>
   if (Array.isArray(value)) return <ol className="space-y-2 text-sm">{value.map((entry, index) => <li key={index} className="rounded-lg bg-wash px-3 py-2">{readableValue(entry)}</li>)}</ol>
-  return <dl className="space-y-3">{Object.entries(value as Record<string, unknown>).filter(([key, entry]) => key !== 'conflicts' && entry != null && entry !== '' && (!Array.isArray(entry) || entry.length)).map(([key, entry]) => <div key={key}><dt className="text-xs font-semibold tracking-wide text-muted">{proposalLabels[key] || key.replaceAll('_', ' ')}</dt><dd className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{readableValue(entry)}</dd></div>)}</dl>
+  return <dl className="space-y-3">{Object.entries(value as Record<string, unknown>).filter(([key, entry]) => key !== 'conflicts' && !technicalProposalKeys.has(key) && entry != null && entry !== '' && (!Array.isArray(entry) || entry.length)).map(([key, entry]) => { const content = readableValue(entry); return content ? <div key={key}><dt className="text-xs font-semibold tracking-wide text-muted">{proposalLabels[key] || key.replaceAll('_', ' ')}</dt><dd className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{content}</dd></div> : null })}</dl>
 }
 
 export default function ReviewQueuePage() {
@@ -261,7 +288,7 @@ export default function ReviewQueuePage() {
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted"><label className="flex items-center gap-1"><input type="checkbox" checked={overdueOnly} onChange={event => setOverdueOnly(event.target.checked)} />已逾期</label><label className="flex items-center gap-1"><input type="checkbox" checked={lowConfidenceOnly} onChange={event => setLowConfidenceOnly(event.target.checked)} />低信心</label></div>
           {selectedIds.size > 0 && <button type="button" className="btn-primary mt-3 w-full" onClick={() => setBatchOpen(true)}>批量核准（{selectedIds.size}）</button>}
         </div>
-        {items.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><CheckCircle className="h-10 w-10 text-success" /><p className="mt-3 font-medium">目前沒有待確認內容</p><Link className="btn-primary mt-4" to="/knowledge/new">新增知識來源</Link></div> : <ul className="flex-1 overflow-y-auto">{groups.map(group => { const expanded = expandedGroups.has(group.key); const groupItems = itemsByGroup.get(group.key) || []; return <li key={group.key} className="border-b border-line"><button type="button" className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left hover:bg-wash" onClick={() => toggleGroup(group.key)} aria-expanded={expanded}><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-ink">{group.title}</span><span className="mt-0.5 block text-xs text-muted">{group.item_count} 筆候選{group.high_risk_count ? ` · ${group.high_risk_count} 筆高風險` : ''}{group.low_confidence_count ? ` · ${group.low_confidence_count} 筆低信心` : ''}</span>{group.blocked_reasons.includes('separation_of_duty') && <span className="mt-1 block text-xs text-highlight">高風險推論需由另一位擁有者確認</span>}</span><ArrowRight className={clsx('h-4 w-4 shrink-0 text-muted transition-transform', expanded && 'rotate-90')} /></button>{group.source_approval_ready && group.source_asset_id && <div className="px-4 pb-3"><button type="button" className="btn-outline min-h-11 w-full" onClick={() => setSourceConfirmGroup(group)}><CheckCircle className="h-4 w-4" />確認此來源的原始內容（{group.source_confirmable_count}）</button>{group.exception_count > 0 && <p className="mt-1 text-xs text-muted">另有 {group.exception_count} 筆推論或高風險內容，會保留供逐項確認。</p>}</div>}{expanded && <ul className="border-t border-line bg-wash/40">{groupItems.map(item => <li key={item.id} className={clsx('flex border-b border-line/70 last:border-0', item.id === selectedId && 'bg-accent-soft/60')}><span className="flex items-start px-3 py-3"><input type="checkbox" checked={selectedIds.has(item.id)} disabled={!item.batch_eligible} onChange={() => toggleBatch(item)} aria-label={`選取 ${item.subtitle}`} title={item.batch_eligible ? '加入批量核准' : '僅低風險、同策略項目可批量'} className="mt-1 h-5 w-5" /></span><button type="button" onClick={() => choose(item)} className="min-h-11 min-w-0 flex-1 py-3 pr-3 text-left hover:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><span className="block truncate text-sm font-medium text-ink">{sourceLabels[item.source_type] || item.source_type}</span><span className="block truncate text-xs text-muted">{item.subtitle}{item.confidence != null ? ` · ${Math.round(item.confidence * 100)}%` : ''}</span><span className="mt-1 flex flex-wrap gap-1"><span className={clsx('rounded-full px-2 py-0.5 text-xs', item.risk_level === 'high' ? 'bg-danger-soft text-danger' : item.risk_level === 'medium' ? 'bg-highlight-soft text-highlight' : 'bg-success-soft text-success')}>{item.risk_level === 'high' ? '高風險' : item.risk_level === 'medium' ? '中風險' : '低風險'}</span>{item.blocked_reasons.map(reason => <span key={reason} className="rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">{blockedLabels[reason] || reason}</span>)}</span></button></li>)}</ul>}</li> })}</ul>}
+        {items.length === 0 ? <div className="flex flex-1 flex-col items-center justify-center p-6 text-center"><CheckCircle className="h-10 w-10 text-success" /><p className="mt-3 font-medium">目前沒有待確認內容</p><Link className="btn-primary mt-4" to="/knowledge/new">新增知識來源</Link></div> : <ul className="flex-1 overflow-y-auto">{groups.map(group => { const expanded = expandedGroups.has(group.key); const groupItems = itemsByGroup.get(group.key) || []; return <li key={group.key} className="border-b border-line"><button type="button" className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left hover:bg-wash" onClick={() => toggleGroup(group.key)} aria-expanded={expanded}><span className="min-w-0 flex-1"><span className="block truncate font-semibold text-ink">{group.title}</span><span className="mt-0.5 block text-xs text-muted">{group.item_count} 筆候選{group.high_risk_count ? ` · ${group.high_risk_count} 筆高風險` : ''}{group.low_confidence_count ? ` · ${group.low_confidence_count} 筆低信心` : ''}</span>{group.blocked_reasons.includes('separation_of_duty') && <span className="mt-1 block text-xs text-highlight">高風險推論需由另一位擁有者確認</span>}</span><ArrowRight className={clsx('h-4 w-4 shrink-0 text-muted transition-transform', expanded && 'rotate-90')} /></button>{group.source_approval_ready && group.source_asset_id && <div className="px-4 pb-3"><button type="button" className="btn-outline min-h-11 w-full" onClick={() => setSourceConfirmGroup(group)}><CheckCircle className="h-4 w-4" />確認此來源的原始內容（{group.source_confirmable_count}）</button>{group.exception_count > 0 && <p className="mt-1 text-xs text-muted">另有 {group.exception_count} 筆推論或高風險內容，會保留供逐項確認。</p>}</div>}{expanded && <ul className="border-t border-line bg-wash/40">{groupItems.map(item => <li key={item.id} className={clsx('flex border-b border-line/70 last:border-0', item.id === selectedId && 'bg-accent-soft/60')}><span className="flex items-start px-3 py-3"><input type="checkbox" checked={selectedIds.has(item.id)} disabled={!item.batch_eligible} onChange={() => toggleBatch(item)} aria-label={`選取 ${candidateSubtitle(item.subtitle)}`} title={item.batch_eligible ? '加入批量核准' : '僅低風險、同策略項目可批量'} className="mt-1 h-5 w-5" /></span><button type="button" onClick={() => choose(item)} className="min-h-11 min-w-0 flex-1 py-3 pr-3 text-left hover:bg-wash focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"><span className="block truncate text-sm font-medium text-ink">{sourceLabels[item.source_type] || '其他候選內容'}</span><span className="block truncate text-xs text-muted">{candidateSubtitle(item.subtitle)}{item.confidence != null ? ` · ${Math.round(item.confidence * 100)}%` : ''}</span><span className="mt-1 flex flex-wrap gap-1"><span className={clsx('rounded-full px-2 py-0.5 text-xs', item.risk_level === 'high' ? 'bg-danger-soft text-danger' : item.risk_level === 'medium' ? 'bg-highlight-soft text-highlight' : 'bg-success-soft text-success')}>{item.risk_level === 'high' ? '高風險' : item.risk_level === 'medium' ? '中風險' : '低風險'}</span>{item.blocked_reasons.map(reason => <span key={reason} className="rounded-full bg-danger-soft px-2 py-0.5 text-xs text-danger">{blockedLabels[reason] || reason}</span>)}</span></button></li>)}</ul>}</li> })}</ul>}
       </aside>
 
       <section className={clsx('min-h-0 flex-1 flex-col overflow-y-auto border-b border-line p-5 md:flex md:border-b-0 md:border-r lg:p-7', mobileStep === 'evidence' ? 'flex' : 'hidden')} aria-label="證據與建議">
