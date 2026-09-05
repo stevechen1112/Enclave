@@ -70,6 +70,9 @@ describe('HealthPage provider gate', () => {
     expect(mocks.probeProviderHealth).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: '實際檢查 Provider' }))
+    expect(mocks.probeProviderHealth).not.toHaveBeenCalled()
+    expect(await screen.findByText('執行外部 AI 服務實測？')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '開始實測' }))
 
     await waitFor(() => expect(mocks.probeProviderHealth).toHaveBeenCalledTimes(1))
     expect(await screen.findByText('實測通過')).toBeInTheDocument()

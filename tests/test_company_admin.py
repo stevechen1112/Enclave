@@ -35,6 +35,10 @@ async def test_company_dashboard(client: AsyncClient, superuser_headers: dict):
     assert data["company_name"] == "Co CD01"
     assert "quota_status" in data
     assert data["user_count"] >= 1
+    assert data["document_count"] == 0
+    assert data["conversation_count"] == 0
+    assert data["monthly_queries"] == 0
+    assert data["monthly_cost"] == 0
 
 
 @pytest.mark.asyncio
@@ -132,6 +136,24 @@ async def test_employee_cannot_access_company_admin(client: AsyncClient, superus
 
     assert (await client.get("/api/v1/company/dashboard", headers=h_emp)).status_code == 403
     assert (await client.get("/api/v1/company/users", headers=h_emp)).status_code == 403
+
+
+def test_company_role_guardrails_are_declared():
+    """Role APIs cannot silently accept arbitrary roles or strand the only Owner."""
+    from app.api.v1.endpoints.company import (
+        VALID_COMPANY_ROLES,
+        VALID_COMPANY_USER_STATUSES,
+        _validate_role,
+        _validate_user_status,
+    )
+
+    assert {"owner", "admin", "hr", "employee", "viewer"} == VALID_COMPANY_ROLES
+    assert _validate_role("owner") == "owner"
+    assert VALID_COMPANY_USER_STATUSES == {"active", "inactive"}
+    assert _validate_user_status("active") == "active"
+    with pytest.raises(Exception) as exc:
+        _validate_role("super-owner")
+    assert getattr(exc.value, "status_code", None) == 400
 
 
 @pytest.mark.asyncio

@@ -115,7 +115,7 @@ export default function QualityPage() {
         <PageHeader
           variant="section"
           title="品質"
-          subtitle="追蹤知識庫還缺哪些內容，並維護文件分類。"
+          subtitle="管理已進入正式知識版本的內容品質、保鮮與使用者回饋。"
         />
 
         <AsyncState loading={loading} error={error} onRetry={load}>
@@ -155,16 +155,16 @@ export default function QualityPage() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-semibold text-ink">目前正式知識版本</h2>
-                  <p className="mt-1 text-sm text-muted">先確認文件是否可回答，再把候選版本送去測試；正式版可回到上一個已驗收版本。</p>
+                  <p className="mt-1 text-sm text-muted">這裡只計入已進入正式知識版本的內容；等待人工確認的來源請到「人工確認」處理，不會列入本區數字。</p>
                 </div>
                 <button type="button" disabled={releaseBusy} className="btn-primary" onClick={() => runReleaseAction(knowledgeControlApi.createCandidate, '候選知識版本已建立')}>
                   <Database className="h-4 w-4" aria-hidden /> 建立候選版本
                 </button>
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="card p-4"><p className="text-sm text-muted">可回答</p><p className="mt-1 text-2xl font-semibold text-success">{control?.readiness.ready ?? 0}</p></div>
-                <div className="card p-4"><p className="text-sm text-muted">部分可用</p><p className="mt-1 text-2xl font-semibold text-highlight">{control?.readiness.partial ?? 0}</p></div>
-                <div className="card p-4"><p className="text-sm text-muted">需處理</p><p className="mt-1 text-2xl font-semibold text-danger">{control?.readiness.needs_attention ?? 0}</p></div>
+                <div className="card p-4"><p className="text-sm text-muted">可作為答案依據</p><p className="mt-1 text-2xl font-semibold text-success">{control?.readiness.ready ?? 0}</p></div>
+                <div className="card p-4"><p className="text-sm text-muted">可有限參考</p><p className="mt-1 text-2xl font-semibold text-highlight">{control?.readiness.partial ?? 0}</p></div>
+                <div className="card p-4"><p className="text-sm text-muted">需要處理</p><p className="mt-1 text-2xl font-semibold text-danger">{control?.readiness.needs_attention ?? 0}</p></div>
               </div>
               {(control?.knowledge_bases ?? []).map(kb => (
                 <div key={kb.id} className="card overflow-hidden">

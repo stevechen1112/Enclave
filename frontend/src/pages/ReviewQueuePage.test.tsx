@@ -50,7 +50,7 @@ describe('ReviewQueuePage', () => {
     expect(screen.getByLabelText('來源類型')).toBeInTheDocument()
     expect(screen.getByLabelText('審核政策')).toBeInTheDocument()
     expect(screen.getByLabelText('指派對象')).toBeInTheDocument()
-    expect(screen.getByLabelText('部門 ID')).toBeInTheDocument()
+    expect(screen.getByText('進階篩選')).toBeInTheDocument()
     expect(screen.getByLabelText('已逾期')).toBeInTheDocument()
   })
 

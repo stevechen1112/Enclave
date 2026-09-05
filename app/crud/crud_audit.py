@@ -42,12 +42,17 @@ def get_audit_logs(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    include_system_events: bool = False,
 ) -> List[AuditLog]:
     query = db.query(AuditLog).filter(AuditLog.tenant_id == tenant_id)
     
     if action:
         query = query.filter(AuditLog.action == action)
+    elif not include_system_events:
+        # Compatibility telemetry is retained for platform retirement work, but
+        # should not drown out the tenant's meaningful business audit trail.
+        query = query.filter(AuditLog.action != "legacy_surface_used")
     if actor_user_id:
         query = query.filter(AuditLog.actor_user_id == actor_user_id)
     if start_date:

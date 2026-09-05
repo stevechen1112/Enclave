@@ -24,6 +24,7 @@ def get_audit_logs(
     end_date: Optional[datetime] = None,
     skip: int = 0,
     limit: int = 100,
+    include_system_events: bool = False,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
     """
@@ -42,9 +43,29 @@ def get_audit_logs(
         start_date=start_date,
         end_date=end_date,
         skip=skip,
-        limit=limit
+        limit=limit,
+        include_system_events=include_system_events,
     )
-    return logs
+    actor_ids = {log.actor_user_id for log in logs if log.actor_user_id}
+    actor_labels = {
+        user.id: (user.full_name or user.email)
+        for user in db.query(User).filter(User.id.in_(actor_ids)).all()
+    } if actor_ids else {}
+    return [
+        {
+            "id": log.id,
+            "tenant_id": log.tenant_id,
+            "actor_user_id": log.actor_user_id,
+            "actor_display": actor_labels.get(log.actor_user_id),
+            "action": log.action,
+            "target_type": log.target_type,
+            "target_id": log.target_id,
+            "detail_json": log.detail_json,
+            "ip_address": log.ip_address,
+            "created_at": log.created_at,
+        }
+        for log in logs
+    ]
 
 
 @router.get("/usage/summary", response_model=UsageSummary)
@@ -252,6 +273,7 @@ def export_audit_logs(
     end_date: Optional[datetime] = None,
     skip: int = 0,
     limit: int = 5000,
+    include_system_events: bool = False,
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
@@ -269,6 +291,7 @@ def export_audit_logs(
         end_date=end_date,
         skip=skip,
         limit=limit,
+        include_system_events=include_system_events,
     )
     columns = [
         ("id", "ID"),

@@ -600,6 +600,7 @@ export interface AuditLog {
   id: string
   tenant_id: string
   actor_user_id: string | null
+  actor_display?: string | null
   action: string
   resource_type: string | null
   resource_id: string | null

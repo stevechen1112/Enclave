@@ -22,6 +22,17 @@ const sourceLabels: Record<string, string> = {
   document_classification: '文件分類', extracted_text: '文件文字', ocr_region: 'OCR',
   table: '表格', transcript_segment: '逐字稿', procedure_candidate: '影片程序',
   sop_conflict_report: 'SOP 衝突', knowhow_card: '經驗知識卡', audio_event: '異常聲音',
+  spoken_action_candidate: '操作動作候選', acoustic_signal_outlier: '異常聲音候選',
+}
+
+const policyLabels: Record<string, string> = {
+  'artifact-human-review-v1': '來源內容人工確認',
+}
+
+const proposalLabels: Record<string, string> = {
+  content: '候選內容', title: '建議標題', summary: '摘要', description: '說明',
+  steps: '建議步驟', conditions: '適用條件', risks: '風險提醒', exceptions: '例外情況',
+  action: '建議動作', signal: '偵測訊號', confidence: '辨識信心',
 }
 
 const blockedLabels: Record<string, string> = {
@@ -47,11 +58,26 @@ function evidenceLabel(evidence: ReviewEvidenceLocator) {
   return `文件${evidence.slide_number ? ` · 投影片 ${evidence.slide_number}` : evidence.page ? ` · 第 ${evidence.page} 頁` : ''}${evidence.section ? ` · ${evidence.section}` : ''}${evidence.paragraph_index ? ` · 段落 ${evidence.paragraph_index}` : ''}`
 }
 
-function JsonPreview({ value }: { value: unknown }) {
+function readableValue(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number') return String(value)
+  if (typeof value === 'boolean') return value ? '是' : '否'
+  if (value == null) return ''
+  if (Array.isArray(value)) return value.map(readableValue).filter(Boolean).join('；')
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, entry]) => `${proposalLabels[key] || key.replaceAll('_', ' ')}：${readableValue(entry)}`)
+      .filter(Boolean)
+      .join('；')
+  }
+  return String(value)
+}
+
+function ProposalPreview({ value }: { value: unknown }) {
   if (value == null || value === '') return <p className="text-sm text-muted">沒有內容預覽。</p>
   if (typeof value === 'string') return <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{value}</p>
-  if (Array.isArray(value)) return <ol className="space-y-2 text-sm">{value.map((entry, index) => <li key={index} className="rounded-lg bg-wash px-3 py-2">{typeof entry === 'string' ? entry : JSON.stringify(entry, null, 2)}</li>)}</ol>
-  return <dl className="space-y-3">{Object.entries(value as Record<string, unknown>).filter(([, entry]) => entry != null && entry !== '' && (!Array.isArray(entry) || entry.length)).map(([key, entry]) => <div key={key}><dt className="text-xs font-semibold uppercase tracking-wide text-muted">{key.replaceAll('_', ' ')}</dt><dd className="mt-1 whitespace-pre-wrap text-sm text-ink">{typeof entry === 'string' ? entry : JSON.stringify(entry, null, 2)}</dd></div>)}</dl>
+  if (Array.isArray(value)) return <ol className="space-y-2 text-sm">{value.map((entry, index) => <li key={index} className="rounded-lg bg-wash px-3 py-2">{readableValue(entry)}</li>)}</ol>
+  return <dl className="space-y-3">{Object.entries(value as Record<string, unknown>).filter(([key, entry]) => key !== 'conflicts' && entry != null && entry !== '' && (!Array.isArray(entry) || entry.length)).map(([key, entry]) => <div key={key}><dt className="text-xs font-semibold tracking-wide text-muted">{proposalLabels[key] || key.replaceAll('_', ' ')}</dt><dd className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-ink">{readableValue(entry)}</dd></div>)}</dl>
 }
 
 export default function ReviewQueuePage() {
@@ -228,10 +254,10 @@ export default function ReviewQueuePage() {
           <div className="mt-3 grid grid-cols-2 gap-2">
             <select aria-label="風險" className="input min-h-10 py-1" value={risk} onChange={event => setRisk(event.target.value)}><option value="">所有風險</option><option value="high">高風險</option><option value="medium">中風險</option><option value="low">低風險</option></select>
             <select aria-label="來源類型" className="input min-h-10 py-1" value={source} onChange={event => setSource(event.target.value)}><option value="">所有來源</option>{inbox?.facets.source_types.map(value => <option key={value} value={value}>{sourceLabels[value] || value}</option>)}</select>
-            <select aria-label="審核政策" className="input min-h-10 py-1" value={policy} onChange={event => setPolicy(event.target.value)}><option value="">所有政策</option>{inbox?.facets.policy_keys.map(value => <option key={value} value={value}>{value}</option>)}</select>
+            <select aria-label="審核政策" className="input min-h-10 py-1" value={policy} onChange={event => setPolicy(event.target.value)}><option value="">所有政策</option>{inbox?.facets.policy_keys.map(value => <option key={value} value={value}>{policyLabels[value] || '其他審核規則'}</option>)}</select>
             <select aria-label="指派對象" className="input min-h-10 py-1" value={assignee} onChange={event => setAssignee(event.target.value)}><option value="">所有指派</option>{inbox?.facets.assignees.map(value => <option key={value} value={value}>{value}</option>)}</select>
           </div>
-          <input aria-label="部門 ID" className="input mt-2 min-h-10 py-1" value={department} onChange={event => setDepartment(event.target.value)} placeholder="依部門 ID 篩選" />
+          <details className="mt-2 text-xs text-muted"><summary className="cursor-pointer">進階篩選</summary><input aria-label="部門範圍 ID（進階）" className="input mt-2 min-h-10 py-1" value={department} onChange={event => setDepartment(event.target.value)} placeholder="部門範圍 ID" /><p className="mt-1">此欄位僅供系統已設定部門範圍的管理者使用。</p></details>
           <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted"><label className="flex items-center gap-1"><input type="checkbox" checked={overdueOnly} onChange={event => setOverdueOnly(event.target.checked)} />已逾期</label><label className="flex items-center gap-1"><input type="checkbox" checked={lowConfidenceOnly} onChange={event => setLowConfidenceOnly(event.target.checked)} />低信心</label></div>
           {selectedIds.size > 0 && <button type="button" className="btn-primary mt-3 w-full" onClick={() => setBatchOpen(true)}>批量核准（{selectedIds.size}）</button>}
         </div>
@@ -241,19 +267,19 @@ export default function ReviewQueuePage() {
       <section className={clsx('min-h-0 flex-1 flex-col overflow-y-auto border-b border-line p-5 md:flex md:border-b-0 md:border-r lg:p-7', mobileStep === 'evidence' ? 'flex' : 'hidden')} aria-label="證據與建議">
         {!selected ? <div className="m-auto text-center text-muted"><FileSearch className="mx-auto h-10 w-10" /><p className="mt-3">請選擇待審項目</p></div> : <div className="mx-auto w-full max-w-3xl space-y-5">
           <button type="button" className="btn-ghost -ml-3 md:hidden" onClick={() => setMobileStep('list')}><ArrowLeft className="h-4 w-4" />返回佇列</button>
-          <header><div className="flex flex-wrap items-center gap-2 text-xs text-muted"><span>{sourceLabels[selected.source_type] || selected.source_type}</span><span>·</span><span>{selected.provider}</span><span>·</span><span>{selected.policy_key} v{selected.policy_version}</span></div><h2 className="mt-2 font-display text-2xl font-semibold text-ink">{selected.title}</h2><p className="mt-1 text-sm text-muted">{selected.subtitle}</p></header>
-          <section className="card p-5"><h3 className="font-semibold text-ink">AI 建議與候選內容</h3><div className="mt-4"><JsonPreview value={selected.proposal} /></div></section>
+          <header><div className="flex flex-wrap items-center gap-2 text-xs text-muted"><span>{sourceLabels[selected.source_type] || '其他候選內容'}</span><span>·</span><span>審核規則：{policyLabels[selected.policy_key] || '其他規則'} v{selected.policy_version}</span></div><h2 className="mt-2 font-display text-2xl font-semibold text-ink">{selected.title}</h2><p className="mt-1 text-sm text-muted">{selected.subtitle}</p></header>
+          <section className="card p-5"><h3 className="font-semibold text-ink">AI 建議與候選內容</h3><p className="mt-1 text-sm text-muted">這是系統從來源整理出的候選內容，核准前請對照下方原始證據。</p><div className="mt-4"><ProposalPreview value={selected.proposal} /></div><details className="mt-4 border-t border-line pt-3 text-xs text-muted"><summary className="cursor-pointer">技術詳細資料</summary><pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-wash p-3 text-xs">{JSON.stringify(selected.proposal, null, 2)}</pre></details></section>
           <section className="card p-5"><h3 className="flex items-center gap-2 font-semibold text-ink"><FileSearch className="h-5 w-5" />來源證據</h3>{!evidenceLinksValid ? <p className="mt-3 rounded-lg bg-danger-soft p-3 text-sm text-danger">此項目缺少有效的站內證據定位器，不應核准。</p> : <ul className="mt-3 space-y-2">{evidenceLinks.map(({ evidence, deepLink }) => <li key={evidence.id}><Link to={deepLink!} className="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-line px-3 py-2 text-sm hover:border-accent hover:bg-accent-soft/30"><span><span className="block font-medium text-ink">{evidenceLabel(evidence)}</span>{evidence.section && evidence.kind !== 'document' && <span className="line-clamp-2 text-xs text-muted">{evidence.section}</span>}</span><ExternalLink className="h-4 w-4 shrink-0 text-accent" /></Link></li>)}</ul>}</section>
           {conflicts.length > 0 && <section className="rounded-2xl border border-highlight/40 bg-highlight-soft p-5"><h3 className="flex items-center gap-2 font-semibold text-highlight"><ShieldAlert className="h-5 w-5" />正式 SOP 衝突</h3><p className="mt-1 text-sm text-highlight">逐項確認正式 SOP 優先，才可發布。</p><div className="mt-3 space-y-2">{conflicts.map((conflict, index) => { const id = String(conflict.id || index); return <label key={id} className="flex min-h-11 cursor-pointer items-start gap-2 rounded-lg bg-surface p-3 text-sm"><input type="checkbox" className="mt-1" checked={resolvedConflicts.has(id)} onChange={event => setResolvedConflicts(current => { const next = new Set(current); if (event.target.checked) next.add(id); else next.delete(id); return next })} /><span><strong>SOP：</strong>{String(conflict.sop_value || conflict.message || '')}<br /><span className="text-muted">候選：{String(conflict.knowhow_value || '')}</span></span></label> })}</div></section>}
           <button type="button" className="btn-primary w-full md:hidden" onClick={() => setMobileStep('decision')}>下一步：發布決策 <ArrowRight className="h-4 w-4" /></button>
         </div>}
       </section>
 
-      <aside className={clsx('w-full flex-col bg-surface md:flex md:w-[22rem]', mobileStep === 'decision' ? 'flex flex-1' : 'hidden')} aria-label="發布決策">
+      <aside className={clsx('w-full flex-col bg-surface md:flex md:w-[20rem] xl:w-[22rem]', mobileStep === 'decision' ? 'flex flex-1' : 'hidden')} aria-label="發布決策">
         <div className="border-b border-line p-4"><h2 className="font-semibold text-ink">決策與發布契約</h2><p className="text-sm text-muted">核准前確認權限、版本與回滾方式</p></div>
         {!selected ? <p className="p-4 text-sm text-muted">尚未選擇項目</p> : <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
           <button type="button" className="btn-ghost -ml-3 self-start md:hidden" onClick={() => setMobileStep('evidence')}><ArrowLeft className="h-4 w-4" />返回證據</button>
-          <dl className="rounded-xl bg-wash p-3 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">知識單元</dt><dd className="break-all text-right font-mono text-xs">{selected.publication.unit_key || '處理完成後建立'}</dd></div><div className="mt-2 flex justify-between"><dt className="text-muted">版本</dt><dd>v{selected.publication.next_revision}</dd></div><div className="mt-2 flex justify-between"><dt className="text-muted">生效</dt><dd>{selected.publication.effective_from}</dd></div><div className="mt-2"><dt className="text-muted">ACL</dt><dd className="mt-1 break-all font-mono text-xs">{JSON.stringify(selected.publication.acl)}</dd></div><div className="mt-2"><dt className="text-muted">回滾</dt><dd className="mt-1">{selected.publication.rollback}</dd></div>{selected.publication.sop_precedence && <div className="mt-2 flex items-center gap-2 text-highlight"><ShieldAlert className="h-4 w-4" /><span>正式 SOP 永遠優先</span></div>}</dl>
+          <dl className="rounded-xl bg-wash p-3 text-sm"><div className="flex justify-between gap-3"><dt className="text-muted">發布版本</dt><dd>第 {selected.publication.next_revision} 版</dd></div><div className="mt-2 flex justify-between"><dt className="text-muted">生效時間</dt><dd>{selected.publication.effective_from === 'on_approval' ? '核准後生效' : selected.publication.effective_from}</dd></div><div className="mt-2"><dt className="text-muted">可見範圍</dt><dd className="mt-1">{selected.publication.acl?.visibility === 'tenant' ? '本公司已授權人員' : '依權限設定'}</dd></div><div className="mt-2"><dt className="text-muted">回復方式</dt><dd className="mt-1">{selected.publication.rollback === 'retire release' ? '可撤回此發布版本' : '可回復上一個版本'}</dd></div>{selected.publication.sop_precedence && <div className="mt-2 flex items-center gap-2 text-highlight"><ShieldAlert className="h-4 w-4" /><span>正式 SOP 永遠優先</span></div>}<details className="mt-3 border-t border-line pt-2 text-xs text-muted"><summary className="cursor-pointer">技術發布識別</summary><p className="mt-1 break-all font-mono">{selected.publication.unit_key || '核准後建立'}</p></details></dl>
           {selected.blocked_reasons.length > 0 && <div className="rounded-xl bg-danger-soft p-3 text-sm text-danger"><p className="font-semibold">目前不可直接發布</p><ul className="mt-1 list-inside list-disc">{selected.blocked_reasons.map(reason => <li key={reason}>{blockedLabels[reason] || reason}</li>)}</ul></div>}
           {selected.risk_level === 'high' && <label className="flex min-h-11 cursor-pointer items-start gap-2 rounded-xl border border-danger/30 bg-danger-soft p-3 text-sm text-danger"><input type="checkbox" className="mt-1" checked={ackHigh} onChange={event => setAckHigh(event.target.checked)} /><span>我已核對高風險內容、禁止動作及主管／正式 SOP 要求。</span></label>}
           {selected.confidence != null && selected.confidence < 0.8 && <label className="flex min-h-11 cursor-pointer items-start gap-2 rounded-xl border border-highlight/30 bg-highlight-soft p-3 text-sm text-highlight"><input type="checkbox" className="mt-1" checked={ackLow} onChange={event => setAckLow(event.target.checked)} /><span>我已逐一核對低信心辨識內容與原始證據。</span></label>}

@@ -496,20 +496,21 @@ export const auditApi = {
     api.get('/audit/usage/export', { params: { format, ...params }, responseType: 'blob' }).then(r => r.data),
 }
 
-// ─── Admin / Organization Management ───
-// P9-1/P9-2: Removed branding/subscription/quota-plan from companyApi
-// Routes map to backend /admin/* prefix
+// ─── Tenant organization management ───
+// These routes deliberately use /company, not platform-only /admin.  Tenant
+// Owners and Admins must be able to manage their own workspace without access
+// to cross-tenant platform administration.
 export const companyApi = {
-  dashboard: () => api.get('/admin/dashboard').then(r => r.data),
-  users: (params?: Record<string, string>) => api.get('/admin/users', { params }).then(r => r.data),
+  dashboard: () => api.get('/company/dashboard').then(r => r.data),
+  users: (params?: Record<string, string>) => api.get('/company/users', { params }).then(r => r.data),
   inviteUser: (data: { email: string; full_name?: string; role: string; password: string }) =>
-    api.post('/admin/users/invite', data).then(r => r.data),
+    api.post('/company/users/invite', data).then(r => r.data),
   updateUser: (id: string, data: Record<string, unknown>) =>
-    api.put(`/admin/users/${id}`, data).then(r => r.data),
-  deactivateUser: (id: string) => api.delete(`/admin/users/${id}`).then(r => r.data),
+    api.put(`/company/users/${id}`, data).then(r => r.data),
+  deactivateUser: (id: string) => api.delete(`/company/users/${id}`).then(r => r.data),
   systemHealth: () => api.get('/admin/system/health').then(r => r.data),
-  providerHealth: () => api.get('/admin/system/provider-health').then(r => r.data),
-  probeProviderHealth: () => api.post('/admin/system/provider-health/probe').then(r => r.data),
+  providerHealth: () => api.get('/company/system/provider-health').then(r => r.data),
+  probeProviderHealth: () => api.post('/company/system/provider-health/probe').then(r => r.data),
   usageSummary: () => api.get('/audit/usage/summary').then(r => r.data),
   usageByUser: () => api.get('/audit/usage/by-action').then(r => r.data),
   getDeploymentMode: () => api.get('/company/deployment-mode').then(r => r.data),

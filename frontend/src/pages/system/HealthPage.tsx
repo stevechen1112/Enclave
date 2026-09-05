@@ -6,6 +6,7 @@ import { CheckCircle2, CircleAlert, PlugZap, RefreshCw, ShieldCheck } from 'luci
 import toast from 'react-hot-toast'
 import { companyApi, kbApi, parseApiError, formatErrorWithTrace } from '../../api'
 import AsyncState from '../../components/AsyncState'
+import ConfirmDialog from '../../components/ConfirmDialog'
 import PageHeader from '../../components/PageHeader'
 import type { ApiErrorInfo } from '../../api'
 import { useAuth } from '../../auth'
@@ -46,19 +47,28 @@ export default function HealthPage() {
   const [providers, setProviders] = useState<ProviderConfiguration[]>([])
   const [providerResults, setProviderResults] = useState<ProviderProbeResult[]>([])
   const [probing, setProbing] = useState(false)
+  const [providerError, setProviderError] = useState<ApiErrorInfo | null>(null)
+  const [confirmProbe, setConfirmProbe] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
+    setProviderError(null)
     try {
-      const [integrityReports, providerHealth] = await Promise.all([
+      const [integrity, provider] = await Promise.allSettled([
         kbApi.listIntegrityReports(5),
         companyApi.providerHealth(),
       ])
-      setReports(integrityReports)
-      setProviders(providerHealth.providers || [])
-    } catch (err) {
-      setError(parseApiError(err, '無法載入健康資料'))
+      if (integrity.status === 'fulfilled') {
+        setReports(integrity.value)
+      } else {
+        setError(parseApiError(integrity.reason, '無法載入資料完整性報告'))
+      }
+      if (provider.status === 'fulfilled') {
+        setProviders(provider.value.providers || [])
+      } else {
+        setProviderError(parseApiError(provider.reason, '無法載入外部 AI 服務設定'))
+      }
     } finally {
       setLoading(false)
     }
@@ -77,6 +87,7 @@ export default function HealthPage() {
   }
 
   const handleProviderProbe = async () => {
+    setConfirmProbe(false)
     setProbing(true)
     try {
       const report = await companyApi.probeProviderHealth()
@@ -133,7 +144,7 @@ export default function HealthPage() {
             </div>
             <button
               type="button"
-              onClick={handleProviderProbe}
+              onClick={() => setConfirmProbe(true)}
               disabled={probing || loading || demoMode}
               title={demoMode ? '公開 Demo 不會呼叫外部服務；正式租戶管理員可執行實測。' : undefined}
               className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-accent px-3 py-1.5 text-sm text-accent hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
@@ -175,6 +186,11 @@ export default function HealthPage() {
               )
             })}
           </div>
+          {providerError && (
+            <p className="mt-3 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
+              無法讀取外部服務設定：{providerError.message}。資料完整性檢查仍可繼續使用。
+            </p>
+          )}
         </section>
 
         <AsyncState loading={loading} error={error} onRetry={load} empty={!loading && !error && reports.length === 0} emptyTitle="尚無掃描報告" emptyDescription="執行檢查可確認文件與可搜尋索引是否一致。" emptyActionLabel="立即檢查" onEmptyAction={handleIntegrity}>
@@ -199,6 +215,15 @@ export default function HealthPage() {
             ))}
           </div>
         </AsyncState>
+        <ConfirmDialog
+          open={confirmProbe}
+          title="執行外部 AI 服務實測？"
+          description="系統會對已設定的服務送出最小測試資料，可能產生少量 API 用量；不會處理或上傳公司的知識來源。"
+          confirmLabel="開始實測"
+          busy={probing}
+          onCancel={() => !probing && setConfirmProbe(false)}
+          onConfirm={handleProviderProbe}
+        />
       </div>
     </div>
   )

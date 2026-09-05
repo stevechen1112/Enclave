@@ -74,7 +74,7 @@ function DashboardTab() {
         <StatCard icon={Users} label="員工人數" value={data.user_count} color="bg-blue-50 text-blue-600" />
         <StatCard icon={FileText} label="文件數" value={data.document_count} color="bg-green-50 text-green-600" />
         <StatCard icon={MessageSquare} label="對話數" value={data.conversation_count} color="bg-purple-50 text-purple-600" />
-        <StatCard icon={BarChart3} label="本月查詢" value={data.monthly_queries} sub={`費用: $${(data.monthly_cost || 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
+        <StatCard icon={BarChart3} label="本月 AI 問答" value={data.monthly_queries} sub={`問答用量: $${(data.monthly_cost || 0).toFixed(4)}`} color="bg-amber-50 text-amber-600" />
       </div>
 
       {/* 地端版授權資訊 */}

@@ -14,7 +14,7 @@ T3-2: 租戶自助管理端點（Owner/Admin 使用）
 """
 from typing import Any, List, Optional
 from uuid import UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -27,6 +27,12 @@ from app.crud import crud_tenant, crud_audit
 from app.models.user import User
 from app.models.tenant import Tenant
 from app.models.audit import UsageRecord
+from app.models.document import Document
+from app.models.chat import Conversation
+from app.services.provider_runtime_health import (
+    probe_required_providers,
+    provider_configuration,
+)
 from app.services.deployment_mode import (
     DEPLOYMENT_MODE_GPU,
     DEPLOYMENT_MODE_NOGPU,
@@ -36,6 +42,8 @@ from app.services.deployment_mode import (
 )
 
 router = APIRouter()
+VALID_COMPANY_ROLES = {"owner", "admin", "hr", "employee", "viewer"}
+VALID_COMPANY_USER_STATUSES = {"active", "inactive"}
 
 
 class DeploymentModeUpdate(BaseModel):
@@ -48,6 +56,26 @@ def _require_same_tenant(current_user: User, target_tenant_id: UUID) -> None:
         raise HTTPException(status_code=403, detail="Access denied")
 
 
+def _active_owner_count(db: Session, tenant_id: UUID) -> int:
+    return (
+        db.query(func.count(User.id))
+        .filter(User.tenant_id == tenant_id, User.role == "owner", User.status == "active")
+        .scalar() or 0
+    )
+
+
+def _validate_role(value: str) -> str:
+    if value not in VALID_COMPANY_ROLES:
+        raise HTTPException(status_code=400, detail="不支援的公司角色")
+    return value
+
+
+def _validate_user_status(value: str) -> str:
+    if value not in VALID_COMPANY_USER_STATUSES:
+        raise HTTPException(status_code=400, detail="不支援的帳號狀態")
+    return value
+
+
 # ─── Dashboard ──────────────────────────────────────────────────────────────
 
 @router.get("/dashboard")
@@ -55,7 +83,7 @@ def company_dashboard(
     db: Session = Depends(deps.get_db),
     current_user: User = Depends(require_admin),
 ) -> Any:
-    """公司儀表板：使用者數、配額狀態、最近活動"""
+    """公司儀表板：Owner/Admin 可安全查看的租戶營運摘要。"""
     tid = current_user.tenant_id
     tenant = db.query(Tenant).filter(Tenant.id == tid).first()
     if not tenant:
@@ -67,10 +95,38 @@ def company_dashboard(
         .scalar() or 0
     )
     quota_status = crud_tenant.get_quota_status(db, tid)
+    document_count = (
+        db.query(func.count(Document.id))
+        .filter(Document.tenant_id == tid, Document.tombstoned_at.is_(None))
+        .scalar() or 0
+    )
+    conversation_count = (
+        db.query(func.count(Conversation.id))
+        .filter(Conversation.tenant_id == tid)
+        .scalar() or 0
+    )
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    monthly_usage = (
+        db.query(
+            func.count(UsageRecord.id).label("query_count"),
+            func.coalesce(func.sum(UsageRecord.estimated_cost_usd), 0).label("cost"),
+        )
+        .filter(
+            UsageRecord.tenant_id == tid,
+            UsageRecord.action_type == "chat",
+            UsageRecord.created_at >= month_start,
+        )
+        .first()
+    )
 
     return {
         "company_name": tenant.name,
         "user_count": user_count,
+        "document_count": document_count,
+        "conversation_count": conversation_count,
+        "monthly_queries": monthly_usage.query_count or 0,
+        "monthly_cost": float(monthly_usage.cost or 0),
         "quota_status": quota_status,
         "plan": tenant.plan,
     }
@@ -147,6 +203,24 @@ def update_company_deployment_mode(
     }
 
 
+# ─── Provider health (tenant Owner/Admin safe view) ─────────────────────────
+
+@router.get("/system/provider-health")
+def company_provider_health_configuration(
+    current_user: User = Depends(require_admin),
+) -> Any:
+    """Show configured provider roles without credentials or external calls."""
+    return {"providers": provider_configuration()}
+
+
+@router.post("/system/provider-health/probe")
+def company_probe_provider_health(
+    current_user: User = Depends(require_admin),
+) -> Any:
+    """Run an explicit, metered provider probe for a tenant Owner/Admin."""
+    return probe_required_providers()
+
+
 # ─── User Management ────────────────────────────────────────────────────────
 
 @router.post("/users/invite")
@@ -166,11 +240,15 @@ def invite_member(
     if existing:
         raise HTTPException(status_code=409, detail="此 Email 已被使用")
 
+    requested_role = _validate_role(payload.get("role", "employee"))
+    if requested_role == "owner" and current_user.role != "owner":
+        raise HTTPException(status_code=403, detail="只有擁有者可以指派擁有者角色")
+
     new_user = User(
         email=email,
         full_name=payload.get("full_name", ""),
         hashed_password=get_password_hash(payload.get("password", "changeme123")),
-        role=payload.get("role", "employee"),
+        role=requested_role,
         tenant_id=current_user.tenant_id,
         status="active",
     )
@@ -228,6 +306,27 @@ def update_member(
     if not user:
         raise HTTPException(status_code=404, detail="找不到使用者")
 
+    if "role" in payload:
+        requested_role = _validate_role(payload["role"])
+        if requested_role == "owner" and current_user.role != "owner":
+            raise HTTPException(status_code=403, detail="只有擁有者可以指派擁有者角色")
+        if user.role == "owner" and requested_role != "owner":
+            if current_user.role != "owner":
+                raise HTTPException(status_code=403, detail="只有擁有者可以變更擁有者角色")
+            if user.id == current_user.id:
+                raise HTTPException(status_code=400, detail="不能將自己的擁有者角色降權")
+            if _active_owner_count(db, current_user.tenant_id) <= 1:
+                raise HTTPException(status_code=400, detail="公司至少必須保留一位啟用中的擁有者")
+    if "status" in payload:
+        _validate_user_status(payload["status"])
+    if "status" in payload and user.id == current_user.id and payload["status"] != "active":
+        raise HTTPException(status_code=400, detail="不能停用自己的帳號")
+    if user.role == "owner" and payload.get("status") not in (None, "active"):
+        if current_user.role != "owner":
+            raise HTTPException(status_code=403, detail="只有擁有者可以停用擁有者帳號")
+        if _active_owner_count(db, current_user.tenant_id) <= 1:
+            raise HTTPException(status_code=400, detail="公司至少必須保留一位啟用中的擁有者")
+
     for field in ("full_name", "role", "status"):
         if field in payload:
             setattr(user, field, payload[field])
@@ -258,6 +357,11 @@ def deactivate_member(
         raise HTTPException(status_code=404, detail="找不到使用者")
     if user.id == current_user.id:
         raise HTTPException(status_code=400, detail="不能停用自己的帳號")
+    if user.role == "owner":
+        if current_user.role != "owner":
+            raise HTTPException(status_code=403, detail="只有擁有者可以停用擁有者帳號")
+        if _active_owner_count(db, current_user.tenant_id) <= 1:
+            raise HTTPException(status_code=400, detail="公司至少必須保留一位啟用中的擁有者")
 
     user.status = "inactive"
     db.commit()

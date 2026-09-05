@@ -17,6 +17,7 @@ class AuditLog(AuditLogBase):
     tenant_id: UUID
     actor_user_id: Optional[UUID] = None
     ip_address: Optional[str] = None
+    actor_display: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
