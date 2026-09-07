@@ -67,10 +67,10 @@ def test_managed_deployments_sync_topology_and_require_input_worker():
         assert "ps -q worker-input" in workflow
         assert "/opt/venv/bin/celery -A app.celery_app inspect ping" in workflow
         assert '--destination=\"input@$(hostname)\"' in workflow
-        assert 'curl -fsSL http://localhost/release.json' in workflow
+        assert 'curl -fsSkL http://localhost/release.json' in workflow
         if workflow_name == "deploy-production.yml":
             assert (
-                'curl -fsSL -o /dev/null -w "%{http_code}" http://localhost/'
+                'curl -fsSkL -o /dev/null -w "%{http_code}" http://localhost/'
                 in workflow
             )
         stop_idx = workflow.find("stop web worker worker-input worker-beat")
