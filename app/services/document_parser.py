@@ -196,6 +196,7 @@ class QualityReport:
     provider_attempts: List[Dict[str, Any]] = field(default_factory=list)
     locator_fallback: bool = False
     review_required: bool = False
+    machine_readable_content: bool = True
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -224,6 +225,11 @@ class QualityReport:
         score -= len(self.errors) * 0.3
         if self.ocr_used and self.ocr_confidence < 0.7:
             score -= 0.2
+        # A valid, decodable source with no machine-readable text is a
+        # governed review case, not a parser failure. Errors have already
+        # returned above, so this floor cannot mask corrupt input.
+        if self.review_required and not self.machine_readable_content:
+            score = max(score, 0.2)
         score = max(0.0, min(1.0, score))
         self.quality_score = round(score, 2)
 
@@ -1114,7 +1120,20 @@ class DocumentParser:
             }
 
             if not text.strip():
-                report.add_error("圖片 OCR 無法辨識文字")
+                # A decodable photo is still a valid enterprise source even
+                # when it contains no OCR text. Keep it in the governed asset
+                # lifecycle, make the machine limitation explicit and require
+                # a person to inspect/describe it. Corrupt or undecodable image
+                # bytes are still handled by the outer exception as failures.
+                text = (
+                    "【影像來源】自動文字辨識未發現可供索引的文字；"
+                    "請於人工確認中檢視原圖並補充內容描述。"
+                )
+                report.machine_readable_content = False
+                report.review_required = True
+                report.add_warning(
+                    "圖片可正常開啟，但未辨識到文字；原圖已保留並等待人工補充描述"
+                )
             elif report.ocr_confidence < 0.7:
                 report.add_warning(f"OCR 辨識信心度偏低 ({report.ocr_confidence:.0%})")
 

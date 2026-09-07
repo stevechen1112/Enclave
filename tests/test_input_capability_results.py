@@ -228,6 +228,24 @@ def test_document_capabilities_preserve_exact_requested_contract():
     assert results["ocr"]["status"] == "available"
 
 
+def test_document_capabilities_do_not_claim_placeholder_as_extracted_text():
+    results = subject.document_capability_results(
+        ["extract_text", "ocr"],
+        content_chars=50,
+        chunk_count=1,
+        parse_engine="native/image",
+        parser_version="1",
+        ocr_used=True,
+        machine_readable_content=False,
+    )
+
+    assert results["extract_text"]["status"] == "degraded"
+    assert results["extract_text"]["reason_code"] == "manual_description_required"
+    assert results["extract_text"]["artifact_count"] == 0
+    assert results["ocr"]["status"] == "not_applicable"
+    assert results["ocr"]["artifact_count"] == 0
+
+
 def test_document_layout_is_not_overclaimed_without_fidelity_measurement():
     results = subject.document_capability_results(
         ["extract_text", "layout"],

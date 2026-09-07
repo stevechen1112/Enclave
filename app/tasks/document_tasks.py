@@ -586,6 +586,9 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
                         metadata.get("parser_version") or artifact.version
                     ),
                     ocr_used=bool(metadata.get("ocr_used")),
+                    machine_readable_content=bool(
+                        metadata.get("machine_readable_content", True)
+                    ),
                 )
                 get_ingestion_orchestrator().transition(
                     db,

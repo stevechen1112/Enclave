@@ -460,15 +460,29 @@ def document_capability_results(
     parse_engine: str,
     parser_version: str | None,
     ocr_used: bool,
+    machine_readable_content: bool = True,
 ) -> dict[str, dict[str, Any]]:
     """Describe document outcomes without treating an empty extraction as success."""
 
     has_content = content_chars > 0 and chunk_count > 0
+    extracted_content = has_content and machine_readable_content
     observed: dict[str, dict[str, Any]] = {
         "extract_text": capability_result(
-            "available" if has_content else "failed",
-            reason_code=None if has_content else "no_usable_text_extracted",
-            artifact_count=chunk_count,
+            (
+                "available"
+                if extracted_content
+                else "degraded"
+                if has_content
+                else "failed"
+            ),
+            reason_code=(
+                None
+                if extracted_content
+                else "manual_description_required"
+                if has_content
+                else "no_usable_text_extracted"
+            ),
+            artifact_count=chunk_count if extracted_content else 0,
             provider=parse_engine,
             provider_version=parser_version,
         ),
@@ -495,11 +509,11 @@ def document_capability_results(
             provider_version=parser_version,
         ),
         "ocr": capability_result(
-            "available" if ocr_used and has_content else "not_applicable",
+            "available" if ocr_used and extracted_content else "not_applicable",
             reason_code=None
-            if ocr_used and has_content
+            if ocr_used and extracted_content
             else "ocr_not_used_or_no_text_detected",
-            artifact_count=chunk_count if ocr_used else 0,
+            artifact_count=chunk_count if ocr_used and extracted_content else 0,
             provider=parse_engine,
             provider_version=parser_version,
             confidence_provider_supplied=False,

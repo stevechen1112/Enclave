@@ -705,6 +705,7 @@ def _maybe_enhance_with_cloud_ocr(
     metadata["ocr_used"] = True
     metadata["quality_score"] = None
     metadata["review_required"] = True
+    metadata["machine_readable_content"] = True
     return result.text, metadata, artifact
 
 

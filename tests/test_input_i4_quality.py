@@ -4,6 +4,7 @@ from pathlib import Path
 
 from docx import Document
 from openpyxl import Workbook
+from PIL import Image
 from pptx import Presentation
 
 from app.schemas.parse_artifact import ParseChunk
@@ -182,6 +183,41 @@ def test_image_declared_regions_beat_whole_image_fallback():
             locator_fallback=False,
         )
     ]
+
+
+def test_decodable_image_without_ocr_text_is_retained_for_human_description(
+    tmp_path: Path, monkeypatch
+):
+    path = tmp_path / "shop-floor-photo.jpg"
+    Image.new("RGB", (64, 48), color=(120, 130, 140)).save(path)
+
+    from app.services import document_parser as parser_module
+
+    monkeypatch.setattr(parser_module, "_get_available_ocr_langs", lambda: ["eng"])
+    monkeypatch.setattr(
+        parser_module.pytesseract,
+        "image_to_data",
+        lambda *_args, **_kwargs: {
+            "text": [],
+            "conf": [],
+            "block_num": [],
+            "par_num": [],
+            "line_num": [],
+            "left": [],
+            "top": [],
+            "width": [],
+            "height": [],
+        },
+    )
+
+    text, metadata = DocumentParser.parse(str(path), "image")
+
+    assert text.strip()
+    assert metadata["machine_readable_content"] is False
+    assert metadata["review_required"] is True
+    assert metadata["locator_fallback"] is True
+    assert metadata["errors"] == []
+    assert document_quality_state(metadata) == "review_required"
 
 
 def test_quality_report_exposes_explicit_structure_and_fallback_fields():
