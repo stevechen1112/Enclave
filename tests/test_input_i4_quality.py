@@ -7,6 +7,7 @@ from openpyxl import Workbook
 from pptx import Presentation
 
 from app.schemas.parse_artifact import ParseChunk
+from app.services.asset_projection import document_quality_state
 from app.services.document_parser import DocumentParser, QualityReport
 from app.services.input_quality import (
     content_accuracy,
@@ -135,6 +136,8 @@ def test_xlsx_nonstandard_drawing_xml_uses_read_only_cell_fallback(
     assert calls == [False, True, False, True]
     assert "QA-2026-0907" in text
     assert metadata["parse_engine"] == "native/openpyxl-read-only"
+    assert metadata["review_required"] is True
+    assert document_quality_state(metadata) == "review_required"
     assert metadata["structure_policy"]["compatibility_mode"] is True
     assert (
         metadata["structure_policy"]["merged_cell_policy"]

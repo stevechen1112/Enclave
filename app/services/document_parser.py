@@ -195,6 +195,7 @@ class QualityReport:
     evidence_chunks: List[Dict[str, Any]] = field(default_factory=list)
     provider_attempts: List[Dict[str, Any]] = field(default_factory=list)
     locator_fallback: bool = False
+    review_required: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -690,6 +691,7 @@ class DocumentParser:
                 compatibility_mode = True
                 native_load_error_class = type(native_exc).__name__
                 report.parse_engine = "native/openpyxl-read-only"
+                report.review_required = True
                 report.add_warning(
                     "工作簿含非標準繪圖或 XML，已使用唯讀相容模式；"
                     "儲存格與公式可解析，但圖表、圖片及合併範圍需人工確認"
