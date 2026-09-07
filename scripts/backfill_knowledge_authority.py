@@ -8,6 +8,8 @@ The command never scans all tenants and prints a resumable checkpoint. Use
 ``--commit`` only after reviewing a dry run.
 """
 
+# ruff: noqa: E402 -- the executable establishes the repository import root first
+
 from __future__ import annotations
 
 import argparse
@@ -28,6 +30,7 @@ from app.models.asset import (
     DerivedArtifact,
     SourceAsset,
 )
+from app.models.document import Document
 from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
 from app.models.mka import KnowhowCardModel
 from app.services.knowledge_authority import (
@@ -35,12 +38,20 @@ from app.services.knowledge_authority import (
     publish_approved_video_procedure,
     publish_document_kb_revision,
 )
+from app.services.asset_projection import (
+    AssetProjectionResult,
+    publish_ready_document_extract,
+)
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--tenant-id", type=UUID, required=True)
-    parser.add_argument("--kind", choices=("document", "knowhow", "video"), required=True)
+    parser.add_argument(
+        "--kind",
+        choices=("document", "source-extract", "knowhow", "video"),
+        required=True,
+    )
     parser.add_argument("--after-id", type=UUID)
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--commit", action="store_true")
@@ -76,6 +87,49 @@ def main() -> int:
                     created_by=None,
                 )
                 processed.append(str(revision.id))
+        elif args.kind == "source-extract":
+            query = (
+                db.query(DerivedArtifact, AssetRevision, SourceAsset, Document)
+                .join(
+                    AssetRevision,
+                    (AssetRevision.tenant_id == DerivedArtifact.tenant_id)
+                    & (AssetRevision.id == DerivedArtifact.asset_revision_id),
+                )
+                .join(
+                    SourceAsset,
+                    (SourceAsset.tenant_id == AssetRevision.tenant_id)
+                    & (SourceAsset.id == AssetRevision.asset_id),
+                )
+                .join(
+                    Document,
+                    (Document.tenant_id == SourceAsset.tenant_id)
+                    & (Document.source_asset_id == SourceAsset.id),
+                )
+                .filter(
+                    DerivedArtifact.tenant_id == args.tenant_id,
+                    DerivedArtifact.artifact_kind == "extracted_text",
+                    DerivedArtifact.quality_state == "ready",
+                    AssetRevision.revision == SourceAsset.current_revision,
+                    AssetRevision.ingestion_status == "ready",
+                    SourceAsset.tombstoned_at.is_(None),
+                    Document.tombstoned_at.is_(None),
+                )
+                .order_by(DerivedArtifact.id)
+            )
+            query = _after(query, DerivedArtifact.id, args.after_id)
+            for artifact, revision, asset, document in query.limit(args.limit):
+                publish_ready_document_extract(
+                    db,
+                    document=document,
+                    projection=AssetProjectionResult(
+                        asset=asset,
+                        revision=revision,
+                        asset_created=False,
+                        revision_created=False,
+                    ),
+                    artifact=artifact,
+                )
+                processed.append(str(artifact.id))
         elif args.kind == "knowhow":
             query = db.query(KnowhowCardModel).filter(
                 KnowhowCardModel.tenant_id == args.tenant_id,

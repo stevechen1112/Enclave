@@ -247,7 +247,7 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
             db.flush()
             from app.services.asset_projection import project_document_text_artifact
 
-            project_document_text_artifact(
+            source_text_artifact = project_document_text_artifact(
                 db,
                 document=doc,
                 content=text_content,
@@ -547,7 +547,11 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         db.add(doc)
         from app.services.asset_projection import document_quality_state
 
-        terminal_quality = document_quality_state(metadata)
+        terminal_quality = (
+            "review_required"
+            if source_text_artifact.quality_state == "review_required"
+            else document_quality_state(metadata)
+        )
         terminal_projection = project_document(
             db,
             doc,
@@ -558,6 +562,15 @@ def process_document_task(self, document_id: str, file_path: str, tenant_id: str
         terminal_projection.asset.status = (
             "review_required" if terminal_quality == "review_required" else "active"
         )
+        if terminal_quality == "ready":
+            from app.services.asset_projection import publish_ready_document_extract
+
+            publish_ready_document_extract(
+                db,
+                document=doc,
+                projection=terminal_projection,
+                artifact=source_text_artifact,
+            )
         if ingestion_job_id is not None:
             from app.models.ingestion import IngestionJob
             from app.services.ingestion_orchestrator import get_ingestion_orchestrator
@@ -825,7 +838,7 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
             project_document_text_artifact,
         )
 
-        project_document_text_artifact(
+        source_text_artifact = project_document_text_artifact(
             db,
             document=doc,
             content=text_content,
@@ -994,7 +1007,11 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         )
         from app.services.asset_projection import document_quality_state
 
-        terminal_quality = document_quality_state(metadata)
+        terminal_quality = (
+            "review_required"
+            if source_text_artifact.quality_state == "review_required"
+            else document_quality_state(metadata)
+        )
         terminal_projection = project_document(
             db,
             doc,
@@ -1005,6 +1022,15 @@ def process_url_task(self, document_id: str, url: str, tenant_id: str):
         terminal_projection.asset.status = (
             "review_required" if terminal_quality == "review_required" else "active"
         )
+        if terminal_quality == "ready":
+            from app.services.asset_projection import publish_ready_document_extract
+
+            publish_ready_document_extract(
+                db,
+                document=doc,
+                projection=terminal_projection,
+                artifact=source_text_artifact,
+            )
         if ingestion_job.status == "running":
             requires_review = terminal_quality == "review_required"
             from app.services.input_capability_results import (

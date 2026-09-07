@@ -28,6 +28,7 @@ from app.services.asset_projection import (
     project_capture_transcript_segments,
     project_document,
     project_document_text_artifact,
+    publish_ready_document_extract,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -289,6 +290,66 @@ def test_document_projection_preserves_provider_supplied_confidence_semantics(
     assert artifact.confidence == 0.0
     assert artifact.metadata_json["confidence_semantics"] == "provider_supplied"
     assert artifact.metadata_json["confidence_provider_supplied"] is True
+
+
+def test_only_ready_literal_extract_is_auto_published(asset_db, monkeypatch):
+    tenant, user = _tenant_and_user(asset_db)
+    document = Document(
+        tenant_id=tenant.id,
+        uploaded_by=user.id,
+        filename="verified.pdf",
+        file_type="pdf",
+        file_path="s3://bucket/verified.pdf",
+        content_hash="e" * 64,
+        version=1,
+        status="completed",
+    )
+    asset_db.add(document)
+    asset_db.flush()
+    projection = project_document(asset_db, document, ingestion_status="ready")
+    artifact = project_document_text_artifact(
+        asset_db,
+        document=document,
+        content="已驗證的原始文件文字",
+        provider="native",
+        provider_version="1",
+        metadata={"parse_artifact": {"confidence": 0.9}},
+    )
+    calls = []
+
+    from app.services import knowledge_authority
+
+    monkeypatch.setattr(
+        knowledge_authority,
+        "publish_knowledge_unit",
+        lambda _db, **kwargs: calls.append(kwargs) or {"unit_id": "unit-1"},
+    )
+
+    result = publish_ready_document_extract(
+        asset_db,
+        document=document,
+        projection=projection,
+        artifact=artifact,
+    )
+
+    assert result == {"unit_id": "unit-1"}
+    assert calls[0]["unit_key"] == f"artifact:{artifact.id}"
+    assert calls[0]["source_asset_id"] == projection.asset.id
+    assert calls[0]["source_asset_revision_id"] == projection.revision.id
+    assert calls[0]["source_artifact_id"] == artifact.id
+    assert calls[0]["authority_class"] == "system_verified_source_extract"
+
+    artifact.quality_state = "review_required"
+    assert (
+        publish_ready_document_extract(
+            asset_db,
+            document=document,
+            projection=projection,
+            artifact=artifact,
+        )
+        is None
+    )
+    assert len(calls) == 1
 
 
 def test_composite_foreign_key_rejects_cross_tenant_revision(asset_db):

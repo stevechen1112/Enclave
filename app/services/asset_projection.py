@@ -566,6 +566,74 @@ def project_document_text_artifact(
     return artifact
 
 
+def publish_ready_document_extract(
+    db: Session,
+    *,
+    document: Any,
+    projection: AssetProjectionResult,
+    artifact: DerivedArtifact,
+) -> dict[str, Any] | None:
+    """Publish a verified literal extract into the canonical serving release.
+
+    A document job must not report ``published`` while enforce-mode Ask has no
+    active KnowledgeUnit for it. Only the parent literal ``extracted_text``
+    artifact may use this automatic path, and only after the parser quality
+    policy marked it ready. Review-required OCR, inferred procedures and other
+    AI-derived content continue through the human review workflow.
+    """
+
+    revision = projection.revision
+    if revision is None:
+        raise AssetProjectionConflict("cannot publish without a source revision")
+    if (
+        artifact.tenant_id != document.tenant_id
+        or artifact.asset_revision_id != revision.id
+    ):
+        raise AssetProjectionConflict("document extract does not belong to the source revision")
+    if artifact.artifact_kind != "extracted_text":
+        raise AssetProjectionConflict("only literal document extracts may auto-publish")
+    if artifact.quality_state != "ready":
+        return None
+    content = str(artifact.content or "").strip()
+    if not content:
+        raise AssetProjectionConflict("cannot publish an empty document extract")
+
+    from app.services.knowledge_authority import publish_knowledge_unit
+
+    acl_snapshot = dict(projection.asset.acl_reference or {})
+    return publish_knowledge_unit(
+        db,
+        tenant_id=UUID(str(document.tenant_id)),
+        unit_key=f"artifact:{artifact.id}",
+        unit_type="narrative",
+        title=str(document.filename or projection.asset.title),
+        content=content,
+        authority_class="system_verified_source_extract",
+        acl_snapshot=acl_snapshot,
+        source_resource_type="derived_artifact",
+        source_resource_id=str(artifact.id),
+        source_asset_id=projection.asset.id,
+        source_asset_revision_id=revision.id,
+        source_artifact_id=artifact.id,
+        risk_level="normal",
+        metadata={
+            "source_asset_id": str(projection.asset.id),
+            "document_id": str(document.id),
+            "document_revision": int(document.version or 1),
+            "artifact_kind": artifact.artifact_kind,
+            "deep_link": f"/knowledge/assets/{projection.asset.id}",
+        },
+        created_by=getattr(document, "uploaded_by", None),
+        policy_revision=int(acl_snapshot.get("policy_revision") or 1),
+        gate_evidence={
+            "decision": "automatic_verified_extract",
+            "quality_state": artifact.quality_state,
+            "provider": artifact.provider,
+            "provider_version": artifact.provider_version,
+        },
+    )
+
+
 def ensure_capture_asset(db: Session, capture: Any) -> SourceAsset:
     """Create the stable audio asset identity for a long capture session."""
 
