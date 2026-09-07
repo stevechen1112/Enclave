@@ -166,13 +166,46 @@ jobs:
             docker tag ${IMAGE_PREFIX}/frontend:${IMAGE_TAG} ${IMAGE_PREFIX}/frontend:latest
             docker tag ${IMAGE_PREFIX}/gateway:${IMAGE_TAG} ${IMAGE_PREFIX}/gateway:latest
 
+            # The managed host is not a git checkout. Extract and validate the
+            # versioned Compose topology from the immutable backend image so
+            # infrastructure changes deploy together with application code.
+            MANIFEST_TMP="$(mktemp /opt/enclave/docker-compose.prod.yml.next.XXXXXX)"
+            MANIFEST_CONTAINER="$(docker create ${IMAGE_PREFIX}/backend:${IMAGE_TAG})"
+            cleanup_manifest() {
+              [ -z "${MANIFEST_CONTAINER:-}" ] || docker rm -f "$MANIFEST_CONTAINER" >/dev/null 2>&1 || true
+              [ -z "${MANIFEST_TMP:-}" ] || rm -f "$MANIFEST_TMP"
+            }
+            trap cleanup_manifest EXIT
+            docker cp "$MANIFEST_CONTAINER:/code/docker-compose.prod.yml" "$MANIFEST_TMP"
+            docker rm "$MANIFEST_CONTAINER" >/dev/null
+            MANIFEST_CONTAINER=""
+            docker compose -f "$MANIFEST_TMP" config --quiet
+            cp -a docker-compose.prod.yml docker-compose.prod.yml.previous
+            mv "$MANIFEST_TMP" docker-compose.prod.yml
+            MANIFEST_TMP=""
+            trap - EXIT
+
             # 縮短舊程式與新 schema 重疊：先停 app 層，migrate，再起全栈
-            docker compose -f docker-compose.prod.yml stop web worker worker-beat || true
+            docker compose -f docker-compose.prod.yml stop web worker worker-input worker-beat || true
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T migrate
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T provision-db-roles
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T init-superuser
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T init-demo
             docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+
+            test -n "$(docker compose -f docker-compose.prod.yml ps -q worker-input)"
+            for i in $(seq 1 6); do
+              if docker compose -f docker-compose.prod.yml exec -T worker-input sh -lc \
+                'celery -A app.celery_app inspect ping --destination="input@$(hostname)" --timeout 10 2>/dev/null | grep -q OK'; then
+                echo "✅ Input worker check passed on attempt $i"
+                break
+              fi
+              if [ $i -eq 6 ]; then
+                echo "❌ Dedicated Input worker unavailable after 60s"
+                exit 1
+              fi
+              sleep 10
+            done
 
             # Health：必須經 edge 對外路徑（容器內 8000 僅診斷）
             for i in $(seq 1 6); do

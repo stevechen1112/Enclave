@@ -53,7 +53,7 @@ def test_pack_enabled_env_turns_modules_on():
 def test_staging_and_prod_migrate_before_up():
     for wf in ("deploy-production.yml", "deploy-staging.yml"):
         text = (ROOT / ".github" / "workflows" / wf).read_text(encoding="utf-8")
-        stop_idx = text.find("stop web worker worker-beat")
+        stop_idx = text.find("stop web worker worker-input worker-beat")
         run_idx = text.find("run --rm -T migrate")
         provision_idx = text.find("run --rm -T provision-db-roles")
         up_idx = text.find("up -d --no-build --remove-orphans")
@@ -106,7 +106,7 @@ def test_mobile_marked_experimental():
 
 
 def test_credential_vault_default_outside_uploads():
-    from app.services.credential_vault import get_credential_dir, ensure_credential_dir
+    from app.services.credential_vault import ensure_credential_dir, get_credential_dir
 
     d = get_credential_dir()
     assert "uploads" not in d.parts or d.parts[-2:] != ("uploads", ".credentials")
@@ -131,7 +131,7 @@ def test_credential_vault_rejects_uploads_path(monkeypatch, tmp_path):
 
 
 def test_preflight_checks_compose_overlays():
-    from app.services.deployment import run_preflight, DeploymentProfile
+    from app.services.deployment import DeploymentProfile, run_preflight
 
     r = run_preflight(DeploymentProfile.LITE)
     names = [c.get("check") or c.get("name") for c in r.checks]
@@ -159,6 +159,7 @@ def test_compose_config_profiles_lite_validates():
         capture_output=True,
         text=True,
         timeout=60,
+        check=False,
     )
     assert result.returncode == 0, result.stderr
     assert "web:" in result.stdout or "web" in result.stdout

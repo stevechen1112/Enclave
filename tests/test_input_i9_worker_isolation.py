@@ -30,9 +30,39 @@ def test_production_compose_serialises_input_with_resource_boundary():
     assert "--concurrency=1" in compose
     assert "--max-memory-per-child=1500000" in compose
     assert "OMP_THREAD_LIMIT=${MEDIA_PROCESSING_THREADS:-1}" in compose
+    assert '--destination=\"core@$$(hostname)\"' in compose
+    assert '--destination=\"input@$$(hostname)\"' in compose
 
 
 def test_stale_reconciliation_is_periodically_scheduled():
     schedule = celery_app.conf.beat_schedule["reconcile-stale-ingestion"]
     assert schedule["task"] == "tasks.reconcile_stale_ingestion"
     assert schedule["schedule"] <= 300
+
+
+def test_managed_deployments_sync_topology_and_require_input_worker():
+    root = Path(__file__).resolve().parents[1]
+    dockerignore = (root / ".dockerignore").read_text(encoding="utf-8")
+    assert "!docker-compose.prod.yml" in dockerignore
+    for workflow_name in ("deploy-production.yml", "deploy-staging.yml"):
+        workflow = (root / ".github" / "workflows" / workflow_name).read_text(
+            encoding="utf-8"
+        )
+        extract_idx = workflow.find(
+            'docker cp "$MANIFEST_CONTAINER:/code/docker-compose.prod.yml"'
+        )
+        validate_idx = workflow.find(
+            'docker compose -f "$MANIFEST_TMP" config --quiet'
+        )
+        replace_idx = workflow.find('mv "$MANIFEST_TMP" docker-compose.prod.yml')
+        start_idx = workflow.find("up -d --no-build --remove-orphans")
+        assert -1 not in (
+            extract_idx,
+            validate_idx,
+            replace_idx,
+            start_idx,
+        ), workflow_name
+        assert extract_idx < validate_idx < replace_idx < start_idx, workflow_name
+        assert "stop web worker worker-input worker-beat" in workflow
+        assert "ps -q worker-input" in workflow
+        assert '--destination=\"input@$(hostname)\"' in workflow

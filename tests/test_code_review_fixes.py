@@ -11,8 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class TestResourceWideDeny:
     def test_is_denied_honors_resource_wide_sentinel(self):
-        from app.services.policy_deny import RESOURCE_WIDE_DENY_SUBJECT, is_denied
         from app.models.policy_deny import PolicyDenyEntry
+        from app.services.policy_deny import RESOURCE_WIDE_DENY_SUBJECT, is_denied
 
         db = MagicMock()
         row = MagicMock()
@@ -84,7 +84,7 @@ class TestDeployStopBeforeMigrate:
     def test_prod_and_staging_stop_then_migrate_then_up(self):
         for name in ("deploy-production.yml", "deploy-staging.yml"):
             text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
-            stop_idx = text.find("stop web worker worker-beat")
+            stop_idx = text.find("stop web worker worker-input worker-beat")
             mig_idx = text.find("run --rm -T migrate")
             provision_idx = text.find("run --rm -T provision-db-roles")
             up_idx = text.find("up -d --no-build --remove-orphans")

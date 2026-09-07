@@ -53,6 +53,7 @@ coverage.xml
 *
 !.dockerignore
 !Dockerfile
+!docker-compose.prod.yml
 !requirements.txt
 !requirements.lock.txt
 !alembic.ini
