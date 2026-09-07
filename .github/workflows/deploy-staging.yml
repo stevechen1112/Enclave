@@ -241,7 +241,7 @@ jobs:
             test -n "$(docker compose -f docker-compose.prod.yml ps -q worker-input)"
             for i in $(seq 1 6); do
               if docker compose -f docker-compose.prod.yml exec -T worker-input sh -lc \
-                'celery -A app.celery_app inspect ping --destination="input@$(hostname)" --timeout 10 2>/dev/null | grep -q OK'; then
+                '/opt/venv/bin/celery -A app.celery_app inspect ping --destination="input@$(hostname)" --timeout 10 2>/dev/null | grep -q OK'; then
                 echo "✅ Input worker check passed on attempt $i"
                 break
               fi

@@ -65,6 +65,7 @@ def test_managed_deployments_sync_topology_and_require_input_worker():
         assert extract_idx < validate_idx < replace_idx < start_idx, workflow_name
         assert "stop web worker worker-input worker-beat" in workflow
         assert "ps -q worker-input" in workflow
+        assert "/opt/venv/bin/celery -A app.celery_app inspect ping" in workflow
         assert '--destination=\"input@$(hostname)\"' in workflow
         stop_idx = workflow.find("stop web worker worker-input worker-beat")
         drain_idx = workflow.find("INPUT_DRAIN_DEADLINE=")
