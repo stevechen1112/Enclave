@@ -100,6 +100,53 @@ def test_xlsx_preserves_formula_row_cell_and_excludes_hidden_sheet(tmp_path: Pat
     assert next(chunk for chunk in chunks if "AX-2048" in chunk.text).row_number == 2
 
 
+def test_xlsx_nonstandard_drawing_xml_uses_read_only_cell_fallback(
+    tmp_path: Path, monkeypatch
+):
+    path = tmp_path / "legacy-erp-export.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "檢驗申請"
+    sheet.append(["委託單號", "品名", "數量"])
+    sheet.append(["QA-2026-0907", "草本原料", "12"])
+    workbook.save(path)
+
+    import openpyxl
+
+    real_load_workbook = openpyxl.load_workbook
+    calls: list[bool] = []
+
+    def compatibility_only(source, *, read_only=False, data_only=False, **kwargs):
+        calls.append(read_only)
+        if not read_only:
+            raise ValueError("drawing XML pitchFamily is outside supported range")
+        return real_load_workbook(
+            source,
+            read_only=True,
+            data_only=data_only,
+            **kwargs,
+        )
+
+    monkeypatch.setattr(openpyxl, "load_workbook", compatibility_only)
+
+    text, metadata = DocumentParser.parse(str(path), "xlsx")
+    chunks = _native_evidence_chunks(str(path), "xlsx", text, metadata)
+
+    assert calls == [False, True, False, True]
+    assert "QA-2026-0907" in text
+    assert metadata["parse_engine"] == "native/openpyxl-read-only"
+    assert metadata["structure_policy"]["compatibility_mode"] is True
+    assert (
+        metadata["structure_policy"]["merged_cell_policy"]
+        == "unavailable_in_read_only_compatibility"
+    )
+    assert any("非標準繪圖或 XML" in warning for warning in metadata["warnings"])
+    row = next(chunk for chunk in chunks if "QA-2026-0907" in chunk.text)
+    assert row.worksheet == "檢驗申請"
+    assert row.row_number == 2
+    assert row.cell_range == "A2:C2"
+
+
 def test_pptx_evidence_preserves_slide_number(tmp_path: Path):
     path = tmp_path / "inspection.pptx"
     presentation = Presentation()

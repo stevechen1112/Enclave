@@ -667,7 +667,33 @@ class DocumentParser:
             # Formula text is source evidence.  Loading data_only=True silently
             # replaces it with a possibly stale cached value, so I4 preserves
             # formulas and makes hidden/merged policies explicit.
-            wb = openpyxl.load_workbook(file_path, read_only=False, data_only=False)
+            compatibility_mode = False
+            native_load_error_class = None
+            try:
+                wb = openpyxl.load_workbook(
+                    file_path, read_only=False, data_only=False
+                )
+            except (KeyError, TypeError, ValueError) as native_exc:
+                # Some workbooks produced by older Excel/ERP/reporting tools
+                # contain non-standard drawing XML that desktop Excel tolerates.
+                # openpyxl's normal mode parses those drawings and can reject
+                # the entire workbook even though cells remain readable. Its
+                # read-only mode intentionally skips that decorative layer and
+                # preserves cell/formula evidence, so use it as a bounded,
+                # honest compatibility path before declaring the source bad.
+                try:
+                    wb = openpyxl.load_workbook(
+                        file_path, read_only=True, data_only=False
+                    )
+                except (KeyError, TypeError, ValueError):
+                    raise native_exc
+                compatibility_mode = True
+                native_load_error_class = type(native_exc).__name__
+                report.parse_engine = "native/openpyxl-read-only"
+                report.add_warning(
+                    "工作簿含非標準繪圖或 XML，已使用唯讀相容模式；"
+                    "儲存格與公式可解析，但圖表、圖片及合併範圍需人工確認"
+                )
             parts: List[str] = []
             table_count = 0
             formulas_detected = 0
@@ -703,10 +729,12 @@ class DocumentParser:
                     if any(cleaned):
                         valid_rows.append(cleaned)
 
-                merged_cells_detected += len(ws.merged_cells.ranges)
-                if ws.merged_cells.ranges:
+                merged = getattr(ws, "merged_cells", None)
+                ranges = list(getattr(merged, "ranges", []) or [])
+                merged_cells_detected += len(ranges)
+                if ranges:
                     merged_ranges[sheet_name] = [
-                        str(cell_range) for cell_range in ws.merged_cells.ranges
+                        str(cell_range) for cell_range in ranges
                     ]
 
                 if not valid_rows:
@@ -730,11 +758,17 @@ class DocumentParser:
                 "formula_policy": "preserve_formula_expression",
                 "formulas_detected": formulas_detected,
                 "formula_cells": formula_cells,
-                "merged_cell_policy": "preserve_anchor_and_range",
+                "merged_cell_policy": (
+                    "unavailable_in_read_only_compatibility"
+                    if compatibility_mode
+                    else "preserve_anchor_and_range"
+                ),
                 "merged_cells_detected": merged_cells_detected,
                 "merged_ranges": merged_ranges,
                 "hidden_sheet_policy": "exclude_and_require_explicit_review",
                 "hidden_sheets": hidden_sheets,
+                "compatibility_mode": compatibility_mode,
+                "native_load_error_class": native_load_error_class,
             }
             if hidden_sheets:
                 report.add_warning(

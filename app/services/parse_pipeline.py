@@ -131,7 +131,17 @@ def _native_evidence_chunks(
             from openpyxl import load_workbook
             from openpyxl.utils import get_column_letter
 
-            workbook = load_workbook(file_path, read_only=False, data_only=False)
+            try:
+                workbook = load_workbook(
+                    file_path, read_only=False, data_only=False
+                )
+            except (KeyError, TypeError, ValueError) as native_exc:
+                try:
+                    workbook = load_workbook(
+                        file_path, read_only=True, data_only=False
+                    )
+                except (KeyError, TypeError, ValueError):
+                    raise native_exc
             chunks = []
             try:
                 for sheet in workbook.worksheets:
