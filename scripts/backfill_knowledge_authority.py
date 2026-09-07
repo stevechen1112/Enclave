@@ -8,8 +8,6 @@ The command never scans all tenants and prints a resumable checkpoint. Use
 ``--commit`` only after reviewing a dry run.
 """
 
-# ruff: noqa: E402 -- the executable establishes the repository import root first
-
 from __future__ import annotations
 
 import argparse
@@ -33,15 +31,16 @@ from app.models.asset import (
 from app.models.document import Document
 from app.models.knowledge_base import KnowledgeBase, KnowledgeBaseRevision
 from app.models.mka import KnowhowCardModel
+from app.services.asset_projection import (
+    AssetProjectionResult,
+    publish_ready_document_extract,
+)
 from app.services.knowledge_authority import (
     publish_approved_knowhow,
     publish_approved_video_procedure,
     publish_document_kb_revision,
 )
-from app.services.asset_projection import (
-    AssetProjectionResult,
-    publish_ready_document_extract,
-)
+from app.services.rls import apply_rls_context
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -69,6 +68,11 @@ def main() -> int:
     db = SessionLocal()
     processed: list[str] = []
     try:
+        # Production RLS is fail-closed. This command is deliberately scoped
+        # to exactly one caller-supplied tenant and must establish that context
+        # before the first query; otherwise a maintenance run can misleadingly
+        # report zero eligible rows while doing no work.
+        apply_rls_context(db, args.tenant_id)
         if args.kind == "document":
             query = (
                 db.query(KnowledgeBaseRevision)
