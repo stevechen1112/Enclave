@@ -84,4 +84,35 @@ describe('AssetDetailPage recovery guidance', () => {
     expect(await screen.findByText('狀態資料無法辨識')).toBeInTheDocument()
     expect(screen.getByText('尚未回報')).toBeInTheDocument()
   })
+
+  it('explains a valid image that needs a human description', async () => {
+    get.mockResolvedValue({
+      ...asset,
+      asset_kind: 'image',
+      title: '現場照片.jpg',
+      status: 'review_required',
+      lifecycle_status: 'awaiting_review',
+      job: {
+        ...asset.job,
+        status: 'review_required',
+        requested_capabilities: ['extract_text', 'ocr'],
+        readiness: {
+          capability_results: {
+            extract_text: {
+              status: 'degraded', reason_code: 'manual_description_required', artifact_count: 0, details: {},
+              provider: { name: 'native/image', version: '1', model: null, confidence_provider_supplied: false, calibration_version: 'unavailable' },
+            },
+            ocr: {
+              status: 'not_applicable', reason_code: 'ocr_not_used_or_no_text_detected', artifact_count: 0, details: {},
+              provider: { name: 'native/image', version: '1', model: null, confidence_provider_supplied: false, calibration_version: 'unavailable' },
+            },
+          },
+        },
+        error: {},
+      },
+    })
+    renderPage()
+    expect(await screen.findByText(/請檢視原圖並補充內容描述/)).toBeInTheDocument()
+    expect(screen.getByText(/未偵測到可用文字/)).toBeInTheDocument()
+  })
 })

@@ -89,6 +89,9 @@ const CAPABILITY_REASON_LABELS: Record<string, string> = {
   no_evidence_backed_procedure: '沒有足夠證據可建立程序候選',
   layout_fidelity_not_measured: '已抽出內容，但尚未量測版面還原品質',
   table_fidelity_not_measured: '已抽出表格內容，但尚未量測結構還原品質',
+  manual_description_required: '未辨識到可索引文字，請檢視原圖並補充內容描述',
+  no_usable_text_extracted: '未擷取到可建立知識的文字',
+  ocr_not_used_or_no_text_detected: '未偵測到可用文字',
   capability_result_missing: '處理器沒有回報這項能力結果',
   provider_failed: '外部處理服務執行失敗',
 }
