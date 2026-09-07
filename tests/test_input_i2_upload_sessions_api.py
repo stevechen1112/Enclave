@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -214,3 +217,121 @@ async def test_large_file_uses_multiple_production_sized_parts_end_to_end(
     )
     assert committed.status_code == 200, committed.text
     assert committed.json()["content_sha256"] == hashlib.sha256(content).hexdigest()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_parts_do_not_deadlock_web_event_loop(
+    monkeypatch,
+):
+    """Regression for production outage caused by three parallel part uploads.
+
+    Each body waits until both requests have entered the endpoint. Holding
+    the upload-session row lock while consuming these streams deadlocks the event
+    loop: the first request cannot resume while a sibling synchronously waits for
+    its lock. The transport must let every body arrive before acknowledging parts.
+    """
+
+    from app.api.v1.endpoints import upload_sessions as endpoint
+
+    session_id = uuid4()
+    tenant_id = uuid4()
+    owner_id = uuid4()
+    state = SimpleNamespace(
+        id=session_id,
+        tenant_id=tenant_id,
+        owner_id=owner_id,
+        status="initialized",
+        total_parts=2,
+        part_size=4,
+        byte_size=8,
+        staging_key="parallel-test",
+        provider_upload_id="parallel-test",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+        received_parts=0,
+        received_bytes=0,
+    )
+
+    all_started = asyncio.Event()
+    start_lock = asyncio.Lock()
+    started = 0
+    acknowledged = []
+    locked_after_body = []
+
+    class FakeQuery:
+        def filter(self, *_args):
+            return self
+
+        def first(self):
+            return None
+
+    class FakeDb:
+        def query(self, *_args):
+            return FakeQuery()
+
+        def rollback(self):
+            return None
+
+        def add(self, part):
+            acknowledged.append(part)
+
+        def commit(self):
+            return None
+
+        def refresh(self, _value):
+            return None
+
+    class FakeStorage:
+        def upload_part(self, _key, _upload_id, number, source_path):
+            assert source_path
+            return f"etag-{number}"
+
+    def owned(_db, _user, requested_id, *, lock=False):
+        assert requested_id == session_id
+        if lock:
+            # This assertion is the regression gate: the old implementation
+            # acquired the row lock before either body was consumed.
+            assert all_started.is_set()
+            locked_after_body.append(True)
+        return state
+
+    monkeypatch.setattr(endpoint, "check_document_permission", lambda *_args: None)
+    monkeypatch.setattr(endpoint, "_owned", owned)
+    monkeypatch.setattr(endpoint, "_response", lambda _db, current: current.received_parts)
+    monkeypatch.setattr(endpoint, "get_storage_backend", lambda: FakeStorage())
+
+    async def synchronized_body(chunk: bytes):
+        nonlocal started
+        async with start_lock:
+            started += 1
+            if started == 2:
+                all_started.set()
+        await asyncio.wait_for(all_started.wait(), timeout=3)
+        yield chunk
+
+    class StreamingRequest:
+        def __init__(self, chunk: bytes):
+            self.chunk = chunk
+
+        def stream(self):
+            return synchronized_body(self.chunk)
+
+    async def upload(number: int, chunk: bytes):
+        return await endpoint.put_upload_part(
+            session_id=session_id,
+            part_number=number,
+            request=StreamingRequest(chunk),
+            db=FakeDb(),
+            current_user=SimpleNamespace(id=owner_id, tenant_id=tenant_id),
+            x_part_sha256=hashlib.sha256(chunk).hexdigest(),
+        )
+
+    chunks = (b"abcd", b"efgh")
+    responses = await asyncio.wait_for(
+        asyncio.gather(*(upload(index, chunk) for index, chunk in enumerate(chunks, 1))),
+        timeout=10,
+    )
+    assert sorted(responses) == [1, 2]
+    assert len(locked_after_body) == 2
+    assert len(acknowledged) == 2
+    assert state.received_parts == 2
+    assert state.received_bytes == 8

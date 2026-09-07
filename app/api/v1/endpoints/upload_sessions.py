@@ -282,13 +282,24 @@ async def put_upload_part(
     checksum = x_part_sha256.lower()
     if len(checksum) != 64 or any(char not in _HEX for char in checksum):
         raise HTTPException(status_code=400, detail="invalid X-Part-SHA256")
-    session = _owned(db, current_user, session_id, lock=True)
+
+    # Do not hold the upload-session row lock while awaiting the request body or
+    # object storage. Browsers intentionally send several parts concurrently. A
+    # row lock across either await lets another coroutine block the synchronous
+    # SQLAlchemy session on the same event loop, preventing the lock holder from
+    # resuming and eventually exhausting every web worker (including /health and
+    # login). Read the immutable transport contract first, then lock only for the
+    # short acknowledgement transaction after all external I/O has completed.
+    session = _owned(db, current_user, session_id)
     _assert_mutable(session)
     if part_number < 1 or part_number > session.total_parts:
         raise HTTPException(status_code=400, detail="part number outside session range")
     expected_size = session.part_size
     if part_number == session.total_parts:
         expected_size = session.byte_size - session.part_size * (session.total_parts - 1)
+
+    staging_key = session.staging_key
+    provider_upload_id = session.provider_upload_id
 
     existing = (
         db.query(UploadPart)
@@ -303,6 +314,10 @@ async def put_upload_part(
         if existing.sha256 != checksum or existing.byte_size != expected_size:
             raise HTTPException(status_code=409, detail="part already acknowledged with different content")
         return _response(db, session)
+
+    # End the read-only transaction before a potentially long client upload.
+    # Primitive contract values above remain valid for the lifetime of a session.
+    db.rollback()
 
     descriptor, temp_path = tempfile.mkstemp(prefix="enclave-part-")
     os.close(descriptor)
@@ -322,9 +337,36 @@ async def put_upload_part(
             raise HTTPException(status_code=400, detail="part size does not match session contract")
         if digest.hexdigest() != checksum:
             raise HTTPException(status_code=422, detail="part checksum mismatch")
-        provider_etag = get_storage_backend().upload_part(
-            session.staging_key, session.provider_upload_id, part_number, temp_path
+        storage = get_storage_backend()
+        provider_etag = await anyio.to_thread.run_sync(
+            storage.upload_part,
+            staging_key,
+            provider_upload_id,
+            part_number,
+            temp_path,
         )
+
+        # Serialize only the small database acknowledgement. There is no await
+        # between acquiring this lock and commit, so the event loop cannot strand
+        # the lock holder behind a competing request from the same worker.
+        session = _owned(db, current_user, session_id, lock=True)
+        _assert_mutable(session)
+        existing = (
+            db.query(UploadPart)
+            .filter(
+                UploadPart.tenant_id == session.tenant_id,
+                UploadPart.session_id == session.id,
+                UploadPart.part_number == part_number,
+            )
+            .first()
+        )
+        if existing is not None:
+            if existing.sha256 != checksum or existing.byte_size != received:
+                raise HTTPException(
+                    status_code=409,
+                    detail="part already acknowledged with different content",
+                )
+            return _response(db, session)
         db.add(
             UploadPart(
                 tenant_id=session.tenant_id,
@@ -375,8 +417,12 @@ async def commit_upload_session(
     try:
         storage = get_storage_backend()
         if not session.staging_completed:
-            if not storage.exists(session.staging_key):
-                storage.complete_multipart(
+            staging_exists = await anyio.to_thread.run_sync(
+                storage.exists, session.staging_key
+            )
+            if not staging_exists:
+                await anyio.to_thread.run_sync(
+                    storage.complete_multipart,
                     session.staging_key,
                     session.provider_upload_id,
                     [(part.part_number, part.provider_etag) for part in parts],
@@ -387,7 +433,9 @@ async def commit_upload_session(
             prefix="enclave-resume-", suffix=Path(session.filename).suffix.lower()
         )
         os.close(descriptor)
-        storage.get_to_file(session.staging_key, assembled)
+        await anyio.to_thread.run_sync(
+            storage.get_to_file, session.staging_key, assembled
+        )
         content_sha256, byte_size = await anyio.to_thread.run_sync(
             _hash_file, assembled
         )
@@ -459,7 +507,7 @@ async def commit_upload_session(
             details={"byte_size": session.byte_size, "parts": session.total_parts},
         )
         db.commit()
-        storage.delete(session.staging_key)
+        await anyio.to_thread.run_sync(storage.delete, session.staging_key)
         return {**asset, "upload_session_id": str(session.id), "content_sha256": content_sha256}
     except Exception as exc:
         db.rollback()
