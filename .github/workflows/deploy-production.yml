@@ -139,6 +139,54 @@ jobs:
             fi
             trap - EXIT
 
+            # Never terminate an in-flight long recording during deployment.
+            # Require two consecutive idle samples covering active, reserved
+            # and broker-queued Input work. If the queue cannot drain within
+            # 30 minutes, fail closed and leave the current release running.
+            INPUT_WORKER_ID="$(docker compose -f docker-compose.prod.yml ps -q worker-input 2>/dev/null || true)"
+            if [ -n "$INPUT_WORKER_ID" ]; then
+              INPUT_DRAINED=false
+              INPUT_DRAIN_DEADLINE=$(( $(date +%s) + 1800 ))
+              while [ "$(date +%s)" -lt "$INPUT_DRAIN_DEADLINE" ]; do
+                if docker compose -f docker-compose.prod.yml exec -T worker-input python -c '
+            import socket, sys
+            import redis
+            from app.celery_app import celery_app
+            node = f"input@{socket.gethostname()}"
+            inspector = celery_app.control.inspect(destination=[node], timeout=10)
+            active = (inspector.active() or {}).get(node)
+            reserved = (inspector.reserved() or {}).get(node)
+            broker = redis.Redis.from_url(celery_app.conf.broker_url)
+            queued = sum(broker.llen(name) for name in ("input.document", "input.media"))
+            print(f"input_drain active={len(active or [])} reserved={len(reserved or [])} queued={queued}")
+            sys.exit(0 if active is not None and reserved is not None and not active and not reserved and queued == 0 else 1)
+            '; then
+                  sleep 5
+                  if docker compose -f docker-compose.prod.yml exec -T worker-input python -c '
+            import socket, sys
+            import redis
+            from app.celery_app import celery_app
+            node = f"input@{socket.gethostname()}"
+            inspector = celery_app.control.inspect(destination=[node], timeout=10)
+            active = (inspector.active() or {}).get(node)
+            reserved = (inspector.reserved() or {}).get(node)
+            broker = redis.Redis.from_url(celery_app.conf.broker_url)
+            queued = sum(broker.llen(name) for name in ("input.document", "input.media"))
+            sys.exit(0 if active is not None and reserved is not None and not active and not reserved and queued == 0 else 1)
+            '; then
+                    INPUT_DRAINED=true
+                    echo "✅ Input queue drained before deployment"
+                    break
+                  fi
+                fi
+                sleep 15
+              done
+              if [ "$INPUT_DRAINED" != "true" ]; then
+                echo "❌ Input work did not drain within 30 minutes; deployment aborted without terminating it"
+                exit 1
+              fi
+            fi
+
             # 縮短舊程式與新 schema 重疊：先停 web/worker/beat，migrate，再起全栈
             docker compose -f docker-compose.prod.yml stop web worker worker-input worker-beat || true
             docker compose --profile operations -f docker-compose.prod.yml run --rm -T migrate

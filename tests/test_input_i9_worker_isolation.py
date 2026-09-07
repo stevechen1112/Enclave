@@ -30,8 +30,8 @@ def test_production_compose_serialises_input_with_resource_boundary():
     assert "--concurrency=1" in compose
     assert "--max-memory-per-child=1500000" in compose
     assert "OMP_THREAD_LIMIT=${MEDIA_PROCESSING_THREADS:-1}" in compose
-    assert '--destination=\"core@$$(hostname)\"' in compose
-    assert '--destination=\"input@$$(hostname)\"' in compose
+    assert r'--destination=\"core@$$(hostname)\"' in compose
+    assert r'--destination=\"input@$$(hostname)\"' in compose
 
 
 def test_stale_reconciliation_is_periodically_scheduled():
@@ -66,3 +66,9 @@ def test_managed_deployments_sync_topology_and_require_input_worker():
         assert "stop web worker worker-input worker-beat" in workflow
         assert "ps -q worker-input" in workflow
         assert '--destination=\"input@$(hostname)\"' in workflow
+        stop_idx = workflow.find("stop web worker worker-input worker-beat")
+        drain_idx = workflow.find("INPUT_DRAIN_DEADLINE=")
+        assert -1 < drain_idx < stop_idx, workflow_name
+        assert 'active is not None and reserved is not None' in workflow
+        assert 'queued == 0' in workflow
+        assert 'INPUT_DRAINED" != "true' in workflow
