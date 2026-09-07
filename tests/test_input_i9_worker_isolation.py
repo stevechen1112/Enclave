@@ -73,6 +73,11 @@ def test_managed_deployments_sync_topology_and_require_input_worker():
                 'curl -fsSkL -o /dev/null -w "%{http_code}" http://localhost/'
                 in workflow
             )
+            smoke = workflow.split("- name: Smoke test", maxsplit=1)[1]
+            assert (
+                "export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance"
+                in smoke
+            )
         stop_idx = workflow.find("stop web worker worker-input worker-beat")
         drain_idx = workflow.find("INPUT_DRAIN_DEADLINE=")
         assert -1 < drain_idx < stop_idx, workflow_name

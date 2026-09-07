@@ -244,6 +244,7 @@ jobs:
           script: |
             set -e
             cd /opt/enclave
+            export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance
             echo "🔍 Running smoke tests..."
 
             # API health：必須經 edge；容器內 8000 僅診斷，不可單獨判定成功
