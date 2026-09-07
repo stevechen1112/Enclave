@@ -78,6 +78,8 @@ def test_managed_deployments_sync_topology_and_require_input_worker():
                 "export COMPOSE_ENV_FILES=.env.production,.env.db-admin,.env.maintenance"
                 in smoke
             )
+            assert "E2E_USER: ${{ vars.PRODUCTION_E2E_USER }}" in workflow
+            assert "E2E_PASS: ${{ secrets.PRODUCTION_E2E_PASS }}" in workflow
         stop_idx = workflow.find("stop web worker worker-input worker-beat")
         drain_idx = workflow.find("INPUT_DRAIN_DEADLINE=")
         assert -1 < drain_idx < stop_idx, workflow_name

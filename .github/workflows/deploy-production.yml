@@ -311,6 +311,8 @@ jobs:
         working-directory: frontend
         env:
           E2E_BASE_URL: ${{ vars.PRODUCTION_BASE_URL || 'https://kachu.tw' }}
+          E2E_USER: ${{ vars.PRODUCTION_E2E_USER }}
+          E2E_PASS: ${{ secrets.PRODUCTION_E2E_PASS }}
           RELEASE_PARITY_E2E: 'true'
         run: npx playwright test e2e/release-parity.spec.ts --reporter=github
 
