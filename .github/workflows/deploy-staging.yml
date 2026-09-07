@@ -268,7 +268,7 @@ jobs:
             done
 
             curl -sf http://localhost/health > /tmp/enclave-health.json
-            curl -sf http://localhost/release.json > /tmp/enclave-frontend-release.json
+            curl -fsSL http://localhost/release.json > /tmp/enclave-frontend-release.json
             docker compose -f docker-compose.prod.yml exec -T web alembic current > /tmp/enclave-alembic-current.txt
             python3 - <<'PY'
             import json

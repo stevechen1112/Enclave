@@ -256,7 +256,7 @@ jobs:
             fi
 
             # Frontend loads
-            curl -sf -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"
+            curl -fsSL -o /dev/null -w "%{http_code}" http://localhost/ | grep -q "200"
             echo "  ✅ Frontend OK"
 
             # Emergency rollback may target an image created before release metadata existed.
@@ -265,7 +265,7 @@ jobs:
               echo "  ⚠️ Explicit rollback: legacy release metadata may be unavailable"
             else
               curl -sf http://localhost/health > /tmp/enclave-health.json
-              curl -sf http://localhost/release.json > /tmp/enclave-frontend-release.json
+              curl -fsSL http://localhost/release.json > /tmp/enclave-frontend-release.json
               docker compose -f docker-compose.prod.yml exec -T web alembic current > /tmp/enclave-alembic-current.txt
               python3 - <<'PY'
             import json
